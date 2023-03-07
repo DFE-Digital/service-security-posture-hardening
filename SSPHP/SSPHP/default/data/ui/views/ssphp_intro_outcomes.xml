@@ -1,0 +1,42 @@
+<form theme="light" version="1.1">
+  <label>Outcomes</label>
+  
+  <row>
+    <panel>
+      <html>
+		<img src="/static/app/SSPHP/images/dfe.png"/>
+      </html>
+    </panel>
+  </row>
+  
+  <row>
+    <panel>
+      <html>
+        <h1>
+          <b>Intro to Service Security Posture Hardening Programme</b>
+        </h1>
+      </html>
+    </panel>
+  </row>
+  
+  <row>
+    <panel>
+      <html>
+        <h2 style="line-height: 1.5em; margin-bottom: 15px">
+          <b>Outcomes</b>
+        </h2>
+            <ul>
+              <li style="line-height: 1.5em; margin-bottom: 15px">The RSD team is able to :</li>
+              <ul>
+              <li style="line-height: 1.5em; margin-bottom: 15px">see all of their system mis-configurations</li>
+              <li style="line-height: 1.5em; margin-bottom: 15px">allocate them directly to owners of sub-teams for remediation</li>
+              <li style="line-height: 1.5em; margin-bottom: 15px">prioritise and group remediation activities</li>
+              <li style="line-height: 1.5em; margin-bottom: 15px">track remediation progress</li>
+              <li style="line-height: 1.5em; margin-bottom: 15px">see all new mis-configurations immediately when they happen</li>
+              </ul>
+            </ul>
+      </html>
+    </panel>
+  </row>
+
+</form>

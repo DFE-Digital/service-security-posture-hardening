@@ -1,0 +1,673 @@
+<form theme="dark" version="1.1">
+  <label>Azure Findings</label>
+  <description>Service Security Posture Hardening Programme : v0.1</description>
+  
+  
+  <init>
+    <eval token="time_window_earliest">strftime(0,"%m/%d/%Y %H:%M")</eval>
+    <eval token="time_window_latest">strftime(now(), "%m/%d/%Y %H:%M")</eval>
+    <eval token="time_window_earliest_epoch">0</eval>
+    <eval token="time_window_latest_epoch">now()</eval>
+    <eval token="tkn_index">"index=\"ssphp_test\""</eval>
+    <eval token="tkn_sourcetype">"sourcetype=\"azure:security:finding\""</eval>
+    <eval token="tkn_host">"host=\"c113p01-splhf04\""</eval>
+    <eval token="tkn_source">"source=\"azure_cloud_defender\""</eval>
+  </init>
+  
+  
+  <search id="base_1">
+    <query>
+$tkn_index$ $tkn_sourcetype$ $tkn_host$ $tkn_source$ (SSPHP_RUN=$ssphp_run_tkn|s$ AND ssphp_creation_time_epoch&gt;$time_window_earliest_epoch$ AND ssphp_creation_time_epoch&lt;$time_window_latest_epoch$) ssphp_business_service_index=$tkn_service_id$
+
+| eval ssphp_tech_contact_email=split(ssphp_tech_contact_email,"; ")
+
+| fields SSPHP_RUN, ssphp_*
+    </query>
+    <earliest>$search_earliest_tkn$</earliest>
+    <latest>now</latest>
+    <!--     <latest>$search_latest_tkn$</latest> -->
+  </search>
+  
+
+  <fieldset submitButton="false">
+    <input type="time" token="tkn_time" searchWhenChanged="true">
+      <label>Finding Created Time Window</label>
+      <default>
+        <earliest>0</earliest>
+        <latest>now</latest>
+      </default>
+      <change>
+        <eval token="time_window_earliest">if(isnum($tkn_time.earliest$), strftime($tkn_time.earliest$,"%m/%d/%Y %H:%M"), strftime(relative_time(now(), $tkn_time.earliest$),"%m/%d/%Y %H:%M"))</eval>
+        <eval token="time_window_latest">if(isnum($tkn_time.latest$), strftime($tkn_time.latest$,"%m/%d/%Y %H:%M"), strftime(relative_time(now(), $tkn_time.latest$), "%m/%d/%Y %H:%M"))</eval>
+        <eval token="time_window_earliest_epoch">if(isnum($tkn_time.earliest$), $tkn_time.earliest$, relative_time(now(), $tkn_time.earliest$))</eval>
+        <eval token="time_window_latest_epoch">if(isnum($tkn_time.latest$), $tkn_time.latest$, relative_time(now(), $tkn_time.latest$))</eval>
+      </change>
+    </input>
+    
+    <input type="dropdown" token="tkn_service" searchWhenChanged="true" depends="$isadmin_tkn$">
+      <label>Service</label>
+      <choice value="*">ALL</choice>
+      <default>s184</default>
+      <initialValue>s184</initialValue>
+      <fieldForLabel>ssphp_service_name</fieldForLabel>
+      <fieldForValue>ssphp_business_service_index</fieldForValue>
+      <search>
+        <query>
+| inputlookup ssphp_resource_service_map.csv
+| search ssphp_resource_group!="mc*"
+| stats values(ssphp_service_name) as ssphp_service_name by ssphp_business_service_index
+| table ssphp_service_name, ssphp_business_service_index
+| dedup ssphp_service_name
+| sort 0 ssphp_service_name
+        </query>
+      </search>
+      <change>
+        <set token="tkn_service_id">$value$</set>
+        <set token="tkn_service_name">$label$</set>
+      </change>
+    </input>
+    
+    <input type="dropdown" token="tkn_subscription" searchWhenChanged="true">
+      <label>Subscription</label>
+      <choice value="*">ALL</choice>
+      <default>*</default>
+      <initialValue>*</initialValue>
+      <fieldForLabel>ssphp_subscription_display_name</fieldForLabel>
+      <fieldForValue>ssphp_subscription</fieldForValue>
+      <search>
+        <query>
+| inputlookup ssphp_resource_service_map where ssphp_business_service_index=$tkn_service_id|s$
+| dedup ssphp_subscription
+| table ssphp_subscription, ssphp_subscription_display_name
+        </query>
+      </search>
+      <change>
+        <set token="subscription_name_tkn">$label$</set>
+      </change>
+    </input>
+    
+    <input type="dropdown" token="tkn_resource_group_id" searchWhenChanged="true">
+      <label>Resource Group</label>
+      <choice value="*">ALL</choice>
+      <default>*</default>
+      <initialValue>*</initialValue>
+      <fieldForLabel>ssphp_resource_group</fieldForLabel>
+      <fieldForValue>ssphp_resource_group</fieldForValue>
+      <search>
+        <query>
+| inputlookup ssphp_resource_service_map where (ssphp_business_service_index=$tkn_service_id|s$ AND ssphp_subscription=$tkn_subscription|s$)
+| dedup ssphp_resource_group
+| table ssphp_resource_group
+        </query>
+      </search>
+    </input>
+    
+    <input type="dropdown" token="tkn_severity" searchWhenChanged="true">
+      <label>Severity</label>
+      <choice value="*">ALL</choice>
+      <choice value="*High*">High</choice>
+      <choice value="*Medium*">Medium</choice>
+      <choice value="*Low*">Low</choice>
+      <default>*</default>
+      <initialValue>*</initialValue>
+    </input>
+    
+    <input type="dropdown" token="tkn_environment" searchWhenChanged="true">
+      <label>Environment</label>
+      <choice value="*">ALL</choice>
+      <choice value="Production">Production</choice>
+      <choice value="Test">Test</choice>
+      <choice value="Development">Development</choice>
+      <default>*</default>
+      <initialValue>*</initialValue>
+    </input>
+    
+    <input type="dropdown" token="tkn_service_team" searchWhenChanged="true">
+      <label>Service Team</label>
+      <choice value="*">ALL</choice>
+      <default>*</default>
+      <initialValue>*</initialValue>
+      <fieldForLabel>ssphp_service_team</fieldForLabel>
+      <fieldForValue>ssphp_service_team</fieldForValue>
+      <search>
+        <query>
+| inputlookup ssphp_resource_service_map where ssphp_business_service_index=$tkn_service_id|s$
+| dedup ssphp_service_team
+| table ssphp_service_team
+| sort 0 ssphp_service_team
+        </query>
+      </search>
+    </input>
+    
+    <input type="checkbox" token="healthy_tkn" searchWhenChanged="true">
+      <label>Health Status to Include</label>
+      <choice value="Healthy">Healthy</choice>
+      <choice value="Unhealthy">Unhealthy</choice>
+      <choice value="NotApplicable">Not Applicable (untested)</choice>
+      <default>Unhealthy,NotApplicable</default>
+      <prefix> (</prefix>
+      <suffix>) </suffix>
+      <initialValue>Unhealthy,NotApplicable</initialValue>
+      <valuePrefix>ssphp_status="</valuePrefix>
+      <valueSuffix>"</valueSuffix>
+      <delimiter> OR </delimiter>
+    </input>
+    
+    <input type="radio" token="tkn_list_view">
+      <label>View</label>
+      <choice value="L">Findings List</choice>
+      <choice value="F">Findings by Resource</choice>
+      <choice value="R">Resources by Finding</choice>
+      <choice value="C">Changes since Checkpoint</choice>
+      <change>
+        <condition label="Findings List">
+          <set token="tkn_chart_view">L</set>
+          <set token="tkn_L_view">L</set>
+          <unset token="tkn_F_view"></unset>
+          <unset token="tkn_R_view"></unset>
+          <unset token="tkn_C_view"></unset>
+        </condition>
+        <condition label="Findings by Resource">
+          <set token="tkn_chart_view">F</set>
+          <set token="tkn_F_view">F</set>
+          <unset token="tkn_L_view"></unset>
+          <unset token="tkn_R_view"></unset>
+          <unset token="tkn_C_view"></unset>
+        </condition>
+        <condition label="Resources by Finding">
+          <set token="tkn_chart_view">R</set>
+          <set token="tkn_R_view">R</set>
+          <unset token="tkn_L_view"></unset>
+          <unset token="tkn_F_view"></unset>
+          <unset token="tkn_C_view"></unset>
+        </condition>
+        <condition label="Changes since Checkpoint">
+          <set token="tkn_C_view">C</set>
+          <unset token="tkn_chart_view"></unset>
+          <unset token="tkn_L_view"></unset>
+          <unset token="tkn_F_view"></unset>
+          <unset token="tkn_R_view"></unset>
+        </condition>
+      </change>
+      <default>L</default>
+      <initialValue>L</initialValue>
+    </input>
+  </fieldset>
+  
+
+  <!-- ************************************************************************************************************************************************************** -->
+  <!-- ****************************************************** Hidden rows to manage RBAC **************************************************************************** -->
+  <!-- ************************************************************************************************************************************************************** -->
+  
+  <row depends="$never_show$">
+    <panel>
+      <table>
+        <search>
+          <query>
+| rest splunk_server=local /services/authentication/current-context
+
+| eval roles=if(username="ian.pearl@education.gov.uk","dfe_ssphp_service_power_s184",roles)    ```override for testing```
+
+| rex field=roles "dfe_ssphp_service_(?&lt;role_level&gt;power|user)_(?&lt;role_service&gt;s\d{3})"
+| eval isadmin=case(like(roles,"%sc_admin%"),"1",role_level="power","1",1==1,"0")
+
+| lookup ssphp_resource_service_map ssphp_business_service_index as role_service OUTPUT ssphp_service_name
+| eval ssphp_service_name=mvdedup(ssphp_service_name),
+       role_service=if(isadmin="1","*",role_service),
+       ssphp_service_name=if(isadmin="1","ALL",ssphp_service_name)
+
+| table roles, isadmin, username, role_service, ssphp_service_name
+        </query>
+          <done>
+            <condition match="match($result.isadmin$,&quot;1&quot;)">
+              <set token="isadmin_tkn">1</set>
+              <set token="user_service_tkn">$result.role_service$</set>
+              <set token="user_service_name_tkn">$result.ssphp_service_name$</set>
+            </condition>
+            <condition>
+              <unset token="isadmin_tkn"></unset>
+              <set token="user_service_tkn">$result.role_service$</set>
+              <set token="user_service_name_tkn">$result.ssphp_service_name$</set>
+            </condition>
+          </done>
+        </search>
+        <option name="drilldown">none</option>
+      </table>
+    </panel>
+  </row>
+  
+<!-- ************************************************************************************************************************************************************** -->
+
+  <row>
+    <panel depends="$nevershow$">
+      <html>
+        <style>
+          #panel1{
+            width:70% !important;
+          }
+          #panel2{
+            width:10% !important;
+          }
+          #panel3{
+            width:20% !important;
+          }
+        </style>
+      </html>
+    </panel>
+    
+    <panel id="panel1">
+      <html>
+            <style>
+                #header_performance .panel-body.html {
+                    background-color: #DDFFDF;
+                }
+            </style>
+            <h1>$tkn_service_name$ [$tkn_service_id$]</h1>
+        </html>
+    </panel>
+    
+    <panel id="panel2">
+      <table>
+        <search>
+          <query>
+| makeresults
+| eval "Number of Findings"=$eventcount_tkn$, "Number of Findings"=if(isnum('Number of Findings'),'Number of Findings',"N/A")
+| fieldformat "Number of Findings"=tostring('Number of Findings',"commas")
+| table "Number of Findings"
+          </query>
+        </search>
+      </table>
+    </panel>
+    
+    <panel id="panel3">
+      <table>
+        <search>
+          <query>
+| inputlookup ssphp_last_ssphp_drop.csv
+| search ssphp_source="findings"
+| rename last_SSPHP_RUN as SSPHP_RUN
+
+| eval search_earliest=SSPHP_RUN-3600, search_latest=SSPHP_RUN+3600
+| eval "Last Findings Ingestion Time from Azure"=strftime(SSPHP_RUN,"%Y-%m-%d %H:%M:%S")
+| table "Last Findings Ingestion Time from Azure", SSPHP_RUN, search_earliest, search_latest
+          </query>
+          <done>
+            <set token="ssphp_run_tkn">$result.SSPHP_RUN$</set>
+            <set token="search_earliest_tkn">$result.search_earliest$</set>
+            <set token="search_latest_tkn">$result.search_latest$</set>
+          </done>
+        </search>
+        <fields>"Last Findings Ingestion Time from Azure", SSPHP_RUN</fields>
+      </table>
+    </panel>
+  </row>
+  
+<!-- ************************************************************************************************************************************************************** -->
+
+  <row depends="$never_show$">
+    <panel>
+      <html>
+       <h1>Date Range: $tkn_time.earliest$ - $tkn_time.latest$ </h1>
+       <h1>Date Range formatted: $time_window_earliest$ - $time_window_latest$ </h1>
+       <h1>Date Range Epoch formatted: $time_window_earliest_epoch$ - $time_window_latest_epoch$ </h1>
+     </html>
+    </panel>
+  </row>
+  
+<!-- ************************************************************************************************************************************************************** -->
+
+  <row depends="$tkn_chart_view$">
+    <panel>
+      <title>Resources with High Findings</title>
+      <chart>
+        <search base="base_1">
+          <query>
+
+| search ssphp_severity="*High*" $healthy_tkn$
+
+| fillnull value="-" ssphp_subscription, ssphp_resource_group, ssphp_resources_affected
+| eval ssphp_resources_affected="subscription = ".ssphp_subscription.", resource group = ".ssphp_resource_group.", resources affected = ".ssphp_resources_affected
+| stats dc(ssphp_resources_affected) as no_resources_affected, values(ssphp_resources_affected) as ssphp_resources_affected by ssphp_policy_name
+| sort 0 - no_resources_affected
+          </query>
+        </search>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
+        <option name="charting.axisTitleX.visibility">visible</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.abbreviation">none</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.abbreviation">none</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.abbreviation">none</option>
+        <option name="charting.axisY2.enabled">0</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">pie</option>
+        <option name="charting.chart.bubbleMaximumSize">50</option>
+        <option name="charting.chart.bubbleMinimumSize">10</option>
+        <option name="charting.chart.bubbleSizeBy">area</option>
+        <option name="charting.chart.nullValueMode">gaps</option>
+        <option name="charting.chart.showDataLabels">none</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.stackMode">default</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">none</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.layout.splitSeries.allowIndependentYRanges">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.mode">standard</option>
+        <option name="charting.legend.placement">right</option>
+        <option name="charting.lineWidth">2</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+      </chart>
+    </panel>
+    
+    <panel>
+      <title>Resource Groups with most High Findings</title>
+      <chart>
+        <search base="base_1">
+          <query>
+
+| search ssphp_severity="*High*" $healthy_tkn$
+
+| stats dc(ssphp_policy_name) as ssphp_policies by ssphp_resource_group
+| sort 0 - ssphp_policies
+          </query>
+        </search>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
+        <option name="charting.axisTitleX.visibility">visible</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.abbreviation">none</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.abbreviation">none</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.abbreviation">none</option>
+        <option name="charting.axisY2.enabled">0</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">pie</option>
+        <option name="charting.chart.bubbleMaximumSize">50</option>
+        <option name="charting.chart.bubbleMinimumSize">10</option>
+        <option name="charting.chart.bubbleSizeBy">area</option>
+        <option name="charting.chart.nullValueMode">gaps</option>
+        <option name="charting.chart.showDataLabels">none</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.stackMode">default</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">none</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.layout.splitSeries.allowIndependentYRanges">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.mode">standard</option>
+        <option name="charting.legend.placement">right</option>
+        <option name="charting.lineWidth">2</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+      </chart>
+    </panel>
+  </row>
+  
+<!-- ************************************************************************************************************************************************************** -->
+
+  <row depends="$tkn_L_view$">
+    <panel>
+      <title>Findings List</title>
+      <table>
+        <search base="base_1">
+          <query>
+
+| search ssphp_business_service_index=$tkn_service_id$ ssphp_subscription=$tkn_subscription$ ssphp_resource_group="$tkn_resource_group_id$" ssphp_severity=$tkn_severity$ ssphp_environment=$tkn_environment$ ssphp_service_team=$tkn_service_team$ $healthy_tkn$
+
+| table SSPHP_RUN, ssphp_creation_time, ssphp_last_changed_time, ssphp_tenant_name, ssphp_subscription, ssphp_resource_group, ssphp_resources_affected, ssphp_environment, ssphp_status, ssphp_policy_name, ssphp_policy_description, ssphp_remediation, ssphp_severity, ssphp_impact, ssphp_user_impact, ssphp_tactics, ssphp_techniques, ssphp_threats, ssphp_service_team, ssphp_tech_contact_email, ssphp_event_uid
+| rename ssphp_creation_time as "Finding Creation Time", 
+         ssphp_last_changed_time as "Finding Last Changed Time", 
+         ssphp_subscription as "Subscription", 
+         ssphp_resource_group as "Resource Group",
+         ssphp_resources_affected as "Resources Affected",
+         ssphp_status as "Status",
+         ssphp_policy_name as "Policy Name",
+         ssphp_policy_description as "Policy Description",
+         ssphp_remediation as "Remediation Recommendations",
+         ssphp_severity as "Severity",
+         ssphp_impact as "Impact",
+         ssphp_user_impact as "User Impact",
+         ssphp_tactics as "Tactics",
+         ssphp_techniques as "Techniques",
+         ssphp_threats as "Threats",
+         ssphp_tenant_name as "Tenant",
+         ssphp_environment as "Environment",
+         ssphp_service_team as "Service Team", 
+         ssphp_tech_contact_email as "Technical Contacts"
+
+| eventstats count
+          </query>
+          <done>
+            <set token="eventcount_tkn">$result.count$</set>
+            <set token="download_tkn">$job.sid$</set>
+          </done>
+        </search>
+        <option name="count">10</option>
+        <option name="dataOverlayMode">none</option>
+        <option name="drilldown">cell</option>
+        <option name="percentagesRow">false</option>
+        <option name="rowNumbers">false</option>
+        <option name="totalsRow">false</option>
+        <option name="wrap">true</option>
+        <format type="color" field="Severity">
+          <colorPalette type="expression">if(match(value,"High"),"#FF0000",if(match(value,"Medium"),"#FFFF00","#65A637"))</colorPalette>
+        </format>
+        <fields>["Finding Creation Time","Finding Last Changed Time","Tenant","Subscription","Resource Group","Resources Affected","Environment","Status","Policy Name","Policy Description","Severity","Tactics","Techniques","Threats","Service Team","Technical Contacts"]</fields>
+        <drilldown>
+          <link target="_blank">/app/SSPHP_RSD/ssphp_findings_dashboard_drilldown?tkn_event_uid=$row.ssphp_event_uid$&amp;tkn_ssphp_run=$row.SSPHP_RUN$</link>
+        </drilldown>
+      </table>
+    </panel>
+  </row>
+  
+  <row>
+    <panel depends="$nevershow$">
+      <html>
+        <style>
+          #panel10{
+            width:10% !important;
+            background:green !important;
+          }
+        </style>
+      </html>
+    </panel>
+    
+    <panel id="panel10" depends="$tkn_L_view$">
+      <html>
+        <a href="/api/search/jobs/$download_tkn$/results?isDownload=true&amp;maxLines=0&amp;count=0&amp;filename=$ssphp_run_tkn$_findings_list&amp;outputMode=csv">Download Findings List csv</a>
+      </html>
+    </panel>
+  </row>
+  
+<!-- ************************************************************************************************************************************************************** -->
+
+  <row>
+    <panel depends="$tkn_F_view$">
+      <title>Findings by Resouce</title>
+      <table>
+        <search base="base_1">
+          <query>
+
+| search ssphp_business_service_index=$tkn_service_id$ ssphp_subscription=$tkn_subscription$ ssphp_resource_group="$tkn_resource_group_id$" ssphp_severity=$tkn_severity$ ssphp_environment=$tkn_environment$ ssphp_service_team=$tkn_service_team$ $healthy_tkn$
+
+| stats values(ssphp_policy_name) as ssphp_policies by ssphp_subscription, ssphp_resource_group, ssphp_resources_affected
+          </query>
+        </search>
+        <option name="count">10</option>
+        <option name="dataOverlayMode">none</option>
+        <option name="drilldown">none</option>
+        <option name="percentagesRow">false</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="rowNumbers">false</option>
+        <option name="totalsRow">false</option>
+        <option name="wrap">true</option>
+      </table>
+    </panel>
+  </row>
+  
+<!-- ************************************************************************************************************************************************************** -->
+
+  <row>
+    <panel depends="$tkn_R_view$">
+      <title>Resouces by Finding</title>
+      <table>
+        <search base="base_1">
+          <query>
+
+| search ssphp_business_service_index=$tkn_service_id$ ssphp_subscription=$tkn_subscription$ ssphp_resource_group="$tkn_resource_group_id$" ssphp_severity=*$tkn_severity$* ssphp_environment=$tkn_environment$ ssphp_service_team=$tkn_service_team$ $healthy_tkn$
+
+| fillnull value="-" ssphp_subscription, ssphp_resource_group, ssphp_resources_affected
+| eval ssphp_resources_affected="subscription = ".ssphp_subscription.", resource group = ".ssphp_resource_group.", resources affected = ".ssphp_resources_affected
+| stats dc(ssphp_resources_affected) as no_resources_affected, values(ssphp_resources_affected) as ssphp_resources_affected by ssphp_policy_name
+| sort 0 - no_resources_affected
+          </query>
+        </search>
+        <option name="count">10</option>
+        <option name="dataOverlayMode">none</option>
+        <option name="drilldown">none</option>
+        <option name="percentagesRow">false</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="rowNumbers">false</option>
+        <option name="totalsRow">false</option>
+        <option name="wrap">true</option>
+      </table>
+    </panel>
+  </row>
+  
+<!-- ************************************************************************************************************************************************************** -->
+
+  <row>
+    <panel depends="$never_show$">
+      <table>
+        <search>
+          <query>
+| inputlookup ssphp_service_checkpoints.csv where ssphp_business_service_index=$tkn_service_id|s$
+| eval latest_ssphp_run=$ssphp_run_tkn|s$,
+       latest_ssphp_run_string=strftime(latest_ssphp_run,"%Y-%m-%d %H:%M:%S"),
+       search_earliest=latest_ssphp_run-1000,
+       search_latest=latest_ssphp_run+2000,
+       checkpoint_run_string=strftime(checkpoint,"%Y-%m-%d %H:%M:%S"),
+       search_text="latest=".search_latest." earliest=".search_earliest." SSPHP_RUN=\"".latest_ssphp_run."\"",
+       outcome="success"
+| append 
+    [| makeresults
+    | eval outcome="failed"
+    | table outcome]
+| head 1
+| table checkpoint, checkpoint_run_string, latest_ssphp_run, latest_ssphp_run_string, checkpoint_file_name, search_text, outcome
+          </query>
+          <done>
+            <condition match="match($result.outcome$,&quot;success&quot;)">
+              <set token="issuccess_tkn">1</set>
+              <unset token="isfailed_tkn"></unset>
+              
+              <set token="checkpoint_run_tkn">$result.checkpoint$</set>
+              <set token="latest_ssphp_run_string_tkn">$result.latest_ssphp_run_string$</set>
+              <set token="checkpoint_run_string_tkn">$result.checkpoint_run_string$</set>
+              <set token="search_text_tkn">$result.search_text$</set>
+              <set token="checkpoint_file_name_tkn">$result.checkpoint_file_name$</set>
+            </condition>
+            <condition match="match($result.outcome$,&quot;failed&quot;)">
+              <unset token="issuccess_tkn"></unset>
+              <set token="isfailed_tkn">1</set>
+              
+              <set token="checkpoint_run_tkn">$result.checkpoint$</set>
+              <set token="latest_ssphp_run_string_tkn">$result.latest_ssphp_run_string$</set>
+              <set token="checkpoint_run_string_tkn">$result.checkpoint_run_string$</set>
+              <set token="search_text_tkn">$result.search_text$</set>
+              <set token="checkpoint_file_name_tkn">$result.checkpoint_file_name$</set>
+            </condition>
+          </done>
+        </search>
+      </table>
+    </panel>
+    
+    
+    <panel depends="$isfailed_tkn$">
+      <html>
+            <style>
+                #header_performance .panel-body.html {
+                    background-color: #DDFFDF;
+                }
+            </style>
+            <h1>No Checkpoint File for Service $tkn_service_id$</h1>
+        </html>
+    </panel>    
+  
+
+
+    <panel depends="$tkn_C_view$,$issuccess_tkn$">
+      <title>$changecount_tkn$ Changes Since Checkpoint [$checkpoint_run_tkn$ : $checkpoint_run_string_tkn$]</title>
+      <table>
+        <search>
+          <query>
+index="ssphp_test" sourcetype="azure:security:finding" host="c113p01-splhf04" source="azure_cloud_defender" ssphp_business_service_index=$tkn_service_id|s$ $search_text_tkn$
+
+
+| eval finding=coalesce(ssphp_sub_assessment_id,ssphp_assessment_id)
+| rename ssphp_status as ssphp_current_status
+
+| lookup $checkpoint_file_name_tkn$ finding OUTPUT ssphp_status as ssphp_checkpoint_status
+| where NOT ssphp_current_status=ssphp_checkpoint_status
+
+| append 
+    [| inputlookup $checkpoint_file_name_tkn$
+| rename ssphp_status as ssphp_checkpoint_status
+
+| join type=outer finding
+    [search index="ssphp_test" sourcetype="azure:security:finding" host="c113p01-splhf04" source="azure_cloud_defender" SSPHP_RUN="1677758801" earliest=1677757000 latest=1677760000 ssphp_business_service_index="s184"
+| eval finding=coalesce(ssphp_sub_assessment_id,ssphp_assessment_id)
+| rename ssphp_status as ssphp_current_status
+| table finding, ssphp_current_status]
+
+| where NOT ssphp_current_status=ssphp_checkpoint_status]
+
+| stats values(*) as * by finding
+
+| table SSPHP_RUN, ssphp_creation_time, ssphp_last_changed_time, ssphp_tenant_name, ssphp_subscription, ssphp_resource_group, ssphp_resources_affected, ssphp_environment, ssphp_checkpoint_status, ssphp_current_status, ssphp_policy_name, ssphp_policy_description
+| rename ssphp_creation_time as "Finding Creation Time", 
+         ssphp_last_changed_time as "Finding Last Changed Time", 
+         ssphp_subscription as "Subscription", 
+         ssphp_resource_group as "Resource Group",
+         ssphp_resources_affected as "Resources Affected",
+         ssphp_environment as "Environment",
+         ssphp_policy_name as "Policy Name",
+         ssphp_policy_description as "Policy Description",
+         ssphp_checkpoint_status as "Checkpoint Status", 
+         ssphp_current_status as "Current Status"
+
+| where NOT ((isnull('Checkpoint Status') OR 'Checkpoint Status'="") AND 'Current Status'="Healthy")
+
+| eventstats count
+          </query>
+          <done>
+            <set token="changecount_tkn">$result.count$</set>
+          </done>
+        </search>
+        <format type="color" field="Current Status">
+          <colorPalette type="map">{"Unhealthy":#D41F1F,"Healthy":#118832}</colorPalette>
+        </format>
+        <format type="color" field="Checkpoint Status">
+          <colorPalette type="map">{"Unhealthy":#D41F1F,"Healthy":#118832}</colorPalette>
+        </format>
+        <fields>"Finding Creation Time","Finding Last Changed Time","Tenant","Subscription","Resource Group","Resources Affected","Environment","Checkpoint Status","Current Status","Policy Name","Policy Description"</fields>
+        <option name="count">25</option>
+        <option name="dataOverlayMode">none</option>
+        <option name="drilldown">none</option>
+        <option name="percentagesRow">false</option>
+        <option name="rowNumbers">false</option>
+        <option name="totalsRow">false</option>
+        <option name="wrap">true</option>
+      </table>
+    </panel>
+  </row>
+</form>
