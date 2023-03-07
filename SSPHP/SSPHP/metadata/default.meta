@@ -1,2 +1,2 @@
 []
-access = read : [ dfe_ssphp_service_power_s184, dfe_ssphp_service_user_s184, admin, sc_admin ], write : [ admin, sc_admin ]
+access = read : [ dfe_ssphp_service_power_s184, dfe_ssphp_service_user_s184, power, admin, sc_admin ], write : [ admin, sc_admin ]

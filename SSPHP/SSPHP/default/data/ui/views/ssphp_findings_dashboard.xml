@@ -206,16 +206,16 @@ $tkn_index$ $tkn_sourcetype$ $tkn_host$ $tkn_source$ (SSPHP_RUN=$ssphp_run_tkn|s
           <query>
 | rest splunk_server=local /services/authentication/current-context
 
-| eval roles=if(username="ian.pearl@education.gov.uk","dfe_ssphp_service_power_s184",roles)    ```override for testing```
-
-| rex field=roles "dfe_ssphp_service_(?&lt;role_level&gt;power|user)_(?&lt;role_service&gt;s\d{3})"
-| eval isadmin=case(like(roles,"%sc_admin%"),"1",role_level="power","1",1==1,"0")
-
+```| eval roles=if(username="ian.pearl@education.gov.uk",mvappend("sc_admin", "power", "dfe_ssphp_service_power", "dfe_ssphp_service_user_s184"),roles)```     ```override for testing```
+            
+| rex field=roles "^dfe_ssphp_service_user_(?<role_service>s\d{3})$"
+| eval isadmin=case(roles="sc_admin","1",roles="power","1",roles="dfe_ssphp_service_power",1,isnotnull(role_service),"0",1==1,"0")
+            
 | lookup ssphp_resource_service_map ssphp_business_service_index as role_service OUTPUT ssphp_service_name
 | eval ssphp_service_name=mvdedup(ssphp_service_name),
        role_service=if(isadmin="1","*",role_service),
        ssphp_service_name=if(isadmin="1","ALL",ssphp_service_name)
-
+            
 | table roles, isadmin, username, role_service, ssphp_service_name
         </query>
           <done>

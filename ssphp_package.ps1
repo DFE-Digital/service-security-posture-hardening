@@ -1,0 +1,1 @@
+&'C:\Program Files\Python310\python.exe' .\package.py .\SSPHP\SSPHP\
