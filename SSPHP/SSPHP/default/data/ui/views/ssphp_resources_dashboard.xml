@@ -1,6 +1,6 @@
 <form theme="dark" version="1.1">
   <label>Azure Resources</label>
-  <description>Service Security Posture Hardening Programme : v0.1</description>
+  <description>Service Security Posture Hardening Programme : v1.0</description>
   <fieldset submitButton="false">
     <input type="text" token="tkn_resouce_group" searchWhenChanged="true">
       <label>Enter Resource Group</label>

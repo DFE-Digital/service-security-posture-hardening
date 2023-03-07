@@ -1,6 +1,6 @@
 <form theme="dark" version="1.1">
   <label>Service Security Posture Hardening Programme : Azure Findings Drilldown</label>
-  <description>v0.1</description>
+  <description>v1.0</description>
   
   <search id="base_1">
           <query>index="ssphp_test" sourcetype="azure:security:finding" host="c113p01-splhf04" source="azure_cloud_defender" SSPHP_RUN=$ssphp_run_tkn$ ssphp_event_uid=$tkn_event_uid|s$

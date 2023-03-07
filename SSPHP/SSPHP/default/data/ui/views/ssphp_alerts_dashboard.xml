@@ -1,6 +1,6 @@
 <form theme="dark" version="1.1">
   <label>Azure Alerts</label>
-  <description>Service Security Posture Hardening Programme : v0.1</description>
+  <description>Service Security Posture Hardening Programme : v1.0</description>
   <init>
     <unset token="isadmin_tkn"></unset>
     <eval token="time_window_earliest">strftime(0,"%m/%d/%Y %H:%M")</eval>

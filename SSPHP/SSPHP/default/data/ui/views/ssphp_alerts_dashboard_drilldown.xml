@@ -1,6 +1,6 @@
 <form theme="dark" version="1.1">
   <label>Service Security Posture Hardening Programme : Azure Alerts Drilldown</label>
-  <description>v0.1</description>
+  <description>v1.0</description>
   
   <search id="base_1">
           <query>
