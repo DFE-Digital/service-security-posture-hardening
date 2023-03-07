@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import json
+import stat
 import tarfile
 import time
 from copy import deepcopy
@@ -41,7 +42,16 @@ class SplunkAppInspect:
         path = Path(source_dir)
         self.packagetargz = f"{path.absolute().name}_{now}.tar.gz"
         with tarfile.open(self.packagetargz, "w:gz") as tar:
-            tar.add(source_dir, arcname=path.absolute().name)
+
+            def remove_world_writable_permissions(tarinfo):
+                tarinfo.mode = tarinfo.mode & ~stat.S_IWOTH
+                return tarinfo
+
+            tar.add(
+                source_dir,
+                arcname=path.absolute().name,
+                filter=remove_world_writable_permissions,
+            )
         return self.packagetargz
 
     def login(self):
