@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
+import json
 import tarfile
+import time
 from copy import deepcopy
 from datetime import datetime
 from pathlib import Path
@@ -8,6 +10,18 @@ from pprint import pprint
 import click
 import requests
 from requests.auth import HTTPBasicAuth
+
+
+class SplunkAppInspectReport:
+    def __init__(self, report):
+        self.report = report
+
+    def print_failed_checks(self):
+        for report in self.report.get("reports", []):
+            for group in report.get("groups", []):
+                for check in group.get("checks", []):
+                    if check.get("result") in ["failure"]:
+                        pprint(check, indent=4, width=200)
 
 
 class SplunkAppInspect:
@@ -72,11 +86,14 @@ class SplunkAppInspect:
             f"https://appinspect.splunk.com/v1/app/validate/status/{self.request_id}"
         )
 
+        sleep = 0
         while True:
             status_res = requests.get(
                 status_url, headers=self.headers, timeout=self.timeout
             )
             pprint(status_res.json(), indent=4, width=200)
+            time.sleep(sleep)
+            sleep += 1
             if status_res.json().get("status", "") != "PROCESSING":
                 break
 
@@ -110,6 +127,8 @@ class SplunkAppInspect:
         self.submit_package()
         self.wait_for_processing()
         report = self.get_report()
+        with open(f"{self.packagetargz}_report.json", "w") as f:
+            json.dump(report, f)
         return report
 
 
@@ -137,7 +156,9 @@ def package_and_validate(app_directory, splunkuser, splunkpassword):
     Package the APP_DIRECORTY containing a SplunkApp and submit to Splunk AppInspect API for validation
     """
     sai = SplunkAppInspect(splunkuser, splunkpassword)
-    sai.package_then_validate(app_directory)
+    report = sai.package_then_validate(app_directory)
+    report = SplunkAppInspectReport(report)
+    report.print_failed_checks()
 
 
 if __name__ == "__main__":
