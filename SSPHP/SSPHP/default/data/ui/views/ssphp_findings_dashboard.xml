@@ -610,8 +610,7 @@ $tkn_index$ $tkn_sourcetype$ $tkn_host$ $tkn_source$ (SSPHP_RUN=$ssphp_run_tkn|s
       <table>
         <search>
           <query>
-index="ssphp_test" sourcetype="azure:security:finding" host="c113p01-splhf04" source="azure_cloud_defender" ssphp_business_service_index=$tkn_service_id|s$ $search_text_tkn$
-
+$tkn_index$ $tkn_sourcetype$ $tkn_host$ $tkn_source$  ssphp_business_service_index=$tkn_service_id|s$ $search_text_tkn$
 
 | eval finding=coalesce(ssphp_sub_assessment_id,ssphp_assessment_id)
 | rename ssphp_status as ssphp_current_status
