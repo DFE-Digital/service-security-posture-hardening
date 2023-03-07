@@ -208,7 +208,7 @@ $tkn_index$ $tkn_sourcetype$ $tkn_host$ $tkn_source$ (SSPHP_RUN=$ssphp_run_tkn|s
 
 ```| eval roles=if(username="ian.pearl@education.gov.uk",mvappend("sc_admin", "power", "dfe_ssphp_service_power", "dfe_ssphp_service_user_s184"),roles)```     ```override for testing```
             
-| rex field=roles "^dfe_ssphp_service_user_(?<role_service>s\d{3})$"
+| rex field=roles "^dfe_ssphp_service_user_(?&lt;role_service&gt;s\d{3})$"
 | eval isadmin=case(roles="sc_admin","1",roles="power","1",roles="dfe_ssphp_service_power",1,isnotnull(role_service),"0",1==1,"0")
             
 | lookup ssphp_resource_service_map ssphp_business_service_index as role_service OUTPUT ssphp_service_name
