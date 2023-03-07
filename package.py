@@ -18,11 +18,13 @@ class SplunkAppInspectReport:
         self.report = report
 
     def print_failed_checks(self):
+        print("\n\n")
         for report in self.report.get("reports", []):
             for group in report.get("groups", []):
                 for check in group.get("checks", []):
                     if check.get("result") in ["failure"]:
                         pprint(check, indent=4, width=200)
+                        print()
 
 
 class SplunkAppInspect:
