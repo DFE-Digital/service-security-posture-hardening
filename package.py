@@ -1,14 +1,13 @@
 #!/usr/bin/env python3
+import tarfile
 from copy import deepcopy
 from datetime import datetime
-import os
-import os.path
+from pathlib import Path
 from pprint import pprint
-import tarfile
 
+import click
 import requests
 from requests.auth import HTTPBasicAuth
-import click
 
 
 class SplunkAppInspect:
@@ -24,10 +23,11 @@ class SplunkAppInspect:
         self.timeout = 10
 
     def make_tarfile(self, source_dir):
-        now = datetime(2012, 4, 1, 0, 0).timestamp()
-        self.packagetargz = f"{source_dir}_{now}.tar.gz"
+        now = int(datetime.now().timestamp())
+        path = Path(source_dir)
+        self.packagetargz = f"{path.absolute().name}_{now}.tar.gz"
         with tarfile.open(self.packagetargz, "w:gz") as tar:
-            tar.add(source_dir, arcname=os.path.basename(source_dir))
+            tar.add(source_dir, arcname=path.absolute().name)
         return self.packagetargz
 
     def login(self):
@@ -117,17 +117,20 @@ class SplunkAppInspect:
 @click.argument(
     "app_directory",
     type=click.Path(exists=True, readable=True, dir_okay=True),
-    #    help="",
 )
 @click.option(
     "--splunkuser",
     envvar="SPLUNK_USER",
     help="The splunk.com username. Can also be set via SPLUNK_USER environment variable",
+    type=str,
+    required=True,
 )
 @click.option(
     "--splunkpassword",
     envvar="SPLUNK_PASSWORD",
     help="The splunk.com password. Can also be set via SPLUNK_USER environment variable",
+    type=str,
+    required=True,
 )
 def package_and_validate(app_directory, splunkuser, splunkpassword):
     """
