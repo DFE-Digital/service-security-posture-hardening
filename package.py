@@ -24,7 +24,7 @@ class SplunkAppInspectReport:
                 for check in group.get("checks", []):
                     if check.get("result") in ["failure"]:
                         pprint(check, indent=4, width=200)
-                        print()
+                        print("\n\n")
 
 
 class SplunkAppInspect:
