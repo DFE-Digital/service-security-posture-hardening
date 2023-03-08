@@ -35,7 +35,89 @@
 | fillnull value="Unknown"
 | table ssphp_tenant, ssphp_tenant_name, ssphp_subscription, ssphp_subscription_display_name, ssphp_resource_group, ssphp_business_service_index, ssphp_service_name, ssphp_service_shortname, ssphp_environment, ssphp_service_team, ssphp_location, ssphp_parent_business, ssphp_portfolio, ssphp_product, ssphp_service, ssphp_service_line, ssphp_service_offering, ssphp_cost_centre, ssphp_devops_site, ssphp_sro, ssphp_tech_dir_arch_partner, ssphp_tech_dir_serv_mgmt_contact, ssphp_tech_contact_email
 
-| search ssphp_resource_group=$tkn_resouce_group|s$</query>
+| search ssphp_resource_group=$tkn_resouce_group|s$
+
+| rename ssphp_* as *
+          </query>
+          <earliest>0</earliest>
+          <latest>now</latest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="count">100</option>
+        <option name="dataOverlayMode">none</option>
+        <option name="drilldown">cell</option>
+        <option name="percentagesRow">false</option>
+        <option name="rowNumbers">false</option>
+        <option name="totalsRow">false</option>
+        <option name="wrap">true</option>
+        <fields>["tenant","tenant_name","subscription","subscription_display_name","resource_group","business_service_index","service_name"]</fields>
+        <drilldown>
+          <set token="tkn_selected_resource_group">$row.resource_group$</set>
+        </drilldown>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>Service Details for Resource Group : $tkn_selected_resource_group$</title>
+      <table>
+        <search>
+          <query>index="ssphp_test" sourcetype="azure:resource:group"
+| dedup name
+       
+| rename name as ssphp_resource_group, location as ssphp_location, "tags.Parent Business" as ssphp_parent_business, tags.Portfolio as ssphp_portfolio, tags.Product as ssphp_product, tags.Service as ssphp_service, "tags.Service Line" as ssphp_service_line, "tags.Service Offering" as ssphp_service_offering, tags.costcenter as ssphp_cost_centre, tags.environment as ssphp_environment
+| eval id=lower(id), ssphp_resource_group=lower(ssphp_resource_group)
+| rex field=id "^\/subscriptions\/(?&lt;ssphp_subscription&gt;[^\/]+)"
+| rex field=ssphp_resource_group "^(?&lt;ssphp_business_service_index&gt;s\d{3})(?&lt;ssphp_environment&gt;p|d|t)[^-]+-(?&lt;ssphp_service_team&gt;[\s\S]*)$$"
+| eval ssphp_environment=case(ssphp_environment="t","Test",ssphp_environment="d","Development",ssphp_environment="p","Production",1==1,"Unknown")
+| fields ssphp_subscription, ssphp_resource_group, ssphp_business_service_index, ssphp_environment, ssphp_service_team, ssphp_location, ssphp_parent_business, ssphp_portfolio, ssphp_product, ssphp_service, ssphp_service_line, ssphp_service_offering
+
+| join type=outer ssphp_subscription
+    [search index="ssphp_test" sourcetype="azure:subscriptions" 
+    | dedup subscriptionId
+
+    | rename tenantId as ssphp_tenant, subscriptionId aS ssphp_subscription, displayName as ssphp_subscription_display_name
+    | fields ssphp_subscription, ssphp_tenant, ssphp_subscription_display_name]
+
+| lookup ssphp_business_service_index.csv "Service ID" as ssphp_business_service_index OUTPUT "Cost Centre" as ssphp_cost_centre, "DevOps Site" as ssphp_devops_site, SRO as ssphp_sro, "Service Name" as ssphp_service_name, "Tech Directorate Architect Partner" as ssphp_tech_dir_arch_partner, "Tech Directorate Service Management Contact" as ssphp_tech_dir_serv_mgmt_contact, "Technical Contact Email" as ssphp_tech_contact_email
+| eval ssphp_service_shortname=case(ssphp_service_name="Regional Service Delivery","RSD",1==1,"Unknown"),
+       ssphp_tenant_name=case(ssphp_tenant="9c7d9dd3-840c-4b3f-818e-552865082e16","CIP",ssphp_tenant="fad277c9-c60a-4da1-b5f3-b3b8b34a82f9","T1",1==1,"SFA : ".substr(ssphp_tenant,0,8))
+
+| fillnull value="Unknown"
+| table ssphp_tenant, ssphp_tenant_name, ssphp_subscription, ssphp_subscription_display_name, ssphp_resource_group, ssphp_business_service_index, ssphp_service_name, ssphp_service_shortname, ssphp_environment, ssphp_service_team, ssphp_location, ssphp_parent_business, ssphp_portfolio, ssphp_product, ssphp_service, ssphp_service_line, ssphp_service_offering, ssphp_cost_centre, ssphp_devops_site, ssphp_sro, ssphp_tech_dir_arch_partner, ssphp_tech_dir_serv_mgmt_contact, ssphp_tech_contact_email
+
+| search ssphp_resource_group=$tkn_selected_resource_group|s$
+
+| rename ssphp_* as *
+
+| transpose
+| rename column as fields, "row 1" as values
+| table fields, values
+          </query>
+          <earliest>0</earliest>
+          <latest>now</latest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="count">100</option>
+        <option name="dataOverlayMode">none</option>
+        <option name="drilldown">none</option>
+        <option name="percentagesRow">false</option>
+        <option name="rowNumbers">false</option>
+        <option name="totalsRow">false</option>
+        <option name="wrap">true</option>
+      </table>
+    </panel>
+    <panel>
+      <title>Resources in the Resource Group : $tkn_selected_resource_group$</title>
+      <table>
+        <search>
+          <query>
+| inputlookup ssphp_azure_resource_list.csv where ssphp_resource_group=$tkn_selected_resource_group$
+| rex field=ssphp_resource "(?&lt;ssphp_resource_type&gt;[^=]+)=(?&lt;ssphp_resource_name&gt;.*)"
+| eval ssphp_resource_type=trim(ssphp_resource_type), ssphp_resource_name=trim(ssphp_resource_name)
+| table ssphp_resource, ssphp_resource_type, ssphp_resource_name
+| stats values(ssphp_resource_name) as ssphp_resource_name by ssphp_resource_type
+          </query>
           <earliest>0</earliest>
           <latest>now</latest>
           <sampleRatio>1</sampleRatio>
