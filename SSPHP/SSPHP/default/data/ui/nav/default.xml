@@ -8,8 +8,13 @@
   	<view name="ssphp_intro_splunk_dashboards" />
   	<view name="ssphp_intro_outcomes" />
   </collection>  
-  <view name="ssphp_findings_dashboard" default='true' />
-  <view name="ssphp_alerts_dashboard" />
-  <view name="ssphp_metrics_dashboard" />
-  <view name="ssphp_resources_dashboard" />
+  <collection label="Azure">
+    <view name="ssphp_findings_dashboard" default='true' />
+    <view name="ssphp_alerts_dashboard" />
+    <view name="ssphp_metrics_dashboard" />
+    <view name="ssphp_resources_dashboard" />
+  </collection>  
+  <collection label="Github">
+    <view name="ssphp_resources_dashboard" />
+  </collection>  
 </nav>
