@@ -1,0 +1,41 @@
+<dashboard version="1.1">
+    <label>Github Findings</label>
+    <row>
+      <panel>
+        <title>CVEs</title>
+        <table>
+          <search>
+            <query>
+  index="ssphp_github_summary" 
+  (
+  (ssphp_use_case="CVE" AND [| inputlookup ssphp_latest_run_times.csv where ssphp_use_case="CVE" | stats max(SSPHP_RUN) as SSPHP_RUN | return SSPHP_RUN]) OR 
+   (ssphp_use_case="Secret" AND [| inputlookup ssphp_latest_run_times.csv where ssphp_use_case="Secret" | stats max(SSPHP_RUN) as SSPHP_RUN | return SSPHP_RUN]) OR 
+   (ssphp_use_case="Disable Secret Scanning" AND [| inputlookup ssphp_latest_run_times.csv where ssphp_use_case="Disable Secret Scanning" | stats max(SSPHP_RUN) as SSPHP_RUN | return SSPHP_RUN]) OR 
+   (ssphp_use_case="Repo Made Public" AND [| inputlookup ssphp_latest_run_times.csv where ssphp_use_case="Repo Made Public" | stats max(SSPHP_RUN) as SSPHP_RUN | return SSPHP_RUN]) OR 
+   (ssphp_use_case="Change Branch Protection Rules" AND [| inputlookup ssphp_latest_run_times.csv where ssphp_use_case="Change Branch Protection Rules" | stats max(SSPHP_RUN) as SSPHP_RUN | return SSPHP_RUN]) OR 
+   (ssphp_use_case="CodeQL" AND [| inputlookup ssphp_latest_run_times.csv where ssphp_use_case="CodeQL" | stats max(SSPHP_RUN) as SSPHP_RUN | return SSPHP_RUN])
+   )
+  
+  | rex field=ssphp_repository "(?&lt;ssphp_organization&gt;[^\/]*)\/(?&lt;ssphp_repository&gt;.*)"
+  | table ssphp_event_time, ssphp_action, ssphp_created_at, ssphp_tech_source, ssphp_use_case, ssphp_organization, ssphp_repository, ssphp_details, ssphp_severity, ssphp_state, ssphp_url, ssphp_original_event, SSPHP_RUN
+  | sort 0 - _time
+            </query>
+            <earliest>0</earliest>
+            <latest>now</latest>
+            <sampleRatio>1</sampleRatio>
+          </search>
+          <option name="count">100</option>
+          <option name="dataOverlayMode">none</option>
+          <option name="drilldown">cell</option>
+          <option name="percentagesRow">false</option>
+          <option name="rowNumbers">false</option>
+          <option name="totalsRow">false</option>
+          <option name="wrap">true</option>
+          <fields>["ssphp_event_time","ssphp_action","ssphp_created_at","ssphp_tech_source","ssphp_use_case", "ssphp_organization", "ssphp_repository", "ssphp_details","ssphp_severity","ssphp_state","ssphp_url"]</fields>
+          <drilldown>
+            <link target="_blank">/app/search/cve_drilldown_dashboard?tkn_original_event=$row.ssphp_original_event$</link>
+          </drilldown>
+        </table>
+      </panel>
+    </row>
+  </dashboard>
