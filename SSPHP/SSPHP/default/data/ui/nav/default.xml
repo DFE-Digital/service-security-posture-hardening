@@ -15,6 +15,6 @@
     <view name="ssphp_resources_dashboard" />
   </collection>  
   <collection label="Github">
-    <view name="ssphp_resources_dashboard" />
+    <view name="ssphp_github_findings_dashboard" />
   </collection>  
 </nav>
