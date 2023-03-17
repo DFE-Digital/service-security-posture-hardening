@@ -1,6 +1,6 @@
 <form theme="dark" version="1.1">
   <label>Azure Findings</label>
-  <description>Service Security Posture Hardening Programme : v1.0</description>
+  <description>Service Security Posture Hardening Programme : v1.1</description>
   
   
   <init>
@@ -550,106 +550,183 @@ $tkn_index$ $tkn_sourcetype$ $tkn_host$ $tkn_source$ (SSPHP_RUN=$ssphp_run_tkn|s
       <table>
         <search>
           <query>
-| inputlookup ssphp_service_checkpoints.csv where ssphp_business_service_index=$tkn_service_id|s$
-| eval latest_ssphp_run=$ssphp_run_tkn|s$,
-       latest_ssphp_run_string=strftime(latest_ssphp_run,"%Y-%m-%d %H:%M:%S"),
-       search_earliest=latest_ssphp_run-1000,
-       search_latest=latest_ssphp_run+2000,
-       checkpoint_run_string=strftime(checkpoint,"%Y-%m-%d %H:%M:%S"),
-       search_text="latest=".search_latest." earliest=".search_earliest." SSPHP_RUN=\"".latest_ssphp_run."\"",
-       outcome="success"
-| append 
-    [| makeresults
-    | eval outcome="failed"
-    | table outcome]
-| head 1
-| table checkpoint, checkpoint_run_string, latest_ssphp_run, latest_ssphp_run_string, checkpoint_file_name, search_text, outcome
+ $tkn_index$ $tkn_sourcetype$ $tkn_host$ $tkn_source$
+    [| makeresults | eval e=$tkn_checkpoint_date$, l=e+20000, ret_string="earliest=".e." latest=".l | return $ret_string]
+| stats min(SSPHP_RUN) as SSPHP_RUN_checkpoint
+| eval SSPHP_RUN_checkpoint_text=strftime(SSPHP_RUN_checkpoint,"%Y-%m-%d %H:%M:%S"),
+       e=SSPHP_RUN_checkpoint-2000,
+       l=SSPHP_RUN_checkpoint+10000,
+       checkpoint_search_text="SSPHP_RUN=".SSPHP_RUN_checkpoint." earliest=".e." latest=".l
+| table SSPHP_RUN_checkpoint, SSPHP_RUN_checkpoint_text, checkpoint_search_text
           </query>
           <done>
-            <condition match="match($result.outcome$,&quot;success&quot;)">
-              <set token="issuccess_tkn">1</set>
-              <unset token="isfailed_tkn"></unset>
-              
-              <set token="checkpoint_run_tkn">$result.checkpoint$</set>
-              <set token="latest_ssphp_run_string_tkn">$result.latest_ssphp_run_string$</set>
-              <set token="checkpoint_run_string_tkn">$result.checkpoint_run_string$</set>
-              <set token="search_text_tkn">$result.search_text$</set>
-              <set token="checkpoint_file_name_tkn">$result.checkpoint_file_name$</set>
-            </condition>
-            <condition match="match($result.outcome$,&quot;failed&quot;)">
-              <unset token="issuccess_tkn"></unset>
-              <set token="isfailed_tkn">1</set>
-              
-              <set token="checkpoint_run_tkn">$result.checkpoint$</set>
-              <set token="latest_ssphp_run_string_tkn">$result.latest_ssphp_run_string$</set>
-              <set token="checkpoint_run_string_tkn">$result.checkpoint_run_string$</set>
-              <set token="search_text_tkn">$result.search_text$</set>
-              <set token="checkpoint_file_name_tkn">$result.checkpoint_file_name$</set>
-            </condition>
+            <set token="ssphp_run_checkpoint_text_tkn">$result.SSPHP_RUN_checkpoint_text$</set>
+            <set token="ssphp_run_checkpoint_tkn">$result.SSPHP_RUN_checkpoint$</set>
+            <set token="checkpoint_search_text_tkn">$result.checkpoint_search_text$</set>
           </done>
         </search>
       </table>
     </panel>
-    
-    
-    <panel depends="$isfailed_tkn$">
-      <html>
-            <style>
-                #header_performance .panel-body.html {
-                    background-color: #DDFFDF;
-                }
-            </style>
-            <h1>No Checkpoint File for Service $tkn_service_id$</h1>
-        </html>
-    </panel>    
-  
 
 
-    <panel depends="$tkn_C_view$,$issuccess_tkn$">
-      <title>$changecount_tkn$ Changes Since Checkpoint [$checkpoint_run_tkn$ : $checkpoint_run_string_tkn$]</title>
+    <panel depends="$never_show$">      
       <table>
         <search>
           <query>
-$tkn_index$ $tkn_sourcetype$ $tkn_host$ $tkn_source$ ssphp_business_service_index=$tkn_service_id|s$ $search_text_tkn$
+| makeresults
+| eval t1=$tkn_view_1|s$, t2=$tkn_view_2|s$, t3=$tkn_view_3|s$, t4=$tkn_view_4|s$
+| eval search_string=" type IN(".t1." ".t2." ".t3." ".t4.")"
 
+| table search_string
+          </query>
+          <done>
+            <set token="search_string_tkn">$result.search_string$</set>
+          </done>
+        </search>
+      </table>
+    </panel>
+
+
+    <panel depends="$tkn_C_view$">
+      <input type="dropdown" token="tkn_checkpoint_date" searchWhenChanged="true">
+        <label>Checkpoint Date</label>
+        <fieldForLabel>checkpoint_date</fieldForLabel>
+        <fieldForValue>starttime</fieldForValue>
+        <search>
+          <query>
+| gentimes start=03/01/2023 increment=1d
+| where starttime&lt;now()
+| eval checkpoint_date=strftime(starttime,"%Y-%m-%d")
+| table checkpoint_date, starttime
+| sort 0 - checkpoint_date
+          </query>
+        </search>
+      </input>
+      
+    
+    
+      <input type="checkbox" token="tkn_v1" searchWhenChanged="true">
+        <label>Resources that have become Healthy - Remediated</label>
+        <choice value="1">View</choice>
+        <initialValue>1</initialValue>
+        <change>
+          <condition value="1">
+            <set token="tkn_view_1">1</set>
+          </condition>
+          <condition>
+            <set token="tkn_view_1">99</set>
+          </condition>
+        </change>  
+      </input>
+      
+      <input type="checkbox" token="tkn_v2" searchWhenChanged="true">
+        <label>New Resources that are NOT Healthy</label>
+        <choice value="2">View</choice>
+        <initialValue>2</initialValue>
+        <change>
+          <condition value="2">
+            <set token="tkn_view_2">2</set>
+          </condition>
+          <condition>
+            <set token="tkn_view_2">99</set>
+          </condition>
+        </change>  
+      </input>
+      
+      <input type="checkbox" token="tkn_v3" searchWhenChanged="true">
+        <label>Resources that were Healthy but now Unhealthy</label>
+        <choice value="3">View</choice>
+        <initialValue>3</initialValue>
+        <change>
+          <condition value="3">
+            <set token="tkn_view_3">3</set>
+          </condition>
+          <condition>
+            <set token="tkn_view_3">99</set>
+          </condition>
+        </change>  
+      </input>
+      
+      <input type="checkbox" token="tkn_v4" searchWhenChanged="true">
+        <label>Resources that were previously Unhealthy but no longer exist</label>
+        <choice value="4">View</choice>
+        <initialValue>4</initialValue>
+        <change>
+          <condition value="4">
+            <set token="tkn_view_4">4</set>
+          </condition>
+          <condition>
+            <set token="tkn_view_4">99</set>
+          </condition>
+        </change>  
+      </input>
+      
+      <input type="checkbox" token="tkn_v5" searchWhenChanged="true">
+        <label>Managed Cluster Resource Groups</label>
+        <choice value="5">View</choice>
+        <initialValue>5</initialValue>
+        <change>
+          <condition value="5">
+            <set token="tkn_view_5">"Resource Group"="*"</set>
+          </condition>
+          <condition>
+            <set token="tkn_view_5">"Resource Group"!="mc_*"</set>
+          </condition>
+        </change>  
+      </input>
+
+    
+      <title>$changecount_tkn$ Changes Since Checkpoint [$ssphp_run_checkpoint_tkn$ : $ssphp_run_checkpoint_text_tkn$]</title>
+      <table>
+        <search>
+          <query>
+| multisearch 
+
+[search $tkn_index$ $tkn_sourcetype$ $tkn_host$ $tkn_source$ ssphp_business_service_index=$tkn_service_id|s$ SSPHP_RUN=$ssphp_run_tkn$ earliest=$search_earliest_tkn$ latest=$search_latest_tkn$
 | eval finding=coalesce(ssphp_sub_assessment_id,ssphp_assessment_id)
-| rename ssphp_status as ssphp_current_status
+| rename ssphp_* as ssphp_current_*]
 
-| lookup $checkpoint_file_name_tkn$ finding OUTPUT ssphp_status as ssphp_checkpoint_status
-| where NOT ssphp_current_status=ssphp_checkpoint_status
-
-| append 
-    [| inputlookup $checkpoint_file_name_tkn$
-| rename ssphp_status as ssphp_checkpoint_status
-
-| join type=outer finding
-    [search $tkn_index$ $tkn_sourcetype$ $tkn_host$ $tkn_source$ ssphp_business_service_index=$tkn_service_id|s$ $search_text_tkn$
+[search $tkn_index$ $tkn_sourcetype$ $tkn_host$ $tkn_source$ ssphp_business_service_index=$tkn_service_id|s$ $checkpoint_search_text_tkn$
 | eval finding=coalesce(ssphp_sub_assessment_id,ssphp_assessment_id)
-| rename ssphp_status as ssphp_current_status
-| table finding, ssphp_current_status]
+| rename ssphp_* as ssphp_checkpoint_*]
 
-| where NOT ssphp_current_status=ssphp_checkpoint_status]
 
+| table SSPHP_RUN, timing, finding, ssphp_*
 | stats values(*) as * by finding
 
-| table SSPHP_RUN, ssphp_creation_time, ssphp_last_changed_time, ssphp_tenant_name, ssphp_subscription, ssphp_resource_group, ssphp_resources_affected, ssphp_environment, ssphp_checkpoint_status, ssphp_current_status, ssphp_policy_name, ssphp_policy_description
-| rename ssphp_creation_time as "Finding Creation Time", 
-         ssphp_last_changed_time as "Finding Last Changed Time", 
-         ssphp_subscription as "Subscription", 
-         ssphp_resource_group as "Resource Group",
-         ssphp_resources_affected as "Resources Affected",
-         ssphp_environment as "Environment",
-         ssphp_policy_name as "Policy Name",
-         ssphp_policy_description as "Policy Description",
-         ssphp_checkpoint_status as "Checkpoint Status", 
+| fillnull value="-" ssphp_checkpoint_status, ssphp_current_status
+| where NOT ('ssphp_current_status'='ssphp_checkpoint_status' OR ('ssphp_checkpoint_status'="-" AND 'ssphp_current_status'="Healthy") OR ('ssphp_checkpoint_status'="Healthy" AND 'ssphp_current_status'="-"))
+
+| eval type=case('ssphp_current_status'="Healthy","1",                                           ```remediated```
+                 'ssphp_checkpoint_status'="-" AND 'ssphp_current_status'!="Healthy","2",          ```new unhealthy```
+                 'ssphp_checkpoint_status'="Healthy" AND 'ssphp_current_status'!="Healthy","3",    ```was healthy but no longer healthy```
+                 'ssphp_checkpoint_status'!="Healthy" AND 'ssphp_current_status'!="-","4"          ```was unhealthy but resource no longer exists```
+                 )
+
+| search $search_string_tkn$
+
+| eval "Finding Creation Time"=coalesce('ssphp_current_creation_time','ssphp_checkpoint_creation_time'),
+       "Finding Last Changed Time"=coalesce('ssphp_current_last_changed_time','ssphp_checkpoint_last_changed_time'),
+       "Subscription"=coalesce('ssphp_current_subscription','ssphp_checkpoint_subscription'),
+       "Resource Group"=coalesce('ssphp_current_resource_group','ssphp_checkpoint_resource_group'),
+       "Resources Affected"=coalesce('ssphp_current_resources_affected','ssphp_checkpoint_resources_affected'),
+       "Environment"=coalesce('ssphp_current_environment','ssphp_checkpoint_environment'),
+       "Severity"=coalesce('ssphp_current_severity','ssphp_checkpoint_severity'),
+       "Policy Name"=coalesce('ssphp_current_policy_name','ssphp_checkpoint_policy_name'),
+       "Policy Description"=coalesce('ssphp_current_policy_description','ssphp_checkpoint_policy_description')
+       
+| search $tkn_view_5$
+       
+| rename ssphp_checkpoint_status as "Checkpoint Status", 
          ssphp_current_status as "Current Status"
 
-| where NOT ((isnull('Checkpoint Status') OR 'Checkpoint Status'="") AND 'Current Status'="Healthy")
+| table SSPHP_RUN, finding, type, "Finding Creation Time", "Finding Last Changed Time", "Subscription", "Resource Group", "Resources Affected", "Environment", "Severity", "Checkpoint Status", "Current Status", "Policy Name", "Policy Description"
+| sort 0 - "Finding Creation Time", "Finding Last Changed Time"
 
 | eventstats count
           </query>
           <done>
-            <set token="changecount_tkn">$result.count$</set>
+            <eval token="changecount_tkn">if(isnull($result.count$),0,($result.count$)</eval>
           </done>
         </search>
         <format type="color" field="Current Status">
@@ -658,8 +735,8 @@ $tkn_index$ $tkn_sourcetype$ $tkn_host$ $tkn_source$ ssphp_business_service_inde
         <format type="color" field="Checkpoint Status">
           <colorPalette type="map">{"Unhealthy":#D41F1F,"Healthy":#118832}</colorPalette>
         </format>
-        <fields>"Finding Creation Time","Finding Last Changed Time","Tenant","Subscription","Resource Group","Resources Affected","Environment","Checkpoint Status","Current Status","Policy Name","Policy Description"</fields>
-        <option name="count">25</option>
+        <fields>"Finding Creation Time", "Finding Last Changed Time", "Subscription", "Resource Group", "Resources Affected", "Environment", "Severity", "Checkpoint Status", "Current Status", "Policy Name", "Policy Description"</fields>
+        <option name="count">20</option>
         <option name="dataOverlayMode">none</option>
         <option name="drilldown">none</option>
         <option name="percentagesRow">false</option>
@@ -669,4 +746,5 @@ $tkn_index$ $tkn_sourcetype$ $tkn_host$ $tkn_source$ ssphp_business_service_inde
       </table>
     </panel>
   </row>
+
 </form>
