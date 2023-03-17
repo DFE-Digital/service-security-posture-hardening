@@ -1,8 +1,7 @@
-<dashboard version="1.1">
+<dashboard theme="dark" version="1.1">
     <label>Github Findings</label>
     <row>
       <panel>
-        <title>CVEs</title>
         <table>
           <search>
             <query>
@@ -33,9 +32,9 @@
           <option name="wrap">true</option>
           <fields>["ssphp_event_time","ssphp_action","ssphp_created_at","ssphp_tech_source","ssphp_use_case", "ssphp_organization", "ssphp_repository", "ssphp_details","ssphp_severity","ssphp_state","ssphp_url"]</fields>
           <drilldown>
-            <link target="_blank">/app/search/cve_drilldown_dashboard?tkn_original_event=$row.ssphp_original_event$</link>
+            <link target="_blank">/app/SSPHP/ssphp_github_findings_drilldown_dashboard?tkn_original_event=$row.ssphp_original_event$</link>
           </drilldown>
         </table>
       </panel>
     </row>
-  </dashboard>
+</dashboard>
