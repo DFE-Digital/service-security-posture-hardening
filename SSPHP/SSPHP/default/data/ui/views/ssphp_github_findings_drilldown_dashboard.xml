@@ -11,8 +11,6 @@
 | sort 0 - _time
 | eval event_time=_time,
        ssphp_original_event=md5(event_time._raw)
-| search ssphp_original_event=$tkn_original_event|s$
-
 
 | eval ssphp_original_event_target=$tkn_original_event|s$
 | where 'ssphp_original_event_target' like "%".'ssphp_original_event'."%"
