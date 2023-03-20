@@ -30,7 +30,7 @@
           <option name="rowNumbers">false</option>
           <option name="totalsRow">false</option>
           <option name="wrap">true</option>
-          <format type="color" field="Severity">
+          <format type="color" field="ssphp_use_case">
             <colorPalette type="expression">if(match(value,"CVE"),"#E59866",
                                             if(match(value,"Repo Made Public"),"#F7DC6F",
                                             if(match(value,"Disable Secret Scanning"),"#76D7C4",
