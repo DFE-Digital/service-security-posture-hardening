@@ -6,7 +6,7 @@
         <event>
           <search>
             <query>
-`github_data_source` OR (index="github_test" sourcetype="github_json")
+(`github_data_source`) OR (index="github_test" sourcetype="github_json")
   
 | sort 0 - _time
 | eval event_time=_time,
@@ -14,16 +14,14 @@
 | search ssphp_original_event=$tkn_original_event|s$
 
 
-| eval ssphp_original_event_target=$tkn_original_event$,
-       ssphp_original_event_target=split(ssphp_original_event_target," ")
-| where ssphp_original_event=ssphp_original_event_target
+| eval ssphp_original_event_target=$tkn_original_event|s$
+| where 'ssphp_original_event_target' like "%".'ssphp_original_event'."%"
 | fields - ssphp_original_event_target
             </query>
             <earliest>0</earliest>
             <latest>now</latest>
             <sampleRatio>1</sampleRatio>
           </search>
-          <option name="count">20</option>
           <option name="list.drilldown">none</option>
           <option name="list.wrap">1</option>
           <option name="maxLines">5</option>
