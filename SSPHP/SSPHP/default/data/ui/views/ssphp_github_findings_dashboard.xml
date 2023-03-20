@@ -31,13 +31,7 @@
           <option name="totalsRow">false</option>
           <option name="wrap">true</option>
           <format type="color" field="ssphp_use_case">
-            <colorPalette type="expression">if(match(value,"CVE"),"#E59866",
-                                            if(match(value,"Repo Made Public"),"#F7DC6F",
-                                            if(match(value,"Disable Secret Scanning"),"#76D7C4",
-                                            if(match(value,"Change Branch Protection Rules"),"#7FB3D5",
-                                            if(match(value,"CodeQL"),"#C39BD3",
-                                            if(match(value,"Secret"),"#DAF7A6",
-                                            "#D5DBDB"))
+            <colorPalette type="expression">case(value="CVE","#E59866",value="Repo Made Public","#F7DC6F",value="Disable Secret Scanning","#76D7C4",value="Change Branch Protection Rules","#7FB3D5",value="CodeQL","#C39BD3",value="Secret","#DAF7A6",1==1,"#000000")
             </colorPalette>
           </format>
           <fields>["ssphp_event_time","ssphp_action","ssphp_created_at","ssphp_tech_source","ssphp_use_case", "ssphp_organization", "ssphp_repository", "ssphp_details","ssphp_severity","ssphp_state","ssphp_url"]</fields>
