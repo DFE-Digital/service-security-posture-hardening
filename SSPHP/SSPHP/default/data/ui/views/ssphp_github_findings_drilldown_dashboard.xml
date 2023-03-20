@@ -1,8 +1,8 @@
 <dashboard theme="dark" version="1.1">
-    <label>cve_drilldown_dashboard</label>
+    <label>Github Findings Drilldown Dashboard</label>
     <row>
       <panel>
-        <title>CVE Details</title>
+        <title>Finding Details</title>
         <event>
           <search>
             <query>

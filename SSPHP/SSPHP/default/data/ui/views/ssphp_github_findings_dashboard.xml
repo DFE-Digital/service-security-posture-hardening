@@ -30,6 +30,16 @@
           <option name="rowNumbers">false</option>
           <option name="totalsRow">false</option>
           <option name="wrap">true</option>
+          <format type="color" field="Severity">
+            <colorPalette type="expression">if(match(value,"CVE"),"#E59866",
+                                            if(match(value,"Repo Made Public"),"#F7DC6F",
+                                            if(match(value,"Disable Secret Scanning"),"#76D7C4",
+                                            if(match(value,"Change Branch Protection Rules"),"#7FB3D5",
+                                            if(match(value,"CodeQL"),"#C39BD3",
+                                            if(match(value,"Secret"),"#DAF7A6",
+                                            "#D5DBDB"))
+            </colorPalette>
+          </format>
           <fields>["ssphp_event_time","ssphp_action","ssphp_created_at","ssphp_tech_source","ssphp_use_case", "ssphp_organization", "ssphp_repository", "ssphp_details","ssphp_severity","ssphp_state","ssphp_url"]</fields>
           <drilldown>
             <link target="_blank">/app/SSPHP/ssphp_github_findings_drilldown_dashboard?tkn_original_event=$row.ssphp_original_event$</link>
