@@ -17,7 +17,7 @@
   
   | rex field=ssphp_repository "(?&lt;ssphp_organization&gt;[^\/]*)\/(?&lt;ssphp_repository&gt;.*)"
   | table ssphp_event_time, ssphp_action, ssphp_created_at, ssphp_tech_source, ssphp_use_case, ssphp_organization, ssphp_repository, ssphp_details, ssphp_severity, ssphp_state, ssphp_url, ssphp_original_event, SSPHP_RUN
-  | sort 0 - _time
+  | sort 0 - ssphp_created_at
             </query>
             <earliest>0</earliest>
             <latest>now</latest>
