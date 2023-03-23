@@ -17,4 +17,7 @@
   <collection label="Github">
     <view name="ssphp_github_findings_dashboard" />
   </collection>  
+  <collection label="Qualys">
+    <view name="ssphp_qualys_vulnerabilities_by_host" />
+  </collection>  
 </nav>
