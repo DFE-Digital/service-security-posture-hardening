@@ -7,7 +7,11 @@
       <title>Security Scores by Subscription</title>
       <chart>
         <search>
-          <query>index="ssphp_test" sourcetype="azure:security:score" source="azure_defender_secure_score" host="c113p01-splhf04"
+          <query>
+index="ssphp_test" sourcetype="azure:security:score" source="azure_defender_secure_score" host="c113p01-splhf04"
+      [search index="ssphp_test" sourcetype="azure:security:score" source="azure_defender_secure_score" host="c113p01-splhf04"
+       | stats max(SSPHP_RUN) as SSPHP_RUN
+       | return SSPHP_RUN]
 
 | lookup ssphp_resource_service_map.csv ssphp_subscription OUTPUT ssphp_subscription_display_name
 | eval ssphp_subscription_display_name=mvdedup(ssphp_subscription_display_name),
