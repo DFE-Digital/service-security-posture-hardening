@@ -314,7 +314,7 @@ $tkn_index$ $tkn_sourcetype$ $tkn_host$ $tkn_source$ SSPHP_RUN=$ssphp_run_tkn|s$
         <option name="wrap">true</option>
         <fields>"Severity","Alert Name","Tenant","Subscription","Resource Group","Affected Resources","Alert Entities Affected","Activity Start Time","Status","Alert Description","Business Service Index","Environment","Service Team"</fields>
         <drilldown>
-          <link target="_blank">/app/SSPHP_RSD/ssphp_alerts_dashboard_drilldown?tkn_alert_id=$row.ssphp_alert_id$</link>
+          <link target="_blank">/app/SSPHP/ssphp_alerts_dashboard_drilldown?tkn_alert_id=$row.ssphp_alert_id$</link>
         </drilldown>
       </table>
     </panel>

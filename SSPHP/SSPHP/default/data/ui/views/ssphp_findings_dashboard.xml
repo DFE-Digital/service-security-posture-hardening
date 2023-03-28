@@ -463,7 +463,7 @@ $tkn_index$ $tkn_sourcetype$ $tkn_host$ $tkn_source$ (SSPHP_RUN=$ssphp_run_tkn|s
         </format>
         <fields>["Finding Creation Time","Finding Last Changed Time","Tenant","Subscription","Resource Group","Resources Affected","Environment","Status","Policy Name","Policy Description","Severity","Tactics","Techniques","Threats","Service Team","Technical Contacts"]</fields>
         <drilldown>
-          <link target="_blank">/app/SSPHP_RSD/ssphp_findings_dashboard_drilldown?tkn_event_uid=$row.ssphp_event_uid$&amp;tkn_ssphp_run=$row.SSPHP_RUN$</link>
+          <link target="_blank">/app/SSPHP/ssphp_findings_dashboard_drilldown?tkn_event_uid=$row.ssphp_event_uid$&amp;tkn_ssphp_run=$row.SSPHP_RUN$</link>
         </drilldown>
       </table>
     </panel>
