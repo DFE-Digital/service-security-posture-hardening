@@ -1,6 +1,6 @@
-<form theme="light" version="1.1">
+<form theme="dark" version="1.1">
   <label>Azure Findings</label>
-  <description>Service Security Posture Hardening Programme : v1.2</description>
+  <description>Service Security Posture Hardening Programme : v1.4</description>
   
   
 <!-- ****************************************************** Initial Values **************************************************************************** -->
@@ -76,7 +76,9 @@ ssphp_level_1_display_name=$tkn_group|s$ AND ssphp_level_2_display_name=$tkn_ser
         </query>
       </search>
       <change>
-        <set token="form.tkn_service">*</set>
+        <condition match="$isadmin_tkn$ != &quot;1&quot;">
+          <set token="form.tkn_service">*</set>
+        </condition>
       </change>
     </input>
 
@@ -101,11 +103,12 @@ ssphp_level_1_display_name=$tkn_group|s$ AND ssphp_level_2_display_name=$tkn_ser
       </change>
     </input>
     
+    
     <input type="dropdown" token="tkn_subscription" searchWhenChanged="true">
       <label>Subscription</label>
       <choice value="*">ALL</choice>
       <default>*</default>
-      <initialValue>825407bb-79de-42be-b6db-9e14fa8b52af</initialValue>
+      <initialValue>*</initialValue>
       <fieldForLabel>ssphp_subscription_display_name</fieldForLabel>
       <fieldForValue>ssphp_subscription</fieldForValue>
       <search base="base_2">
@@ -249,7 +252,7 @@ ssphp_level_1_display_name=$tkn_group|s$ AND ssphp_level_2_display_name=$tkn_ser
           <query>
 | rest splunk_server=local /services/authentication/current-context
 
-```| eval roles=if(username="ian.pearl@education.gov.uk","dfe_ssphp_service_user_s184",roles)```     ```make ian a service user for testing```
+| eval roles=if(username="ian.pearl@education.gov.uk","dfe_ssphp_service_user_s184",roles)     ```make ian a service user for testing```
             
 | rex field=roles "^dfe_ssphp_service_user_(?&lt;role_service&gt;s\d{3})$"
 | eval isadmin=case(roles="sc_admin","1",roles="power","1",roles="dfe_ssphp_service_power",1,isnotnull(role_service),"0",1==1,"0")
@@ -266,13 +269,13 @@ ssphp_level_1_display_name=$tkn_group|s$ AND ssphp_level_2_display_name=$tkn_ser
           <done>
             <condition match="match($result.isadmin$,&quot;1&quot;)">
               <set token="isadmin_tkn">1</set>
-              <set token="l1_tkn">$result.L1$</set>
-              <set token="l2_tkn">$result.L2$</set>
+              <set token="form.tkn_group">*</set>
+              <set token="form.tkn_service">*</set>
             </condition>
             <condition>
               <unset token="isadmin_tkn"></unset>
-              <set token="l1_tkn">$result.L1$</set>
-              <set token="l2_tkn">$result.L2$</set>
+              <set token="form.tkn_group">$result.L1$</set>
+              <set token="form.tkn_service">$result.L2$</set>
             </condition>
           </done>
         </search>
