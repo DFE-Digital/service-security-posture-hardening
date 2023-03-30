@@ -1,4 +1,4 @@
-<form theme="dark" version="1.1">
+<form theme="light" version="1.1">
   <label>Azure Findings</label>
   <description>Service Security Posture Hardening Programme : v1.2</description>
   
@@ -13,6 +13,7 @@
     <eval token="tkn_sourcetype">"sourcetype=\"azure:security:finding\""</eval>
     <eval token="tkn_host">"host=\"c113p01-splhf04\""</eval>
     <eval token="tkn_source">"source=\"azure_cloud_defender\""</eval>
+    <eval token="drilldown_subscription_tkn">coalesce($tkn_drilldown_subscription$,"null")</eval>
   </init>
   
   
@@ -96,7 +97,7 @@ ssphp_level_1_display_name=$tkn_group|s$ AND ssphp_level_2_display_name=$tkn_ser
         </query>
       </search>
       <change>
-        <set token="form.tkn_subscription">*</set>
+        <eval token="form.tkn_subscription">coalesce($tkn_drilldown_subscription$,"*")</eval>
       </change>
     </input>
     
@@ -104,7 +105,7 @@ ssphp_level_1_display_name=$tkn_group|s$ AND ssphp_level_2_display_name=$tkn_ser
       <label>Subscription</label>
       <choice value="*">ALL</choice>
       <default>*</default>
-      <initialValue>*</initialValue>
+      <initialValue>825407bb-79de-42be-b6db-9e14fa8b52af</initialValue>
       <fieldForLabel>ssphp_subscription_display_name</fieldForLabel>
       <fieldForValue>ssphp_subscription</fieldForValue>
       <search base="base_2">
@@ -238,9 +239,8 @@ ssphp_level_1_display_name=$tkn_group|s$ AND ssphp_level_2_display_name=$tkn_ser
   </fieldset>
   
 
-  <!-- ************************************************************************************************************************************************************** -->
-  <!-- ****************************************************** Hidden rows to manage RBAC **************************************************************************** -->
-  <!-- ************************************************************************************************************************************************************** -->
+
+<!-- ****************************************************** Hidden rows to manage RBAC **************************************************************************** -->
   
   <row depends="$never_show$">
     <panel>
@@ -249,28 +249,30 @@ ssphp_level_1_display_name=$tkn_group|s$ AND ssphp_level_2_display_name=$tkn_ser
           <query>
 | rest splunk_server=local /services/authentication/current-context
 
-```| eval roles=if(username="ian.pearl@education.gov.uk",mvappend("sc_admin", "power", "dfe_ssphp_service_power", "dfe_ssphp_service_user_s184"),roles)```     ```override for testing```
+```| eval roles=if(username="ian.pearl@education.gov.uk","dfe_ssphp_service_user_s184",roles)```     ```make ian a service user for testing```
             
 | rex field=roles "^dfe_ssphp_service_user_(?&lt;role_service&gt;s\d{3})$"
 | eval isadmin=case(roles="sc_admin","1",roles="power","1",roles="dfe_ssphp_service_power",1,isnotnull(role_service),"0",1==1,"0")
             
-| lookup ssphp_resource_service_map ssphp_business_service_index as role_service OUTPUT ssphp_service_name
-| eval ssphp_service_name=mvdedup(ssphp_service_name),
-       role_service=if(isadmin="1","*",role_service),
-       ssphp_service_name=if(isadmin="1","ALL",ssphp_service_name)
+| eval L1=case(isadmin="1","*",
+               role_service="s184","Schools and School Performance",
+               1==1,"none"),
+       L2=case(isadmin="1","*",
+               role_service="s184","Regional Service Delivery",
+               1==1,"none")
             
-| table roles, isadmin, username, role_service, ssphp_service_name
+| table roles, isadmin, username, L1, L2
         </query>
           <done>
             <condition match="match($result.isadmin$,&quot;1&quot;)">
               <set token="isadmin_tkn">1</set>
-              <set token="user_service_tkn">$result.role_service$</set>
-              <set token="user_service_name_tkn">$result.ssphp_service_name$</set>
+              <set token="l1_tkn">$result.L1$</set>
+              <set token="l2_tkn">$result.L2$</set>
             </condition>
             <condition>
               <unset token="isadmin_tkn"></unset>
-              <set token="user_service_tkn">$result.role_service$</set>
-              <set token="user_service_name_tkn">$result.ssphp_service_name$</set>
+              <set token="l1_tkn">$result.L1$</set>
+              <set token="l2_tkn">$result.L2$</set>
             </condition>
           </done>
         </search>
