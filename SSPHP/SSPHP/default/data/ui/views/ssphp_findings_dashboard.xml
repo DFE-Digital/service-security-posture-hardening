@@ -1,8 +1,9 @@
 <form theme="dark" version="1.1">
   <label>Azure Findings</label>
-  <description>Service Security Posture Hardening Programme : v1.1</description>
+  <description>Service Security Posture Hardening Programme : v1.2</description>
   
   
+<!-- ****************************************************** Initial Values **************************************************************************** -->
   <init>
     <eval token="time_window_earliest">strftime(0,"%m/%d/%Y %H:%M")</eval>
     <eval token="time_window_latest">strftime(now(), "%m/%d/%Y %H:%M")</eval>
@@ -15,20 +16,32 @@
   </init>
   
   
+<!-- ****************************************************** Base Queries **************************************************************************** -->
   <search id="base_1">
     <query>
-$tkn_index$ $tkn_sourcetype$ $tkn_host$ $tkn_source$ (SSPHP_RUN=$ssphp_run_tkn|s$ AND ssphp_creation_time_epoch&gt;$time_window_earliest_epoch$ AND ssphp_creation_time_epoch&lt;$time_window_latest_epoch$) ssphp_business_service_index=$tkn_service_id$
+$tkn_index$ $tkn_sourcetype$ $tkn_host$ $tkn_source$ (SSPHP_RUN=$ssphp_run_tkn|s$ AND ssphp_creation_time_epoch&gt;$time_window_earliest_epoch$ AND ssphp_creation_time_epoch&lt;$time_window_latest_epoch$)
+ssphp_level_1_display_name=$tkn_group|s$ AND ssphp_level_2_display_name=$tkn_service|s$
 
 | eval ssphp_tech_contact_email=split(ssphp_tech_contact_email,"; ")
 
 | fields SSPHP_RUN, ssphp_*
     </query>
     <earliest>$search_earliest_tkn$</earliest>
-    <latest>now</latest>
-    <!--     <latest>$search_latest_tkn$</latest> -->
+    <!--  <latest>now</latest> -->
+    <latest>$search_latest_tkn$</latest>
   </search>
   
 
+  <search id="base_2">
+    <query>
+| inputlookup ssphp_resource_service_map.csv
+| search ssphp_resource_group!="mc*"
+| table ssphp_level_1_display_name, ssphp_level_2_display_name, ssphp_resource_group, ssphp_subscription, ssphp_subscription_display_name, ssphp_service_team
+    </query>
+  </search>
+  
+
+<!-- ****************************************************** Form Filters **************************************************************************** -->
   <fieldset submitButton="false">
     <input type="time" token="tkn_time" searchWhenChanged="true">
       <label>Finding Created Time Window</label>
@@ -44,26 +57,46 @@ $tkn_index$ $tkn_sourcetype$ $tkn_host$ $tkn_source$ (SSPHP_RUN=$ssphp_run_tkn|s
       </change>
     </input>
     
-    <input type="dropdown" token="tkn_service" searchWhenChanged="true" depends="$isadmin_tkn$">
-      <label>Service</label>
+    
+    
+    <input type="dropdown" token="tkn_group" searchWhenChanged="true" depends="$isadmin_tkn$">
+      <label>DfE Group</label>
       <choice value="*">ALL</choice>
-      <default>s184</default>
-      <initialValue>s184</initialValue>
-      <fieldForLabel>ssphp_service_name</fieldForLabel>
-      <fieldForValue>ssphp_business_service_index</fieldForValue>
-      <search>
+      <default>ALL</default>
+      <initialValue>ALL</initialValue>
+      <fieldForLabel>ssphp_level_1_display_name</fieldForLabel>
+      <fieldForValue>ssphp_level_1_display_name</fieldForValue>
+      <search base="base_2">
         <query>
-| inputlookup ssphp_resource_service_map.csv
-| search ssphp_resource_group!="mc*"
-| stats values(ssphp_service_name) as ssphp_service_name by ssphp_business_service_index
-| table ssphp_service_name, ssphp_business_service_index
-| dedup ssphp_service_name
-| sort 0 ssphp_service_name
+| search ssphp_level_1_display_name!="NO AZURE DATA AVAILABLE"
+| dedup ssphp_level_1_display_name
+| sort 0 ssphp_level_1_display_name
+| table ssphp_level_1_display_name
         </query>
       </search>
       <change>
-        <set token="tkn_service_id">$value$</set>
-        <set token="tkn_service_name">$label$</set>
+        <set token="form.tkn_service">*</set>
+      </change>
+    </input>
+
+
+    <input type="dropdown" token="tkn_service" searchWhenChanged="true" depends="$isadmin_tkn$">
+      <label>DfE Service</label>
+      <choice value="*">ALL</choice>
+      <default>ALL</default>
+      <initialValue>ALL</initialValue>
+      <fieldForLabel>ssphp_level_2_display_name</fieldForLabel>
+      <fieldForValue>ssphp_level_2_display_name</fieldForValue>
+      <search base="base_2">
+        <query>
+  | search ssphp_level_1_display_name=$tkn_group|s$ AND ssphp_level_2_display_name!="NO AZURE DATA AVAILABLE"
+  | dedup ssphp_level_2_display_name
+  | sort 0 ssphp_level_2_display_name
+  | table ssphp_level_2_display_name
+        </query>
+      </search>
+      <change>
+        <set token="form.tkn_subscription">*</set>
       </change>
     </input>
     
@@ -74,17 +107,19 @@ $tkn_index$ $tkn_sourcetype$ $tkn_host$ $tkn_source$ (SSPHP_RUN=$ssphp_run_tkn|s
       <initialValue>*</initialValue>
       <fieldForLabel>ssphp_subscription_display_name</fieldForLabel>
       <fieldForValue>ssphp_subscription</fieldForValue>
-      <search>
+      <search base="base_2">
         <query>
-| inputlookup ssphp_resource_service_map where ssphp_business_service_index=$tkn_service_id|s$
+| search (ssphp_level_1_display_name=$tkn_group|s$ AND ssphp_level_2_display_name=$tkn_service|s$)
 | dedup ssphp_subscription
 | table ssphp_subscription, ssphp_subscription_display_name
         </query>
       </search>
       <change>
+        <set token="form.tkn_resource_group_id">*</set>
         <set token="subscription_name_tkn">$label$</set>
       </change>
     </input>
+    
     
     <input type="dropdown" token="tkn_resource_group_id" searchWhenChanged="true">
       <label>Resource Group</label>
@@ -93,15 +128,19 @@ $tkn_index$ $tkn_sourcetype$ $tkn_host$ $tkn_source$ (SSPHP_RUN=$ssphp_run_tkn|s
       <initialValue>*</initialValue>
       <fieldForLabel>ssphp_resource_group</fieldForLabel>
       <fieldForValue>ssphp_resource_group</fieldForValue>
-      <search>
+      <search base="base_2">
         <query>
-| inputlookup ssphp_resource_service_map where (ssphp_business_service_index=$tkn_service_id|s$ AND ssphp_subscription=$tkn_subscription|s$)
+| search (ssphp_level_1_display_name=$tkn_group|s$ AND ssphp_level_2_display_name=$tkn_service|s$) AND ssphp_subscription=$tkn_subscription|s$
 | dedup ssphp_resource_group
 | table ssphp_resource_group
         </query>
       </search>
+      <change>
+        <set token="form.tkn_service_team">*</set>
+      </change>
     </input>
-    
+
+
     <input type="dropdown" token="tkn_severity" searchWhenChanged="true">
       <label>Severity</label>
       <choice value="*">ALL</choice>
@@ -111,7 +150,8 @@ $tkn_index$ $tkn_sourcetype$ $tkn_host$ $tkn_source$ (SSPHP_RUN=$ssphp_run_tkn|s
       <default>*</default>
       <initialValue>*</initialValue>
     </input>
-    
+
+
     <input type="dropdown" token="tkn_environment" searchWhenChanged="true">
       <label>Environment</label>
       <choice value="*">ALL</choice>
@@ -121,7 +161,8 @@ $tkn_index$ $tkn_sourcetype$ $tkn_host$ $tkn_source$ (SSPHP_RUN=$ssphp_run_tkn|s
       <default>*</default>
       <initialValue>*</initialValue>
     </input>
-    
+
+
     <input type="dropdown" token="tkn_service_team" searchWhenChanged="true">
       <label>Service Team</label>
       <choice value="*">ALL</choice>
@@ -129,16 +170,17 @@ $tkn_index$ $tkn_sourcetype$ $tkn_host$ $tkn_source$ (SSPHP_RUN=$ssphp_run_tkn|s
       <initialValue>*</initialValue>
       <fieldForLabel>ssphp_service_team</fieldForLabel>
       <fieldForValue>ssphp_service_team</fieldForValue>
-      <search>
+      <search base="base_2">
         <query>
-| inputlookup ssphp_resource_service_map where ssphp_business_service_index=$tkn_service_id|s$
+| search (ssphp_level_1_display_name=$tkn_group|s$ AND ssphp_level_2_display_name=$tkn_service|s$) AND ssphp_subscription=$tkn_subscription|s$ AND ssphp_resource_group=$tkn_resource_group_id|s$
 | dedup ssphp_service_team
 | table ssphp_service_team
 | sort 0 ssphp_service_team
         </query>
       </search>
     </input>
-    
+
+
     <input type="checkbox" token="healthy_tkn" searchWhenChanged="true">
       <label>Health Status to Include</label>
       <choice value="Healthy">Healthy</choice>
@@ -152,7 +194,8 @@ $tkn_index$ $tkn_sourcetype$ $tkn_host$ $tkn_source$ (SSPHP_RUN=$ssphp_run_tkn|s
       <valueSuffix>"</valueSuffix>
       <delimiter> OR </delimiter>
     </input>
-    
+
+
     <input type="radio" token="tkn_list_view">
       <label>View</label>
       <choice value="L">Findings List</choice>
@@ -236,7 +279,19 @@ $tkn_index$ $tkn_sourcetype$ $tkn_host$ $tkn_source$ (SSPHP_RUN=$ssphp_run_tkn|s
     </panel>
   </row>
   
-<!-- ************************************************************************************************************************************************************** -->
+<!-- ************************************* Only show for testing ************************************************************************************************************************* -->
+
+  <row depends="$never_show$">
+    <panel>
+      <html>
+       <h1>Date Range: $tkn_time.earliest$ - $tkn_time.latest$ </h1>
+       <h1>Date Range formatted: $time_window_earliest$ - $time_window_latest$ </h1>
+       <h1>Date Range Epoch formatted: $time_window_earliest_epoch$ - $time_window_latest_epoch$ </h1>
+     </html>
+    </panel>
+  </row>
+  
+<!-- ******************************************* HEADING & SSPHP DETAILS ROW ******************************************************************************************************************* -->
 
   <row>
     <panel depends="$nevershow$">
@@ -262,7 +317,7 @@ $tkn_index$ $tkn_sourcetype$ $tkn_host$ $tkn_source$ (SSPHP_RUN=$ssphp_run_tkn|s
                     background-color: #DDFFDF;
                 }
             </style>
-            <h1>$tkn_service_name$ [$tkn_service_id$]</h1>
+            <h1>$tkn_group$ : $tkn_service$</h1>
         </html>
     </panel>
     
@@ -302,19 +357,7 @@ $tkn_index$ $tkn_sourcetype$ $tkn_host$ $tkn_source$ (SSPHP_RUN=$ssphp_run_tkn|s
     </panel>
   </row>
   
-<!-- ************************************************************************************************************************************************************** -->
-
-  <row depends="$never_show$">
-    <panel>
-      <html>
-       <h1>Date Range: $tkn_time.earliest$ - $tkn_time.latest$ </h1>
-       <h1>Date Range formatted: $time_window_earliest$ - $time_window_latest$ </h1>
-       <h1>Date Range Epoch formatted: $time_window_earliest_epoch$ - $time_window_latest_epoch$ </h1>
-     </html>
-    </panel>
-  </row>
-  
-<!-- ************************************************************************************************************************************************************** -->
+<!-- ******************************************* CHARTS ******************************************************************************************************************* -->
 
   <row depends="$tkn_chart_view$">
     <panel>
@@ -412,7 +455,8 @@ $tkn_index$ $tkn_sourcetype$ $tkn_host$ $tkn_source$ (SSPHP_RUN=$ssphp_run_tkn|s
     </panel>
   </row>
   
-<!-- ************************************************************************************************************************************************************** -->
+  
+<!-- ************************************************* Findings List Tab ************************************************************************************************************* -->
 
   <row depends="$tkn_L_view$">
     <panel>
@@ -420,8 +464,8 @@ $tkn_index$ $tkn_sourcetype$ $tkn_host$ $tkn_source$ (SSPHP_RUN=$ssphp_run_tkn|s
       <table>
         <search base="base_1">
           <query>
-
-| search ssphp_business_service_index=$tkn_service_id$ ssphp_subscription=$tkn_subscription$ ssphp_resource_group="$tkn_resource_group_id$" ssphp_severity=$tkn_severity$ ssphp_environment=$tkn_environment$ ssphp_service_team=$tkn_service_team$ $healthy_tkn$
+| search ssphp_level_1_display_name=$tkn_group|s$ AND ssphp_level_2_display_name=$tkn_service|s$ AND ssphp_subscription=$tkn_subscription|s$ AND ssphp_resource_group=$tkn_resource_group_id|s$ AND ssphp_service_team=$tkn_service_team$ 
+        AND $healthy_tkn$ AND ssphp_severity=$tkn_severity|s$ AND ssphp_environment=$tkn_environment|s$
 
 | table SSPHP_RUN, ssphp_creation_time, ssphp_last_changed_time, ssphp_tenant_name, ssphp_subscription, ssphp_resource_group, ssphp_resources_affected, ssphp_environment, ssphp_status, ssphp_policy_name, ssphp_policy_description, ssphp_remediation, ssphp_severity, ssphp_impact, ssphp_user_impact, ssphp_tactics, ssphp_techniques, ssphp_threats, ssphp_service_team, ssphp_tech_contact_email, ssphp_event_uid
 | rename ssphp_creation_time as "Finding Creation Time", 
@@ -488,16 +532,16 @@ $tkn_index$ $tkn_sourcetype$ $tkn_host$ $tkn_source$ (SSPHP_RUN=$ssphp_run_tkn|s
     </panel>
   </row>
   
-<!-- ************************************************************************************************************************************************************** -->
+<!-- ******************************************************* Findings by Resource ******************************************************************************************************* -->
 
   <row>
     <panel depends="$tkn_F_view$">
-      <title>Findings by Resouce</title>
+      <title>Findings by Resource</title>
       <table>
         <search base="base_1">
           <query>
-
-| search ssphp_business_service_index=$tkn_service_id$ ssphp_subscription=$tkn_subscription$ ssphp_resource_group="$tkn_resource_group_id$" ssphp_severity=$tkn_severity$ ssphp_environment=$tkn_environment$ ssphp_service_team=$tkn_service_team$ $healthy_tkn$
+| search ssphp_level_1_display_name=$tkn_group|s$ AND ssphp_level_2_display_name=$tkn_service|s$ AND ssphp_subscription=$tkn_subscription|s$ AND ssphp_resource_group=$tkn_resource_group_id|s$ AND ssphp_service_team=$tkn_service_team$ 
+        AND $healthy_tkn$ AND ssphp_severity=$tkn_severity|s$ AND ssphp_environment=$tkn_environment|s$
 
 | stats values(ssphp_policy_name) as ssphp_policies by ssphp_subscription, ssphp_resource_group, ssphp_resources_affected
           </query>
@@ -514,16 +558,16 @@ $tkn_index$ $tkn_sourcetype$ $tkn_host$ $tkn_source$ (SSPHP_RUN=$ssphp_run_tkn|s
     </panel>
   </row>
   
-<!-- ************************************************************************************************************************************************************** -->
+<!-- ************************************************** Resources by Finding ************************************************************************************************************ -->
 
   <row>
     <panel depends="$tkn_R_view$">
-      <title>Resouces by Finding</title>
+      <title>Resources by Finding</title>
       <table>
         <search base="base_1">
           <query>
-
-| search ssphp_business_service_index=$tkn_service_id$ ssphp_subscription=$tkn_subscription$ ssphp_resource_group="$tkn_resource_group_id$" ssphp_severity=*$tkn_severity$* ssphp_environment=$tkn_environment$ ssphp_service_team=$tkn_service_team$ $healthy_tkn$
+| search ssphp_level_1_display_name=$tkn_group|s$ AND ssphp_level_2_display_name=$tkn_service|s$ AND ssphp_subscription=$tkn_subscription|s$ AND ssphp_resource_group=$tkn_resource_group_id|s$ AND ssphp_service_team=$tkn_service_team$ 
+        AND $healthy_tkn$ AND ssphp_severity=$tkn_severity|s$ AND ssphp_environment=$tkn_environment|s$
 
 | fillnull value="-" ssphp_subscription, ssphp_resource_group, ssphp_resources_affected
 | eval ssphp_resources_affected="subscription = ".ssphp_subscription.", resource group = ".ssphp_resource_group.", resources affected = ".ssphp_resources_affected
@@ -543,7 +587,7 @@ $tkn_index$ $tkn_sourcetype$ $tkn_host$ $tkn_source$ (SSPHP_RUN=$ssphp_run_tkn|s
     </panel>
   </row>
   
-<!-- ************************************************************************************************************************************************************** -->
+<!-- ****************************************** Compare to Checkpoint ******************************************************************************************************************** -->
 
   <row>
     <panel depends="$never_show$">
@@ -682,11 +726,18 @@ $tkn_index$ $tkn_sourcetype$ $tkn_host$ $tkn_source$ (SSPHP_RUN=$ssphp_run_tkn|s
           <query>
 | multisearch 
 
-[search $tkn_index$ $tkn_sourcetype$ $tkn_host$ $tkn_source$ ssphp_business_service_index=$tkn_service_id|s$ SSPHP_RUN=$ssphp_run_tkn$ earliest=$search_earliest_tkn$ latest=$search_latest_tkn$
+[search $tkn_index$ $tkn_sourcetype$ $tkn_host$ $tkn_source$
+        SSPHP_RUN=$ssphp_run_tkn$ earliest=$search_earliest_tkn$ latest=$search_latest_tkn$
+        ssphp_level_1_display_name=$tkn_group|s$ AND ssphp_level_2_display_name=$tkn_service|s$ AND ssphp_subscription=$tkn_subscription|s$ AND ssphp_resource_group=$tkn_resource_group_id|s$ AND ssphp_service_team=$tkn_service_team$ $healthy_tkn$ AND ssphp_severity=$tkn_severity|s$ AND ssphp_environment=$tkn_environment|s$
+
 | eval finding=coalesce(ssphp_sub_assessment_id,ssphp_assessment_id)
 | rename ssphp_* as ssphp_current_*]
 
-[search $tkn_index$ $tkn_sourcetype$ $tkn_host$ $tkn_source$ ssphp_business_service_index=$tkn_service_id|s$ $checkpoint_search_text_tkn$
+
+[search $tkn_index$ $tkn_sourcetype$ $tkn_host$ $tkn_source$
+        $checkpoint_search_text_tkn$
+        ssphp_level_1_display_name=$tkn_group|s$ AND ssphp_level_2_display_name=$tkn_service|s$ AND ssphp_subscription=$tkn_subscription|s$ AND ssphp_resource_group=$tkn_resource_group_id|s$ AND ssphp_service_team=$tkn_service_team$ $healthy_tkn$ AND ssphp_severity=$tkn_severity|s$ AND ssphp_environment=$tkn_environment|s$
+
 | eval finding=coalesce(ssphp_sub_assessment_id,ssphp_assessment_id)
 | rename ssphp_* as ssphp_checkpoint_*]
 
