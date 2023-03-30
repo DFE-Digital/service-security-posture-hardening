@@ -252,7 +252,7 @@ ssphp_level_1_display_name=$tkn_group|s$ AND ssphp_level_2_display_name=$tkn_ser
           <query>
 | rest splunk_server=local /services/authentication/current-context
 
-| eval roles=if(username="ian.pearl@education.gov.uk","dfe_ssphp_service_user_s184",roles)     ```make ian a service user for testing```
+```| eval roles=if(username="ian.pearl@education.gov.uk","dfe_ssphp_service_user_s184",roles)```     ```make ian a service user for testing```
             
 | rex field=roles "^dfe_ssphp_service_user_(?&lt;role_service&gt;s\d{3})$"
 | eval isadmin=case(roles="sc_admin","1",roles="power","1",roles="dfe_ssphp_service_power",1,isnotnull(role_service),"0",1==1,"0")
