@@ -1,6 +1,6 @@
 <form theme="dark" version="1.1">
-  <label>Azure Findings</label>
-  <description>Service Security Posture Hardening Programme : v1.4</description>
+  <label>Azure Findings &amp; Alerts</label>
+  <description>Service Security Posture Hardening Programme : v1.6</description>
   
   
 <!-- ****************************************************** Initial Values **************************************************************************** -->
@@ -11,13 +11,16 @@
     <eval token="time_window_latest_epoch">now()</eval>
     <eval token="tkn_index">"index=\"ssphp_test\""</eval>
     <eval token="tkn_sourcetype">"sourcetype=\"azure:security:finding\""</eval>
+    <eval token="tkn_alerts_sourcetype">"sourcetype=\"azure:security:alert\""</eval>
     <eval token="tkn_host">"host=\"c113p01-splhf04\""</eval>
     <eval token="tkn_source">"source=\"azure_cloud_defender\""</eval>
+    <eval token="tkn_alerts_source">"source=\"azure_defender_alerts\""</eval>
     <eval token="drilldown_subscription_tkn">coalesce($tkn_drilldown_subscription$,"null")</eval>
   </init>
   
   
 <!-- ****************************************************** Base Queries **************************************************************************** -->
+
   <search id="base_1">
     <query>
 $tkn_index$ $tkn_sourcetype$ $tkn_host$ $tkn_source$ (SSPHP_RUN=$ssphp_run_tkn|s$ AND ssphp_creation_time_epoch&gt;$time_window_earliest_epoch$ AND ssphp_creation_time_epoch&lt;$time_window_latest_epoch$)
@@ -43,9 +46,86 @@ ssphp_level_1_display_name=$tkn_group|s$ AND ssphp_level_2_display_name=$tkn_ser
   
 
 <!-- ****************************************************** Form Filters **************************************************************************** -->
+
   <fieldset submitButton="false">
+
+    <input type="radio" token="tkn_list_view">
+      <label>View</label>
+      <choice value="L">Findings List</choice>
+      <choice value="F">Findings by Resource</choice>
+      <choice value="R">Resources by Finding</choice>
+      <choice value="A">Alerts List</choice>
+      <choice value="C">Changes since Checkpoint</choice>
+      <change>
+        <condition label="Findings List">
+          <set token="tkn_chart_view">L</set>
+          <set token="tkn_health_view">L</set>
+          <unset token="tkn_alerts_view"></unset>
+          <set token="tkn_findings_view">L</set>
+          <set token="tkn_L_view">L</set>
+          <unset token="tkn_F_view"></unset>
+          <unset token="tkn_R_view"></unset>
+          <unset token="tkn_C_view"></unset>
+          <unset token="tkn_A_view"></unset>
+          <set token="tkn_focus">Findings</set>
+        </condition>
+        <condition label="Findings by Resource">
+          <set token="tkn_chart_view">F</set>
+          <set token="tkn_health_view">F</set>
+          <unset token="tkn_alerts_view"></unset>
+          <set token="tkn_findings_view">F</set>
+          <set token="tkn_F_view">F</set>
+          <unset token="tkn_L_view"></unset>
+          <unset token="tkn_R_view"></unset>
+          <unset token="tkn_C_view"></unset>
+          <unset token="tkn_A_view"></unset>
+          <set token="tkn_focus">Findings</set>
+        </condition>
+        <condition label="Resources by Finding">
+          <set token="tkn_chart_view">R</set>
+          <set token="tkn_health_view">R</set>
+          <unset token="tkn_alerts_view"></unset>
+          <set token="tkn_findings_view">R</set>
+          <set token="tkn_R_view">R</set>
+          <unset token="tkn_L_view"></unset>
+          <unset token="tkn_F_view"></unset>
+          <unset token="tkn_C_view"></unset>
+          <unset token="tkn_A_view"></unset>
+          <set token="tkn_focus">Findings</set>
+        </condition>
+        <condition label="Alerts List">
+          <unset token="tkn_chart_view"></unset>
+          <unset token="tkn_health_view"></unset>
+          <set token="tkn_alerts_view">A</set>
+          <unset token="tkn_findings_view"></unset>
+          <set token="tkn_A_view">A</set>
+          <unset token="tkn_R_view"></unset>
+          <unset token="tkn_L_view"></unset>
+          <unset token="tkn_F_view"></unset>
+          <unset token="tkn_C_view"></unset>
+          <set token="tkn_focus">Alerts</set>
+        </condition>
+        <condition label="Changes since Checkpoint">
+          <set token="tkn_C_view">C</set>
+          <unset token="tkn_chart_view"></unset>
+          <set token="tkn_health_view">C</set>
+          <unset token="tkn_alerts_view"></unset>
+          <set token="tkn_findings_view">C</set>
+          <unset token="tkn_L_view"></unset>
+          <unset token="tkn_F_view"></unset>
+          <unset token="tkn_R_view"></unset>
+          <unset token="tkn_A_view"></unset>
+          <set token="tkn_focus">Findings</set>
+        </condition>
+      </change>
+      <default>L</default>
+      <initialValue>L</initialValue>
+    </input>
+    
+    
+    
     <input type="time" token="tkn_time" searchWhenChanged="true">
-      <label>Finding Created Time Window</label>
+      <label>$tkn_focus$ Created Time Window</label>
       <default>
         <earliest>0</earliest>
         <latest>now</latest>
@@ -185,7 +265,7 @@ ssphp_level_1_display_name=$tkn_group|s$ AND ssphp_level_2_display_name=$tkn_ser
     </input>
 
 
-    <input type="checkbox" token="healthy_tkn" searchWhenChanged="true">
+    <input type="checkbox" token="healthy_tkn" searchWhenChanged="true" depends="$tkn_health_view$">
       <label>Health Status to Include</label>
       <choice value="Healthy">Healthy</choice>
       <choice value="Unhealthy">Unhealthy</choice>
@@ -198,49 +278,14 @@ ssphp_level_1_display_name=$tkn_group|s$ AND ssphp_level_2_display_name=$tkn_ser
       <valueSuffix>"</valueSuffix>
       <delimiter> OR </delimiter>
     </input>
-
-
-    <input type="radio" token="tkn_list_view">
-      <label>View</label>
-      <choice value="L">Findings List</choice>
-      <choice value="F">Findings by Resource</choice>
-      <choice value="R">Resources by Finding</choice>
-      <choice value="C">Changes since Checkpoint</choice>
-      <change>
-        <condition label="Findings List">
-          <set token="tkn_chart_view">L</set>
-          <set token="tkn_L_view">L</set>
-          <unset token="tkn_F_view"></unset>
-          <unset token="tkn_R_view"></unset>
-          <unset token="tkn_C_view"></unset>
-        </condition>
-        <condition label="Findings by Resource">
-          <set token="tkn_chart_view">F</set>
-          <set token="tkn_F_view">F</set>
-          <unset token="tkn_L_view"></unset>
-          <unset token="tkn_R_view"></unset>
-          <unset token="tkn_C_view"></unset>
-        </condition>
-        <condition label="Resources by Finding">
-          <set token="tkn_chart_view">R</set>
-          <set token="tkn_R_view">R</set>
-          <unset token="tkn_L_view"></unset>
-          <unset token="tkn_F_view"></unset>
-          <unset token="tkn_C_view"></unset>
-        </condition>
-        <condition label="Changes since Checkpoint">
-          <set token="tkn_C_view">C</set>
-          <unset token="tkn_chart_view"></unset>
-          <unset token="tkn_L_view"></unset>
-          <unset token="tkn_F_view"></unset>
-          <unset token="tkn_R_view"></unset>
-        </condition>
-      </change>
-      <default>L</default>
-      <initialValue>L</initialValue>
-    </input>
   </fieldset>
   
+  
+
+<!-- ************************************************************************************************************************************************************************************************* -->
+<!-- ************************************************************************************************************************************************************************************************* -->
+<!-- ************************************************************************************************************************************************************************************************* -->
+
 
 
 <!-- ****************************************************** Hidden rows to manage RBAC **************************************************************************** -->
@@ -311,10 +356,17 @@ ssphp_level_1_display_name=$tkn_group|s$ AND ssphp_level_2_display_name=$tkn_ser
           #panel3{
             width:20% !important;
           }
+          #panel4{
+            width:10% !important;
+          }
+          #panel5{
+            width:20% !important;
+          }
         </style>
       </html>
     </panel>
     
+<!-- ***************** -->
     <panel id="panel1">
       <html>
             <style>
@@ -326,7 +378,8 @@ ssphp_level_1_display_name=$tkn_group|s$ AND ssphp_level_2_display_name=$tkn_ser
         </html>
     </panel>
     
-    <panel id="panel2">
+<!-- ***************** -->
+    <panel id="panel2" depends="$tkn_findings_view$">
       <table>
         <search>
           <query>
@@ -334,12 +387,13 @@ ssphp_level_1_display_name=$tkn_group|s$ AND ssphp_level_2_display_name=$tkn_ser
 | eval "Number of Findings"=$eventcount_tkn$, "Number of Findings"=if(isnum('Number of Findings'),'Number of Findings',"N/A")
 | fieldformat "Number of Findings"=tostring('Number of Findings',"commas")
 | table "Number of Findings"
+| rename "Number of Findings" as "Number of $tkn_focus$"
           </query>
         </search>
       </table>
     </panel>
-    
-    <panel id="panel3">
+
+    <panel id="panel3" depends="$tkn_findings_view$">
       <table>
         <search>
           <query>
@@ -347,7 +401,7 @@ ssphp_level_1_display_name=$tkn_group|s$ AND ssphp_level_2_display_name=$tkn_ser
 | search ssphp_source="findings"
 | rename last_SSPHP_RUN as SSPHP_RUN
 
-| eval search_earliest=SSPHP_RUN-3600, search_latest=SSPHP_RUN+3600
+| eval search_earliest=SSPHP_RUN-600, search_latest=SSPHP_RUN+3600
 | eval "Last Findings Ingestion Time from Azure"=strftime(SSPHP_RUN,"%Y-%m-%d %H:%M:%S")
 | table "Last Findings Ingestion Time from Azure", SSPHP_RUN, search_earliest, search_latest
           </query>
@@ -360,7 +414,44 @@ ssphp_level_1_display_name=$tkn_group|s$ AND ssphp_level_2_display_name=$tkn_ser
         <fields>"Last Findings Ingestion Time from Azure", SSPHP_RUN</fields>
       </table>
     </panel>
+    
+<!-- ***************** -->
+    <panel id="panel4" depends="$tkn_alerts_view$">
+      <table>
+        <search>
+          <query>
+| makeresults
+| eval "Number of Alerts"=$alerts_eventcount_tkn$, "Number of Alerts"=if(isnum('Number of Alerts'),'Number of Alerts',"N/A")
+| fieldformat "Number of Alerts"=tostring('Number of Alerts',"commas")
+| table "Number of Alerts"
+          </query>
+        </search>
+      </table>
+    </panel>
+    
+    <panel id="panel5" depends="$tkn_alerts_view$">
+      <table>
+        <search>
+          <query>
+| inputlookup ssphp_last_ssphp_drop.csv
+| search ssphp_source="alerts"
+| rename last_SSPHP_RUN as SSPHP_RUN
+
+| eval search_earliest=SSPHP_RUN-600, search_latest=SSPHP_RUN+3600
+| eval "Last Alerts Ingestion Time from Azure"=strftime(SSPHP_RUN,"%Y-%m-%d %H:%M:%S")
+| table "Last Alerts Ingestion Time from Azure", SSPHP_RUN, search_earliest, search_latest
+          </query>
+          <done>
+            <set token="ssphp_alerts_run_tkn">$result.SSPHP_RUN$</set>
+            <set token="search_alerts_earliest_tkn">$result.search_earliest$</set>
+            <set token="search_alerts_latest_tkn">$result.search_latest$</set>
+          </done>
+        </search>
+        <fields>"Last Alerts Ingestion Time from Azure", SSPHP_RUN</fields>
+      </table>
+    </panel>
   </row>
+  
   
 <!-- ******************************************* CHARTS ******************************************************************************************************************* -->
 
@@ -591,6 +682,88 @@ ssphp_level_1_display_name=$tkn_group|s$ AND ssphp_level_2_display_name=$tkn_ser
       </table>
     </panel>
   </row>
+  
+  
+  
+<!-- ************************************************** Alerts List ************************************************************************************************************ -->
+
+  <row>
+    <panel depends="$tkn_A_view$">
+      <table>
+        <search>
+          <query>
+$tkn_index$ $tkn_alerts_sourcetype$ $tkn_host$ $tkn_alerts_source$ SSPHP_RUN=$ssphp_alerts_run_tkn|s$
+
+| rex field=ssphp_resource_id "resource(G|g)roups\/(?&lt;ssphp_resource_group&gt;[^\/]+)\/"
+| fillnull value="-"
+
+| lookup ssphp_resource_service_map ssphp_resource_group AS ssphp_resource_group OUTPUT ssphp_level_1_display_name as ssphp_level_1_display_name ssphp_level_2_display_name as ssphp_level_2_display_name ssphp_business_service_index AS ssphp_business_service_index ssphp_environment AS ssphp_environment ssphp_location AS ssphp_location ssphp_parent_business AS ssphp_parent_business ssphp_portfolio AS ssphp_portfolio ssphp_product AS ssphp_product ssphp_service AS ssphp_service ssphp_service_line AS ssphp_service_line ssphp_service_name AS ssphp_service_name ssphp_service_offering AS ssphp_service_offering ssphp_service_team AS ssphp_service_team ssphp_tech_contact_email AS ssphp_tech_contact_email ssphp_tech_dir_arch_partner AS ssphp_tech_dir_arch_partner ssphp_tenant AS ssphp_tenant ssphp_tenant_name AS ssphp_tenant_name ssphp_subscription as ssphp_subscription
+
+| where ssphp_start_time_epoch&gt;$time_window_earliest_epoch$ AND ssphp_start_time_epoch&lt;$time_window_latest_epoch$
+
+| eval sev_sort=case(ssphp_severity="High",1,ssphp_severity="Medium",2,ssphp_severity="Low",3,1==1,4)
+| sort 0 sev_sort, ssphp_status, ssphp_start_time_epoch
+
+| search ssphp_level_1_display_name=$tkn_group|s$ AND ssphp_level_2_display_name=$tkn_service|s$ AND ssphp_subscription=$tkn_subscription|s$ AND ssphp_resource_group=$tkn_resource_group_id|s$ AND ssphp_service_team=$tkn_service_team$ 
+        ```AND $healthy_tkn$ ```AND ssphp_severity=$tkn_severity|s$ AND ssphp_environment=$tkn_environment|s$
+
+| table ssphp_alert_id,
+        ssphp_severity,
+        ssphp_alert_name,
+        ssphp_tenant_name,
+        ssphp_subscription,
+        ssphp_resource_group,
+        ssphp_resources_affected,
+        ssphp_alerts_meta_entities,
+        ssphp_start_time,
+        ssphp_status,
+        ssphp_alert_description,
+        ssphp_level_1_display_name,
+        ssphp_level_2_display_name,
+        ssphp_business_service_index,
+        ssphp_environment,
+        ssphp_service_team
+
+| rename ssphp_severity as "Severity",
+         ssphp_alert_name as "Alert Name",
+         ssphp_tenant_name as "Tenant",
+         ssphp_subscription as "Subscription",
+         ssphp_resource_group as "Resource Group",
+         ssphp_resources_affected as "Affected Resources",
+         ssphp_alerts_meta_entities as "Alert Entities Affected",
+         ssphp_start_time as "Activity Start Time",
+         ssphp_status as "Status",
+         ssphp_alert_description as "Alert Description",
+         ssphp_level_1_display_name as "DfE Group",
+         ssphp_level_2_display_name as "DfE Service",
+         ssphp_business_service_index as "Business Service Index",
+         ssphp_environment as "Environment",
+         ssphp_service_team as "Service Team"
+
+| eventstats count
+          </query>
+          <done>
+            <set token="alerts_eventcount_tkn">$result.count$</set>
+          </done>
+          <earliest>-1d@d</earliest>
+          <latest>now</latest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="count">25</option>
+        <option name="dataOverlayMode">none</option>
+        <option name="drilldown">cell</option>
+        <option name="percentagesRow">false</option>
+        <option name="rowNumbers">false</option>
+        <option name="totalsRow">false</option>
+        <option name="wrap">true</option>
+        <fields>"Severity","Alert Name","Tenant","Subscription","Resource Group","Affected Resources","Alert Entities Affected","Activity Start Time","Status","Alert Description","DfE Group", "DfE Service", "Business Service Index","Environment","Service Team"</fields>
+        <drilldown>
+          <link target="_blank">/app/SSPHP/ssphp_alerts_dashboard_drilldown?tkn_alert_id=$row.ssphp_alert_id$</link>
+        </drilldown>
+      </table>
+    </panel>
+  </row>
+  
   
 <!-- ****************************************** Compare to Checkpoint ******************************************************************************************************************** -->
 

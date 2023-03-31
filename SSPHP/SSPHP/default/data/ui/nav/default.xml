@@ -10,7 +10,6 @@
   </collection>  
   <collection label="Azure">
     <view name="ssphp_findings_dashboard" default='true' />
-    <view name="ssphp_alerts_dashboard" />
     <view name="ssphp_metrics_dashboard" />
     <view name="ssphp_resources_dashboard" />
   </collection>  
