@@ -1,278 +1,281 @@
 <form theme="dark" version="1.1">
-  <label>Service Security Posture Hardening Programme : Azure Findings Drilldown</label>
-  <description>v1.0</description>
+	<label>Service Security Posture Hardening Programme : Azure Findings Drilldown</label>
+	<description>v1.1</description>
+	
+	<search id="base_1">
+			<query>index="ssphp_test" sourcetype="azure:security:finding" host="c113p01-splhf04" source="azure_cloud_defender" SSPHP_RUN=$ssphp_run_tkn$ ssphp_event_uid=$tkn_event_uid|s$
   
-  <search id="base_1">
-          <query>index="ssphp_test" sourcetype="azure:security:finding" host="c113p01-splhf04" source="azure_cloud_defender" SSPHP_RUN=$ssphp_run_tkn$ ssphp_event_uid=$tkn_event_uid|s$
-
-| eval ssphp_tech_contact_email=split(ssphp_tech_contact_email,"; ")
-
-
-| rename ssphp_event_uid as "Event UID",
-	   ssphp_run as "Download Time",
-	   ssphp_creation_time as "Finding Creation Time",
-	   ssphp_creation_time_epoch as "Finding Creation Time Epoch",
-	   ssphp_last_changed_time as "Finding Last Changed Time", 
-	   ssphp_last_changed_time_epoch as "Finding Last Changed Time Epoch",
-
-	   ssphp_business_service_index as "Business Service Index",
-	   ssphp_service as "Service",
-	   ssphp_service_name as "Service Name",
-	   ssphp_service_shortname as "Service Short Name",
-	   ssphp_parent_business as "Parent Business",
-	   ssphp_portfolio as "Portfolio",
-	   ssphp_product as "Product",
-	   ssphp_service_team as "Service Team",
-	   ssphp_service_line as "Service Line",
-	   ssphp_service_offering as "Service Offering",
-	   
-	   ssphp_tech_contact_email as "Technical Contacts",
-	   ssphp_tech_dir_arch_partner as "Architecture Partner",
-	   
-	   
-	   ssphp_assessment_id as "Assessment ID",
-	   ssphp_sub_assessment_id as "Sub Assessment ID",
-	   ssphp_metadata_id as "Assessment Metadata ID",
-	   
-	   ssphp_tenant as "Tenancy ID",
-	   ssphp_tenant_name as "Tenancy Name",
-	   ssphp_location as "Location",
-	   ssphp_subscription as "Subscription",
-	   ssphp_resource_group as "Resource Group",
-	   ssphp_resource_types as "Resource Types Affected",
-	   ssphp_resource_names as "Resources Affected",
-	   ssphp_environment as "Environment",
-	   
-	   ssphp_policy_name as "Policy Name",
-	   ssphp_policy_description as "Policy Description",
-	   ssphp_remediation as "Remediation Recommendations",
-	   
-	   ssphp_severity as "Severity",
-	   ssphp_impact as "Impact",
-	   ssphp_user_impact as "User Impact",
-	   ssphp_tactics as "Tactics",
-	   ssphp_techniques as "Techniques",
-	   ssphp_threats as "Threats",
-	   ssphp_category as "Category",
-	   ssphp_status as "Status",
-	   ssphp_status_cause as "Status Cause",
-	   
-	   ssphp_assessment_id as "Assessment ID",
-	   ssphp_sub_assessment_id as "Sub Assessment ID",
-	   ssphp_metadata_id as "Assessment Metadata ID"
-	   
-| table "Event UID",
-	   "Download Time",
-	   "Finding Creation Time",
-	   "Finding Creation Time Epoch",
-	   "Finding Last Changed Time", 
-	   "Finding Last Changed Time Epoch",
-
-	   "Business Service Index",
-	   "Service",
-	   "Service Name",
-	   "Service Short Name",
-	   "Parent Business",
-	   "Portfolio",
-	   "Product",
-	   "Service Team",
-	   "Service Line",
-	   "Service Offering",
-	   
-	   "Technical Contacts",
-	   "Architecture Partner",
-	   
-	   "Assessment ID",
-	   "Sub Assessment ID",
-	   "Assessment Metadata ID",
-	   
-	   "Tenancy ID",
-	   "Tenancy Name",
-	   "Location",
-	   "Subscription",
-	   "Resource Group",
-	   "Resource Types Affected",
-	   "Resources Affected",
-	   "Environment",
-	   
-	   "Policy Name",
-	   "Policy Description",
-	   "Remediation Recommendations",
-	   
-	   "Severity",
-	   "Impact",
-	   "User Impact",
-	   "Tactics",
-	   "Techniques",
-	   "Threats",
-	   "Category",
-	   "Status",
-	   "Status Cause",
-	   
-	   "Assessment ID",
-	   "Sub Assessment ID",
-	   "Assessment Metadata ID"  
-          </query>
-          <earliest>$search_earliest_tkn$</earliest>
-          <latest>$search_latest_tkn$</latest>
-          <sampleRatio>1</sampleRatio>
-        </search>    
-
-
-<!-- ************************************************************************************************************************************************************** -->
-
-  <row depends="$never_show$">
-    <panel>
-      <table>
-        <search>
-          <query>
-| inputlookup ssphp_last_ssphp_drop.csv
-| rename last_SSPHP_RUN as SSPHP_RUN
-
-| eval search_earliest=SSPHP_RUN-3600, search_latest=SSPHP_RUN+3600
-| eval "Last Ingestion Time from Azure"=strftime(SSPHP_RUN,"%Y-%m-%d %H:%M:%S")
-| table "Last Ingestion Time from Azure", SSPHP_RUN, search_earliest, search_latest
-          </query>
-          <done>
-            <set token="ssphp_run_tkn">$result.SSPHP_RUN$</set>
-            <set token="search_earliest_tkn">$result.search_earliest$</set>
-            <set token="search_latest_tkn">$result.search_latest$</set>
-          </done>
-        </search>
-        <fields>"Last Ingestion Time from Azure", SSPHP_RUN</fields>
-      </table>
-    </panel>
-  </row> 
-
-
-<!-- ************************************************************************************************************************************************************** -->
-
-  <row>
-    <panel>
-      <title>Event Times</title>
-      <table>
-        <search base="base_1">
-          <query>
-| table "Event UID", 
-        "Download Time", 
-        "Finding Creation Time", 
-        "Finding Creation Time Epoch", 
-        "Finding Last Changed Time", 
-        "Finding Last Changed Time Epoch" 
-	   
-| transpose
-| rename column as "Field", "row 1" as "Value"
-          </query>
-        </search>
-        <option name="count">100</option>
-        <option name="dataOverlayMode">none</option>
-        <option name="drilldown">none</option>
-        <option name="percentagesRow">false</option>
-        <option name="rowNumbers">false</option>
-        <option name="totalsRow">false</option>
-        <option name="wrap">true</option>
-      </table>
-    </panel>
-    
-    <panel>
-      <title>Resource Details</title>
-      <table>
-        <search base="base_1">
-          <query>
-| table "Tenancy ID",
-	   "Tenancy Name",
-	   "Location",
-	   "Subscription",
-	   "Resource Group",
-	   "Resource Types Affected",
-	   "Resources Affected",
-	   "Environment"
-	   
-| transpose
-| rename column as "Field", "row 1" as "Value"
-          </query>
-        </search>
-        <option name="count">100</option>
-        <option name="dataOverlayMode">none</option>
-        <option name="drilldown">none</option>
-        <option name="percentagesRow">false</option>
-        <option name="rowNumbers">false</option>
-        <option name="totalsRow">false</option>
-        <option name="wrap">true</option>
-      </table>
-    </panel>
-  </row>
-
-
-<!-- ************************************************************************************************************************************************************** -->
-
-  <row>
-    <panel>
-      <title>Service Details</title>
-      <table>
-        <search base="base_1">
-          <query>
-| table "Business Service Index",
-	   "Service",
-	   "Service Name",
-	   "Service Short Name",
-	   "Parent Business",
-	   "Portfolio",
-	   "Product",
-	   "Service Team",
-	   "Service Line",
-	   "Service Offering",
-	   "Technical Contacts",
-	   "Architecture Partner"
-	   
-| transpose
-| rename column as "Field", "row 1" as "Value"
-          </query>
-        </search>
-        <option name="count">100</option>
-        <option name="dataOverlayMode">none</option>
-        <option name="drilldown">none</option>
-        <option name="percentagesRow">false</option>
-        <option name="rowNumbers">false</option>
-        <option name="totalsRow">false</option>
-        <option name="wrap">true</option>
-      </table>
-    </panel>
-
-    <panel>
-      <title>Finding Details</title>
-      <table>
-        <search base="base_1">
-          <query>
-| table "Policy Name",
-	   "Policy Description",
-	   "Remediation Recommendations",
-	   ssphp_severity as "Severity",
-	   ssphp_impact as "Impact",
-	   ssphp_user_impact as "User Impact",
-	   ssphp_tactics as "Tactics",
-	   ssphp_techniques as "Techniques",
-	   ssphp_threats as "Threats",
-	   ssphp_category as "Category",
-	   ssphp_status as "Status",
-	   ssphp_status_cause as "Status Cause",
-	   
-	   "Assessment ID",
-	   "Sub Assessment ID",
-	   "Assessment Metadata ID" 
-	   
-| transpose
-| rename column as "Field", "row 1" as "Value"
-          </query>
-        </search>
-        <option name="count">100</option>
-        <option name="dataOverlayMode">none</option>
-        <option name="drilldown">none</option>
-        <option name="percentagesRow">false</option>
-        <option name="rowNumbers">false</option>
-        <option name="totalsRow">false</option>
-        <option name="wrap">true</option>
-      </table>
-    </panel>
-  </row>
-</form>
+  | eval ssphp_tech_contact_email=split(ssphp_tech_contact_email,"; ")
+  
+  
+  | rename ssphp_event_uid as "Event UID",
+		 ssphp_run as "Download Time",
+		 ssphp_creation_time as "Finding Creation Time",
+		 ssphp_creation_time_epoch as "Finding Creation Time Epoch",
+		 ssphp_last_changed_time as "Finding Last Changed Time", 
+		 ssphp_last_changed_time_epoch as "Finding Last Changed Time Epoch",
+  
+		 ssphp_level_1_display_name as "DfE Group",
+		 ssphp_level_2_display_name as "DfE Service",
+		 ssphp_business_service_index as "Business Service Index",
+		 ssphp_service as "Service",
+		 ssphp_service_name as "Service Name",
+		 ssphp_parent_business as "Parent Business",
+		 ssphp_portfolio as "Portfolio",
+		 ssphp_product as "Product",
+		 ssphp_service_team as "Service Team",
+		 ssphp_service_line as "Service Line",
+		 ssphp_service_offering as "Service Offering",
+		 
+		 ssphp_tech_contact_email as "Technical Contacts",
+		 ssphp_tech_dir_arch_partner as "Architecture Partner",
+		 
+		 
+		 ssphp_assessment_id as "Assessment ID",
+		 ssphp_sub_assessment_id as "Sub Assessment ID",
+		 ssphp_metadata_id as "Assessment Metadata ID",
+		 
+		 ssphp_tenant as "Tenancy ID",
+		 ssphp_tenant_name as "Tenancy Name",
+		 ssphp_location as "Location",
+		 ssphp_subscription as "Subscription",
+		 ssphp_resource_group as "Resource Group",
+		 ssphp_resource_types as "Resource Types Affected",
+		 ssphp_resource_names as "Resources Affected",
+		 ssphp_environment as "Environment",
+		 
+		 ssphp_policy_name as "Policy Name",
+		 ssphp_policy_description as "Policy Description",
+		 ssphp_remediation as "Remediation Recommendations",
+		 
+		 ssphp_severity as "Severity",
+		 ssphp_impact as "Impact",
+		 ssphp_user_impact as "User Impact",
+		 ssphp_tactics as "Tactics",
+		 ssphp_techniques as "Techniques",
+		 ssphp_threats as "Threats",
+		 ssphp_category as "Category",
+		 ssphp_status as "Status",
+		 ssphp_status_cause as "Status Cause",
+		 
+		 ssphp_assessment_id as "Assessment ID",
+		 ssphp_sub_assessment_id as "Sub Assessment ID",
+		 ssphp_metadata_id as "Assessment Metadata ID"
+		 
+  | fields "Event UID",
+		 "Download Time",
+		 "Finding Creation Time",
+		 "Finding Creation Time Epoch",
+		 "Finding Last Changed Time", 
+		 "Finding Last Changed Time Epoch",
+  
+		 "DfE Group",
+		 "DfE Service",
+		 "Business Service Index",
+		 "Service",
+		 "Service Name",
+		 "Parent Business",
+		 "Portfolio",
+		 "Product",
+		 "Service Team",
+		 "Service Line",
+		 "Service Offering",
+		 
+		 "Technical Contacts",
+		 "Architecture Partner",
+		 
+		 "Assessment ID",
+		 "Sub Assessment ID",
+		 "Assessment Metadata ID",
+		 
+		 "Tenancy ID",
+		 "Tenancy Name",
+		 "Location",
+		 "Subscription",
+		 "Resource Group",
+		 "Resource Types Affected",
+		 "Resources Affected",
+		 "Environment",
+		 
+		 "Policy Name",
+		 "Policy Description",
+		 "Remediation Recommendations",
+		 
+		 "Severity",
+		 "Impact",
+		 "User Impact",
+		 "Tactics",
+		 "Techniques",
+		 "Threats",
+		 "Category",
+		 "Status",
+		 "Status Cause",
+		 
+		 "Assessment ID",
+		 "Sub Assessment ID",
+		 "Assessment Metadata ID"  
+			</query>
+			<earliest>$search_earliest_tkn$</earliest>
+			<latest>$search_latest_tkn$</latest>
+			<sampleRatio>1</sampleRatio>
+		  </search>    
+  
+  
+  <!-- ************************************************************************************************************************************************************** -->
+  
+	<row depends="$never_show$">
+	  <panel>
+		<table>
+		  <search>
+			<query>
+  | inputlookup ssphp_last_ssphp_drop.csv
+  | rename last_SSPHP_RUN as SSPHP_RUN
+  
+  | eval search_earliest=SSPHP_RUN-3600, search_latest=SSPHP_RUN+3600
+  | eval "Last Ingestion Time from Azure"=strftime(SSPHP_RUN,"%Y-%m-%d %H:%M:%S")
+  | table "Last Ingestion Time from Azure", SSPHP_RUN, search_earliest, search_latest
+			</query>
+			<done>
+			  <set token="ssphp_run_tkn">$result.SSPHP_RUN$</set>
+			  <set token="search_earliest_tkn">$result.search_earliest$</set>
+			  <set token="search_latest_tkn">$result.search_latest$</set>
+			</done>
+		  </search>
+		  <fields>"Last Ingestion Time from Azure", SSPHP_RUN</fields>
+		</table>
+	  </panel>
+	</row> 
+  
+  
+  <!-- ************************************************************************************************************************************************************** -->
+  
+	<row>
+	  <panel>
+		<title>Event Times</title>
+		<table>
+		  <search base="base_1">
+			<query>
+  | table "Event UID", 
+		  "Download Time", 
+		  "Finding Creation Time", 
+		  "Finding Creation Time Epoch", 
+		  "Finding Last Changed Time", 
+		  "Finding Last Changed Time Epoch" 
+		 
+  | transpose
+  | rename column as "Field", "row 1" as "Value"
+			</query>
+		  </search>
+		  <option name="count">100</option>
+		  <option name="dataOverlayMode">none</option>
+		  <option name="drilldown">none</option>
+		  <option name="percentagesRow">false</option>
+		  <option name="rowNumbers">false</option>
+		  <option name="totalsRow">false</option>
+		  <option name="wrap">true</option>
+		</table>
+	  </panel>
+	  
+	  <panel>
+		<title>Resource Details</title>
+		<table>
+		  <search base="base_1">
+			<query>
+  | table "Tenancy ID",
+		 "Tenancy Name",
+		 "Location",
+		 "Subscription",
+		 "Resource Group",
+		 "Resource Types Affected",
+		 "Resources Affected",
+		 "Environment"
+		 
+  | transpose
+  | rename column as "Field", "row 1" as "Value"
+			</query>
+		  </search>
+		  <option name="count">100</option>
+		  <option name="dataOverlayMode">none</option>
+		  <option name="drilldown">none</option>
+		  <option name="percentagesRow">false</option>
+		  <option name="rowNumbers">false</option>
+		  <option name="totalsRow">false</option>
+		  <option name="wrap">true</option>
+		</table>
+	  </panel>
+	</row>
+  
+  
+  <!-- ************************************************************************************************************************************************************** -->
+  
+	<row>
+	  <panel>
+		<title>Service Details</title>
+		<table>
+		  <search base="base_1">
+			<query>
+  | table "DfE Group",
+		 "DfE Service",
+		 "Business Service Index",
+		 "Service",
+		 "Service Name",
+		 "Parent Business",
+		 "Portfolio",
+		 "Product",
+		 "Service Team",
+		 "Service Line",
+		 "Service Offering",
+		 "Technical Contacts",
+		 "Architecture Partner"
+		 
+  | transpose
+  | rename column as "Field", "row 1" as "Value"
+			</query>
+		  </search>
+		  <option name="count">100</option>
+		  <option name="dataOverlayMode">none</option>
+		  <option name="drilldown">none</option>
+		  <option name="percentagesRow">false</option>
+		  <option name="rowNumbers">false</option>
+		  <option name="totalsRow">false</option>
+		  <option name="wrap">true</option>
+		</table>
+	  </panel>
+  
+	  <panel>
+		<title>Finding Details</title>
+		<table>
+		  <search base="base_1">
+			<query>
+  | table "Policy Name",
+		 "Policy Description",
+		 "Remediation Recommendations",
+		 ssphp_severity as "Severity",
+		 ssphp_impact as "Impact",
+		 ssphp_user_impact as "User Impact",
+		 ssphp_tactics as "Tactics",
+		 ssphp_techniques as "Techniques",
+		 ssphp_threats as "Threats",
+		 ssphp_category as "Category",
+		 ssphp_status as "Status",
+		 ssphp_status_cause as "Status Cause",
+		 
+		 "Assessment ID",
+		 "Sub Assessment ID",
+		 "Assessment Metadata ID" 
+		 
+  | transpose
+  | rename column as "Field", "row 1" as "Value"
+			</query>
+		  </search>
+		  <option name="count">100</option>
+		  <option name="dataOverlayMode">none</option>
+		  <option name="drilldown">none</option>
+		  <option name="percentagesRow">false</option>
+		  <option name="rowNumbers">false</option>
+		  <option name="totalsRow">false</option>
+		  <option name="wrap">true</option>
+		</table>
+	  </panel>
+	</row>
+  </form>

@@ -9,7 +9,7 @@ index="ssphp_test" sourcetype="azure:security:alert" host="c113p01-splhf04" sour
 | rex field=ssphp_resource_id "resource(G|g)roups\/(?&lt;ssphp_resource_group&gt;[^\/]+)\/"
 | fillnull value="-"
 
-| lookup ssphp_resource_service_map ssphp_resource_group AS ssphp_resource_group OUTPUT ssphp_business_service_index AS ssphp_business_service_index ssphp_environment AS ssphp_environment ssphp_location AS ssphp_location ssphp_parent_business AS ssphp_parent_business ssphp_portfolio AS ssphp_portfolio ssphp_product AS ssphp_product ssphp_service AS ssphp_service ssphp_service_line AS ssphp_service_line ssphp_service_name AS ssphp_service_name ssphp_service_offering AS ssphp_service_offering ssphp_service_shortname AS ssphp_service_shortname ssphp_service_team AS ssphp_service_team ssphp_tech_contact_email AS ssphp_tech_contact_email ssphp_tech_dir_arch_partner AS ssphp_tech_dir_arch_partner ssphp_tenant AS ssphp_tenant ssphp_tenant_name AS ssphp_tenant_name ssphp_subscription as ssphp_subscription
+| lookup ssphp_resource_service_map ssphp_resource_group AS ssphp_resource_group OUTPUT ssphp_level_1_display_name as ssphp_level_1_display_name ssphp_level_2_display_name as ssphp_level_2_display_name ssphp_business_service_index AS ssphp_business_service_index ssphp_environment AS ssphp_environment ssphp_location AS ssphp_location ssphp_parent_business AS ssphp_parent_business ssphp_portfolio AS ssphp_portfolio ssphp_product AS ssphp_product ssphp_service AS ssphp_service ssphp_service_line AS ssphp_service_line ssphp_service_name AS ssphp_service_name ssphp_service_offering AS ssphp_service_offering ssphp_service_team AS ssphp_service_team ssphp_tech_contact_email AS ssphp_tech_contact_email ssphp_tech_dir_arch_partner AS ssphp_tech_dir_arch_partner ssphp_tenant AS ssphp_tenant ssphp_tenant_name AS ssphp_tenant_name ssphp_subscription as ssphp_subscription
 
 | eval sev_sort=case(ssphp_severity="High",1,ssphp_severity="Medium",2,ssphp_severity="Low",3,1==1,4)
 | sort 0 sev_sort, ssphp_status, ssphp_start_time_epoch
@@ -30,7 +30,9 @@ index="ssphp_test" sourcetype="azure:security:alert" host="c113p01-splhf04" sour
           <query>
 | table ssphp_*
 
-| rename ssphp_severity as "Severity",
+| rename ssphp_level_1_display_name as "DfE Group",
+         ssphp_level_2_display_name as "DfE Service",
+         ssphp_severity as "Severity",
          ssphp_alert_name as "Alert Name",
          ssphp_tenant_name as "Tenant",
          ssphp_subscription as "Subscription",
@@ -54,7 +56,6 @@ index="ssphp_test" sourcetype="azure:security:alert" host="c113p01-splhf04" sour
          ssphp_service_line as "Service Line",
          ssphp_service_name as "Service Name",
          ssphp_service_offering as "Service Offering",
-         ssphp_service_shortname as "Service Short Name",
          ssphp_tech_contact_email as "Technical COntact EMails",
          ssphp_tech_dir_arch_partner as "Tech Directorship Architecture Partner",
          ssphp_tenant as "Tenant"
