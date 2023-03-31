@@ -1,14 +1,15 @@
 <form theme="dark" version="1.1">
 	<label>Service Security Posture Hardening Programme : Azure Findings Drilldown</label>
-	<description>v1.1</description>
+	<description>v1.2</description>
 	
 	<search id="base_1">
-			<query>index="ssphp_test" sourcetype="azure:security:finding" host="c113p01-splhf04" source="azure_cloud_defender" SSPHP_RUN=$tkn_ssphp_run$ ssphp_event_uid=$tkn_event_uid|s$
+			<query>
+index="ssphp_test" sourcetype="azure:security:finding" host="c113p01-splhf04" source="azure_cloud_defender" SSPHP_RUN=$tkn_ssphp_run$ ssphp_event_uid=$tkn_event_uid|s$
   
-  | eval ssphp_tech_contact_email=split(ssphp_tech_contact_email,"; ")
+| eval ssphp_tech_contact_email=split(ssphp_tech_contact_email,"; ")
   
   
-  | rename ssphp_event_uid as "Event UID",
+| rename ssphp_event_uid as "Event UID",
 		 ssphp_run as "Download Time",
 		 ssphp_creation_time as "Finding Creation Time",
 		 ssphp_creation_time_epoch as "Finding Creation Time Epoch",
@@ -62,7 +63,8 @@
 		 ssphp_sub_assessment_id as "Sub Assessment ID",
 		 ssphp_metadata_id as "Assessment Metadata ID"
 		 
-  | fields "Event UID",
+| fields SSPHP_RUN,
+         "Event UID",
 		 "Download Time",
 		 "Finding Creation Time",
 		 "Finding Creation Time Epoch",
@@ -115,36 +117,10 @@
 		 "Sub Assessment ID",
 		 "Assessment Metadata ID"  
 			</query>
-			<earliest>$search_earliest_tkn$</earliest>
-			<latest>$search_latest_tkn$</latest>
+			<earliest>0</earliest>
+			<latest>now</latest>
 			<sampleRatio>1</sampleRatio>
 		  </search>    
-  
-  
-  <!-- ************************************************************************************************************************************************************** -->
-  
-	<row depends="$never_show$">
-	  <panel>
-		<table>
-		  <search>
-			<query>
-  | inputlookup ssphp_last_ssphp_drop.csv
-  | rename last_SSPHP_RUN as SSPHP_RUN
-  
-  | eval search_earliest=SSPHP_RUN-3600, search_latest=SSPHP_RUN+3600
-  | eval "Last Ingestion Time from Azure"=strftime(SSPHP_RUN,"%Y-%m-%d %H:%M:%S")
-  | table "Last Ingestion Time from Azure", SSPHP_RUN, search_earliest, search_latest
-			</query>
-			<done>
-			  <set token="ssphp_run_tkn">$result.SSPHP_RUN$</set>
-			  <set token="search_earliest_tkn">$result.search_earliest$</set>
-			  <set token="search_latest_tkn">$result.search_latest$</set>
-			</done>
-		  </search>
-		  <fields>"Last Ingestion Time from Azure", SSPHP_RUN</fields>
-		</table>
-	  </panel>
-	</row> 
   
   
   <!-- ************************************************************************************************************************************************************** -->
@@ -155,7 +131,8 @@
 		<table>
 		  <search base="base_1">
 			<query>
-  | table "Event UID", 
+  | table SSPHP_RUN,
+          "Event UID", 
 		  "Download Time", 
 		  "Finding Creation Time", 
 		  "Finding Creation Time Epoch", 
