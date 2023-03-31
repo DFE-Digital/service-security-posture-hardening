@@ -3,7 +3,7 @@
 	<description>v1.1</description>
 	
 	<search id="base_1">
-			<query>index="ssphp_test" sourcetype="azure:security:finding" host="c113p01-splhf04" source="azure_cloud_defender" SSPHP_RUN=$ssphp_run_tkn$ ssphp_event_uid=$tkn_event_uid|s$
+			<query>index="ssphp_test" sourcetype="azure:security:finding" host="c113p01-splhf04" source="azure_cloud_defender" SSPHP_RUN=$tkn_ssphp_run$ ssphp_event_uid=$tkn_event_uid|s$
   
   | eval ssphp_tech_contact_email=split(ssphp_tech_contact_email,"; ")
   

@@ -4,7 +4,7 @@
   
   <search id="base_1">
           <query>
-index="ssphp_test" sourcetype="azure:security:alert" host="c113p01-splhf04" source="azure_defender_alerts" SSPHP_RUN="1677776789" ssphp_alert_id=$tkn_alert_id|s$
+index="ssphp_test" sourcetype="azure:security:alert" host="c113p01-splhf04" source="azure_defender_alerts" SSPHP_RUN=$tkn_ssphp_run$ ssphp_alert_id=$tkn_alert_id|s$
 
 | rex field=ssphp_resource_id "resource(G|g)roups\/(?&lt;ssphp_resource_group&gt;[^\/]+)\/"
 | fillnull value="-"
