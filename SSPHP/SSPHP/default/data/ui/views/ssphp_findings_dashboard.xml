@@ -707,8 +707,7 @@ $tkn_index$ $tkn_alerts_sourcetype$ $tkn_host$ $tkn_alerts_source$ SSPHP_RUN=$ss
 | search ssphp_level_1_display_name=$tkn_group|s$ AND ssphp_level_2_display_name=$tkn_service|s$ AND ssphp_subscription=$tkn_subscription|s$ AND ssphp_resource_group=$tkn_resource_group_id|s$ AND ssphp_service_team=$tkn_service_team$ 
         ```AND $healthy_tkn$ ```AND ssphp_severity=$tkn_severity|s$ AND ssphp_environment=$tkn_environment|s$
 
-| table ssphp_alert_id,
-        ssphp_severity,
+| table ssphp_ssphp_severity,
         ssphp_alert_name,
         ssphp_tenant_name,
         ssphp_subscription,
@@ -723,7 +722,8 @@ $tkn_index$ $tkn_alerts_sourcetype$ $tkn_host$ $tkn_alerts_source$ SSPHP_RUN=$ss
         ssphp_business_service_index,
         ssphp_environment,
         ssphp_service_team, 
-        SSPHP_RUN
+        SSPHP_RUN,
+        ssphp_alert_id
 
 | rename ssphp_severity as "Severity",
          ssphp_alert_name as "Alert Name",
