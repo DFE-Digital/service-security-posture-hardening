@@ -15,7 +15,7 @@
       <table>
         <search>
           <query>
-| inputlookup ssphp_resource_service_map where ssphp_resource_group="rg-t1pr-*"
+| inputlookup ssphp_resource_service_map where ssphp_resource_group=$tkn_resouce_group|s$
 
 | fillnull value="Unknown"
 | table ssphp_tenant, ssphp_tenant_name, ssphp_subscription, ssphp_subscription_display_name, ssphp_resource_group, ssphp_level_1_display_name, ssphp_level_2_display_name, ssphp_environment, ssphp_service_team, ssphp_location
