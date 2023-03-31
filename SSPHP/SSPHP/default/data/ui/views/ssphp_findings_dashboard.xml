@@ -1,6 +1,6 @@
 <form theme="dark" version="1.1">
   <label>Azure Findings &amp; Alerts</label>
-  <description>Service Security Posture Hardening Programme : v1.6</description>
+  <description>Service Security Posture Hardening Programme : v1.7</description>
   
   
 <!-- ****************************************************** Initial Values **************************************************************************** -->
@@ -707,7 +707,7 @@ $tkn_index$ $tkn_alerts_sourcetype$ $tkn_host$ $tkn_alerts_source$ SSPHP_RUN=$ss
 | search ssphp_level_1_display_name=$tkn_group|s$ AND ssphp_level_2_display_name=$tkn_service|s$ AND ssphp_subscription=$tkn_subscription|s$ AND ssphp_resource_group=$tkn_resource_group_id|s$ AND ssphp_service_team=$tkn_service_team$ 
         ```AND $healthy_tkn$ ```AND ssphp_severity=$tkn_severity|s$ AND ssphp_environment=$tkn_environment|s$
 
-| table ssphp_ssphp_severity,
+| table ssphp_severity,
         ssphp_alert_name,
         ssphp_tenant_name,
         ssphp_subscription,
