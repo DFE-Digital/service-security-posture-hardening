@@ -17,7 +17,7 @@ jobs:
           use-cross: true
           command: test
           args: --manifest-path TA_github_reader/Cargo.toml
-	  
+
       - uses: actions-rs/cargo@v1
         with:
           use-cross: true
@@ -26,7 +26,7 @@ jobs:
 
       - name: Commit changes
         uses: EndBug/add-and-commit@v9
-	working-directory: TA_github_reader
+        working-directory: TA_github_reader
         with:
           author_name: GitHub Actions
           author_email: 41898282+github-actions[bot]@users.noreply.github.com
