@@ -26,9 +26,8 @@ jobs:
 
       - name: Commit changes
         uses: EndBug/add-and-commit@v9
-        working-directory: TA_github_reader
         with:
           author_name: GitHub Actions
           author_email: 41898282+github-actions[bot]@users.noreply.github.com
-          message: Update deployment zip
-          add: '*.gz'
+          message: Update deployment gz
+          add: 'TA_github_reader/*.gz'
