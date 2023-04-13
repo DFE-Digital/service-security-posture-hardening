@@ -15,9 +15,8 @@ jobs:
           default: true
           components: rust-src, clippy
 
-      - uses: actions-rs/audit-check@v1
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: cargo audit
+        run: cargo install cargo-audit; cd TA_github_reader; cargo audit
 
       - uses: actions-rs/cargo@v1
         with:
