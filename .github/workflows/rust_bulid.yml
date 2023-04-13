@@ -15,17 +15,18 @@ jobs:
           default: true
           components: rust-src, clippy
 
+      - uses: actions-rs/audit-check@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
       - uses: actions-rs/cargo@v1
         with:
           use-cross: true
           command: test
           args: --manifest-path TA_github_reader/Cargo.toml
 
-      - uses: actions-rs/cargo@v1
-        with:
-          use-cross: true
-          command: run
-          args: --bin xtask --manifest-path TA_github_reader/Cargo.toml -- build
+      - name: xtask build
+        run: cd TA_github_reader; cargo xtask build
 
       - name: Commit changes
         uses: EndBug/add-and-commit@v9
