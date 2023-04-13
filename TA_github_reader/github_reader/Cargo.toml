@@ -11,7 +11,7 @@ clap = "*"
 futures = "*"
 modular_input = {path = "../modular_input" }
 # modular_input_macros = {path = "../modular_input_macros" }
-octorust = "0.3.2"
+octorust = "*"
 reqwest = { version ="*", features = ["rustls-tls",], default-features = false}
 serde = {version = "*", features = ["derive"]}
 serde_json = "*"
@@ -19,7 +19,3 @@ tokio = { version = "1.0", features = ["full"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "std", "alloc", "fmt", "registry", "ansi"], default-features = false }
 
-[profile.release]
-strip = true
-opt-level = "z"
-lto = true
