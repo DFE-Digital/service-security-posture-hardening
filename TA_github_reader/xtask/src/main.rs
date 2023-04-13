@@ -43,7 +43,7 @@ fn build() -> Result<(), DynError> {
     let sh = Shell::new()?;
     cmd!(
         sh,
-        "cargo +nightly build -Z build-std=std --bin github_reader --target x86_64-unknown-linux-musl --release"
+        "cargo build -Z build-std=std --bin github_reader --target x86_64-unknown-linux-musl --release"
     )
     .run()?;
     cmd!(
