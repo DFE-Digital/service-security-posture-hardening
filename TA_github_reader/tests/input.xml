@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<input>
+  <server_host>SOMEHOST</server_host>
+  <server_uri>https://127.0.0.1:8089</server_uri>
+  <session_key>SOMESESSIONKEY</session_key>
+  <checkpoint_dir>/opt/splunk/var/lib/splunk/modinputs/SOMEAPP</checkpoint_dir>
+  <configuration>
+    <stanza name="github://SOMEINPUT" app="SOMEAPP">
+      <param name="foo">bar</param>
+      <param name="host">$decideOnStartup</param>
+      <param name="index">default</param>
+      <param name="interval">-1</param>
+      <param name="org">SOMEORG</param>
+      <param name="run_introspection">true</param>
+      <param name="start_by_shell">false</param>
+      <param name="token">SOMETOKEN</param>      
+    </stanza>
+  </configuration>
+</input>

@@ -1,0 +1,12 @@
+[workspace]
+
+members = [
+ 	"github_reader",
+	"modular_input",
+	"xtask"
+]
+
+[profile.release]
+strip = true
+opt-level = "z"
+lto = true
