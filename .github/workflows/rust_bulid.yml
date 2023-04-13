@@ -15,6 +15,11 @@ jobs:
           default: true
           components: rust-src, clippy
 
+      - uses: awalsh128/cache-apt-pkgs-action@v1
+        with:
+          packages: musl-tools
+          version: 1.0
+
       - name: cargo audit
         run: cargo install cargo-audit; cd TA_github_reader; cargo audit
 
