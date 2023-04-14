@@ -48,4 +48,4 @@ jobs:
           author_name: GitHub Actions
           author_email: 41898282+github-actions[bot]@users.noreply.github.com
           message: Update deployment gz
-          add: TA_github_reader/github_reader.tar.gz
+          add: TA_github_reader/github_reader.tar.gz --force
