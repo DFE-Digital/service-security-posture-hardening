@@ -20,11 +20,7 @@ jobs:
         with:
           path: |
             **/target
-          key: cache-rust-target-${{ hashFiles('TA_github_reader/github_reader/Cargo.lock') }}-${{ hashFiles('TA_github_reader/modular_input/Cargo.lock') }}-${{ hashFiles('TA_github_reader/xtask/Cargo.lock') }}
-          restore-keys: |
-            cache-rust-target-${{ hashFiles('TA_github_reader/github_reader/Cargo.lock') }}
-            cache-rust-target-${{ hashFiles('TA_github_reader/modular_input/Cargo.lock') }}
-            cache-rust-target-${{ hashFiles('TA_github_reader/xtask/Cargo.lock') }}
+          key: cache-rust-target-${{ hashFiles('**/Cargo.lock') }}
 
       - uses: awalsh128/cache-apt-pkgs-action@v1
         with:
