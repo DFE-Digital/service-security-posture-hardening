@@ -20,6 +20,10 @@ jobs:
         with:
           path: |
             **/target
+          restore-keys: |
+            cache-rust-target-${{ hashFiles('TA_github_reader/github_reader/Cargo.lock') }}
+            cache-rust-target-${{ hashFiles('TA_github_reader/modular_input/Cargo.lock') }}
+            cache-rust-target-${{ hashFiles('TA_github_reader/xtask/Cargo.lock') }}
 
       - uses: awalsh128/cache-apt-pkgs-action@v1
         with:
@@ -43,4 +47,4 @@ jobs:
           author_name: GitHub Actions
           author_email: 41898282+github-actions[bot]@users.noreply.github.com
           message: Update deployment gz
-          add: TA_github_reader/*.gz
+          add: TA_github_reader/github_reader.tar.gz
