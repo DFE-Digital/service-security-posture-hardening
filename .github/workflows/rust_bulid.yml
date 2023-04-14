@@ -15,6 +15,12 @@ jobs:
           default: true
           components: rust-src, clippy
 
+      - name: Cache build artifacts
+        uses: actions/cache@v2
+        with:
+          path: |
+            **/target
+
       - uses: awalsh128/cache-apt-pkgs-action@v1
         with:
           packages: musl-tools
@@ -38,11 +44,3 @@ jobs:
           author_email: 41898282+github-actions[bot]@users.noreply.github.com
           message: Update deployment gz
           add: TA_github_reader/*.gz
-
-      - name: Archive production artifacts
-        uses: actions/upload-artifact@v3
-        with:
-          name: target
-          path: |
-            TA_github_reader/target
-            target
