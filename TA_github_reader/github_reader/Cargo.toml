@@ -1,0 +1,21 @@
+[package]
+name = "github_reader"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+anyhow = "1.0"
+clap = "*"
+futures = "*"
+modular_input = {path = "../modular_input" }
+# modular_input_macros = {path = "../modular_input_macros" }
+octorust = "*"
+reqwest = { version ="*", features = ["rustls-tls",], default-features = false}
+serde = {version = "*", features = ["derive"]}
+serde_json = "*"
+tokio = { version = "1.0", features = ["full"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "std", "alloc", "fmt", "registry", "ansi"], default-features = false }
+
