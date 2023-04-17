@@ -146,8 +146,8 @@ class SplunkAppInspect:
 
 @click.command()
 @click.argument(
-    "app_directory",
-    type=click.Path(exists=True, readable=True, dir_okay=True),
+    "app_package",
+    type=click.Path(exists=True, readable=True),
 )
 @click.option(
     "--splunkuser",
@@ -163,15 +163,24 @@ class SplunkAppInspect:
     type=str,
     required=True,
 )
-def package_and_validate(app_directory, splunkuser, splunkpassword):
-    """
-    Package the APP_DIRECORTY containing a SplunkApp and submit to Splunk AppInspect API for validation
-    """
+@click.option(
+    "--justvalidate",
+    envvar="SPLUNK_PASSWORD",
+    help="Provied a package .tag.gz instead of a directory and validate it.",
+    type=bool,
+    required=False,
+    default=False,
+    is_flag=True,
+)
+def main(app_package, splunkuser, splunkpassword, justvalidate):
     sai = SplunkAppInspect(splunkuser, splunkpassword)
-    report = sai.package_then_validate(app_directory)
+    if justvalidate:
+        report = sai.validate_package(app_package)
+    else:
+        report = sai.package_then_validate(app_package)
     report = SplunkAppInspectReport(report)
     report.print_failed_checks()
 
 
 if __name__ == "__main__":
-    package_and_validate()
+    main()

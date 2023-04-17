@@ -1,6 +1,6 @@
 #[cfg(feature = "deploy")]
 use axum::Router;
-use std::env;
+use std::{env, fs};
 #[cfg(feature = "deploy")]
 use std::net::SocketAddr;
 #[cfg(feature = "deploy")]
@@ -45,7 +45,8 @@ fn build() -> Result<(), DynError> {
         sh,
         "cargo build -Z build-std=std --bin github_reader --target x86_64-unknown-linux-musl --release"
     )
-    .run()?;
+        .run()?;
+    fs::create_dir_all("TA_github_reader/linux_x86_64/bin")?;
     cmd!(
         sh,
         "cp target/x86_64-unknown-linux-musl/release/github_reader TA_github_reader/linux_x86_64/bin/github"
