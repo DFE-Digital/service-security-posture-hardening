@@ -1,0 +1,58 @@
+---
+name: Python package
+
+on:
+  push:
+    paths:
+      - TA_SSPHP/**
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python 3.x
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.7.x'
+          architecture: 'x64'
+          cache: 'pip'
+      - run: cd TA_SSPHP; pip install -U setuptools && pip install -r tests/requirements.txt splunk-add-on-ucc-framework splunk-packaging-toolkit
+
+      - name: Pip audit
+        run: cd TA_SSPHP; pip-audit -S
+
+      - name: ruff
+        run: cd TA_SSPHP; ruff package/bin/*.py tests/*.py --ignore=F401,E501,E402
+
+      - name: Run offline tests
+        run: cd TA_SSPHP/tests; pytest
+
+      - name: Run live tests
+        env:
+          azure_client_id: ${{ secrets.AZURE_CLIENT_ID }}
+          azure_client_secret: ${{ secrets.AZURE_CLIENT_SECRET }}
+          azure_tenant_id: ${{ secrets.AZURE_TENANT_ID }}
+        run: cd TA_SSPHP/tests; pytest -m live
+
+      - name: bandit
+        run: cd TA_SSPHP; bandit package/bin/*.py
+
+      - name: pycodestyle
+        run: cd TA_SSPHP; pycodestyle package/bin/*.py --ignore=E501,W503,W504
+
+      - name: pylint
+        run: cd TA_SSPHP; pylint --fail-under 5 package/bin/*.py tests/*.py
+
+      - name: Package
+        run: cd TA_SSPHP; ucc-gen build && slim package output/TA-MS-AAD && mv TA*.tar.gz ta-ms-aad.tar.gz; ls -la *.gz && sha1sum *.gz
+
+      - name: Commit changes
+        uses: EndBug/add-and-commit@v9
+        with:
+          author_name: GitHub Actions
+          author_email: 41898282+github-actions[bot]@users.noreply.github.com
+          message: Update deployment zip
+          add: 'TA_SSPHP/*.gz'

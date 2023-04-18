@@ -1,4 +1,7 @@
-on: [push]
+on:
+  push:
+    paths:
+      - TA_github_reader/**
 
 name: CI
 
