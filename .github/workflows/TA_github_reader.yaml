@@ -1,9 +1,9 @@
+name: TA_github_reader
+
 on:
   push:
     paths:
       - TA_github_reader/**
-
-name: CI
 
 jobs:
   build_and_test:
