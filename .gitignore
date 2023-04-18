@@ -1,7 +1,9 @@
+*.tar
 *.tar.gz
 *report.json
 .*cache
 __pycache__
 target
 TA_github_reader/TA_github_reader/linux_x86_64/bin/github
+TA_SSPHP/output
 *#*

@@ -1,0 +1,5 @@
+splunktaucclib>=6.0.6
+azure-identity
+azure-mgmt-security
+azure-mgmt-resource
+msrestazure
