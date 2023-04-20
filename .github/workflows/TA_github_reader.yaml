@@ -1,0 +1,50 @@
+name: TA_github_reader
+
+on:
+  push:
+    paths:
+      - TA_github_reader/**
+
+jobs:
+  build_and_test:
+    name: Rust project
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          target: x86_64-unknown-linux-musl
+          default: true
+          components: rust-src, clippy
+
+      - name: Cache build artifacts
+        uses: actions/cache@v2
+        with:
+          path: |
+            **/target
+          key: cache-rust-target-${{ hashFiles('**/Cargo.lock') }}
+
+      - uses: awalsh128/cache-apt-pkgs-action@v1
+        with:
+          packages: musl-tools
+          version: 1.0
+
+      - name: cargo audit
+        run: cargo install cargo-audit; cd TA_github_reader; cargo audit
+
+      - uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --manifest-path TA_github_reader/Cargo.toml
+
+      - name: xtask build
+        run: cd TA_github_reader; cargo xtask build
+
+      - name: Commit changes
+        uses: EndBug/add-and-commit@v9
+        with:
+          author_name: GitHub Actions
+          author_email: 41898282+github-actions[bot]@users.noreply.github.com
+          message: Update deployment gz
+          add: TA_github_reader/github_reader.tar.gz --force

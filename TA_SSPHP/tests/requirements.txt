@@ -1,0 +1,9 @@
+pytest
+pip-audit
+bandit
+pycodestyle
+pylint
+flake8
+ruff
+black
+-r ../package/lib/requirements.txt

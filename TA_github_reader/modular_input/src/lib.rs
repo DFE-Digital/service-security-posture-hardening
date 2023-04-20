@@ -99,6 +99,7 @@ pub trait AsXml: Serialize {
         quick_xml::se::to_string(&self).map_err(anyhow::Error::msg)
     }
 }
+
 impl AsXml for Scheme {}
 
 #[derive(Debug, Default, Deserialize, Serialize, Clone)]
@@ -114,7 +115,7 @@ pub struct Event {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub sourcetype: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub time: Option<u64>,
+    pub time: Option<f64>,
     #[serde(rename = "@stanza")]
     pub stanza: Option<String>,
 }
@@ -162,7 +163,7 @@ impl Event {
     }
 
     // Might need other time formats....
-    pub fn time(mut self, time: u64) -> Self {
+    pub fn time(mut self, time: f64) -> Self {
         self.time = Some(time);
         self
     }
