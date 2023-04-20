@@ -1,0 +1,631 @@
+<dashboard theme="dark" version="1.1" script="js/addtags.js">
+  <label>Consolidated Findings Dashboard</label>
+  <description>Service Security Posture Hardening Programme : v2.0</description>
+  
+  
+<!-- ****************************************************** Initial Values **************************************************************************** -->
+  <init>
+    <eval token="drilldown_subscription_tkn">coalesce($tkn_drilldown_subscription$,"null")</eval>
+  </init>
+  
+  
+<!-- ****************************************************** Base Queries **************************************************************************** -->
+
+  <search id="base_2">
+    <query>
+| inputlookup ssphp_resource_service_map.csv
+| search ssphp_resource_group!="mc*"
+| table ssphp_level_1_display_name, ssphp_level_2_display_name, ssphp_resource_group, ssphp_subscription, ssphp_subscription_display_name, ssphp_service_team, ssphp_tenant, ssphp_tenant_name
+    </query>
+  </search>
+
+  <search id="base_3">
+    <query>
+| inputlookup ssphp_github_repo_service_map.csv
+| table ssphp_level_1_display_name, ssphp_level_2_display_name, ssphp_org, ssphp_repo, ssphp_service_team
+    </query>
+  </search>
+
+
+  
+
+<!-- ************************************************************************************************************************************************************************************************* -->
+<!-- ************************************************************************************************************************************************************************************************* -->
+<!-- ************************************************************************************************************************************************************************************************* -->
+
+
+<!-- ****************************************************** Form Filters **************************************************************************** -->
+
+  <row>
+    <panel depends="$nevershow$">
+      <html>
+        <style>
+          #panel_menu_1{
+            width:70% !important;
+          }
+          #panel_menu_2{
+            width:30% !important;
+          }
+        </style>
+      </html>
+    </panel>
+    
+    <panel id="panel_menu_1">
+      <input type="multiselect" token="tech_choices_tkn" searchWhenChanged="true">
+        <label>Technology Use Cases</label>
+        <choice value="*">ALL</choice>
+        <choice value="findings.ssphp_norm_use_case=&quot;findings&quot;">Azure Findings</choice>
+        <choice value="findings.ssphp_norm_use_case=&quot;alerts&quot;">Azure Alerts</choice>
+        <choice value="findings.ssphp_norm_tech_source=&quot;Github&quot;">Github</choice>
+        <choice value="findings.ssphp_norm_tech_source=&quot;Qualys&quot;">Qualys Vulnerabilities</choice>
+        <default>*</default>
+        <prefix>(</prefix>
+        <suffix>)</suffix>
+        <initialValue>*</initialValue>
+        <valuePrefix></valuePrefix>
+        <valueSuffix></valueSuffix>
+        <delimiter> OR </delimiter>
+      </input>
+      
+      <input type="dropdown" token="tkn_group" searchWhenChanged="true" depends="$isadmin_tkn$">
+        <label>DfE Group</label>
+        <choice value="*">ALL</choice>
+        <default>ALL</default>
+        <initialValue>*</initialValue>
+        <fieldForLabel>ssphp_level_1_display_name</fieldForLabel>
+        <fieldForValue>ssphp_level_1_display_name</fieldForValue>
+        <search base="base_2">
+          <query>
+  | search ssphp_level_1_display_name!="NO AZURE DATA AVAILABLE"
+  | dedup ssphp_level_1_display_name
+  | sort 0 ssphp_level_1_display_name
+  | table ssphp_level_1_display_name
+          </query>
+        </search>
+        <change>
+          <condition match="$isadmin_tkn$ != &quot;1&quot;">
+            <eval token="tkn_group_text">"*DfE Group = ".$value$."*"</eval>
+            <set token="form.tkn_service">*</set>
+          </condition>
+          <condition>
+            <eval token="tkn_group_text">"*DfE Group = ".$value$."*"</eval>
+            <set token="form.tkn_service">*</set>
+          </condition>
+        </change>
+      </input>
+  
+      <input type="dropdown" token="tkn_service" searchWhenChanged="true" depends="$isadmin_tkn$">
+        <label>DfE Service</label>
+        <choice value="*">ALL</choice>
+        <default>ALL</default>
+        <initialValue>*</initialValue>
+        <fieldForLabel>ssphp_level_2_display_name</fieldForLabel>
+        <fieldForValue>ssphp_level_2_display_name</fieldForValue>
+        <search base="base_2">
+          <query>
+    | search ssphp_level_1_display_name=$tkn_group|s$ AND ssphp_level_2_display_name!="NO AZURE DATA AVAILABLE"
+    | dedup ssphp_level_2_display_name
+    | sort 0 ssphp_level_2_display_name
+    | table ssphp_level_2_display_name
+          </query>
+        </search>
+        <change>
+          <eval token="tkn_service_text">"*DfE Service = ".$value$."*"</eval>
+          <eval token="form.tkn_subscription">coalesce($tkn_drilldown_subscription$,"*")</eval>
+        </change>
+      </input>
+  
+      <input type="dropdown" token="tkn_service_team" searchWhenChanged="true" depends="$never_show$">
+        <label>Service Team</label>
+        <choice value="*">ALL</choice>
+        <default>*</default>
+        <initialValue>*</initialValue>
+        <fieldForLabel>ssphp_service_team</fieldForLabel>
+        <fieldForValue>ssphp_service_team</fieldForValue>
+        <search base="base_2">
+          <query>
+  | search (ssphp_level_1_display_name=$tkn_group|s$ AND ssphp_level_2_display_name=$tkn_service|s$) AND ssphp_subscription=$tkn_subscription|s$ AND ssphp_resource_group=$tkn_resource_group_id|s$
+  | dedup ssphp_service_team
+  | table ssphp_service_team
+  | sort 0 ssphp_service_team
+          </query>
+        </search>
+      </input>
+  
+      <input type="dropdown" token="tkn_severity" searchWhenChanged="true">
+        <label>Severity</label>
+        <choice value="*">ALL</choice>
+        <choice value="*Critical*">Critical</choice>
+        <choice value="*High*">High</choice>
+        <choice value="*Medium*">Medium</choice>
+        <choice value="*Low*">Low</choice>
+        <choice value="*unknown*">Unknown</choice>
+        <default>*</default>
+        <initialValue>*</initialValue>
+      </input>
+
+      <input type="checkbox" token="tkn_details" searchWhenChanged="true">
+        <label>Advanced Filters</label>
+        <choice value="Y">Show</choice>
+        <initialValue></initialValue>
+        <change>
+          <condition value="Y">
+            <set token="tkn_view_filters">Y</set>
+          </condition>
+          <condition>
+            <unset token="tkn_view_filters"></unset>
+          </condition>
+        </change>
+      </input>
+    </panel>
+
+
+    <panel id="panel_menu_2">
+      <table>
+        <search base="base_1">
+          <query>
+| stats count, values(SSPHP_RUN) as SSPHP_RUN by "Use Case"
+
+| eval uc_col_no=case('Use Case'="Findings",1,
+                      'Use Case'="Alerts",1,
+                      'Use Case'="VM Vulerabilities",1,
+                      'Use Case'="CVE",2,
+                      'Use Case'="Repo Made Public",2,
+                      'Use Case'="CodeQL",2,
+                      'Use Case'="Secret",2,
+                      'Use Case'="Change Branch Protection Rules",2,
+                      1==1,2)
+
+| eval "Use Case"=case('Use Case'="VM Vulerabilities","Qualys VM Vulerabilities",1==1,'Use Case')     
+| eval col_1_text=if(uc_col_no=1,'Use Case',null()), col_1_count=if(uc_col_no=1,'count',null()), 
+       col_2_text=if(uc_col_no=2,'Use Case',null()), col_2_count=if(uc_col_no=2,'count',null())
+| rename col_1_text as "Azure Use Cases", col_1_count as "Azure Count",
+         col_2_text as "Github Use Cases", col_2_count as "Github Count"
+
+| streamstats count as col_row by uc_col_no
+
+| stats values(*) as * by col_row
+| eval "Azure Count" = tostring('Azure Count', "commas"), "Github Count" = tostring('Github Count', "commas")
+| table "Azure Use Cases", "Azure Count", "Github Use Cases", "Github Count"
+          </query>
+          <done>
+            <set token="ssphp_run_tkn">$result.SSPHP_RUN$</set>
+            <set token="search_earliest_tkn">$result.search_earliest$</set>
+            <set token="search_latest_tkn">$result.search_latest$</set>
+          </done>
+        </search>
+      </table>
+    </panel>
+  </row>
+
+
+<!-- ****************************************************** Additional Form Filters Row *************************************************************************** -->
+
+
+  <row depends="$tkn_view_filters$">
+    <panel depends="$nevershow$">
+      <html>
+        <style>
+          #panel_menu_11{
+            width:50% !important;
+          }
+          #panel_menu_12{
+            width:50% !important;
+          }
+        </style>
+      </html>
+    </panel>
+    
+
+<!-- ************* Azure ************* -->
+
+    <panel id="panel_menu_11">
+      <title>Azure &amp; Qualys Filters</title>
+      
+      <input type="dropdown" token="tkn_tenant" searchWhenChanged="true">
+        <label>Tenancy</label>
+        <choice value="*">ALL</choice>
+        <default>*</default>
+        <initialValue>*</initialValue>
+        <fieldForLabel>ssphp_tenant_name</fieldForLabel>
+        <fieldForValue>ssphp_tenant</fieldForValue>
+        <search base="base_2">
+          <query>
+  | search (ssphp_level_1_display_name=$tkn_group|s$ AND ssphp_level_2_display_name=$tkn_service|s$)
+  | dedup ssphp_tenant
+  | table ssphp_tenant, ssphp_tenant_name
+          </query>
+        </search>
+        <change>
+          <condition label="ALL">
+            <set token="form.tkn_subscription">*</set>
+            <set token="tenant_name_tkn">*Tenant = *</set>
+          </condition>
+          <condition>
+            <set token="form.tkn_subscription">*</set>
+            <set token="tenant_name_tkn">*Tenant = $label$*</set>
+          </condition>
+        </change>
+      </input>
+      
+      
+      <input type="dropdown" token="tkn_subscription" searchWhenChanged="true">
+        <label>Subscription</label>
+        <choice value="*">ALL</choice>
+        <default>*</default>
+        <initialValue>*</initialValue>
+        <fieldForLabel>ssphp_subscription_display_name</fieldForLabel>
+        <fieldForValue>ssphp_subscription</fieldForValue>
+        <search base="base_2">
+          <query>
+  | search (ssphp_level_1_display_name=$tkn_group|s$ AND ssphp_level_2_display_name=$tkn_service|s$) AND ssphp_tenant=$tkn_tenant|s$
+  | dedup ssphp_subscription
+  | table ssphp_subscription, ssphp_subscription_display_name
+          </query>
+        </search>
+        <change>
+          <set token="form.tkn_resource_group_id">*</set>
+          <set token="subscription_name_tkn">*Subscription = $value$*</set>
+        </change>
+      </input>
+      
+      
+      <input type="dropdown" token="tkn_resource_group_id" searchWhenChanged="true">
+        <label>Resource Group</label>
+        <choice value="*">ALL</choice>
+        <default>*</default>
+        <initialValue>*</initialValue>
+        <fieldForLabel>ssphp_resource_group</fieldForLabel>
+        <fieldForValue>ssphp_resource_group</fieldForValue>
+        <search base="base_2">
+          <query>
+  | search (ssphp_level_1_display_name=$tkn_group|s$ AND ssphp_level_2_display_name=$tkn_service|s$) AND ssphp_tenant=$tkn_tenant|s$ AND ssphp_subscription=$tkn_subscription|s$
+  | dedup ssphp_resource_group
+  | table ssphp_resource_group
+          </query>
+        </search>
+        <change>
+          <set token="resource_group_name_tkn">*Resource Group = $value$*</set>
+        </change>
+      </input>
+  
+  
+      <input type="checkbox" token="healthy_tkn" searchWhenChanged="true">
+        <label>Health Status to Include</label>
+        <choice value="Healthy">Healthy</choice>
+        <choice value="Unhealthy">Unhealthy</choice>
+        <choice value="NotApplicable">Not Applicable (untested)</choice>
+        <default>Unhealthy,NotApplicable</default>
+        <prefix> (</prefix>
+        <suffix>) </suffix>
+        <initialValue>Unhealthy,NotApplicable</initialValue>
+        <valuePrefix>findings.ssphp_norm_status="</valuePrefix>
+        <valueSuffix>"</valueSuffix>
+        <delimiter> OR </delimiter>
+      </input>
+    </panel>
+
+<!-- ************* Github ************* -->
+
+    <panel id="panel_menu_12">
+      <title>Github Filters</title>
+      <input type="dropdown" token="tkn_organisation" searchWhenChanged="true">
+        <label>Organisation</label>
+        <choice value="*">ALL</choice>
+        <default>*</default>
+        <initialValue>*</initialValue>
+        <fieldForLabel>ssphp_org</fieldForLabel>
+        <fieldForValue>ssphp_org</fieldForValue>
+        <search base="base_3">
+          <query>
+| search (ssphp_level_1_display_name=$tkn_group|s$ AND ssphp_level_2_display_name=$tkn_service|s$)
+| dedup ssphp_org
+| table ssphp_org
+          </query>
+        </search>
+        <change>
+          <set token="form.tkn_repo">*</set>
+          <set token="github_org_tkn">*Organisation = $value$*</set>
+        </change>
+      </input>
+      
+      
+      <input type="dropdown" token="tkn_repo" searchWhenChanged="true">
+        <label>Repository</label>
+        <choice value="*">ALL</choice>
+        <default>*</default>
+        <initialValue>*</initialValue>
+        <fieldForLabel>ssphp_repo</fieldForLabel>
+        <fieldForValue>ssphp_repo</fieldForValue>
+        <search base="base_3">
+          <query>
+| search (ssphp_level_1_display_name=$tkn_group|s$ AND ssphp_level_2_display_name=$tkn_service|s$)
+| search ssphp_org=$tkn_organisation|s$
+| dedup ssphp_repo
+| table ssphp_repo
+          </query>
+        </search>
+        <change>
+          <set token="github_repo_tkn">*Repo = $value$*</set>
+        </change>
+      </input>
+  
+  
+      <input type="checkbox" token="pub_priv_tkn" searchWhenChanged="true">
+        <label>Include</label>
+        <choice value="(private)">Private Repos</choice>
+        <choice value="(public)">Public Repos</choice>
+        <default>(private),(public)</default>
+        <prefix> (</prefix>
+        <suffix>) </suffix>
+        <initialValue>(private),(public)</initialValue>
+        <valuePrefix>findings.ssphp_norm_resource="*</valuePrefix>
+        <valueSuffix>"</valueSuffix>
+        <delimiter> OR </delimiter>
+      </input>
+    </panel>
+  </row>
+
+
+
+<!-- ****************************************************** Hidden rows to manage RBAC **************************************************************************** -->
+  
+  <row depends="$never_show$">
+    <panel>
+      <table>
+        <search>
+          <query>
+| rest splunk_server=local /services/authentication/current-context
+
+```| eval roles=if(username="ian.pearl@education.gov.uk","dfe_ssphp_service_user_s184",roles)```     ```make ian a service user for testing```
+            
+| rex field=roles "^dfe_ssphp_service_user_(?&lt;role_service&gt;s\d{3})$"
+| eval isadmin=case(roles="sc_admin","1",roles="power","1",roles="dfe_ssphp_service_power",1,isnotnull(role_service),"0",1==1,"0")
+            
+| eval L1=case(isadmin="1","*",
+               role_service="s184","Schools and School Performance",
+               1==1,"none"),
+       L2=case(isadmin="1","*",
+               role_service="s184","Regional Service Delivery",
+               1==1,"none")
+            
+| table roles, isadmin, username, L1, L2
+        </query>
+          <done>
+            <condition match="match($result.isadmin$,&quot;1&quot;)">
+              <set token="isadmin_tkn">1</set>
+              <set token="form.tkn_group">*</set>
+              <set token="form.tkn_service">*</set>
+            </condition>
+            <condition>
+              <unset token="isadmin_tkn"></unset>
+              <set token="form.tkn_group">$result.L1$</set>
+              <set token="form.tkn_service">$result.L2$</set>
+            </condition>
+          </done>
+        </search>
+        <option name="drilldown">none</option>
+      </table>
+    </panel>
+  </row>
+  
+<!-- ************************************* Only show for testing ************************************************************************************************************************* -->
+
+  <row depends="$never_show$">
+    <panel>
+      <html>
+       <h1>Date Range: $tkn_time.earliest$ - $tkn_time.latest$ </h1>
+       <h1>Date Range formatted: $time_window_earliest$ - $time_window_latest$ </h1>
+       <h1>Date Range Epoch formatted: $time_window_earliest_epoch$ - $time_window_latest_epoch$ </h1>
+     </html>
+    </panel>
+  </row>
+  
+<!-- ******************************************* HEADING & SSPHP DETAILS ROW ******************************************************************************************************************* -->
+
+  <row>
+    <panel>
+      <html>
+            <style>
+                #header_performance .panel-body.html {
+                    background-color: #DDFFDF;
+                }
+            </style>
+            <h1>$tkn_group$ : $tkn_service$</h1>
+        </html>
+    </panel>
+  </row>
+  
+  
+<!-- ************************************************* Findings List ************************************************************************************************************* -->
+
+  <row>
+    <panel>
+      <title>Findings List</title>
+      <html>
+        <style>
+          .green{
+            color:green !important;
+          }
+          .blue{
+            color:cyan !important;
+          }
+          .red{
+            color:red !important;
+          }
+          .orange{
+            color:orange !important;
+          }
+          .yellow{
+            color:yellow !important;
+          }
+          .lightgrey{
+            color:gray !important;
+          }
+          .lightblue{
+            color:#485959 !important;
+          }
+        </style>
+      </html>
+      
+      <table>
+        <search id="base_1">
+          <query>
+| tstats summariesonly=false 
+         count, 
+         values(findings.SSPHP_RUN) as SSPHP_RUN, 
+         values(findings.ssphp_norm_description) as ssphp_norm_description, 
+         values(findings.ssphp_norm_remediation) as ssphp_norm_remediation,  
+         values(findings.ssphp_norm_severity) as ssphp_norm_severity,  
+         values(findings.ssphp_norm_impact) as ssphp_norm_impact,  
+         values(findings.ssphp_norm_status) as ssphp_norm_status, 
+         values(findings.ssphp_norm_original_events) as ssphp_norm_original_events
+
+FROM datamodel=SSPHP.findings
+
+WHERE 
+    findings.ssphp_norm_ownership=$tkn_group_text|s$ AND findings.ssphp_norm_ownership=$tkn_service_text|s$ AND $tech_choices_tkn$ AND findings.ssphp_norm_severity=$tkn_severity$
+    
+    
+    ((findings.ssphp_norm_tech_source="Azure" AND findings.ssphp_norm_use_case="findings" AND findings.ssphp_norm_resource_parent=$tenant_name_tkn|s$ AND findings.ssphp_norm_resource_parent=$subscription_name_tkn|s$ AND findings.ssphp_norm_resource_parent=$resource_group_name_tkn|s$ AND $healthy_tkn$)
+        OR 
+     (findings.ssphp_norm_tech_source="Github" AND findings.ssphp_norm_resource_parent=$github_org_tkn|s$ AND findings.ssphp_norm_resource=$github_repo_tkn|s$ AND $pub_priv_tkn$)
+        OR
+     (findings.ssphp_norm_tech_source="Azure" AND findings.ssphp_norm_use_case="alerts")
+        OR
+     (findings.ssphp_norm_tech_source="Qualys" AND findings.ssphp_norm_use_case="VM Vulerabilities" AND findings.ssphp_norm_resource_parent=$tenant_name_tkn|s$ AND findings.ssphp_norm_resource_parent=$subscription_name_tkn|s$ AND findings.ssphp_norm_resource_parent=$resource_group_name_tkn|s$))
+
+     
+    [| inputlookup ssphp_findings_summary_latest_run_times.csv where ssphp_norm_use_case!="unknown"
+     | stats max(SSPHP_RUN) as SSPHP_RUN by ssphp_norm_use_case
+     | eventstats max(SSPHP_RUN) as max_SSPHP_RUN, min(SSPHP_RUN) as min_SSPHP_RUN
+     
+     | eval search_text="(findings.ssphp_norm_use_case=\"".'ssphp_norm_use_case'."\" AND findings.SSPHP_RUN=".SSPHP_RUN.")",
+            earliest=min_SSPHP_RUN-600,
+            latest=max_SSPHP_RUN+1200
+     | stats values(search_text) as search_text
+     | eval search_text="(".mvjoin(search_text," OR ").")"
+     | return $search_text]
+
+
+BY findings.ssphp_norm_time,
+   findings.ssphp_norm_tech_source, 
+   findings.ssphp_norm_use_case, 
+   findings.ssphp_norm_resource_parent, 
+   findings.ssphp_norm_resource, 
+   findings.ssphp_norm_title,
+   findings.ssphp_norm_ownership, 
+   findings.ssphp_norm_contact
+
+
+| rename findings.* as *
+
+| rex field=ssphp_norm_time ".*Creation Time\s*=\s*(?&lt;ssphp_norm_creation_time&gt;\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2})"
+
+| eval ssphp_norm_description=mvjoin(ssphp_norm_description,"
+"),
+       ssphp_norm_description=split(ssphp_norm_description,"
+"),
+       ssphp_norm_remediation=split(ssphp_norm_remediation,"
+"),
+       ssphp_norm_resource_parent=split(ssphp_norm_resource_parent,"
+"),
+       ssphp_norm_resource=split(ssphp_norm_resource,"
+"),
+       ssphp_norm_title=split(ssphp_norm_title,"
+"),
+       ssphp_norm_ownership=split(ssphp_norm_ownership,"
+"),
+       ssphp_norm_contact=split(ssphp_norm_contact,"
+"),
+       ssphp_norm_severity=split(ssphp_norm_severity,"
+"),
+       ssphp_norm_status=split(ssphp_norm_status,"
+"),
+       ssphp_norm_time=split(ssphp_norm_time,"
+"),
+       ssphp_norm_original_events=split(ssphp_norm_original_events,"
+")
+
+| fields SSPHP_RUN, ssphp_*
+
+`ssphp_add_display_colours`
+
+| rename ssphp_norm_description_display as "Description",
+         ssphp_norm_remediation_display as "Remediation",
+         ssphp_norm_time_display as "Time",
+         ssphp_norm_tech_source_display as "Technology Source", 
+         ssphp_norm_use_case_display as "Use Case", 
+         ssphp_norm_resource_parent_display as "Resource Parent", 
+         ssphp_norm_resource_display as "Resource", 
+         ssphp_norm_title_display as "Title",
+         ssphp_norm_ownership_display as "Ownership", 
+         ssphp_norm_contact_display as "Contact",
+         ssphp_norm_severity_display as "Severity",
+         ssphp_norm_impact_display as "Impact",
+         ssphp_norm_status_display as "Status"
+         
+| eval "Use Case"=case('Use Case'="cve","CVE",1==1,upper(substr('Use Case',1,1)).substr('Use Case',2)),
+       ssphp_ts='Technology Source'.":".'Use Case'
+
+| sort 0 - ssphp_norm_creation_time
+
+| table  "Time",
+         "Technology Source", 
+         "Use Case", 
+         "Resource Parent", 
+         "Resource",
+         "Title",
+         "Description",
+         "Remediation",
+         "Ownership", 
+         "Contact",
+         "Severity",
+         "Impact",
+         "Status",
+         SSPHP_RUN,
+         ssphp_ts,
+         ssphp_norm_*
+          </query>
+          <done>
+            <set token="download_tkn">$job.sid$</set>
+            <eval token="download_runtime_tkn">strftime(now(),"%Y-%m-%d %H:%M:%S"</eval>
+          </done>
+        </search>
+        <option name="count">10</option>
+        <option name="dataOverlayMode">none</option>
+        <option name="drilldown">cell</option>
+        <option name="percentagesRow">false</option>
+        <option name="rowNumbers">false</option>
+        <option name="totalsRow">false</option>
+        <option name="wrap">true</option>
+        <fields>"Time","Technology Source","Use Case","Resource Parent","Resource","Title", "Description", "Remediation" "Ownership","Contact","Severity","Impact","Status"</fields>
+        <drilldown>
+          <link target="_blank">/app/SSPHP/ssphp_consolidated_findings_dashboard_drilldown?tkn_tech_source=$row.ssphp_ts$&amp;tkn_original_events=$row.ssphp_norm_original_events$</link>
+        </drilldown>
+      </table>
+    </panel>
+  </row>
+  
+
+<!-- ************************** DRILLDOWN *************************************** -->  
+  <row>
+    <panel depends="$nevershow$">
+      <html>
+        <style>
+          #panel10{
+            width:10% !important;
+            background:green !important;
+          }
+        </style>
+      </html>
+    </panel>
+    
+    <panel id="panel10">
+      <html>
+        <a href="/api/search/jobs/$download_tkn$/results?isDownload=true&amp;maxLines=0&amp;count=0&amp;filename=$download_runtime_tkn$_findings_list&amp;outputMode=csv">Download Findings List csv</a>
+      </html>
+    </panel>
+  </row>
+
+</dashboard>

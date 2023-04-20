@@ -1,22 +1,4 @@
 <nav search_view="search">
   <view name="search" />
-  <collection label="SSPHP Intro">
-  	<view name="ssphp_intro_who_are_we" />
-  	<view name="ssphp_intro_what_problems_are_we_solving" />
-  	<view name="ssphp_intro_what_have_we_built__data_in" />
-  	<view name="ssphp_intro_what_have_we_built__splunk" />
-  	<view name="ssphp_intro_splunk_dashboards" />
-  	<view name="ssphp_intro_outcomes" />
-  </collection>  
-  <collection label="Azure">
-    <view name="ssphp_findings_dashboard" default='true' />
-    <view name="ssphp_metrics_dashboard" />
-    <view name="ssphp_resources_dashboard" />
-  </collection>  
-  <collection label="Github">
-    <view name="ssphp_github_findings_dashboard" />
-  </collection>  
-  <collection label="Qualys">
-    <view name="ssphp_qualys_vulnerabilities_by_host" />
-  </collection>  
+  <view name="ssphp_consolidated_findings_dashboard" default='true' />
 </nav>
