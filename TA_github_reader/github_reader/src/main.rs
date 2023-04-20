@@ -96,7 +96,7 @@ impl ModularInput for GitHubMI {
     async fn run(&self) -> Result<()> {
         let time = SystemTime::now()
             .duration_since(SystemTime::UNIX_EPOCH)?
-            .as_secs();
+            .as_secs_f64();
 
         let (event_writer_thread, event_writer) = self.start_event_writing_thread();
 
