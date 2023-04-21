@@ -138,6 +138,7 @@ class SplunkAppInspect:
         return report
 
     def package_then_validate(self, app_directory):
+        self.increment_build_numbers(app_directory)
         self.make_tarfile(app_directory)
         self.login()
         self.submit_package()
@@ -146,6 +147,23 @@ class SplunkAppInspect:
         with open(f"{self.packagetargz}_report.json", "w") as f:
             json.dump(report, f)
         return report
+
+    def increment_build_numbers(self, app_directory):
+        config = configparser.ConfigParser()
+        config.read(f"{app_directory}/default/app.conf")
+
+        version = config["launcher"]["version"]
+
+        sem_ver = version.split(".")
+        sem_ver[-1] = str(int(sem_ver[-1]) + 1)
+        new_version = ".".join(sem_ver)
+
+        config["launcher"]["version"] = new_version
+        config["id"]["version"] = new_version
+        config["install"]["build"] = str(time.time()).split(".")[0]
+
+        with open(f"{app_directory}/default/app.conf", "w") as f:
+            config.write(f)
 
     def make_dev_app(self, app_directory):
         config = configparser.ConfigParser()
@@ -156,7 +174,10 @@ class SplunkAppInspect:
         config["ui"]["lable"] = f"{config['ui']['label']} [DEVELOPMENT]"
 
         target_dir = f"{app_directory[:-1]}_DEV"
-        shutil.rmtree(target_dir)
+        try:
+            shutil.rmtree(target_dir)
+        except:
+            pass
 
         copy_tree(app_directory, target_dir)
         with open(f"{target_dir}/default/app.conf", "w") as f:
