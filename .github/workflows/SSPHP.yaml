@@ -1,0 +1,48 @@
+---
+name: SSPHP
+
+on:
+  push:
+    paths:
+      - SSPHP/**
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python 3.x
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.7.x'
+          architecture: 'x64'
+          cache: 'pip'
+      - run: pip install -U setuptools && pip install -r requirements.txt
+
+      - name: Pip audit
+        run: pip-audit -S
+
+      - name: ruff
+        run: package.py --ignore=F401,E501,E402
+
+      - name: bandit
+        run: bandit package.py
+
+      - name: pycodestyle
+        run: pycodestyle package.py --ignore=E501,W503,W504
+
+      - name: pylint
+        run: pylint --fail-under 5 package.py
+
+      - name: package and validate
+        run: cd SSPHP; ../package.py --outfile SSPHP.tar.gz SSPHP
+
+      - name: Commit changes
+        uses: EndBug/add-and-commit@v9
+        with:
+          author_name: GitHub Actions
+          author_email: 41898282+github-actions[bot]@users.noreply.github.com
+          message: Update deployment zip
+          add: 'SSPHP/*.gz'

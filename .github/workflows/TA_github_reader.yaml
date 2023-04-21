@@ -41,6 +41,9 @@ jobs:
       - name: xtask build
         run: cd TA_github_reader; cargo xtask build
 
+      - name: validate
+        run: ../package.py --justvalidate TA_github_reader/TA_github_reader.tar.gz
+
       - name: Commit changes
         uses: EndBug/add-and-commit@v9
         with:

@@ -1,2 +1,10 @@
+
 requests
 click
+pip-audit
+bandit
+pycodestyle
+pylint
+flake8
+ruff
+black
