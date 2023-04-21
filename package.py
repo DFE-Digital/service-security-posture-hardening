@@ -42,7 +42,8 @@ class SplunkAppInspect:
     def make_tarfile(self, source_dir):
         now = int(datetime.now().timestamp())
         path = Path(source_dir)
-        self.packagetargz = f"{path.absolute().name}_{now}.tar.gz"
+        if not self.packagetargz:
+            self.packagetargz = f"{path.absolute().name}_{now}.tar.gz"
         with tarfile.open(self.packagetargz, "w:gz") as tar:
 
             def remove_world_writable_permissions(tarinfo):
@@ -165,15 +166,23 @@ class SplunkAppInspect:
 )
 @click.option(
     "--justvalidate",
-    envvar="SPLUNK_PASSWORD",
     help="Provied a package .tag.gz instead of a directory and validate it.",
     type=bool,
     required=False,
     default=False,
     is_flag=True,
 )
-def main(app_package, splunkuser, splunkpassword, justvalidate):
-    sai = SplunkAppInspect(splunkuser, splunkpassword)
+
+@click.option(
+    "--outfile",
+    help="Provied a package .tag.gz instead of a directory and validate it.",
+    type=str,
+    required=False,
+    default=None,
+)
+
+def main(app_package, splunkuser, splunkpassword, justvalidate, outfile):
+    sai = SplunkAppInspect(splunkuser, splunkpassword, packagetargz=outfile)
     if justvalidate:
         report = sai.validate_package(app_package)
     else:
