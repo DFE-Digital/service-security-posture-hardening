@@ -4,7 +4,7 @@ name: SSPHP
 on:
   push:
     paths:
-      - TA_SSPHP/**
+      - SSPHP/**
 
 jobs:
   build:
