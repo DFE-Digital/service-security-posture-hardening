@@ -171,7 +171,7 @@ class SplunkAppInspect:
 
         config["package"]["id"] = f"{config['package']['id']}_DEV"
         config["id"]["name"] = f"{config['id']['name']}_DEV"
-        config["ui"]["lable"] = f"{config['ui']['label']} [DEVELOPMENT]"
+        config["ui"]["label"] = f"{config['ui']['label']} [DEVELOPMENT]"
 
         target_dir = f"{app_directory[:-1]}_DEV"
         try:
