@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
+import configparser
 import json
+import shutil
 import stat
 import tarfile
 import time
 from copy import deepcopy
 from datetime import datetime
+from distutils.dir_util import copy_tree
 from pathlib import Path
 from pprint import pprint
 
@@ -144,6 +147,23 @@ class SplunkAppInspect:
             json.dump(report, f)
         return report
 
+    def make_dev_app(self, app_directory):
+        config = configparser.ConfigParser()
+        config.read(f"{app_directory}/default/app.conf")
+
+        config["package"]["id"] = f"{config['package']['id']}_DEV"
+        config["id"]["name"] = f"{config['id']['name']}_DEV"
+        config["ui"]["lable"] = f"{config['ui']['label']} [DEVELOPMENT]"
+
+        target_dir = f"{app_directory[:-1]}_DEV"
+        shutil.rmtree(target_dir)
+
+        copy_tree(app_directory, target_dir)
+        with open(f"{target_dir}/default/app.conf", "w") as f:
+            config.write(f)
+
+        return target_dir
+
 
 @click.command()
 @click.argument(
@@ -172,7 +192,14 @@ class SplunkAppInspect:
     default=False,
     is_flag=True,
 )
-
+@click.option(
+    "--dev",
+    help="Build a DEV package",
+    type=bool,
+    required=False,
+    default=False,
+    is_flag=True,
+)
 @click.option(
     "--outfile",
     help="Provied a package .tag.gz instead of a directory and validate it.",
@@ -180,15 +207,20 @@ class SplunkAppInspect:
     required=False,
     default=None,
 )
-
-def main(app_package, splunkuser, splunkpassword, justvalidate, outfile):
+def main(app_package, splunkuser, splunkpassword, justvalidate, outfile, dev):
     sai = SplunkAppInspect(splunkuser, splunkpassword, packagetargz=outfile)
-    if justvalidate:
-        report = sai.validate_package(app_package)
-    else:
+    if dev:
+        app_package = sai.make_dev_app(app_package)
         report = sai.package_then_validate(app_package)
-    report = SplunkAppInspectReport(report)
-    report.print_failed_checks()
+        report = SplunkAppInspectReport(report)
+        report.print_failed_checks()
+    else:
+        if justvalidate:
+            report = sai.validate_package(app_package)
+        else:
+            report = sai.package_then_validate(app_package)
+            report = SplunkAppInspectReport(report)
+            report.print_failed_checks()
 
 
 if __name__ == "__main__":
