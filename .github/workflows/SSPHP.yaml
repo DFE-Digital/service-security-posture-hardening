@@ -1,5 +1,5 @@
 ---
-name: TA_SSPHP
+name: SSPHP
 
 on:
   push:
