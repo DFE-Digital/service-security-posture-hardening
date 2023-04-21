@@ -50,6 +50,21 @@
       </html>
     </panel>
     
+    <panel depends="$never_show$">
+      <table>
+        <search>
+          <query>
+| makeresults
+| eval app=$env:app|s$
+| table app
+          </query>
+          <done>
+            <set token="tkn_current_app">$result.app$</set>
+          </done>
+        </search>
+      </table>
+    </panel>
+    
     <panel id="panel_menu_1">
       <input type="multiselect" token="tech_choices_tkn" searchWhenChanged="true">
         <label>Technology Use Cases</label>
@@ -601,7 +616,7 @@ BY findings.ssphp_norm_time,
         <option name="wrap">true</option>
         <fields>"Time","Technology Source","Use Case","Resource Parent","Resource","Title", "Description", "Remediation" "Ownership","Contact","Severity","Impact","Status"</fields>
         <drilldown>
-          <link target="_blank">/app/SSPHP/ssphp_consolidated_findings_dashboard_drilldown?tkn_tech_source=$row.ssphp_ts$&amp;tkn_original_events=$row.ssphp_norm_original_events$</link>
+          <link target="_blank">/app/$tkn_current_app$/ssphp_consolidated_findings_dashboard_drilldown?tkn_tech_source=$row.ssphp_ts$&amp;tkn_original_events=$row.ssphp_norm_original_events$</link>
         </drilldown>
       </table>
     </panel>

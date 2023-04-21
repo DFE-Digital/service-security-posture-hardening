@@ -1,10 +1,24 @@
 <dashboard theme="dark" version="1.1" script="js/addtags.js">
-  <label>Consolidated Findings Drilldown Dashboard</label>
+  <label>Consolidated Findings Drilldown Dashboard (DEV)</label>
   <description>Service Security Posture Hardening Programme : v2.0</description>
   
-<!-- <link target="_blank">/app/SSPHP/ssphp_consolidated_findings_dashboard_drilldown?tkn_tech_source=row.ssphp_norm_tech_source&amp;tkn_original_events=$row.ssphp_norm_original_events$</link>  -->
-  
   <row>
+    <panel depends="$never_show$">
+      <table>
+        <search>
+          <query>
+| makeresults
+| eval app=$env:app|s$
+| table app
+          </query>
+          <done>
+            <set token="tkn_current_app">$result.app$</set>
+          </done>
+        </search>
+      </table>
+    </panel>
+    
+    
     <panel depends="$never_show$">
       <table>
         <search>
