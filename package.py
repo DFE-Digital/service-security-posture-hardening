@@ -173,6 +173,9 @@ class SplunkAppInspect:
         config["id"]["name"] = f"{config['id']['name']}_DEV"
         config["ui"]["label"] = f"{config['ui']['label']} [DEVELOPMENT]"
 
+        with open(f"{app_directory}/default/app.conf", "w") as f:
+            config.write(f)
+
         target_dir = f"{app_directory[:-1]}_DEV"
         try:
             shutil.rmtree(target_dir)
@@ -180,8 +183,6 @@ class SplunkAppInspect:
             pass
 
         copy_tree(app_directory, target_dir)
-        with open(f"{target_dir}/default/app.conf", "w") as f:
-            config.write(f)
 
         return target_dir
 
