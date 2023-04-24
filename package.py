@@ -173,9 +173,6 @@ class SplunkAppInspect:
         config["id"]["name"] = f"{config['id']['name']}_DEV"
         config["ui"]["label"] = f"{config['ui']['label']} [DEVELOPMENT]"
 
-        with open(f"{app_directory}/default/app.conf", "w") as f:
-            config.write(f)
-
         target_dir = f"{app_directory[:-1]}_DEV"
         try:
             shutil.rmtree(target_dir)
@@ -183,6 +180,9 @@ class SplunkAppInspect:
             pass
 
         copy_tree(app_directory, target_dir)
+
+        with open(f"{target_dir}/default/app.conf", "w") as f:
+            config.write(f)
 
         return target_dir
 
@@ -232,6 +232,7 @@ class SplunkAppInspect:
 def main(app_package, splunkuser, splunkpassword, justvalidate, outfile, dev):
     sai = SplunkAppInspect(splunkuser, splunkpassword, packagetargz=outfile)
     if dev:
+        sai.increment_build_numbers(app_package)
         app_package = sai.make_dev_app(app_package)
         report = sai.package_then_validate(app_package)
         report = SplunkAppInspectReport(report)
