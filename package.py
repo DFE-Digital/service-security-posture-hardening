@@ -5,6 +5,7 @@ import shutil
 import stat
 import tarfile
 import time
+import glob
 from copy import deepcopy
 from datetime import datetime
 from distutils.dir_util import copy_tree
@@ -138,7 +139,6 @@ class SplunkAppInspect:
         return report
 
     def package_then_validate(self, app_directory):
-        self.increment_build_numbers(app_directory)
         self.make_tarfile(app_directory)
         self.login()
         self.submit_package()
@@ -165,15 +165,9 @@ class SplunkAppInspect:
         with open(f"{app_directory}/default/app.conf", "w") as f:
             config.write(f)
 
-    def make_dev_app(self, app_directory):
-        config = configparser.ConfigParser()
-        config.read(f"{app_directory}/default/app.conf")
 
-        config["package"]["id"] = f"{config['package']['id']}_DEV"
-        config["id"]["name"] = f"{config['id']['name']}_DEV"
-        config["ui"]["label"] = f"{config['ui']['label']} [DEVELOPMENT]"
-
-        target_dir = f"{app_directory[:-1]}_DEV"
+    def copy_app(self, app_directory, suffix=""):
+        target_dir = f"target/{app_directory[:-1]}{suffix}"
         try:
             shutil.rmtree(target_dir)
         except:
@@ -181,10 +175,22 @@ class SplunkAppInspect:
 
         copy_tree(app_directory, target_dir)
 
-        with open(f"{target_dir}/default/app.conf", "w") as f:
-            config.write(f)
-
         return target_dir
+
+
+
+    def replace_dev_tag(self, app_directory, environment=""):
+        file_list = glob.glob(f"{app_directory}\**/*.conf",recursive=True)
+        file_list = file_list + glob.glob(f"{app_directory}\**/*.json",recursive=True)
+        file_list = file_list + glob.glob(f"{app_directory}\**/*.xml",recursive=True)
+
+        for each in file_list:
+            with open(each, 'r') as f:
+                s = f.read()
+
+            with open(each, 'w') as f:
+                s = s.replace("~^ENV^~", environment)
+                f.write(s)
 
 
 @click.command()
@@ -231,19 +237,23 @@ class SplunkAppInspect:
 )
 def main(app_package, splunkuser, splunkpassword, justvalidate, outfile, dev):
     sai = SplunkAppInspect(splunkuser, splunkpassword, packagetargz=outfile)
+    sai.increment_build_numbers(app_package)
+
     if dev:
-        sai.increment_build_numbers(app_package)
-        app_package = sai.make_dev_app(app_package)
+        app_package = sai.copy_app(app_package, suffix="_DEV")
+        sai.replace_dev_tag(app_package, "_DEV")
         report = sai.package_then_validate(app_package)
-        report = SplunkAppInspectReport(report)
-        report.print_failed_checks()
+
     else:
         if justvalidate:
             report = sai.validate_package(app_package)
         else:
+            app_package = sai.copy_app(app_package)
+            sai.replace_dev_tag(app_package)
             report = sai.package_then_validate(app_package)
-            report = SplunkAppInspectReport(report)
-            report.print_failed_checks()
+
+    report = SplunkAppInspectReport(report)
+    report.print_failed_checks()
 
 
 if __name__ == "__main__":
