@@ -180,9 +180,9 @@ class SplunkAppInspect:
 
 
     def replace_dev_tag(self, app_directory, environment=""):
-        file_list = glob.glob(f"{app_directory}\**/*.conf",recursive=True)
-        file_list = file_list + glob.glob(f"{app_directory}\**/*.json",recursive=True)
-        file_list = file_list + glob.glob(f"{app_directory}\**/*.xml",recursive=True)
+        file_list = glob.glob(f"{app_directory}/**/*.conf",recursive=True)
+        file_list = file_list + glob.glob(f"{app_directory}/**/*.json",recursive=True)
+        file_list = file_list + glob.glob(f"{app_directory}/**/*.xml",recursive=True)
 
         for each in file_list:
             with open(each, 'r') as f:
