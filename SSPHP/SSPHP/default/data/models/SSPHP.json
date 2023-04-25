@@ -282,7 +282,7 @@
             "calculations": [],
             "constraints": [
                 {
-                    "search": "index=ssphp_findings_summary",
+                    "search": "index=ssphp_findings_summary~^ENV^~",
                     "owner": "findings"
                 }
             ],
