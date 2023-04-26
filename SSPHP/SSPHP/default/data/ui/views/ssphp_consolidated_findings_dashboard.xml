@@ -41,10 +41,10 @@
       <html>
         <style>
           #panel_menu_1{
-            width:70% !important;
+            width:65% !important;
           }
           #panel_menu_2{
-            width:30% !important;
+            width:35% !important;
           }
         </style>
       </html>
@@ -69,17 +69,20 @@
       <input type="multiselect" token="tech_choices_tkn" searchWhenChanged="true">
         <label>Technology Use Cases</label>
         <choice value="*">ALL</choice>
-        <choice value="findings.ssphp_norm_use_case=&quot;findings&quot;">Azure Findings</choice>
-        <choice value="findings.ssphp_norm_use_case=&quot;alerts&quot;">Azure Alerts</choice>
-        <choice value="findings.ssphp_norm_tech_source=&quot;Github&quot;">Github</choice>
-        <choice value="findings.ssphp_norm_tech_source=&quot;Qualys&quot;">Qualys Vulnerabilities</choice>
         <default>*</default>
         <prefix>(</prefix>
         <suffix>)</suffix>
         <initialValue>*</initialValue>
-        <valuePrefix></valuePrefix>
-        <valueSuffix></valueSuffix>
         <delimiter> OR </delimiter>
+        <fieldForLabel>ts_label</fieldForLabel>
+        <fieldForValue>ts_search</fieldForValue>
+        <search>
+          <query>
+| tstats summariesonly=false count FROM datamodel=SSPHP.findings BY findings.ssphp_norm_tech_source
+| rename findings.ssphp_norm_tech_source as ts_label
+| eval ts_search="findings.ssphp_norm_tech_source=\"".'ts_label'."\""
+          </query>
+        </search>
       </input>
       
       <input type="dropdown" token="tkn_group" searchWhenChanged="true" depends="$isadmin_tkn$">
@@ -183,25 +186,27 @@
 
 | eval uc_col_no=case('Use Case'="Findings",1,
                       'Use Case'="Alerts",1,
-                      'Use Case'="VM Vulerabilities",1,
+                      'Use Case'="VM Vulerabilities",3,
                       'Use Case'="CVE",2,
                       'Use Case'="Repo Made Public",2,
                       'Use Case'="CodeQL",2,
                       'Use Case'="Secret",2,
                       'Use Case'="Change Branch Protection Rules",2,
-                      1==1,2)
+                      1==1,3)
 
 | eval "Use Case"=case('Use Case'="VM Vulerabilities","Qualys VM Vulerabilities",1==1,'Use Case')     
 | eval col_1_text=if(uc_col_no=1,'Use Case',null()), col_1_count=if(uc_col_no=1,'count',null()), 
-       col_2_text=if(uc_col_no=2,'Use Case',null()), col_2_count=if(uc_col_no=2,'count',null())
+       col_2_text=if(uc_col_no=2,'Use Case',null()), col_2_count=if(uc_col_no=2,'count',null()), 
+       col_3_text=if(uc_col_no=3,'Use Case',null()), col_3_count=if(uc_col_no=3,'count',null())
 | rename col_1_text as "Azure Use Cases", col_1_count as "Azure Count",
-         col_2_text as "Github Use Cases", col_2_count as "Github Count"
+         col_2_text as "Github Use Cases", col_2_count as "Github Count",
+         col_3_text as "Other Use Cases", col_3_count as "Other Count"
 
 | streamstats count as col_row by uc_col_no
 
 | stats values(*) as * by col_row
-| eval "Azure Count" = tostring('Azure Count', "commas"), "Github Count" = tostring('Github Count', "commas")
-| table "Azure Use Cases", "Azure Count", "Github Use Cases", "Github Count"
+| eval "Azure Count" = tostring('Azure Count', "commas"), "Github Count" = tostring('Github Count', "commas"), "Other Count" = tostring('Other Count', "commas")
+| table "Azure Use Cases", "Azure Count", "Github Use Cases", "Github Count", "Other Use Cases", "Other Count"
           </query>
           <done>
             <set token="ssphp_run_tkn">$result.SSPHP_RUN$</set>
@@ -508,7 +513,9 @@ WHERE
         OR
      (findings.ssphp_norm_tech_source="Azure" AND findings.ssphp_norm_use_case="alerts")
         OR
-     (findings.ssphp_norm_tech_source="Qualys" AND findings.ssphp_norm_use_case="VM Vulerabilities" AND findings.ssphp_norm_resource_parent=$tenant_name_tkn|s$ AND findings.ssphp_norm_resource_parent=$subscription_name_tkn|s$ AND findings.ssphp_norm_resource_parent=$resource_group_name_tkn|s$))
+     (findings.ssphp_norm_tech_source="Qualys" AND findings.ssphp_norm_use_case="VM Vulerabilities" AND findings.ssphp_norm_resource_parent=$tenant_name_tkn|s$ AND findings.ssphp_norm_resource_parent=$subscription_name_tkn|s$ AND findings.ssphp_norm_resource_parent=$resource_group_name_tkn|s$)
+        OR
+     (findings.ssphp_norm_tech_source="Test" AND findings.ssphp_norm_use_case="Test"))
 
      
     [| inputlookup ssphp_findings_summary_latest_run_times.csv where ssphp_norm_use_case!="unknown"
