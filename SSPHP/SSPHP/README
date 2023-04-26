@@ -1,1 +1,33 @@
 SSPHP App
+=========
+
+
+Installation of the app from scratch
+------------------------------------
+
+Steps : 
+
+1. Installing the app from scratch involves first removing (uninstalling) the previous version of the app if there was one. Do this using 'Manage Apps' option in the Splunk Web UI.
+
+2. Using 'Manage Apps' in the Web UI, you will first need to manually create a template barebones app called SSPHP (or SSPHP_DEV depending).
+    2.1 App ID = SSPHP_DEV
+    2.2 Description = DfE Service Security Posture Hardening Programme [DEVELOPMENT]
+
+3. Now upload and install the tar.gz for the app package that you have built, again using the Web UI.
+
+4. Certain lookup csv files need to exist and they must be created by manually running saved searches. There are dependencies between the searches o create the csv files, so the order to run the queries in should be as follows :
+
+    4.1. ssphp_create_resource_service_map_csv creates ssphp_resource_service_map.csv
+    4.2. 
+
+
+
+
+
+
+Building the Package to Install
+-------------------------------
+
+Terminal Command :  &'C:\Program Files\Python310\python.exe' .\package.py .\SSPHP\SSPHP\ [--dev]
+
+
