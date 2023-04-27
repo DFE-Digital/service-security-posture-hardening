@@ -37,19 +37,6 @@
 <!-- ****************************************************** Form Filters **************************************************************************** -->
 
   <row>
-    <panel depends="$nevershow$">
-      <html>
-        <style>
-          #panel_menu_1{
-            width:65% !important;
-          }
-          #panel_menu_2{
-            width:35% !important;
-          }
-        </style>
-      </html>
-    </panel>
-    
     <panel depends="$never_show$">
       <table>
         <search>
@@ -65,7 +52,7 @@
       </table>
     </panel>
     
-    <panel id="panel_menu_1">
+    <panel>
       <input type="multiselect" token="tech_choices_tkn" searchWhenChanged="true">
         <label>Technology Use Cases</label>
         <choice value="*">ALL</choice>
@@ -176,46 +163,6 @@
         </change>
       </input>
     </panel>
-
-
-    <panel id="panel_menu_2">
-      <table>
-        <search base="base_1">
-          <query>
-| stats count, values(SSPHP_RUN) as SSPHP_RUN by "Use Case"
-
-| eval uc_col_no=case('Use Case'="Findings",1,
-                      'Use Case'="Alerts",1,
-                      'Use Case'="VM Vulerabilities",3,
-                      'Use Case'="CVE",2,
-                      'Use Case'="Repo Made Public",2,
-                      'Use Case'="CodeQL",2,
-                      'Use Case'="Secret",2,
-                      'Use Case'="Change Branch Protection Rules",2,
-                      1==1,3)
-
-| eval "Use Case"=case('Use Case'="VM Vulerabilities","Qualys VM Vulerabilities",1==1,'Use Case')     
-| eval col_1_text=if(uc_col_no=1,'Use Case',null()), col_1_count=if(uc_col_no=1,'count',null()), 
-       col_2_text=if(uc_col_no=2,'Use Case',null()), col_2_count=if(uc_col_no=2,'count',null()), 
-       col_3_text=if(uc_col_no=3,'Use Case',null()), col_3_count=if(uc_col_no=3,'count',null())
-| rename col_1_text as "Azure Use Cases", col_1_count as "Azure Count",
-         col_2_text as "Github Use Cases", col_2_count as "Github Count",
-         col_3_text as "Other Use Cases", col_3_count as "Other Count"
-
-| streamstats count as col_row by uc_col_no
-
-| stats values(*) as * by col_row
-| eval "Azure Count" = tostring('Azure Count', "commas"), "Github Count" = tostring('Github Count', "commas"), "Other Count" = tostring('Other Count', "commas")
-| table "Azure Use Cases", "Azure Count", "Github Use Cases", "Github Count", "Other Use Cases", "Other Count"
-          </query>
-          <done>
-            <set token="ssphp_run_tkn">$result.SSPHP_RUN$</set>
-            <set token="search_earliest_tkn">$result.search_earliest$</set>
-            <set token="search_latest_tkn">$result.search_latest$</set>
-          </done>
-        </search>
-      </table>
-    </panel>
   </row>
 
 
@@ -223,23 +170,23 @@
 
 
   <row depends="$tkn_view_filters$">
+
     <panel depends="$nevershow$">
       <html>
         <style>
-          #panel_menu_11{
+          #panel_menu_1{
             width:65% !important;
           }
-          #panel_menu_12{
+          #panel_menu_2{
             width:35% !important;
           }
         </style>
       </html>
-    </panel>
-    
+    </panel>    
 
 <!-- ************* Azure ************* -->
 
-    <panel id="panel_menu_11">
+    <panel id="panel_menu_1">
       <title>Azure &amp; Qualys Filters</title>
       
       <input type="dropdown" token="tkn_tenant" searchWhenChanged="true">
@@ -327,7 +274,7 @@
 
 <!-- ************* Github ************* -->
 
-    <panel id="panel_menu_12">
+    <panel id="panel_menu_2">
       <title>Github Filters</title>
       <input type="dropdown" token="tkn_organisation" searchWhenChanged="true">
         <label>Organisation</label>
@@ -443,15 +390,29 @@
   
 
   
-<!-- ************************************* Only show for testing ************************************************************************************************************************* -->
+<!-- ************************************* Graph Row ************************************************************************************************************************* -->
 
 
   <row>
-    <panel>
+    <panel depends="$nevershow$">
+      <html>
+        <style>
+          #panel_graph_11{
+            width:65% !important;
+          }
+          #panel_table_12{
+            width:35% !important;
+          }
+        </style>
+      </html>
+    </panel>
+    
+    
+    <panel id="panel_graph_11">
       <chart>
-        <search>
-          <query>| tstats summariesonly=false 
-         count
+        <search id="base_graph_1">
+          <query>
+| tstats summariesonly=false count
 
 FROM datamodel=SSPHP.findings
 WHERE
@@ -491,7 +452,11 @@ BY
 | eval data_source=ssphp_norm_tech_source."--".ssphp_norm_use_case,
        _time=strptime(YYMM,"%Y-%m-%d")
 | fields - ssphp_norm_ownership, SSPHP_RUN, ssphp_norm_tech_source, ssphp_norm_use_case, YYMM
-| timechart sum(count) by data_source</query>
+| timechart sum(count) by data_source
+          </query>
+          <done>
+            <set token="graph_output_tkn">$job.sid$</set>
+          </done>
           <earliest>0</earliest>
           <sampleRatio>1</sampleRatio>
         </search>
@@ -526,7 +491,34 @@ BY
         <option name="trellis.enabled">0</option>
         <option name="trellis.scales.shared">1</option>
         <option name="trellis.size">medium</option>
+        <option name="height">250</option>
       </chart>
+    </panel>
+    
+
+    <panel id="panel_table_12">
+      <single>
+        <search base="base_graph_1">
+        </search>
+        <option name="colorBy">trend</option>
+        <option name="colorMode">block</option>
+        <option name="drilldown">none</option>
+        <option name="numberPrecision">0</option>
+        <option name="rangeColors">["0x53a051","0x0877a6","0xf8be34","0xf1813f","0xdc4e41"]</option>
+        <option name="rangeValues">[0,30,70,100]</option>
+        <option name="showSparkline">1</option>
+        <option name="showTrendIndicator">1</option>
+        <option name="trellis.enabled">1</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+        <option name="trendColorInterpretation">inverse</option>
+        <option name="trendDisplayMode">absolute</option>
+        <option name="trendInterval">-7d</option>
+        <option name="unitPosition">after</option>
+        <option name="useColors">1</option>
+        <option name="useThousandSeparators">1</option>
+        <option name="height">250</option>
+      </single>
     </panel>
   </row>  
   
@@ -535,7 +527,7 @@ BY
   
 <!-- ******************************************* HEADING & SSPHP DETAILS ROW ******************************************************************************************************************* -->
 
-  <row>
+  <row depends="$never_show$">
     <panel>
       <html>
             <style>
