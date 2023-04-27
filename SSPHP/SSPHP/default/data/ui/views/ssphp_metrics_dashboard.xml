@@ -2,7 +2,8 @@
   <label>Azure Metrics</label>
   <description>Service Security Posture Hardening Programme : v1.1</description>
   <search id="basesearch">
-    <query> index="ssphp_test" sourcetype="azure:security:score"
+    <query>
+`azure_index` sourcetype="azure:security:score"
 | rename meta.id.subscription as ssphp_subscription 
 | lookup ssphp_resource_service_map.csv ssphp_subscription OUTPUT ssphp_subscription_display_name 
 | eval compliant_percent='properties.score.percentage' * 100 
