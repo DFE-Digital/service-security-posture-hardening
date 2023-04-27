@@ -227,10 +227,10 @@
       <html>
         <style>
           #panel_menu_11{
-            width:50% !important;
+            width:65% !important;
           }
           #panel_menu_12{
-            width:50% !important;
+            width:35% !important;
           }
         </style>
       </html>
@@ -440,6 +440,98 @@
      </html>
     </panel>
   </row>
+  
+
+  
+<!-- ************************************* Only show for testing ************************************************************************************************************************* -->
+
+
+  <row>
+    <panel>
+      <chart>
+        <search>
+          <query>| tstats summariesonly=false 
+         count
+
+FROM datamodel=SSPHP.findings
+WHERE
+    findings.ssphp_norm_ownership=$tkn_group_text|s$ AND findings.ssphp_norm_ownership=$tkn_service_text|s$ AND $tech_choices_tkn$ AND findings.ssphp_norm_severity=$tkn_severity$
+    
+    
+    ((findings.ssphp_norm_tech_source="Azure" AND findings.ssphp_norm_use_case="findings" AND findings.ssphp_norm_resource_parent=$tenant_name_tkn|s$ AND findings.ssphp_norm_resource_parent=$subscription_name_tkn|s$ AND findings.ssphp_norm_resource_parent=$resource_group_name_tkn|s$ AND $healthy_tkn$)
+        OR 
+     (findings.ssphp_norm_tech_source="Github" AND findings.ssphp_norm_resource_parent=$github_org_tkn|s$ AND findings.ssphp_norm_resource=$github_repo_tkn|s$ AND $pub_priv_tkn$)
+        OR
+     (findings.ssphp_norm_tech_source="Azure" AND findings.ssphp_norm_use_case="alerts")
+        OR
+     (findings.ssphp_norm_tech_source="Qualys" AND findings.ssphp_norm_use_case="VM Vulerabilities" AND findings.ssphp_norm_resource_parent=$tenant_name_tkn|s$ AND findings.ssphp_norm_resource_parent=$subscription_name_tkn|s$ AND findings.ssphp_norm_resource_parent=$resource_group_name_tkn|s$)
+        OR
+     (findings.ssphp_norm_tech_source="Test" AND findings.ssphp_norm_use_case="Test"))
+     
+    [| inputlookup ssphp_findings_summary_latest_run_times.csv where ssphp_norm_use_case!="unknown"
+| eval ssphp_run_yymm=strftime(SSPHP_RUN,"%Y-%m-%d")
+| stats max(SSPHP_RUN) as SSPHP_RUN by ssphp_norm_use_case, ssphp_run_yymm
+| stats values(SSPHP_RUN) as SSPHP_RUN by ssphp_norm_use_case
+| eval return_search_string="(findings.ssphp_norm_use_case=\"".ssphp_norm_use_case."\" AND (findings.SSPHP_RUN=".mvjoin(SSPHP_RUN," OR findings.SSPHP_RUN=")."))"
+| stats values(return_search_string) as return_search_string
+| eval return_search_string=mvjoin(return_search_string," OR "),
+       return_search_string="(".return_search_string.")"
+    | return $$return_search_string]
+    
+BY 
+   findings.ssphp_norm_tech_source,
+   findings.ssphp_norm_use_case,
+   findings.ssphp_norm_ownership,
+   findings.ssphp_norm_severity, 
+   findings.SSPHP_RUN
+   
+| eval YYMM=strftime('findings.SSPHP_RUN',"%Y-%m-%d")
+| stats sum(count) as count, values(findings.ssphp_norm_ownership) as findings.ssphp_norm_ownership, values(findings.SSPHP_RUN) as SSPHP_RUN by findings.ssphp_norm_tech_source, findings.ssphp_norm_use_case, findings.SSPHP_RUN, YYMM
+| rename findings.* as *
+| eval data_source=ssphp_norm_tech_source."--".ssphp_norm_use_case,
+       _time=strptime(YYMM,"%Y-%m-%d")
+| fields - ssphp_norm_ownership, SSPHP_RUN, ssphp_norm_tech_source, ssphp_norm_use_case, YYMM
+| timechart sum(count) by data_source</query>
+          <earliest>0</earliest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
+        <option name="charting.axisTitleX.visibility">visible</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.abbreviation">none</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.abbreviation">none</option>
+        <option name="charting.axisY.scale">log</option>
+        <option name="charting.axisY2.abbreviation">none</option>
+        <option name="charting.axisY2.enabled">0</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">line</option>
+        <option name="charting.chart.bubbleMaximumSize">50</option>
+        <option name="charting.chart.bubbleMinimumSize">10</option>
+        <option name="charting.chart.bubbleSizeBy">area</option>
+        <option name="charting.chart.nullValueMode">gaps</option>
+        <option name="charting.chart.showDataLabels">none</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.stackMode">default</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">none</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.layout.splitSeries.allowIndependentYRanges">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.mode">standard</option>
+        <option name="charting.legend.placement">right</option>
+        <option name="charting.lineWidth">2</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+      </chart>
+    </panel>
+  </row>  
+  
+  
+  
   
 <!-- ******************************************* HEADING & SSPHP DETAILS ROW ******************************************************************************************************************* -->
 

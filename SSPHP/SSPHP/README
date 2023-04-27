@@ -24,7 +24,7 @@ Steps :
 
     3.7 You might also want to manually run the use case searches so that there in a uptodate version of the data in the summary index
 
-4. Accelerate the SSPHP data model in your app
+4. Accelerate the SSPHP data model **in your app**
 
 
 ======================================================================================================================================================================
@@ -34,7 +34,7 @@ Building the Package to Install
 
 Terminal Command :  &'C:\Program Files\Python310\python.exe' .\package.py .\SSPHP\SSPHP\ [--dev]
 
-
+Note.... build then commit
 
 
 
