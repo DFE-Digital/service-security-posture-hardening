@@ -15,6 +15,8 @@ from pprint import pprint
 import click
 import requests
 from requests.auth import HTTPBasicAuth
+import confreader
+import sys
 
 
 class SplunkAppInspectReport:
@@ -242,7 +244,11 @@ def main(app_package, splunkuser, splunkpassword, justvalidate, outfile, dev):
     if dev:
         app_package = sai.copy_app(app_package, suffix="_DEV")
         sai.replace_dev_tag(app_package, "_DEV")
-        report = sai.package_then_validate(app_package)
+        conf_reader_result = confreader.result(app_package)
+        if conf_reader_result:
+            report = sai.package_then_validate(app_package)
+        else:
+            sys.exit(1)
 
     else:
         if justvalidate:
@@ -250,7 +256,11 @@ def main(app_package, splunkuser, splunkpassword, justvalidate, outfile, dev):
         else:
             app_package = sai.copy_app(app_package)
             sai.replace_dev_tag(app_package)
-            report = sai.package_then_validate(app_package)
+            conf_reader_result = confreader.result(app_package)
+            if conf_reader_result:
+                report = sai.package_then_validate(app_package)
+            else:
+                sys.exit(1)
 
     report = SplunkAppInspectReport(report)
     report.print_failed_checks()

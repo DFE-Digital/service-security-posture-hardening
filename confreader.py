@@ -14,7 +14,8 @@ class ConfParser:
         self.load_file()
 
     def validate(self, new):
-        c = configparser.ConfigParser()
+        c = configparser.RawConfigParser()
+        c.optionxform = lambda x: x
         try:
             # Try to load the currently parsed config
             c.read_string("\n".join(new), source=self.filename)
@@ -42,10 +43,11 @@ class ConfParser:
                     # This line ends with a '\'
                     # Remove the '\\\n'
                     line = self.SLASH_NEW_LINE.sub(" ", line)
-                    # Append this line to the previous line
-                    new[-1] = f"{new[-1]} {line}"
                     # Append the next line to the current one
                     join_next_line = True
+
+                # Append this line to the previous line
+                new[-1] = f"{new[-1]} {line}"
 
             elif self.SLASH_NEW_LINE.search(line):
                 # This line ends with a '\' (the previous line didn't)
@@ -93,10 +95,26 @@ class ConfParser:
         print("" + "!" * 100 + "\n\n")
 
 
-def conf_files():
-    f = glob.glob("*.conf", recursive=True)
-    f += glob.glob("**/*.conf", recursive=True)
+def conf_files(app_package=""):
+    if app_package:
+        f = glob.glob(f"{app_package}/**/*.conf", recursive=True)
+    else:
+        f = glob.glob("*.conf", recursive=True)
+        f += glob.glob("**/*.conf", recursive=True)        
     return f
+
+
+def result(app_package):
+    conffiles = conf_files(app_package)
+    my_return = True
+    for conf_file in conffiles:
+        parser = ConfParser(conf_file)
+        if not parser.parse():
+            parser.show_error()
+            my_return  = False
+        else:
+            print(f"{conf_file} is validish!")
+    return my_return
 
 
 def main():
