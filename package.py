@@ -6,6 +6,7 @@ import stat
 import tarfile
 import time
 import glob
+import re
 from copy import deepcopy
 from datetime import datetime
 from distutils.dir_util import copy_tree
@@ -167,7 +168,6 @@ class SplunkAppInspect:
         with open(f"{app_directory}/default/app.conf", "w") as f:
             config.write(f)
 
-
     def copy_app(self, app_directory, suffix=""):
         target_dir = f"target/{app_directory[:-1]}{suffix}"
         try:
@@ -179,18 +179,35 @@ class SplunkAppInspect:
 
         return target_dir
 
+    def process_conf_file_tripple_quotes(self, data):
+        in_search = False
+        out = ""
+        for line in data:
+            if '"""' in line and in_search == False:
+                in_search = True
+            elif '"""' in line and in_search == True:
+                in_search = False
 
+            if in_search:
+                line = line[:-1] + "\\\n"
+            out += re.sub('"""', "", line)
+        return out
 
-    def replace_dev_tag(self, app_directory, environment=""):
-        file_list = glob.glob(f"{app_directory}/**/*.conf",recursive=True)
-        file_list = file_list + glob.glob(f"{app_directory}/**/*.json",recursive=True)
-        file_list = file_list + glob.glob(f"{app_directory}/**/*.xml",recursive=True)
+    def replace_dev_tag_and_tripple_quotes(self, app_directory, environment=""):
+        file_list = glob.glob(f"{app_directory}/**/*.conf", recursive=True)
+        file_list = file_list + glob.glob(f"{app_directory}/**/*.json", recursive=True)
+        file_list = file_list + glob.glob(f"{app_directory}/**/*.xml", recursive=True)
 
         for each in file_list:
-            with open(each, 'r') as f:
-                s = f.read()
+            with open(each, "r") as f:
+                s = f.readlines()
 
-            with open(each, 'w') as f:
+            if ".conf" in each:
+                s = self.process_conf_file_tripple_quotes(s)
+            else:
+                s = "".join(s)
+
+            with open(each, "w") as f:
                 s = s.replace("~^ENV^~", environment)
                 f.write(s)
 
@@ -243,24 +260,15 @@ def main(app_package, splunkuser, splunkpassword, justvalidate, outfile, dev):
 
     if dev:
         app_package = sai.copy_app(app_package, suffix="_DEV")
-        sai.replace_dev_tag(app_package, "_DEV")
-        conf_reader_result = confreader.result(app_package)
-        if conf_reader_result:
-            report = sai.package_then_validate(app_package)
-        else:
-            sys.exit(1)
-
+        sai.replace_dev_tag_and_tripple_quotes(app_package, "_DEV")
+        report = sai.package_then_validate(app_package)
     else:
         if justvalidate:
             report = sai.validate_package(app_package)
         else:
             app_package = sai.copy_app(app_package)
-            sai.replace_dev_tag(app_package)
-            conf_reader_result = confreader.result(app_package)
-            if conf_reader_result:
-                report = sai.package_then_validate(app_package)
-            else:
-                sys.exit(1)
+            sai.replace_dev_tag_and_tripple_quotes(app_package)
+            report = sai.package_then_validate(app_package)
 
     report = SplunkAppInspectReport(report)
     report.print_failed_checks()
