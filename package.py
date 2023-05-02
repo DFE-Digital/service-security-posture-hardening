@@ -16,8 +16,6 @@ from pprint import pprint
 import click
 import requests
 from requests.auth import HTTPBasicAuth
-import confreader
-import sys
 
 
 class SplunkAppInspectReport:
@@ -147,8 +145,8 @@ class SplunkAppInspect:
         self.submit_package()
         self.wait_for_processing()
         report = self.get_report()
-        with open(f"{self.packagetargz}_report.json", "w") as f:
-            json.dump(report, f)
+        with open(f"{self.packagetargz}_report.json", "w", encoding="utf8") as package:
+            json.dump(report, package)
         return report
 
     def increment_build_numbers(self, app_directory):
@@ -163,16 +161,16 @@ class SplunkAppInspect:
 
         config["launcher"]["version"] = new_version
         config["id"]["version"] = new_version
-        config["install"]["build"] = str(time.time()).split(".")[0]
+        config["install"]["build"] = str(time.time()).split(".", maxsplit=1)[0]
 
-        with open(f"{app_directory}/default/app.conf", "w") as f:
-            config.write(f)
+        with open(f"{app_directory}/default/app.conf", "w", encoding="utf8") as conf:
+            config.write(conf)
 
     def copy_app(self, app_directory, suffix=""):
         target_dir = f"target/{app_directory[:-1]}{suffix}"
         try:
             shutil.rmtree(target_dir)
-        except:
+        except FileNotFoundError:
             pass
 
         copy_tree(app_directory, target_dir)
@@ -183,9 +181,9 @@ class SplunkAppInspect:
         in_search = False
         out = ""
         for line in data:
-            if '"""' in line and in_search == False:
+            if '"""' in line and in_search is False:
                 in_search = True
-            elif '"""' in line and in_search == True:
+            elif '"""' in line and in_search is True:
                 in_search = False
 
             if in_search:
@@ -199,17 +197,17 @@ class SplunkAppInspect:
         file_list = file_list + glob.glob(f"{app_directory}/**/*.xml", recursive=True)
 
         for each in file_list:
-            with open(each, "r") as f:
-                s = f.readlines()
+            with open(each, "r", encoding="utf8") as source:
+                contents = source.readlines()
 
             if ".conf" in each:
-                s = self.process_conf_file_tripple_quotes(s)
+                contents = self.process_conf_file_tripple_quotes(contents)
             else:
-                s = "".join(s)
+                contents = "".join(contents)
 
-            with open(each, "w") as f:
-                s = s.replace("~^ENV^~", environment)
-                f.write(s)
+            with open(each, "w", encoding="utf8") as target_file:
+                contents = contents.replace("~^ENV^~", environment)
+                target_file.write(contents)
 
 
 @click.command()
