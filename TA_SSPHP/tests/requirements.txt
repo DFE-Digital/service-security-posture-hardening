@@ -6,4 +6,4 @@ pylint
 flake8
 ruff
 black
--r ../package/lib/requirements.txt
+-r ../TA_SSPHP/lib/requirements.txt

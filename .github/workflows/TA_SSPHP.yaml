@@ -26,7 +26,7 @@ jobs:
         run: cd TA_SSPHP; pip-audit -S
 
       - name: ruff
-        run: cd TA_SSPHP; ruff package/bin/*.py tests/*.py --ignore=F401,E501,E402
+        run: cd TA_SSPHP; ruff TA_SSPHP/bin/*.py tests/*.py --ignore=F401,E501,E402
 
       - name: Run offline tests
         run: cd TA_SSPHP/tests; pytest
@@ -39,16 +39,16 @@ jobs:
         run: cd TA_SSPHP/tests; pytest -m live
 
       - name: bandit
-        run: cd TA_SSPHP; bandit package/bin/*.py
+        run: cd TA_SSPHP; bandit TA_SSPHP/bin/*.py
 
       - name: pycodestyle
-        run: cd TA_SSPHP; pycodestyle package/bin/*.py --ignore=E501,W503,W504
+        run: cd TA_SSPHP; pycodestyle TA_SSPHP/bin/*.py --ignore=E501,W503,W504
 
       - name: pylint
-        run: cd TA_SSPHP; pylint --fail-under 5 package/bin/*.py tests/*.py
+        run: cd TA_SSPHP; pylint --fail-under 5 TA_SSPHP/bin/*.py tests/*.py
 
       - name: Package
-        run: cd TA_SSPHP; ucc-gen build && slim package output/TA-MS-AAD && mv TA*.tar.gz ta-ms-aad.tar.gz; ls -la *.gz && sha1sum *.gz
+        run: cd TA_SSPHP; ucc-gen build --source TA_SSPHP && slim package output/TA_SSPHP && mv TA*.tar.gz TA_SSPHP.tar.gz; ls -la *.gz && sha1sum *.gz
 
       - name: validate
         env:
