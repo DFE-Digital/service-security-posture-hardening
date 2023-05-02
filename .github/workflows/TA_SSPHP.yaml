@@ -5,6 +5,7 @@ on:
   push:
     paths:
       - TA_SSPHP/**
+  workflow_dispatch:
 
 jobs:
   build:

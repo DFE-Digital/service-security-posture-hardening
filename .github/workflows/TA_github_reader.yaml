@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - TA_github_reader/**
+  workflow_dispatch:
 
 jobs:
   build_and_test:

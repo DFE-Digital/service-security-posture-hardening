@@ -5,6 +5,7 @@ on:
   push:
     paths:
       - SSPHP/**
+  workflow_dispatch:
 
 jobs:
   build:
