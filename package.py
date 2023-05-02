@@ -91,7 +91,7 @@ class SplunkAppInspect:
 
         headers.update(
             {
-                "included_tags": "cloud",
+                "included_tags": "private_victoria",
             }
         )
 
