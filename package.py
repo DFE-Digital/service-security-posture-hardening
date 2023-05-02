@@ -254,19 +254,19 @@ class SplunkAppInspect:
 )
 def main(app_package, splunkuser, splunkpassword, justvalidate, outfile, dev):
     sai = SplunkAppInspect(splunkuser, splunkpassword, packagetargz=outfile)
-    sai.increment_build_numbers(app_package)
 
-    if dev:
-        app_package = sai.copy_app(app_package, suffix="_DEV")
-        sai.replace_dev_tag_and_tripple_quotes(app_package, "_DEV")
-        report = sai.package_then_validate(app_package)
+    if justvalidate:
+        report = sai.validate_package(app_package)
     else:
-        if justvalidate:
-            report = sai.validate_package(app_package)
+        sai.increment_build_numbers(app_package)
+        if dev:
+            suffix = "_DEV"
         else:
-            app_package = sai.copy_app(app_package)
-            sai.replace_dev_tag_and_tripple_quotes(app_package)
-            report = sai.package_then_validate(app_package)
+            suffix = ""
+
+        app_package = sai.copy_app(app_package, suffix)
+        sai.replace_dev_tag_and_tripple_quotes(app_package)
+        report = sai.package_then_validate(app_package)
 
     report = SplunkAppInspectReport(report)
     report.print_failed_checks()
