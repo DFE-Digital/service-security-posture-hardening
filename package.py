@@ -265,7 +265,7 @@ def main(app_package, splunkuser, splunkpassword, justvalidate, outfile, dev):
             suffix = ""
 
         app_package = sai.copy_app(app_package, suffix)
-        sai.replace_dev_tag_and_tripple_quotes(app_package)
+        sai.replace_dev_tag_and_tripple_quotes(app_package, suffix)
         report = sai.package_then_validate(app_package)
 
     report = SplunkAppInspectReport(report)
