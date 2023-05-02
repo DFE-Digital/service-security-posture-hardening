@@ -39,7 +39,7 @@ jobs:
 
       - name: package and validate
         env:
-          SPLUNK_USER: ${{ secrets.SPLUNK_USER }}
+          SPLUNK_USER: ${{ secrets.SPLUNK_USERNAME }}
           SPLUNK_PASSWORD: ${{ secrets.SPLUNK_PASSWORD }}
         run: cd SSPHP; ../package.py --outfile SSPHP.tar.gz SSPHP
 

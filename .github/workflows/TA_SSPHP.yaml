@@ -52,7 +52,7 @@ jobs:
 
       - name: validate
         env:
-          SPLUNK_USER: ${{ secrets.SPLUNK_USER }}
+          SPLUNK_USER: ${{ secrets.SPLUNK_USERNAME }}
           SPLUNK_PASSWORD: ${{ secrets.SPLUNK_PASSWORD }}
         run: ../package.py --justvalidate TA_SSPHP/TA_SSPHP.tar.gz
 

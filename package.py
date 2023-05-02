@@ -225,7 +225,7 @@ class SplunkAppInspect:
 @click.option(
     "--splunkpassword",
     envvar="SPLUNK_PASSWORD",
-    help="The splunk.com password. Can also be set via SPLUNK_USER environment variable",
+    help="The splunk.com password. Can also be set via SPLUNK_PASSWORD environment variable",
     type=str,
     required=True,
 )
