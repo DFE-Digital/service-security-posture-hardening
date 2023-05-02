@@ -1,6 +1,6 @@
 <dashboard theme="dark" version="1.1" script="js/addtags.js">
   <label>Consolidated Findings Dashboard</label>
-  <description>Service Security Posture Hardening Programme : v2.0</description>
+  <description>Service Security Posture Hardening Programme : v2.1</description>
   
   
 <!-- ****************************************************** Initial Values **************************************************************************** -->
@@ -94,12 +94,12 @@
           </condition>
           <condition>
             <eval token="tkn_group_text">"*DfE Group = ".$value$."*"</eval>
-            <set token="form.tkn_service">*</set>
+<!-- ***            <set token="form.tkn_service">*</set> *** -->
           </condition>
         </change>
       </input>
   
-      <input type="dropdown" token="tkn_service" searchWhenChanged="true" depends="$isadmin_tkn$">
+     <input type="dropdown" token="tkn_service" searchWhenChanged="true" depends="$isadmin_tkn$">
         <label>DfE Service</label>
         <choice value="*">ALL</choice>
         <default>ALL</default>
@@ -332,6 +332,12 @@
       </input>
     </panel>
   </row>
+  
+  
+  <row>     
+      <html depends="$notadmin_tkn$">$tkn_group$ : $tkn_service$</html>
+  </row>
+
 
 
 
@@ -361,11 +367,13 @@
           <done>
             <condition match="match($result.isadmin$,&quot;1&quot;)">
               <set token="isadmin_tkn">1</set>
+              <unset token="notadmin_tkn"></unset>
               <set token="form.tkn_group">*</set>
               <set token="form.tkn_service">*</set>
             </condition>
             <condition>
               <unset token="isadmin_tkn"></unset>
+              <set token="notadmin_tkn">1</set>
               <set token="form.tkn_group">$result.L1$</set>
               <set token="form.tkn_service">$result.L2$</set>
             </condition>
