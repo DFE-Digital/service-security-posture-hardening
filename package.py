@@ -31,6 +31,15 @@ class SplunkAppInspectReport:
                         pprint(check, indent=4, width=200)
                         print("\n\n")
 
+    def print_manual_checks(self):
+        print("\n\n")
+        for report in self.report.get("reports", []):
+            for group in report.get("groups", []):
+                for check in group.get("checks", []):
+                    if check.get("result") in ["manual_check"]:
+                        pprint(check, indent=4, width=200)
+                        print("\n\n")
+
 
 class SplunkAppInspect:
     def __init__(self, user, password, token=None, request_id=None, packagetargz=None):
@@ -269,6 +278,7 @@ def main(app_package, splunkuser, splunkpassword, justvalidate, outfile, dev):
         report = sai.package_then_validate(app_package)
 
     report = SplunkAppInspectReport(report)
+    report.print_manual_checks()
     report.print_failed_checks()
 
 
