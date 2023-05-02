@@ -50,6 +50,9 @@ jobs:
         run: cd TA_SSPHP; ucc-gen build && slim package output/TA-MS-AAD && mv TA*.tar.gz ta-ms-aad.tar.gz; ls -la *.gz && sha1sum *.gz
 
       - name: validate
+        env:
+          SPLUNK_USER: ${{ SPLUNK_USER }}
+          SPLUNK_PASSWORD: ${{ SPLUNK_PASSWORD }}
         run: ../package.py --justvalidate TA_SSPHP/TA_SSPHP.tar.gz
 
       - name: Commit changes

@@ -42,6 +42,9 @@ jobs:
         run: cd TA_github_reader; cargo xtask build
 
       - name: validate
+        env:
+          SPLUNK_USER: ${{ SPLUNK_USER }}
+          SPLUNK_PASSWORD: ${{ SPLUNK_PASSWORD }}
         run: ../package.py --justvalidate TA_github_reader/TA_github_reader.tar.gz
 
       - name: Commit changes
