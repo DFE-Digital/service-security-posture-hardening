@@ -54,7 +54,7 @@ jobs:
         env:
           SPLUNK_USER: ${{ secrets.SPLUNK_USERNAME }}
           SPLUNK_PASSWORD: ${{ secrets.SPLUNK_PASSWORD }}
-        run: package.py --justvalidate TA_SSPHP/TA_SSPHP.tar.gz
+        run: ./package.py --justvalidate TA_SSPHP/TA_SSPHP.tar.gz
 
       - name: Commit changes
         uses: EndBug/add-and-commit@v9
