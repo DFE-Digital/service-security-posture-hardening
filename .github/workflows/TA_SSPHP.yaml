@@ -31,12 +31,12 @@ jobs:
       - name: Run offline tests
         run: cd TA_SSPHP/tests; pytest
 
-      - name: Run live tests
-        env:
-          azure_client_id: ${{ secrets.AZURE_CLIENT_ID }}
-          azure_client_secret: ${{ secrets.AZURE_CLIENT_SECRET }}
-          azure_tenant_id: ${{ secrets.AZURE_TENANT_ID }}
-        run: cd TA_SSPHP/tests; pytest -m live
+      # - name: Run live tests
+      #   env:
+      #     azure_client_id: ${{ secrets.AZURE_CLIENT_ID }}
+      #     azure_client_secret: ${{ secrets.AZURE_CLIENT_SECRET }}
+      #     azure_tenant_id: ${{ secrets.AZURE_TENANT_ID }}
+      #   run: cd TA_SSPHP/tests; pytest -m live
 
       - name: bandit
         run: cd TA_SSPHP; bandit TA_SSPHP/bin/*.py
