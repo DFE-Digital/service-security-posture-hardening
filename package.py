@@ -89,12 +89,6 @@ class SplunkAppInspect:
 
         headers = deepcopy(self.headers)
 
-        headers.update(
-            {
-                "included_tags": "private_victoria",
-            }
-        )
-
         with open(self.packagetargz, "rb") as targz:
             validate_res = requests.post(
                 validate_url,
@@ -110,7 +104,7 @@ class SplunkAppInspect:
 
     def wait_for_processing(self):
         status_url = (
-            f"https://appinspect.splunk.com/v1/app/validate/status/{self.request_id}"
+            f"https://appinspect.splunk.com/v1/app/validate/status/{self.request_id}?included_tags=private_victoria"
         )
 
         sleep = 0
@@ -125,7 +119,7 @@ class SplunkAppInspect:
                 break
 
     def get_report(self):
-        report_url = f"https://appinspect.splunk.com/v1/app/report/{self.request_id}"
+        report_url = f"https://appinspect.splunk.com/v1/app/report/{self.request_id}?included_tags=private_victoria"
 
         headers = deepcopy(self.headers)
 
