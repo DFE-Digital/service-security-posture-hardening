@@ -68,7 +68,6 @@ class SplunkAppInspect:
         auth_res = requests.get(url, auth=auth, timeout=self.timeout)
 
         self.token = auth_res.json().get("data", {}).get("token")
-
         self.headers.update(
             {
                 "Authorization": f"bearer {self.token}",
@@ -270,7 +269,8 @@ def main(app_package, splunkuser, splunkpassword, justvalidate, outfile, dev):
 
     report = SplunkAppInspectReport(report)
     report.print_failed_checks()
-
+    
+    print(f"token={sai.token}")
 
 if __name__ == "__main__":
     main()
