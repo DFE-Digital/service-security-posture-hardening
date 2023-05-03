@@ -31,6 +31,15 @@ class SplunkAppInspectReport:
                         pprint(check, indent=4, width=200)
                         print("\n\n")
 
+    def print_manual_checks(self):
+        print("\n\n")
+        for report in self.report.get("reports", []):
+            for group in report.get("groups", []):
+                for check in group.get("checks", []):
+                    if check.get("result") in ["manual_check"]:
+                        pprint(check, indent=4, width=200)
+                        print("\n\n")
+
 
 class SplunkAppInspect:
     def __init__(self, user, password, token=None, request_id=None, packagetargz=None):
@@ -79,12 +88,6 @@ class SplunkAppInspect:
 
         headers = deepcopy(self.headers)
 
-        headers.update(
-            {
-                "included_tags": "cloud",
-            }
-        )
-
         with open(self.packagetargz, "rb") as targz:
             validate_res = requests.post(
                 validate_url,
@@ -100,7 +103,7 @@ class SplunkAppInspect:
 
     def wait_for_processing(self):
         status_url = (
-            f"https://appinspect.splunk.com/v1/app/validate/status/{self.request_id}"
+            f"https://appinspect.splunk.com/v1/app/validate/status/{self.request_id}?included_tags=private_victoria"
         )
 
         sleep = 0
@@ -115,7 +118,7 @@ class SplunkAppInspect:
                 break
 
     def get_report(self):
-        report_url = f"https://appinspect.splunk.com/v1/app/report/{self.request_id}"
+        report_url = f"https://appinspect.splunk.com/v1/app/report/{self.request_id}?included_tags=private_victoria"
 
         headers = deepcopy(self.headers)
 
@@ -268,6 +271,7 @@ def main(app_package, splunkuser, splunkpassword, justvalidate, outfile, dev):
         report = sai.package_then_validate(app_package)
 
     report = SplunkAppInspectReport(report)
+    report.print_manual_checks()
     report.print_failed_checks()
     
     print(f"token={sai.token}")
