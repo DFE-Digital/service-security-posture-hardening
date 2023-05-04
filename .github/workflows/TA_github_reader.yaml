@@ -46,7 +46,7 @@ jobs:
         env:
           SPLUNK_USER: ${{ secrets.SPLUNK_USERNAME }}
           SPLUNK_PASSWORD: ${{ secrets.SPLUNK_PASSWORD }}
-        run: ../package.py --justvalidate TA_github_reader/TA_github_reader.tar.gz
+        run: ../package.py --justvalidate TA_github_reader/TA_github_reader.tar.gz --nodeploy
 
       - name: Commit changes
         uses: EndBug/add-and-commit@v9

@@ -5,11 +5,12 @@ from pprint import pprint
 
 
 class SplunkACS:
-    def __init__(self, stack, token):
+    def __init__(self, stack, acs_token, validation_token):
         self.stack = stack
-        self.token = token
-        self.url = f"https://admin.splunk.com/{self.stack}/adminconfig/v2/apps?count=100"
-        self.headers = {"Authorization": f"Bearer {self.token}"}
+        self.acs_token = acs_token
+        self.validation_token = validation_token
+        self.url = f"https://admin.splunk.com/{self.stack}/adminconfig/v2/apps/victoria"
+        self.headers = {"Authorization": f"Bearer {self.acs_token}", "X-Splunk-Authorization": self.validation_token}
         self.ack_header = {"ACS-Legal-Ack": "Y"}
         self.all_headers = dict(self.ack_header, **self.headers)
 
@@ -29,27 +30,11 @@ class SplunkACS:
         return False
 
     def install_app(self, app_path):
-        print(f"gonna install {app_path}")
-        print(self.all_headers)
+        print(f"Starting install of {app_path}")
         
-        files = {"package": open(app_path,"rb"), "token": "token"}
-        response = requests.post(self.url, headers=self.all_headers, files = files)
+        with open(app_path,"rb") as f:
+            data = f.read()
+
+        response = requests.post(self.url, headers=self.all_headers, data = data)
 
         return response
-
-
-def main():
-    token = os.getenv('ACS_TOKEN')
-    acs = SplunkACS("dfe", token)
-    # app = "Splunk_TA_MS_Security"
-    app_path="SSPHP_DEV_1683125797.tar.gz"
-
-    # acs_response = acs.check_app_exists(app)
-    # print(f"the app is {app} and exists is {acs_response}")
-
-    # if acs_response:
-    success = acs.install_app(app_path)
-    print(success.text)
-
-if __name__ == "__main__":
-    main()

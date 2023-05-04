@@ -16,23 +16,28 @@ from pprint import pprint
 import click
 import requests
 from requests.auth import HTTPBasicAuth
+import os
+from acs import SplunkACS
 
 
 class SplunkAppInspectReport:
     def __init__(self, report):
         self.report = report
+        self.failed_check_count = 0
 
     def print_failed_checks(self):
-        print("\n\n")
         for report in self.report.get("reports", []):
             for group in report.get("groups", []):
                 for check in group.get("checks", []):
                     if check.get("result") in ["failure"]:
                         pprint(check, indent=4, width=200)
                         print("\n\n")
+                        self.failed_check_count += 1
+
+    def report_valid(self):
+        return self.failed_check_count == 0
 
     def print_manual_checks(self):
-        print("\n\n")
         for report in self.report.get("reports", []):
             for group in report.get("groups", []):
                 for check in group.get("checks", []):
@@ -111,7 +116,7 @@ class SplunkAppInspect:
             status_res = requests.get(
                 status_url, headers=self.headers, timeout=self.timeout
             )
-            pprint(status_res.json(), indent=4, width=200)
+            #pprint(status_res.json(), indent=4, width=200)
             time.sleep(sleep)
             sleep += 1
             if status_res.json().get("status", "") != "PROCESSING":
@@ -130,7 +135,7 @@ class SplunkAppInspect:
 
         report_res = requests.get(report_url, headers=headers, timeout=self.timeout)
         report_json = report_res.json()
-        pprint(report_json, indent=4, width=200)
+        #pprint(report_json, indent=4, width=200)
         return report_json
 
     def validate_package(self, packagetargz):
@@ -143,6 +148,7 @@ class SplunkAppInspect:
 
     def package_then_validate(self, app_directory):
         self.make_tarfile(app_directory)
+        print(f"Starting packaging of {self.packagetargz}")
         self.login()
         self.submit_package()
         self.wait_for_processing()
@@ -248,13 +254,25 @@ class SplunkAppInspect:
     is_flag=True,
 )
 @click.option(
+    "--nodeploy",
+    help="Do NOT do the Deploy leg, just validate",
+    type=bool,
+    required=False,
+    default=False,
+    is_flag=True,
+)
+@click.option(
     "--outfile",
     help="Provied a package .tag.gz instead of a directory and validate it.",
     type=str,
     required=False,
     default=None,
 )
-def main(app_package, splunkuser, splunkpassword, justvalidate, outfile, dev):
+
+
+def main(app_package, splunkuser, splunkpassword, justvalidate, outfile, dev, nodeploy):
+
+    # All the code relating to Building the Package
     sai = SplunkAppInspect(splunkuser, splunkpassword, packagetargz=outfile)
 
     if justvalidate:
@@ -274,7 +292,19 @@ def main(app_package, splunkuser, splunkpassword, justvalidate, outfile, dev):
     report.print_manual_checks()
     report.print_failed_checks()
     
-    print(f"token={sai.token}")
+    #print(f"token={sai.token}")
+
+    # All the code relating to installing the package using Victoria Experience
+    if report.report_valid() and not nodeploy:
+        acs_token = os.getenv('ACS_TOKEN')
+        acs = SplunkACS("dfe", acs_token, sai.token)
+
+        # if acs_response:
+        success = acs.install_app(sai.packagetargz)
+        print(success.text)
+
+    elif not nodeploy:
+        print("Package Not Uploaded because it failed validation")
 
 if __name__ == "__main__":
     main()
