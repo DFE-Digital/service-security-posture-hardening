@@ -1,0 +1,10 @@
+paths-ignore:
+  - .github
+  - TA_github_reader # rust not supported
+query-filters:
+- exclude:
+    problem.severity:
+      - Note # ignore notes when there's too much noise
+queries:
+  - uses: advanced-security/codeql-queries/python/suites/codeql-python.qls@main
+  - uses: advanced-security/codeql-queries/javascript/suites/codeql-javascript.qls@main
