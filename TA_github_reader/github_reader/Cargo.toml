@@ -7,12 +7,16 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0"
+azure_core = "*"
+azure_identity = "*"
+azure_mgmt_security = {version = "*", path ="/home/a/repos/azure-sdk-for-rust/services/mgmt/security"}
+azure_mgmt_subscription = "*"
 clap = "*"
 futures = "*"
 modular_input = {path = "../modular_input" }
 # modular_input_macros = {path = "../modular_input_macros" }
 octorust = "*"
-reqwest = { version ="*", features = ["rustls-tls",], default-features = false}
+reqwest = { version ="*", features = ["rustls-tls"], default-features = false}
 serde = {version = "*", features = ["derive"]}
 serde_json = "*"
 tokio = { version = "1.0", features = ["full"] }

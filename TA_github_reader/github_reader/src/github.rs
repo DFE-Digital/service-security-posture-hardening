@@ -1,9 +1,7 @@
-#![feature(async_fn_in_trait)]
 use anyhow::Result;
 use modular_input::Event;
 use octorust::types::{MinimalRepository, Order, ReposListOrgSort, ReposListOrgType};
 use octorust::{auth::Credentials, Client};
-use serde::{Deserialize, Serialize};
 use std::fmt;
 use std::sync::mpsc::Sender;
 use tracing::instrument;
@@ -12,17 +10,6 @@ use tracing::{debug, info};
 #[derive(Clone)]
 pub struct GitHub {
     client: Client,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct SsphpWrapper<T>
-where
-    T: Serialize,
-{
-    #[serde(rename = "SSPHP_RUN")]
-    ssphp_run: f64,
-    #[serde(flatten)]
-    event: T,
 }
 
 impl fmt::Debug for GitHub {
@@ -83,12 +70,7 @@ impl GitHub {
             for repo in repos.iter() {
                 let cloned_event = template_event.clone();
 
-                let ssphp_wrapper = SsphpWrapper {
-                    ssphp_run: cloned_event.time.unwrap() as f64,
-                    event: repo,
-                };
-
-                let new_event = cloned_event.data_from(&ssphp_wrapper)?;
+                let new_event = cloned_event.data_from_ssphp_run(&repo)?;
                 event_writer.send(new_event)?;
             }
             repositories.extend(repos);
@@ -125,12 +107,7 @@ impl GitHub {
             count += 1;
             for member in members {
                 let cloned_event = template_event.clone();
-                let ssphp_wrapper = SsphpWrapper {
-                    ssphp_run: cloned_event.time.unwrap() as f64,
-                    event: member,
-                };
-
-                let new_event = cloned_event.data_from(&ssphp_wrapper)?;
+                let new_event = cloned_event.data_from_ssphp_run(&member)?;
 
                 event_writer.send(new_event)?;
             }
@@ -146,15 +123,9 @@ impl GitHub {
         event_writer: Sender<Event>,
     ) -> Result<()> {
         let rate_limit = self.client.rate_limit().get().await?;
-        let ssphp_wrapper = SsphpWrapper {
-            ssphp_run: template_event.time.unwrap() as f64,
-            event: rate_limit,
-        };
-
-        let new_event = template_event.clone().data_from(&ssphp_wrapper)?;
+        let new_event = template_event.clone().data_from_ssphp_run(&rate_limit)?;
 
         event_writer.send(new_event)?;
         Ok(())
     }
-
 }

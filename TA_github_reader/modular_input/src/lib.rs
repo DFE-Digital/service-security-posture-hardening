@@ -120,6 +120,17 @@ pub struct Event {
     pub stanza: Option<String>,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct SsphpWrapper<T>
+where
+    T: Serialize,
+{
+    #[serde(rename = "SSPHP_RUN", skip_serializing_if = "Option::is_none")]
+    ssphp_run: Option<f64>,
+    #[serde(flatten)]
+    event: T,
+}
+
 impl Event {
     pub fn new() -> Self {
         Self {
@@ -135,6 +146,15 @@ impl Event {
 
     pub fn data_from<T: Serialize>(mut self, obj: &T) -> anyhow::Result<Self> {
         self.data = Some(serde_json::to_string(obj)?);
+        Ok(self)
+    }
+
+    pub fn data_from_ssphp_run<T: Serialize>(mut self, obj: &T) -> anyhow::Result<Self> {
+        let wrapped = SsphpWrapper{
+            event: obj,
+            ssphp_run: self.time.clone(),
+        };
+        self.data = Some(serde_json::to_string(&wrapped)?);
         Ok(self)
     }
 

@@ -11,7 +11,8 @@ use tracing::instrument;
 use tracing::{debug, info};
 mod github;
 use crate::github::GitHub;
-
+mod azure;
+// use crate::azure::AzureClient;
 #[tokio::main]
 #[instrument]
 async fn main() -> Result<()> {
@@ -38,7 +39,7 @@ async fn main() -> Result<()> {
     let args = Args::parse();
 
     if args.scheme {
-        let _ = GitHubMI::default().scheme()?;
+        GitHubMI::default().scheme()?;
         std::process::exit(0);
     }
 
