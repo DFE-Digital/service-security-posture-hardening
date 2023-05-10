@@ -7,17 +7,18 @@ use std::io::Read;
 use std::io::{self, Write};
 use std::sync::mpsc::{channel, Sender};
 use std::thread;
+use std::time::SystemTime;
 
 // A trait to provide functions to work with the Splunk Modular Input interface
-pub trait ModularInput {
-    //fn new() -> Self;
-    // Print the Scheme
-    fn scheme(&self) -> Result<()> {
+pub trait ModularInput: Sized {
+    fn from_input(input: &Input) -> Result<Self>;
+
+    fn scheme() -> Result<()> {
         Ok(())
     }
 
     // Validate the input arguments
-    async fn validate_arguments(&self, _input: &Input) -> Result<()> {
+    async fn validate_arguments(&self) -> Result<()> {
         Ok(())
     }
 
@@ -34,7 +35,7 @@ pub trait ModularInput {
         Ok(())
     }
 
-    fn write_event_xml<T: AsXml>(&self, event: &T) -> Result<()> {
+    fn write_event_xml<T: AsXml>(event: &T) -> Result<()> {
         let out = event.as_xml()?;
         io::stdout().write_all(out.as_bytes())?;
         Ok(())
@@ -55,6 +56,12 @@ pub trait ModularInput {
         loop {
             self.write_event_bytes(buf.as_bytes())?;
         }
+    }
+
+    fn current_time(&self) -> Result<f64> {
+        Ok(SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)?
+            .as_secs_f64())
     }
 
     //    fn stdout(&self) -> &BufWriter<StdoutLock>;
@@ -150,9 +157,9 @@ impl Event {
     }
 
     pub fn data_from_ssphp_run<T: Serialize>(mut self, obj: &T) -> anyhow::Result<Self> {
-        let wrapped = SsphpWrapper{
+        let wrapped = SsphpWrapper {
             event: obj,
-            ssphp_run: self.time.clone(),
+            ssphp_run: self.time,
         };
         self.data = Some(serde_json::to_string(&wrapped)?);
         Ok(self)

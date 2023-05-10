@@ -51,7 +51,7 @@ fn build() -> Result<(), DynError> {
         sh,
         "cp target/x86_64-unknown-linux-musl/release/github_reader TA_github_reader/linux_x86_64/bin/github"
     )
-    .run()?;
+        .run()?;
     cmd!(sh, "tar cvf github_reader.tar TA_github_reader").run()?;
     cmd!(sh, "gzip -f -9 github_reader.tar ").run()?;
     Ok(())

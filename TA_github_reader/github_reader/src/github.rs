@@ -1,5 +1,6 @@
-use anyhow::Result;
-use modular_input::Event;
+use anyhow::{Context, Result};
+use futures::join;
+use modular_input::{Event, Input, ModularInput, Scheme};
 use octorust::types::{MinimalRepository, Order, ReposListOrgSort, ReposListOrgType};
 use octorust::{auth::Credentials, Client};
 use std::fmt;
@@ -126,6 +127,93 @@ impl GitHub {
         let new_event = template_event.clone().data_from_ssphp_run(&rate_limit)?;
 
         event_writer.send(new_event)?;
+        Ok(())
+    }
+}
+
+#[derive(Debug, Default)]
+pub struct GitHubMI {
+    pub org: String,
+    pub github_token: String,
+}
+
+// impl<'a> ModularInput for Foo<'a> {
+impl ModularInput for GitHubMI {
+    fn from_input(input: &Input) -> Result<Self> {
+        Ok(GitHubMI {
+            org: input
+                .param_by_name("org")
+                .context("Missing `org` parameter!")?
+                .to_string(),
+            github_token: input
+                .param_by_name("github_token")
+                .context("Missing `github_token` parameter!")?
+                .to_string(),
+        })
+    }
+
+    //#[instrument]
+    async fn run(&self) -> Result<()> {
+        let time = self.current_time()?;
+
+        let (event_writer_thread, event_writer) = self.start_event_writing_thread();
+
+        let github = GitHub::new(&self.github_token).await;
+        let source = format!("github_{}", &self.org);
+        let template_event = Event::new()
+            .source(&source)
+            .sourcetype("github_repo_json")
+            .time(time);
+        let gh1 = github.clone();
+        let repos = gh1.repos(&self.org, &template_event, event_writer.clone());
+
+        let template_event = Event::new()
+            .source(&source)
+            .sourcetype("github_members_json")
+            .time(time);
+        let gh2 = github.clone();
+        let members = gh2.members(&self.org, &template_event, event_writer.clone());
+        let template_event = Event::new()
+            .source(&source)
+            .sourcetype("github_rate_limit")
+            .time(time);
+
+        let gh3 = github.clone();
+        let rate_limit = gh3.rate_limit(&template_event, event_writer.clone());
+
+        let (repo_r, members_r, rate_limit_r) = join!(repos, members, rate_limit);
+        repo_r.context("Failed to get repositories")?;
+        members_r.context("Failed to get members")?;
+        rate_limit_r.context("Failed to get rate limit")?;
+        std::mem::drop(event_writer);
+        event_writer_thread.join().unwrap()?;
+        Ok(())
+    }
+
+    async fn validate_arguments(&self) -> Result<()> {
+        GitHub::new(&self.github_token)
+            .await
+            .check_access(&self.org)
+            .await
+            .context(format!(
+                "Unable to access Org:{} with token:{}...",
+                &self.org,
+                &self.github_token.chars().take(8).collect::<String>()
+            ))?;
+        info!("Arguments valid!");
+        Ok(())
+    }
+
+    #[instrument]
+    fn scheme() -> Result<()> {
+        let scheme = Scheme {
+            title: "SSPHP_GitHub".to_string(),
+            description: "SSPHP GitHub reader - for repos, members, & teams ".to_string(),
+            streaming_mode: "xml".to_string(),
+            use_single_instance: false,
+        };
+
+        <Self as ModularInput>::write_event_xml(&scheme).map_err(anyhow::Error::from)?;
         Ok(())
     }
 }

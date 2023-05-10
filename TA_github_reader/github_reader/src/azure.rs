@@ -1,11 +1,11 @@
-use anyhow::Result;
+use anyhow::{Context, Result};
 use azure_core::ClientOptions;
 use azure_identity::ClientSecretCredential;
 // use azure_mgmt_security::models::{SecurityAssessmentList, SecurityTaskList};
 // use azure_mgmt_security::package_composite_v3::Client as SecurityClient;
 use azure_mgmt_subscription::models::{Subscription, SubscriptionListResult};
 use futures::StreamExt;
-use modular_input::Event;
+use modular_input::{Event, Input, ModularInput, Scheme};
 
 use std::sync::mpsc::Sender;
 use std::sync::Arc;
@@ -71,8 +71,8 @@ impl AzureClient {
         template_event: &Event,
         event_writer: Sender<Event>,
     ) -> Result<Vec<Subscription>> {
-        let mut subs = vec![];
-        self.subscription_client()?
+        let subscriptions = self
+            .subscription_client()?
             .subscriptions_client()
             .list()
             .into_stream()
@@ -81,13 +81,13 @@ impl AzureClient {
             .await
             .into_iter()
             .flat_map(|s| s.value)
-            .inspect(|s| subs.push(s.clone()))
-            .map(|s| template_event.clone().data_from_ssphp_run(&s).unwrap())
-            .for_each(|s| {
-                event_writer.send(s).unwrap();
-            });
+            .inspect(|s| {
+                let new_event = template_event.clone().data_from_ssphp_run(&s).unwrap();
+                event_writer.send(new_event).unwrap()
+            })
+            .collect::<Vec<Subscription>>();
 
-        Ok(subs)
+        Ok(subscriptions)
     }
 }
 
@@ -140,5 +140,58 @@ mod tests {
             dbg!(&subscriptions.len()),
             dbg!(&received_subscriptions.len())
         );
+    }
+}
+
+#[derive(Debug, Default)]
+pub struct AzureMI {
+    pub client_id: String,
+    pub client_secret: String,
+    pub tenant_id: String,
+}
+
+impl ModularInput for AzureMI {
+    fn from_input(input: &Input) -> Result<Self> {
+        let client_id = input
+            .param_by_name("client_id")
+            .context("No `client_id` parameter!")?
+            .to_string();
+        let client_secret = input
+            .param_by_name("client_secret")
+            .context("No `client_secret` parameter!")?
+            .to_string();
+        let tenant_id = input
+            .param_by_name("tenant_id")
+            .context("No `tenant_id` parameter!")?
+            .to_string();
+        Ok(Self {
+            client_id,
+            client_secret,
+            tenant_id,
+        })
+    }
+
+    async fn run(&self) -> Result<()> {
+        let time = self.current_time()?;
+        Ok(())
+    }
+
+    async fn validate_arguments(&self) -> Result<()> {
+        // let client_id = input.param_by_name("client_id").context("No `client_id` parameter!")?;
+        // let client_secret = input.param_by_name("client_secret").context("No `client_secret` parameter!")?;
+        // let tenant_id = input.param_by_name("tenant_id").context("No `tenant_id` parameter!")?;
+        // TODO Check Azure credentials are valid...
+        Ok(())
+    }
+
+    fn scheme() -> Result<()> {
+        let scheme = Scheme {
+            title: "SSPHP_Azure".to_string(),
+            description: "SSPHP Azure Client - Subscriptions, resource groups, security findings, security alerts ".to_string(),
+            streaming_mode: "xml".to_string(),
+            use_single_instance: false,
+        };
+        <Self as ModularInput>::write_event_xml(&scheme).map_err(anyhow::Error::from)?;
+        Ok(())
     }
 }

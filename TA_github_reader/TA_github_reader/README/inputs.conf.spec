@@ -13,3 +13,10 @@ This should be set to False as the program does not need shell expansion of prov
 
 run_introspection= <value>
 This should be set to True as the program will configure XML streaming with the host Splunk daemon.
+
+[azure_client://<name>]
+org= <value>
+* The GitHub orginisation name to read from
+
+interval= <value>
+* The interval to run the check at
