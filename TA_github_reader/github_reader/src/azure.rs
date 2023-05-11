@@ -6,6 +6,7 @@ use azure_identity::ClientSecretCredential;
 use azure_mgmt_subscription::models::{Subscription, SubscriptionListResult};
 use futures::StreamExt;
 use modular_input::{Event, Input, ModularInput, Scheme};
+use splunk_rest_client::Client as SplunkClient;
 
 use std::sync::mpsc::Sender;
 use std::sync::Arc;
@@ -151,19 +152,18 @@ pub struct AzureMI {
 }
 
 impl ModularInput for AzureMI {
-    fn from_input(input: &Input) -> Result<Self> {
-        let client_id = input
-            .param_by_name("client_id")
-            .context("No `client_id` parameter!")?
-            .to_string();
-        let client_secret = input
-            .param_by_name("client_secret")
-            .context("No `client_secret` parameter!")?
-            .to_string();
-        let tenant_id = input
-            .param_by_name("tenant_id")
-            .context("No `tenant_id` parameter!")?
-            .to_string();
+    async fn from_input(input: &Input) -> Result<Self> {
+        let client = SplunkClient::new(&input.server_uri, &input.session_key, false)?;
+        // TODO figure out multiple creds  / tenants
+        let tenant_id = client
+            .get_password(crate::SPLUNK_APP_NAME, "client_id", None)
+            .await?;
+        let client_id = client
+            .get_password(crate::SPLUNK_APP_NAME, "client_id", None)
+            .await?;
+        let client_secret = client
+            .get_password(crate::SPLUNK_APP_NAME, "client_secret", None)
+            .await?;
         Ok(Self {
             client_id,
             client_secret,
@@ -177,9 +177,6 @@ impl ModularInput for AzureMI {
     }
 
     async fn validate_arguments(&self) -> Result<()> {
-        // let client_id = input.param_by_name("client_id").context("No `client_id` parameter!")?;
-        // let client_secret = input.param_by_name("client_secret").context("No `client_secret` parameter!")?;
-        // let tenant_id = input.param_by_name("tenant_id").context("No `tenant_id` parameter!")?;
         // TODO Check Azure credentials are valid...
         Ok(())
     }

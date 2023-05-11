@@ -3,6 +3,7 @@ use futures::join;
 use modular_input::{Event, Input, ModularInput, Scheme};
 use octorust::types::{MinimalRepository, Order, ReposListOrgSort, ReposListOrgType};
 use octorust::{auth::Credentials, Client};
+use splunk_rest_client::Client as SplunkClient;
 use std::fmt;
 use std::sync::mpsc::Sender;
 use tracing::instrument;
@@ -137,19 +138,16 @@ pub struct GitHubMI {
     pub github_token: String,
 }
 
-// impl<'a> ModularInput for Foo<'a> {
 impl ModularInput for GitHubMI {
-    fn from_input(input: &Input) -> Result<Self> {
-        Ok(GitHubMI {
-            org: input
-                .param_by_name("org")
-                .context("Missing `org` parameter!")?
-                .to_string(),
-            github_token: input
-                .param_by_name("github_token")
-                .context("Missing `github_token` parameter!")?
-                .to_string(),
-        })
+    async fn from_input(input: &Input) -> Result<Self> {
+        let org = input
+            .param_by_name("org")
+            .context("Missing `org` parameter!")?
+            .to_string();
+        let github_token = SplunkClient::new(&input.server_uri, &input.session_key, false)?
+            .get_password(crate::SPLUNK_APP_NAME, "github_token", Some(&org))
+            .await?;
+        Ok(GitHubMI { org, github_token })
     }
 
     //#[instrument]

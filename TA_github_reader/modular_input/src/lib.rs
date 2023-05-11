@@ -11,7 +11,7 @@ use std::time::SystemTime;
 
 // A trait to provide functions to work with the Splunk Modular Input interface
 pub trait ModularInput: Sized {
-    fn from_input(input: &Input) -> Result<Self>;
+    async fn from_input(input: &Input) -> Result<Self>;
 
     fn scheme() -> Result<()> {
         Ok(())
@@ -64,8 +64,6 @@ pub trait ModularInput: Sized {
             .as_secs_f64())
     }
 
-    //    fn stdout(&self) -> &BufWriter<StdoutLock>;
-
     fn start_event_writing_thread(&self) -> (std::thread::JoinHandle<Result<()>>, Sender<Event>) {
         let (sender, receiver) = channel::<Event>();
         let join_handle = thread::spawn(move || -> Result<()> {
@@ -89,8 +87,6 @@ pub struct Args {
     #[arg(long)]
     pub validate_arguments: bool,
 }
-
-// macro_rules3
 
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(rename = "scheme", rename_all = "lowercase")]
@@ -205,9 +201,9 @@ impl AsXml for Event {}
 
 #[derive(Debug, Default, Deserialize, Serialize, Clone, PartialEq, Eq)]
 pub struct Input {
-    server_host: String,
-    server_uri: String,
-    session_key: String,
+    pub server_host: String,
+    pub server_uri: String,
+    pub session_key: String,
     checkpoint_dir: String,
     configuration: InputConfiguration,
 }

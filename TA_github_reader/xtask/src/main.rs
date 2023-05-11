@@ -87,7 +87,10 @@ async fn deploy() -> Result<(), DynError> {
         .build()?;
     let resp = client
         .post("https://localhost:8089/services/apps/local")
-        .basic_auth("admin", Some("aaaaaaaa"))
+        .basic_auth(
+            &std::env::var("splunk_username").unwrap(),
+            std::env::var("splunk_password").ok()
+        )
         .body("name=http://192.168.3.66:3005/github_reader.tar.gz&filename=true&update=true&visible=true")
         .send()
         .await?;

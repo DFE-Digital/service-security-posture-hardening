@@ -4,9 +4,8 @@ use anyhow::{anyhow, Context, Result};
 use clap::Parser;
 use modular_input::{Args, Input, ModularInput};
 use std::io::{self};
-//use std::time::SystemTime;
 // use tracing::instrument;
-// use tracing::{debug, info};
+use tracing::{debug, info};
 mod github;
 use crate::azure::AzureMI;
 use crate::github::GitHubMI;
@@ -14,7 +13,7 @@ mod azure;
 mod symlinks;
 use crate::symlinks::{current_exe_from_args, make_symlinks};
 
-// use crate::azure::AzureClient;
+static SPLUNK_APP_NAME: &str = "TA_SSPHP";
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -44,7 +43,7 @@ async fn main() -> Result<()> {
     let args = Args::parse();
 
     match current_name.as_str() {
-        "github_reader" => run::<GitHubMI>(&args).await?,
+        "github" => run::<GitHubMI>(&args).await?,
         "azure_client" => run::<AzureMI>(&args).await?,
         _ => return Err(anyhow!("Unknown binary name!")),
     };
@@ -57,7 +56,8 @@ async fn run<T: ModularInput>(args: &Args) -> Result<()> {
         return Ok(());
     }
     let input = Input::from_stdin()?;
-    let actual_mi = <T>::from_input(&input)?;
+    info!("{:?}", &input);
+    let actual_mi = <T>::from_input(&input).await?;
     if args.validate_arguments {
         actual_mi.validate_arguments().await?
     } else {

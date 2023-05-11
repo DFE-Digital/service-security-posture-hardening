@@ -3,6 +3,7 @@
 members = [
  	"github_reader",
 	"modular_input",
+        "splunk_rest_client",
 	"xtask"
 ]
 
