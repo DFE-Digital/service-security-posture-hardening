@@ -226,40 +226,12 @@ dependencies = [
 ]
 
 [[package]]
-name = "azure_core"
-version = "0.11.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "32568c56fda7f2f1173430298bddeb507ed44e99bd989ba1156a25534bff5d98"
-dependencies = [
- "async-trait",
- "base64 0.21.0",
- "bytes",
- "dyn-clone",
- "futures",
- "getrandom 0.2.9",
- "http-types",
- "log",
- "paste",
- "pin-project",
- "rand 0.8.5",
- "reqwest",
- "rustc_version",
- "serde",
- "serde_json",
- "time",
- "url",
- "uuid",
-]
-
-[[package]]
 name = "azure_identity"
 version = "0.11.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c192adeb5898319e838507137f312e0e4e7dde66e4eddd024fac6acf17043294"
 dependencies = [
  "async-lock",
  "async-trait",
- "azure_core 0.11.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "azure_core",
  "fix-hidden-lifetime-bug",
  "futures",
  "log",
@@ -275,10 +247,8 @@ dependencies = [
 [[package]]
 name = "azure_mgmt_resources"
 version = "0.11.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "473028d61b1e74406c9670599a1ba5c9e396839a7aca75ac3f3f2455314999f1"
 dependencies = [
- "azure_core 0.11.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "azure_core",
  "bytes",
  "futures",
  "serde",
@@ -290,7 +260,7 @@ dependencies = [
 name = "azure_mgmt_security"
 version = "0.11.0"
 dependencies = [
- "azure_core 0.11.0",
+ "azure_core",
  "bytes",
  "futures",
  "serde",
@@ -301,10 +271,8 @@ dependencies = [
 [[package]]
 name = "azure_mgmt_subscription"
 version = "0.11.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a297a0a76a1b48aee15194ceb8f87df48da5f9b209f68c7ccbd45ee8ba9df6ee"
 dependencies = [
- "azure_core 0.11.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "azure_core",
  "bytes",
  "futures",
  "serde",
@@ -841,7 +809,7 @@ name = "github_reader"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "azure_core 0.11.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "azure_core",
  "azure_identity",
  "azure_mgmt_resources",
  "azure_mgmt_security",

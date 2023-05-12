@@ -7,11 +7,12 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0"
-azure_core = { version = "*", features = ["enable_reqwest_rustls"], default_features = false}
-azure_identity = { version = "*", features = ["enable_reqwest_rustls"], default_features = false}
+# TODO Change back to public release once https://github.com/Azure/azure-sdk-for-rust/pull/1274 is merged
+azure_core = { version = "*", features = ["enable_reqwest_rustls"], default_features = false, path = "/home/a/repos/azure-sdk-for-rust/sdk/core"}
+azure_identity = { version = "*", features = ["enable_reqwest_rustls"], default_features = false, path = "/home/a/repos/azure-sdk-for-rust/sdk/identity"}
 azure_mgmt_security = {version = "*", path ="/home/a/repos/azure-sdk-for-rust/services/mgmt/security", features = ["package-composite-v3", "enable_reqwest_rustls"], default_features = false}
-azure_mgmt_subscription = { version = "*", features = ["package-2021-10", "enable_reqwest_rustls"], default_features = false}
-azure_mgmt_resources = { version = "*", features = ["package-resources-2021-04", "enable_reqwest_rustls"], default_features = false}
+azure_mgmt_subscription = { version = "*", features = ["package-2021-10", "enable_reqwest_rustls"], default_features = false, path ="/home/a/repos/azure-sdk-for-rust/services/mgmt/subscription"}
+azure_mgmt_resources = { version = "*", features = ["package-resources-2021-04", "enable_reqwest_rustls"], default_features = false, path ="/home/a/repos/azure-sdk-for-rust/services/mgmt/resources"}
 clap = { version = "*"}
 futures = "*"
 modular_input = {path = "../modular_input" }

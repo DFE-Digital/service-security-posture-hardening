@@ -1,14 +1,9 @@
-use anyhow::Result;
+use anyhow::{Context, Result};
+use futures::join;
 use futures::StreamExt;
 use modular_input::{Event, Input, ModularInput, Scheme};
 use splunk_rest_client::Client as SplunkClient;
-
 use std::sync::mpsc::Sender;
-// use std::sync::Arc;
-
-// use std::fmt;
-// use std::ops::Deref;
-// use tracing::instrument;
 
 use crate::azure_client::{AzureClient, SubscriptionId, SubscriptionIds};
 
@@ -46,15 +41,26 @@ impl ModularInput for AzureMI {
         let client =
             AzureClient::new(&self.tenant_id, &self.client_id, &self.client_secret).await?;
 
-        let azure = Azure {};
+        let azure = Azure { concurrency: 10 };
 
         let subscription_ids = azure
             .subscriptions(&client, event_writer.clone(), time)
             .await?;
 
-        azure
-            .resource_groups(&client, &subscription_ids, event_writer.clone(), time)
-            .await?;
+        let resource_groups =
+            azure.resource_groups(&client, &subscription_ids, event_writer.clone(), time);
+
+        let alerts = azure.alerts(&client, &subscription_ids, event_writer.clone(), time);
+
+        let secure_scores =
+            azure.secure_scores(&client, &subscription_ids, event_writer.clone(), time);
+
+        let (resource_groups, alerts, secure_scores) =
+            join!(resource_groups, alerts, secure_scores);
+
+        resource_groups.context("Failed to get ResourceGroups")?;
+        alerts.context("Failed to get Alerts")?;
+        secure_scores.context("Failed to get Secure Scores")?;
 
         std::mem::drop(event_writer);
         event_writer_thread.join().unwrap()?;
@@ -78,7 +84,9 @@ impl ModularInput for AzureMI {
     }
 }
 
-struct Azure {}
+struct Azure {
+    concurrency: usize,
+}
 
 impl Azure {
     async fn subscriptions(
@@ -93,11 +101,11 @@ impl Azure {
             .time(time);
         let subscriptions = client
             .subscriptions_list_send_events(&template_event, event_writer.clone())
-            .await
-            .unwrap();
+            .await?;
 
         Ok(subscriptions.subscription_ids())
     }
+
     async fn resource_groups(
         &self,
         client: &AzureClient,
@@ -105,19 +113,62 @@ impl Azure {
         event_writer: Sender<Event>,
         time: f64,
     ) -> Result<()> {
-        let template_event = Event::new()
-            .source("azure")
-            .sourcetype("azure:resourcegroup")
-            .time(time);
+        let template_event = Event::new().sourcetype("azure:resource:group").time(time);
         futures::stream::iter(subscription_ids.iter())
-            .for_each_concurrent(10, |sub_id| {
+            .for_each_concurrent(self.concurrency, |sub_id| {
                 let te = template_event.clone();
                 let ew = event_writer.clone();
                 let c = client.clone();
                 async move {
                     c.resource_groups_list_send_events(sub_id, &te, ew)
                         .await
-                        .expect("Faild while getting resourcegroups");
+                        .expect("Faild while getting ResourceGroups");
+                }
+            })
+            .await;
+        Ok(())
+    }
+
+    async fn alerts(
+        &self,
+        client: &AzureClient,
+        subscription_ids: &[SubscriptionId],
+        event_writer: Sender<Event>,
+        time: f64,
+    ) -> Result<()> {
+        let template_event = Event::new().sourcetype("azure:security:alert").time(time);
+        futures::stream::iter(subscription_ids.iter())
+            .for_each_concurrent(self.concurrency, |sub_id| {
+                let te = template_event.clone();
+                let ew = event_writer.clone();
+                let c = client.clone();
+                async move {
+                    c.alerts_list_send_events(sub_id, &te, ew)
+                        .await
+                        .expect("Failed while getting Alerts");
+                }
+            })
+            .await;
+        Ok(())
+    }
+
+    async fn secure_scores(
+        &self,
+        client: &AzureClient,
+        subscription_ids: &[SubscriptionId],
+        event_writer: Sender<Event>,
+        time: f64,
+    ) -> Result<()> {
+        let template_event = Event::new().sourcetype("azure:security:score").time(time);
+        futures::stream::iter(subscription_ids.iter())
+            .for_each_concurrent(self.concurrency, |sub_id| {
+                let te = template_event.clone();
+                let ew = event_writer.clone();
+                let c = client.clone();
+                async move {
+                    c.secure_scores_list_send_events(sub_id, &te, ew)
+                        .await
+                        .expect("Failed while getting Secure Scores");
                 }
             })
             .await;

@@ -50,7 +50,6 @@ impl GitHub {
         let mut count = 1;
         let mut repositories = vec![];
         loop {
-            info!("getting repos");
             let repos = self
                 .client
                 .repos()
@@ -63,12 +62,12 @@ impl GitHub {
                     count,
                 )
                 .await?;
-            info!("repos: {}", repos.len());
+
             if repos.is_empty() {
                 break;
             }
             count += 1;
-            info!("writing repos");
+
             for repo in repos.iter() {
                 let cloned_event = template_event.clone();
 
@@ -102,7 +101,7 @@ impl GitHub {
                     count,
                 )
                 .await?;
-            info!("members: {}", members.len());
+
             if members.is_empty() {
                 break;
             }
@@ -198,7 +197,6 @@ impl ModularInput for GitHubMI {
                 &self.org,
                 &self.github_token.chars().take(8).collect::<String>()
             ))?;
-        info!("Arguments valid!");
         Ok(())
     }
 

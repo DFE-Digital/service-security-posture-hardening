@@ -1,8 +1,8 @@
 use anyhow::Result;
 use azure_core::ClientOptions;
 use azure_identity::ClientSecretCredential;
-use azure_mgmt_resources::models::ResourceGroup;
-use azure_mgmt_subscription::models::{Subscription, SubscriptionListResult};
+use azure_mgmt_security::package_composite_v3::Client;
+use azure_mgmt_subscription::models::Subscription;
 use futures::{StreamExt, TryStreamExt};
 use modular_input::Event;
 
@@ -61,14 +61,13 @@ impl AzureClient {
     }
 
     #[instrument]
-    pub fn subscription_client(&self) -> Result<azure_mgmt_subscription::Client> {
-        let subscription_client = azure_mgmt_subscription::Client::new(
+    pub fn subscription_client(&self) -> azure_mgmt_subscription::Client {
+        azure_mgmt_subscription::Client::new(
             "https://management.azure.com",
             self.credentials.clone(),
             vec!["https://management.azure.com".to_owned()],
             ClientOptions::default(),
-        );
-        Ok(subscription_client)
+        )
     }
 
     #[instrument]
@@ -78,33 +77,30 @@ impl AzureClient {
         event_writer: Sender<Event>,
     ) -> Result<Vec<Subscription>> {
         let subscriptions = self
-            .subscription_client()?
+            .subscription_client()
             .subscriptions_client()
             .list()
             .into_stream()
-            .map(|c| c.unwrap())
-            .collect::<Vec<SubscriptionListResult>>()
-            .await
-            .into_iter()
-            .flat_map(|s| s.value)
+            .map_ok(|s| futures::stream::iter(s.value))
+            .flat_map(|s| s.unwrap())
             .inspect(|s| {
                 let new_event = template_event.clone().data_from_ssphp_run(&s).unwrap();
                 event_writer.send(new_event).unwrap()
             })
-            .collect::<Vec<Subscription>>();
+            .collect::<Vec<Subscription>>()
+            .await;
 
         Ok(subscriptions)
     }
 
     #[instrument]
-    pub fn resources_client(&self) -> Result<azure_mgmt_resources::Client> {
-        let resources_client = azure_mgmt_resources::package_resources_2021_04::Client::new(
+    pub fn resources_client(&self) -> azure_mgmt_resources::Client {
+        azure_mgmt_resources::package_resources_2021_04::Client::new(
             "https://management.azure.com",
             self.credentials.clone(),
             vec!["https://management.azure.com".to_owned()],
             ClientOptions::default(),
-        );
-        Ok(resources_client)
+        )
     }
 
     pub async fn resource_groups_list_send_events(
@@ -113,24 +109,84 @@ impl AzureClient {
         template_event: &Event,
         event_writer: Sender<Event>,
     ) -> Result<()> {
-        self.resources_client()?
+        self.resources_client()
             .resource_groups_client()
             .list(subscription_id.deref().to_owned())
             .into_stream()
-            .map_ok(
-                |rg| -> futures::stream::Iter<std::vec::IntoIter<ResourceGroup>> {
-                    futures::stream::iter(rg.value)
-                },
-            )
+            .map_ok(|rg| futures::stream::iter(rg.value))
             .flat_map(|s| s.unwrap())
             .for_each_concurrent(None, |s| {
                 let ew = event_writer.clone();
                 let te = template_event.clone();
                 async move {
-                    let new_event = te
-                        .data_from_ssphp_run(&s)
-                        .unwrap()
-                        .source(&format!("azure:{}", &subscription_id.0));
+                    let new_event = te.data_from_ssphp_run(&s).unwrap().source(&format!(
+                        "azure_resource_group:subscription:{}",
+                        &subscription_id.0
+                    ));
+                    ew.send(new_event).unwrap()
+                }
+            })
+            .await;
+        Ok(())
+    }
+
+    #[instrument]
+    pub fn security_client(&self) -> azure_mgmt_security::package_composite_v3::Client {
+        azure_mgmt_security::package_composite_v3::Client::new(
+            "https://management.azure.com",
+            self.credentials.clone(),
+            vec!["https://management.azure.com".to_owned()],
+            ClientOptions::default(),
+        )
+    }
+
+    pub async fn alerts_list_send_events(
+        &self,
+        subscription_id: &SubscriptionId,
+        template_event: &Event,
+        event_writer: Sender<Event>,
+    ) -> Result<()> {
+        self.security_client()
+            .alerts_client()
+            .list(subscription_id.deref().to_owned())
+            .into_stream()
+            .map_ok(|a| futures::stream::iter(a.value))
+            .flat_map(Result::unwrap)
+            .for_each_concurrent(None, |s| {
+                let ew = event_writer.clone();
+                let te = template_event.clone();
+                async move {
+                    let new_event = te.data_from_ssphp_run(&s).unwrap().source(&format!(
+                        "azure:security:alerts:subscription:{}",
+                        &subscription_id.0
+                    ));
+                    ew.send(new_event).unwrap()
+                }
+            })
+            .await;
+        Ok(())
+    }
+
+    pub async fn secure_scores_list_send_events(
+        &self,
+        subscription_id: &SubscriptionId,
+        template_event: &Event,
+        event_writer: Sender<Event>,
+    ) -> Result<()> {
+        self.security_client()
+            .secure_scores_client()
+            .list(subscription_id.deref().to_owned())
+            .into_stream()
+            .map_ok(|a| futures::stream::iter(a.value))
+            .flat_map(Result::unwrap)
+            .for_each_concurrent(None, |s| {
+                let ew = event_writer.clone();
+                let te = template_event.clone();
+                async move {
+                    let new_event = te.data_from_ssphp_run(&s).unwrap().source(&format!(
+                        "azure:security:score:subscription:{}",
+                        &subscription_id.0
+                    ));
                     ew.send(new_event).unwrap()
                 }
             })
@@ -169,7 +225,7 @@ mod tests {
     async fn subscription_ids(client: &AzureClient) -> Result<Vec<SubscriptionId>> {
         let template_event = template_event();
         let subscription_ids = {
-            let (sender, receiver) = channel::<Event>();
+            let (sender, _receiver) = channel::<Event>();
             client
                 .subscriptions_list_send_events(&template_event, sender.clone())
                 .await
@@ -191,7 +247,7 @@ mod tests {
         let subscriptions = client
             .subscriptions_list_send_events(&template_event, sender)
             .await
-            .expect("Faild while getting subscriptions");
+            .expect("Failed while getting subscriptions");
 
         let received_subscriptions = receiver.iter().collect::<Vec<Event>>();
 
@@ -201,25 +257,6 @@ mod tests {
             dbg!(&subscriptions.len()),
             dbg!(&received_subscriptions.len())
         );
-    }
-
-    #[tokio::test]
-    async fn test_resource_group_list_event_sender() {
-        let (client, template_event, sender, receiver) = test_items().await;
-        let subscription_ids = subscription_ids(&client).await.unwrap();
-
-        client
-            .resource_groups_list_send_events(
-                subscription_ids.first().unwrap(),
-                &template_event,
-                sender,
-            )
-            .await
-            .expect("Faild while getting subscriptions");
-
-        let received_subscriptions = receiver.iter().collect::<Vec<Event>>();
-        dbg!(&received_subscriptions);
-        assert!(received_subscriptions.len() > 0);
     }
 
     #[tokio::test]
@@ -235,7 +272,55 @@ mod tests {
                 async move {
                     c.resource_groups_list_send_events(sub_id, &te, ew)
                         .await
-                        .expect("Faild while getting subscriptions");
+                        .expect("Failed while getting subscriptions");
+                }
+            })
+            .await;
+
+        std::mem::drop(sender);
+        let received_resource_groups = receiver.iter().collect::<Vec<Event>>();
+        dbg!(&received_resource_groups);
+        assert!(received_resource_groups.len() > 0);
+    }
+
+    #[tokio::test]
+    async fn test_alerts_list_event_sender_iter() {
+        let (client, template_event, sender, receiver) = test_items().await;
+        let subscription_ids = subscription_ids(&client).await.unwrap();
+
+        futures::stream::iter(subscription_ids.iter())
+            .for_each_concurrent(10, |sub_id| {
+                let te = template_event.clone();
+                let ew = sender.clone();
+                let c = client.clone();
+                async move {
+                    c.alerts_list_send_events(sub_id, &te, ew)
+                        .await
+                        .expect("Failed while getting alerts");
+                }
+            })
+            .await;
+
+        std::mem::drop(sender);
+        let received_resource_groups = receiver.iter().collect::<Vec<Event>>();
+        dbg!(&received_resource_groups);
+        assert!(received_resource_groups.len() > 0);
+    }
+
+    #[tokio::test]
+    async fn test_secure_score_list_event_sender_iter() {
+        let (client, template_event, sender, receiver) = test_items().await;
+        let subscription_ids = subscription_ids(&client).await.unwrap();
+
+        futures::stream::iter(subscription_ids.iter())
+            .for_each_concurrent(10, |sub_id| {
+                let te = template_event.clone();
+                let ew = sender.clone();
+                let c = client.clone();
+                async move {
+                    c.secure_scores_list_send_events(sub_id, &te, ew)
+                        .await
+                        .expect("Failed while getting Secure Score");
                 }
             })
             .await;
