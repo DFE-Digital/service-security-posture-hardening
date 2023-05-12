@@ -1,6 +1,5 @@
 use crate::crazy_splunk_x509v1::crazy_x509_tls_clientconfig;
 use anyhow::{anyhow, Context, Result};
-use reqwest;
 use reqwest::header;
 mod crazy_splunk_x509v1;
 use serde::{Deserialize, Serialize};
@@ -9,10 +8,6 @@ use serde::{Deserialize, Serialize};
 pub struct Client {
     /// Server URI to connct to
     server_uri: String,
-    /// Session key to use while connecting
-    // session_key: String,
-    /// Verify TLS
-    verify: bool,
     reqwest_client: reqwest::Client,
 }
 
@@ -34,8 +29,8 @@ impl Client {
 
         Ok(Self {
             server_uri: server_uri.into(),
-            verify: verify,
-            reqwest_client: reqwest_client,
+            //            verify,
+            reqwest_client,
         })
     }
 
@@ -74,33 +69,26 @@ impl Client {
     }
 
     async fn get(&self, path: &str) -> Result<reqwest::Response> {
-        Ok(self
-            .reqwest_client
+        self.reqwest_client
             .get(self.path(path))
             .send()
             .await
-            .context(format!("Reqwest to {} failed!", &path))?)
+            .context(format!("Reqwest to {} failed!", &path))
     }
 
     async fn post<S: Into<String>>(&self, path: S, body: S) -> Result<reqwest::Response> {
         let path = path.into();
-        Ok(self
-            .reqwest_client
+        self.reqwest_client
             .post(self.path(&path))
             .body(body.into())
             .send()
             .await
-            .context(format!("Reqwest to {} failed!", &path))?)
+            .context(format!("Reqwest to {} failed!", &path))
     }
 
-    async fn get_search_jobs(&self) -> Result<reqwest::Response> {
-        Ok(self.get("/search/jobs").await?)
-    }
-
-    async fn list_passwords(&self, app: &str) -> Result<reqwest::Response> {
-        Ok(self
-            .get(&format!("NS/nobody/{}/storage/passwords", app))
-            .await?)
+    pub async fn list_passwords(&self, app: &str) -> Result<reqwest::Response> {
+        self.get(&format!("NS/nobody/{}/storage/passwords", app))
+            .await
     }
 
     pub async fn get_password(&self, app: &str, user: &str, realm: Option<&str>) -> Result<String> {
@@ -124,7 +112,8 @@ impl Client {
                 .to_owned())
         } else {
             Err(anyhow!(format!(
-                "Failed to get Splunk password: {}",
+                "Failed to get Splunk password: '{}' {}",
+                path,
                 response.text().await?
             )))
         }
@@ -139,15 +128,12 @@ impl Client {
         realm: Option<&str>,
     ) -> Result<reqwest::Response> {
         let path = format!("NS/nobody/{}/storage/passwords", app);
-        dbg!(&path);
         let body = if let Some(realm) = realm {
             format!("name={}&password={}&realm={}", name, password, realm)
         } else {
             format!("name={}&password={}", name, password)
         };
-
-        dbg!(&body);
-        Ok(self.post(path, body).await?)
+        self.post(path, body).await
     }
 }
 
@@ -199,12 +185,6 @@ mod tests {
         .await
         .unwrap();
         dbg!(client);
-    }
-
-    #[tokio::test]
-    async fn test_get_search_jobs() {
-        let result = create_client().get_search_jobs().await.unwrap();
-        dbg!(&result.json::<Value>().await.unwrap());
     }
 
     #[tokio::test]

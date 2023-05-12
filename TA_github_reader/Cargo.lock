@@ -273,6 +273,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "azure_mgmt_resources"
+version = "0.11.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "473028d61b1e74406c9670599a1ba5c9e396839a7aca75ac3f3f2455314999f1"
+dependencies = [
+ "azure_core 0.11.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "bytes",
+ "futures",
+ "serde",
+ "serde_json",
+ "time",
+]
+
+[[package]]
 name = "azure_mgmt_security"
 version = "0.11.0"
 dependencies = [
@@ -829,6 +843,7 @@ dependencies = [
  "anyhow",
  "azure_core 0.11.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "azure_identity",
+ "azure_mgmt_resources",
  "azure_mgmt_security",
  "azure_mgmt_subscription",
  "clap",

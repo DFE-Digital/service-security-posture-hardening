@@ -4,16 +4,16 @@ use anyhow::{anyhow, Context, Result};
 use clap::Parser;
 use modular_input::{Args, Input, ModularInput};
 use std::io::{self};
-// use tracing::instrument;
-use tracing::{debug, info};
+use tracing::debug;
 mod github;
 use crate::azure::AzureMI;
 use crate::github::GitHubMI;
 mod azure;
+mod azure_client;
 mod symlinks;
 use crate::symlinks::{current_exe_from_args, make_symlinks};
 
-static SPLUNK_APP_NAME: &str = "TA_SSPHP";
+static SPLUNK_APP_NAME: &str = "TA_github_reader";
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -41,7 +41,7 @@ async fn main() -> Result<()> {
     let current_name = current_exe_from_args().context("Unable to get bin name")?;
 
     let args = Args::parse();
-
+    debug!("current_name: {:?}", current_name);
     match current_name.as_str() {
         "github" => run::<GitHubMI>(&args).await?,
         "azure_client" => run::<AzureMI>(&args).await?,
@@ -56,7 +56,7 @@ async fn run<T: ModularInput>(args: &Args) -> Result<()> {
         return Ok(());
     }
     let input = Input::from_stdin()?;
-    info!("{:?}", &input);
+    debug!("input: {:?}", &input);
     let actual_mi = <T>::from_input(&input).await?;
     if args.validate_arguments {
         actual_mi.validate_arguments().await?
