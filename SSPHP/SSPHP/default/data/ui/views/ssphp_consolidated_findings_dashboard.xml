@@ -1,6 +1,6 @@
 <dashboard theme="dark" version="1.1" script="js/addtags.js">
   <label>Consolidated Findings Dashboard</label>
-  <description>Service Security Posture Hardening Programme : v2.6</description>
+  <description>Service Security Posture Hardening Programme : v2.7</description>
   
   
 <!-- ****************************************************** Initial Values **************************************************************************** -->
@@ -89,6 +89,8 @@
         <initialValue>Z</initialValue>
       </input>
       
+      
+      
       <input type="dropdown" token="tkn_group" searchWhenChanged="true" depends="$isadmin_tkn$">
         <label>DfE Group</label>
         <choice value="*">ALL</choice>
@@ -105,13 +107,12 @@
           </query>
         </search>
         <change>
-          <condition match="$isadmin_tkn$ != &quot;1&quot;">
+          <condition match="$isadmin_tkn$ = &quot;1&quot;">
             <eval token="tkn_group_text">"*DfE Group = ".$value$."*"</eval>
             <set token="form.tkn_service">*</set>
           </condition>
           <condition>
             <eval token="tkn_group_text">"*DfE Group = ".$value$."*"</eval>
-<!-- ***            <set token="form.tkn_service">*</set> *** -->
           </condition>
         </change>
       </input>
@@ -535,6 +536,11 @@ $cid_tkn$
         <option name="drilldown">none</option>
       </table>
     </panel>
+    
+    <panel>
+      <html>$isadmin_tkn$  :  $notadmin_tkn$</html>
+    </panel>
+
   </row>
   
 <!-- ************************************* Only show for testing ************************************************************************************************************************* -->
