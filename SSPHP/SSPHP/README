@@ -39,7 +39,7 @@ By default, all saved searches are configured to be 'disabled' in the code saved
 
 Terminal Command :  &'C:\Program Files\Python310\python.exe' .\package.py .\SSPHP\SSPHP\ [--dev]
 
-Note.... build then commit
+Note.... build then commit (because the build increments the version number and we want the committed version to have the correct number)
 
 
 
