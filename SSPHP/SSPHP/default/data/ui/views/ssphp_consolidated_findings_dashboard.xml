@@ -1,6 +1,6 @@
 <dashboard theme="dark" version="1.1" script="js/addtags.js">
   <label>Consolidated Findings Dashboard</label>
-  <description>Service Security Posture Hardening Programme : v2.7</description>
+  <description>Service Security Posture Hardening Programme : v2.8</description>
   
   
 <!-- ****************************************************** Initial Values **************************************************************************** -->
@@ -312,16 +312,7 @@ FROM datamodel=SSPHP.findings
 WHERE 
     (findings.ssphp_norm_tech_source="Azure" AND findings.ssphp_norm_use_case="findings")
 
-    [| inputlookup ssphp_findings_summary_latest_run_times.csv where ssphp_norm_use_case!="unknown"
-     | stats max(SSPHP_RUN) as SSPHP_RUN by ssphp_norm_use_case
-     | eventstats max(SSPHP_RUN) as max_SSPHP_RUN, min(SSPHP_RUN) as min_SSPHP_RUN
-     
-     | eval search_text="(findings.ssphp_norm_use_case=\"".'ssphp_norm_use_case'."\" AND findings.SSPHP_RUN=".SSPHP_RUN.")",
-            earliest=min_SSPHP_RUN-600,
-            latest=max_SSPHP_RUN+1200
-     | stats values(search_text) as search_text
-     | eval search_text="(".mvjoin(search_text," OR ").")"
-     | return $search_text]
+    [`ssphp_create_latest_findings_times_search_string`]
 
 | mvexpand ssphp_norm_impact
 | eval ssphp_norm_impact=split(ssphp_norm_impact,"
@@ -368,16 +359,7 @@ FROM datamodel=SSPHP.findings
 WHERE 
     (findings.ssphp_norm_tech_source="Azure" AND findings.ssphp_norm_use_case="findings")
 
-    [| inputlookup ssphp_findings_summary_latest_run_times.csv where ssphp_norm_use_case!="unknown"
-     | stats max(SSPHP_RUN) as SSPHP_RUN by ssphp_norm_use_case
-     | eventstats max(SSPHP_RUN) as max_SSPHP_RUN, min(SSPHP_RUN) as min_SSPHP_RUN
-     
-     | eval search_text="(findings.ssphp_norm_use_case=\"".'ssphp_norm_use_case'."\" AND findings.SSPHP_RUN=".SSPHP_RUN.")",
-            earliest=min_SSPHP_RUN-600,
-            latest=max_SSPHP_RUN+1200
-     | stats values(search_text) as search_text
-     | eval search_text="(".mvjoin(search_text," OR ").")"
-     | return $search_text]
+    [`ssphp_create_latest_findings_times_search_string`]
 
 | mvexpand ssphp_norm_description
 | eval ssphp_norm_description=split(ssphp_norm_description,"
@@ -596,15 +578,7 @@ WHERE
         OR
      (findings.ssphp_norm_tech_source="Test" AND findings.ssphp_norm_use_case="Test"))
      
-    [| inputlookup ssphp_findings_summary_latest_run_times.csv where ssphp_norm_use_case!="unknown"
-| eval ssphp_run_yymm=strftime(SSPHP_RUN,"%Y-%m-%d")
-| stats max(SSPHP_RUN) as SSPHP_RUN by ssphp_norm_use_case, ssphp_run_yymm
-| stats values(SSPHP_RUN) as SSPHP_RUN by ssphp_norm_use_case
-| eval return_search_string="(findings.ssphp_norm_use_case=\"".ssphp_norm_use_case."\" AND (findings.SSPHP_RUN=".mvjoin(SSPHP_RUN," OR findings.SSPHP_RUN=")."))"
-| stats values(return_search_string) as return_search_string
-| eval return_search_string=mvjoin(return_search_string," OR "),
-       return_search_string="(".return_search_string.")"
-    | return $$return_search_string]
+    [`ssphp_create_all_findings_times_search_string`]
     
 BY 
    findings.ssphp_norm_tech_source,
@@ -769,17 +743,7 @@ WHERE
      (findings.ssphp_norm_tech_source="Test" AND findings.ssphp_norm_use_case="Test"))
 
      
-    [| inputlookup ssphp_findings_summary_latest_run_times.csv where ssphp_norm_use_case!="unknown"
-     | stats max(SSPHP_RUN) as SSPHP_RUN by ssphp_norm_use_case
-     | eventstats max(SSPHP_RUN) as max_SSPHP_RUN, min(SSPHP_RUN) as min_SSPHP_RUN
-     
-     | eval search_text="(findings.ssphp_norm_use_case=\"".'ssphp_norm_use_case'."\" AND findings.SSPHP_RUN=".SSPHP_RUN.")",
-            earliest=min_SSPHP_RUN-600,
-            latest=max_SSPHP_RUN+1200
-     | stats values(search_text) as search_text
-     | eval search_text="(".mvjoin(search_text," OR ").")"
-     | return $search_text]
-
+    [`ssphp_create_latest_findings_times_search_string`]
 
 BY findings.ssphp_norm_time,
    findings.ssphp_norm_tech_source, 
