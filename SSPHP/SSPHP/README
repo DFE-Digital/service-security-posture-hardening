@@ -1,9 +1,8 @@
-SSPHP App
-=========
+<ins>**SSPHP App**</ins>
 
 
-Installation of the app from scratch
-------------------------------------
+<ins>Installation of the app from scratch</ins>
+
 
 Steps : 
 
@@ -29,8 +28,14 @@ Steps :
 
 ======================================================================================================================================================================
 
-Building the Package to Install
--------------------------------
+<ins>Points to Note regarding Installation</ins>
+
+By default, all saved searches are configured to be 'disabled' in the code savedsearches.conf. This means that any new saved searches will need to be manually enabled in the webui, as will all saved searches when thge app is installed from scratch.
+
+
+======================================================================================================================================================================
+
+<ins>Building the Package to Install</ins>
 
 Terminal Command :  &'C:\Program Files\Python310\python.exe' .\package.py .\SSPHP\SSPHP\ [--dev]
 
