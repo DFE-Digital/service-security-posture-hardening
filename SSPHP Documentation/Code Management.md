@@ -11,9 +11,9 @@ All SSPHP code in the Production app is created and managed in .conf files, and 
 
 
 ### Github Repos
-The Repo is held in the Github Organisation called (DFE-Digital)[https://github.com/DFE-Digital/service-security-posture-hardening]. You will need to request access to the Repo from TBD.
+The Repo is held in the Github Organisation called [DFE-Digital](https://github.com/DFE-Digital/service-security-posture-hardening). You will need to request access to the Repo from TBD.
 
-The Repo is organised with a directory for (SSPHP)[./SSPHP] (the app that is deployed onto the Splunk Search Head), and a directory for the (TA)[./TA_SSPHP] code (that is deployed to the (Heavy Forwarder)[./TA Heavy Forwarder Architecture.md]).
+The Repo is organised with a directory for [SSPHP](./SSPHP) (the app that is deployed onto the Splunk Search Head), and a directory for the [TA](./TA_SSPHP) code (that is deployed to the (Heavy Forwarder)[./TA Heavy Forwarder Architcture.md]).
 
 ---
 ## Deployment Process
@@ -21,10 +21,10 @@ The Repo is organised with a directory for (SSPHP)[./SSPHP] (the app that is dep
 ### 3 Steps : Packaging, Validation & Deployment
 
 1. **Packaging** : We take a copy of the directory SSPHP, we modify the files to indicate the environment it will be deployed to and to reformat .conf files for SplunkCloud, and we create a tarball and compress it with gzip
-2. **Validation** : We submit the app to the Splunk app validation endpoint [https://dev.splunk.com/enterprise/docs/releaseapps/cloudvetting/]  
-3. **Deployment** : Using the Splunk ACS [https://docs.splunk.com/Documentation/SplunkCloud/9.0.2303/Config/ACSIntro] we deploy the app to the AdHoc searchhead. 
+2. **Validation** : We submit the app to the Splunk app [validation endpoint](https://dev.splunk.com/enterprise/docs/releaseapps/cloudvetting/)
+3. **Deployment** : Using the [Splunk ACS](https://docs.splunk.com/Documentation/SplunkCloud/9.0.2303/Config/ACSIntro) we deploy the app to the AdHoc searchhead. 
 
-All of these steps are performed by (package.py)[../package.py]
+All of these steps are performed by [package.py](../package.py)
 
 To use package.py you will need valid credentials for SplunkBase and a deployment token from the AdHoc searchhead. These should be set as Environment Variables as follows :
 SPLUNK_USER = "********"
