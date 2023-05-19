@@ -27,9 +27,11 @@ The Repo is organised with a directory for [SSPHP](./SSPHP) (the app that is dep
 All of these steps are performed by [package.py](../package.py)
 
 To use package.py you will need valid credentials for SplunkBase and a deployment token from the AdHoc searchhead. These should be set as Environment Variables as follows :
-```SPLUNK_USER = "********"
+```
+SPLUNK_USER = "********"
 SPLUNK_PASSWORD = "*********"
-ACS_TOKEN = "************"```
+ACS_TOKEN = "************"
+```
 
 To execute pckage.py use `.\package.py .\SSPHP\SSPHP\ --dev`. The --dev option will deploy to the _DEV version of the app, so leave that off to deploy to Production.
 
