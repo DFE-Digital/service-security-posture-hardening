@@ -13,7 +13,7 @@ All SSPHP code in the Production app is created and managed in .conf files, and 
 ### Github Repos
 The Repo is held in the Github Organisation called [DFE-Digital](https://github.com/DFE-Digital/service-security-posture-hardening). You will need to request access to the Repo from TBD.
 
-The Repo is organised with a directory for [SSPHP](../SSPHP) (the app that is deployed onto the Splunk Search Head), and a directory for the [TA](./TA_SSPHP) code that is deployed to the (Heavy Forwarder)[./TA Heavy Forwarder Architcture.md].
+The Repo is organised with a directory for [SSPHP](../SSPHP) (the app that is deployed onto the Splunk Search Head), and a directory for the [TA](./TA_SSPHP) code that is deployed to the [Heavy Forwarder](./TA Heavy Forwarder Architcture.md).
 
 ---
 ## Deployment Process
