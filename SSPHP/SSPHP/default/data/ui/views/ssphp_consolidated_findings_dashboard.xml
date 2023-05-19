@@ -395,8 +395,8 @@ $cid_tkn$
         <choice value="IG3">IG3</choice>
         <choice value="IG2">IG2</choice>
         <choice value="IG1">IG1</choice>
-        <default>IG3</default>
-        <initialValue>IG3</initialValue>
+        <default>ALL</default>
+        <initialValue>ALL</initialValue>
         <change>
           <condition label="ALL">
             <set token="implemntation_group_tkn">*</set>
