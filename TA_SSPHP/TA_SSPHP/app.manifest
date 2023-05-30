@@ -18,5 +18,11 @@
         "description": "Collect Azure Cloud Defender data",
         "releaseNotes": {
         }
-    }
+    },
+    "supportedDeployments": [
+        "_standalone"
+    ],
+    "targetWorkloads": [
+        "*"
+    ]
 }
