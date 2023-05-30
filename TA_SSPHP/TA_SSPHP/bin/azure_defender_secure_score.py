@@ -65,7 +65,7 @@ class ModInputazure_defender_secure_score(AzureClient, base_mi.BaseModInput):
         return scheme
 
     def get_app_name(self):
-        return "TA-MS-AAD"
+        return "TA-SSPHP"
 
     def validate_input(helper, definition):
         pass

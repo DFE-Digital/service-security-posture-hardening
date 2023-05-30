@@ -121,8 +121,8 @@ class ModInputAzureCloudDefender(AzureClient, base_mi.BaseModInput):
         )
         return scheme
 
-    # def get_app_name(self):
-    #     return "TA-MS-AAD"
+    def get_app_name(self):
+        return "TA-SSPHP"
 
     # def validate_input(self, definition):
     #     pass
