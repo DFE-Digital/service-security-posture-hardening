@@ -63,7 +63,7 @@ class ModInputazure_defender_alerts(AzureClient, base_mi.BaseModInput):
     def __init__(self):
         use_single_instance = False
         super(ModInputazure_defender_alerts, self).__init__(
-            "ta_ms_aad", "azure_defender_alerts", use_single_instance
+            "ta_ssphp", "azure_defender_alerts", use_single_instance
         )
         self.global_checkbox_fields = None
         self.ssphp_run = datetime.now().timestamp()

@@ -35,7 +35,7 @@ class ModInputazure_subscription(AzureClient, base_mi.BaseModInput):
     def __init__(self):
         use_single_instance = False
         super(ModInputazure_subscription, self).__init__(
-            "ta_ms_aad", "azure_subscription", use_single_instance
+            "ta_ssphp", "azure_subscription", use_single_instance
         )
         self.global_checkbox_fields = None
         self.ssphp_run = datetime.now().timestamp()

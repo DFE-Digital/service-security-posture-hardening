@@ -43,7 +43,7 @@ class ModInputazure_resource_group(AzureClient, base_mi.BaseModInput):
     def __init__(self):
         use_single_instance = False
         super(ModInputazure_resource_group, self).__init__(
-            "ta_ms_aad", "azure_resource_group", use_single_instance
+            "ta_ssphp", "azure_resource_group", use_single_instance
         )
         self.global_checkbox_fields = None
         self.ssphp_run = datetime.now().timestamp()
