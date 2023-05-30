@@ -90,7 +90,7 @@ class ModInputazure_subscription(AzureClient, base_mi.BaseModInput):
         return scheme
 
     def get_app_name(self):
-        return "TA-SSPHP"
+        return "TA_SSPHP"
 
     def validate_input(helper, definition):
         pass
