@@ -48,7 +48,7 @@ jobs:
         run: cd TA_SSPHP; pylint --fail-under 5 TA_SSPHP/bin/*.py tests/*.py
 
       - name: Package
-        run: cd TA_SSPHP; ucc-gen build --source TA_SSPHP && slim package output/TA_SSPHP && mv TA*.tar.gz TA_SSPHP.tar.gz; ls -la *.gz && sha1sum *.gz
+        run: cd TA_SSPHP; rm -f TA_SSPHP.tar.gz; ucc-gen build --source TA_SSPHP && slim package output/TA_SSPHP && mv TA*.tar.gz TA_SSPHP.tar.gz; ls -la *.gz && sha1sum *.gz
 
       - name: validate
         env:
