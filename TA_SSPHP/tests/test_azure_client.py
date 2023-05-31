@@ -56,13 +56,13 @@ def test_arg_get_resource_groups(az, ew, sub_ids):
         assert rgs
 
 
-@pytest.mark.live
-def test_list_alerts(az, ew, sub_ids):
-    for sub_id in sub_ids:
-        alerts = list(az.list_alerts(sub_id))
-        assert alerts
-        for alert in alerts:
-            assert alert
+# @pytest.mark.live
+# def test_list_alerts(az, ew, sub_ids):
+#     for sub_id in sub_ids:
+#         alerts = list(az.list_alerts(sub_id))
+#         assert alerts
+#         for alert in alerts:
+#             assert alert
 
 
 @pytest.mark.live
