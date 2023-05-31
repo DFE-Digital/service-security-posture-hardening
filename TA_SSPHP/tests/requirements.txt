@@ -7,3 +7,5 @@ flake8
 ruff
 black
 -r ../TA_SSPHP/lib/requirements.txt
+splunk-add-on-ucc-framework
+splunk-packaging-toolkit
