@@ -107,13 +107,16 @@ class ModInputazure_resource_graph(AzureClient, base_mi.BaseModInput):
         sys.stdout.flush()
 
     def collect_events(self, event_writer):
-        resource_graphs = self.get_resource_graph()
+        subscriptions = self.get_subscriptions()
 
-        self.write_events(
-            event_writer,
-            resource_graphs,
-            self.resource_graph_metadata(),
-        )
+        for subscription_id in self.subscription_ids(subscriptions):
+            resource_graphs = self.get_resource_graph(subscription_id)
+
+            self.write_events(
+                event_writer,
+                resource_graphs,
+                self.resource_graph_metadata(),
+            )
 
         return resource_graphs
 

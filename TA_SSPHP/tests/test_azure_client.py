@@ -107,14 +107,8 @@ def test_list_settings(az, ew, sub_ids):
             assert setting
 
 
-
-
 @pytest.mark.live
-def test_get_resource_graph(az, ew):
-    rgs = az.get_resource_graph()
-
-    for rg in rgs:
-        print("***********************")
-        PP(rg)
-
-    assert rgs
+def test_get_resource_graph(az, sub_ids):
+    for sub_id in sub_ids:
+        rgs = az.get_resource_graph(sub_id)
+        assert rgs

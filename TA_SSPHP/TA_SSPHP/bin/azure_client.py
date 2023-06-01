@@ -105,11 +105,19 @@ class AzureClient:
         ).secure_score_controls.list()
         return scores
 
-    def get_resource_graph(self):
+    def get_resource_graph(self, subscription_id):
         client = ResourceGraphClient(self.get_azure_credentials())
-        request = QueryRequest(query="Resources")
-
-        # options = QueryRequestOptions(result_format=ResultFormat.object_array)
+        request = QueryRequest(query="Resources", subscriptions=[subscription_id])
         resource_graphs = client.resources(request)
 
-        return resource_graphs.data
+        data = resource_graphs.data
+
+        while resource_graphs.skip_token:
+            options = QueryRequestOptions(skip_token=resource_graphs.skip_token)
+            request = QueryRequest(
+                query="Resources", subscriptions=[subscription_id], options=options
+            )
+            resource_graphs = client.resources(request)
+            data += resource_graphs.data
+
+        return data
