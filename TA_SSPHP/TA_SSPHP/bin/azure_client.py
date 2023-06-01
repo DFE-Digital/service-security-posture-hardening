@@ -2,6 +2,12 @@ from azure.identity import ClientSecretCredential
 from azure.mgmt.resource import ResourceManagementClient
 from azure.mgmt.security import SecurityCenter
 from azure.mgmt.resource.subscriptions import SubscriptionClient
+from azure.mgmt.resourcegraph import ResourceGraphClient
+from azure.mgmt.resourcegraph.models import (
+    QueryRequest,
+    QueryRequestOptions,
+    ResultFormat,
+)
 
 
 class AzureClient:
@@ -98,3 +104,12 @@ class AzureClient:
             subscription_id, "settings"
         ).secure_score_controls.list()
         return scores
+
+    def get_resource_graph(self):
+        client = ResourceGraphClient(self.get_azure_credentials())
+        request = QueryRequest(query="Resources")
+
+        # options = QueryRequestOptions(result_format=ResultFormat.object_array)
+        resource_graphs = client.resources(request)
+
+        return resource_graphs.data

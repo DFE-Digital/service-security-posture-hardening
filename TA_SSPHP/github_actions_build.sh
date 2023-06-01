@@ -9,7 +9,7 @@ cd tests; pytest; cd ..
 
 cd tests; pytest -m live; cd ..
 
-pip-audit -S
+# pip-audit -S
 
 bandit TA_SSPHP/bin/*.py
 

@@ -105,3 +105,16 @@ def test_list_settings(az, ew, sub_ids):
         for setting in settings:
             print(setting.serialize(keep_readonly=True))
             assert setting
+
+
+
+
+@pytest.mark.live
+def test_get_resource_graph(az, ew):
+    rgs = az.get_resource_graph()
+
+    for rg in rgs:
+        print("***********************")
+        PP(rg)
+
+    assert rgs
