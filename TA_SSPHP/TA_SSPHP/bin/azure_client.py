@@ -9,6 +9,7 @@ from azure.mgmt.resourcegraph.models import (
     ResultFormat,
 )
 from azure.core.exceptions import ServiceRequestError
+import time
 
 
 class AzureClient:
@@ -119,6 +120,7 @@ class AzureClient:
                 print(e)
                 error_count += 1
                 if error_count < 5:
+                    time.sleep(5)
                     continue
                 break
 
@@ -135,6 +137,7 @@ class AzureClient:
                     print(e)
                     error_count += 1
                     if error_count < 5:
+                        time.sleep(5)
                         continue
                     break
                 resource_graphs = client.resources(request)
