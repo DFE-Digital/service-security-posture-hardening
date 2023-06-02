@@ -1,5 +1,4 @@
 from pprint import PrettyPrinter
-
 import pytest
 
 PP = PrettyPrinter(indent=4, width=300, compact=False).pprint

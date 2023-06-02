@@ -107,15 +107,17 @@ class AzureClient:
 
     def get_resource_graph(self, subscription_id):
         client = ResourceGraphClient(self.get_azure_credentials())
-        request = QueryRequest(query="Resources", subscriptions=[subscription_id])
+
+        query = "Resources | order by name asc"
+        request = QueryRequest(query=query, subscriptions=[subscription_id])
+
         resource_graphs = client.resources(request)
 
         data = resource_graphs.data
-
         while resource_graphs.skip_token:
             options = QueryRequestOptions(skip_token=resource_graphs.skip_token)
             request = QueryRequest(
-                query="Resources", subscriptions=[subscription_id], options=options
+                query=query, subscriptions=[subscription_id], options=options
             )
             resource_graphs = client.resources(request)
             data += resource_graphs.data
