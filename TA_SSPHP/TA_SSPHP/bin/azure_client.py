@@ -8,6 +8,7 @@ from azure.mgmt.resourcegraph.models import (
     QueryRequestOptions,
     ResultFormat,
 )
+from azure.core.exceptions import ServiceRequestError
 
 
 class AzureClient:
@@ -106,20 +107,37 @@ class AzureClient:
         return scores
 
     def get_resource_graph(self, subscription_id):
-        client = ResourceGraphClient(self.get_azure_credentials())
+        error_count = 0
+        while True:
+            client = ResourceGraphClient(self.get_azure_credentials())
 
-        query = "Resources | order by name asc"
-        request = QueryRequest(query=query, subscriptions=[subscription_id])
+            query = "Resources | order by name asc"
+            request = QueryRequest(query=query, subscriptions=[subscription_id])
+            try:
+                resource_graphs = client.resources(request)
+            except ServiceRequestError as e:
+                print(e)
+                error_count += 1
+                if error_count < 5:
+                    continue
+                break
 
-        resource_graphs = client.resources(request)
+            data = resource_graphs.data
 
-        data = resource_graphs.data
-        while resource_graphs.skip_token:
-            options = QueryRequestOptions(skip_token=resource_graphs.skip_token)
-            request = QueryRequest(
-                query=query, subscriptions=[subscription_id], options=options
-            )
-            resource_graphs = client.resources(request)
-            data += resource_graphs.data
-
+            while resource_graphs.skip_token:
+                options = QueryRequestOptions(skip_token=resource_graphs.skip_token)
+                request = QueryRequest(
+                    query=query, subscriptions=[subscription_id], options=options
+                )
+                try:
+                    resource_graphs = client.resources(request)
+                except ServiceRequestError as e:
+                    print(e)
+                    error_count += 1
+                    if error_count < 5:
+                        continue
+                    break
+                resource_graphs = client.resources(request)
+                data += resource_graphs.data
+            break
         return data
