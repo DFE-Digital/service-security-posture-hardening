@@ -110,7 +110,7 @@ class ModInputazure_resource_graph(AzureClient, base_mi.BaseModInput):
         subscriptions = self.get_subscriptions()
 
         for subscription_id in self.subscription_ids(subscriptions):
-            resource_graphs = self.get_resource_graph(subscription_id)
+            resource_graphs = self.get_resource_graph(subscription_id, event_writer)
 
             self.write_events(
                 event_writer,

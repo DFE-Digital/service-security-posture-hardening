@@ -107,22 +107,34 @@ class AzureClient:
         ).secure_score_controls.list()
         return scores
 
-    def get_resource_graph(self, subscription_id):
+    def get_resource_graph(self, subscription_id, event_writer):
         error_count = 0
         while True:
-            client = ResourceGraphClient(self.get_azure_credentials())
+            try:
+                client = ResourceGraphClient(self.get_azure_credentials())
+            except ServiceRequestError as e:
+                event_writer.log(
+                    "ERROR", "Error while building resource client graph: " + str(e)
+                )
+                error_count += 1
+                if error_count < 5:
+                    time.sleep(5)
+                    continue
+                raise
 
             query = "Resources | order by name asc"
             request = QueryRequest(query=query, subscriptions=[subscription_id])
             try:
                 resource_graphs = client.resources(request)
             except ServiceRequestError as e:
-                print(e)
+                event_writer.log(
+                    "ERROR", "Error while requesting resource graph: " + str(e)
+                )
                 error_count += 1
                 if error_count < 5:
                     time.sleep(5)
                     continue
-                break
+                raise
 
             data = resource_graphs.data
 
@@ -134,12 +146,14 @@ class AzureClient:
                 try:
                     resource_graphs = client.resources(request)
                 except ServiceRequestError as e:
-                    print(e)
+                    event_writer.log(
+                        "ERROR", "Error while requesting resource graph: " + str(e)
+                    )
                     error_count += 1
                     if error_count < 5:
                         time.sleep(5)
                         continue
-                    break
+                    raise
                 resource_graphs = client.resources(request)
                 data += resource_graphs.data
             break
