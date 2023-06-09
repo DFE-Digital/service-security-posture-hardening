@@ -109,40 +109,43 @@ class AzureClient:
 
     def get_resource_graph(self, subscription_id, event_writer):
         error_count = 0
-        while True:
-            try:
-                client = ResourceGraphClient(self.get_azure_credentials())
-            except ServiceRequestError as e:
-                event_writer.log(
-                    "ERROR", "Error while building resource client graph: " + str(e)
-                )
-                error_count += 1
-                if error_count < 5:
-                    time.sleep(5)
-                    continue
-                raise
+        tables = [
+            "Resources",
+            "ResourceContainers",
+            "AdvisorResources",
+            "AlertsManagementResources",
+            "DesktopVirtualizationResources",
+            "ExtendedLocationResources",
+            "GuestConfigurationResources",
+            "HealthResources",
+            "IoTSecurityResources",
+            "KubernetesConfigurationResources",
+            "MaintenanceResources",
+            "PatchAssessmentResources",
+            "PatchInstallationResources",
+            "PolicyResources",
+            "RecoveryServicesResources",
+            "SecurityResources",
+            "ServiceHealthResources",
+            "WorkloadMonitorResources",
+        ]
+        data = []
+        for table in tables:
+            while True:
+                try:
+                    client = ResourceGraphClient(self.get_azure_credentials())
+                except ServiceRequestError as e:
+                    event_writer.log(
+                        "ERROR", "Error while building resource client graph: " + str(e)
+                    )
+                    error_count += 1
+                    if error_count < 5:
+                        time.sleep(5)
+                        continue
+                    raise
 
-            query = "Resources | order by name asc"
-            request = QueryRequest(query=query, subscriptions=[subscription_id])
-            try:
-                resource_graphs = client.resources(request)
-            except ServiceRequestError as e:
-                event_writer.log(
-                    "ERROR", "Error while requesting resource graph: " + str(e)
-                )
-                error_count += 1
-                if error_count < 5:
-                    time.sleep(5)
-                    continue
-                raise
-
-            data = resource_graphs.data
-
-            while resource_graphs.skip_token:
-                options = QueryRequestOptions(skip_token=resource_graphs.skip_token)
-                request = QueryRequest(
-                    query=query, subscriptions=[subscription_id], options=options
-                )
+                query = f"{table} | order by name asc"
+                request = QueryRequest(query=query, subscriptions=[subscription_id])
                 try:
                     resource_graphs = client.resources(request)
                 except ServiceRequestError as e:
@@ -154,7 +157,27 @@ class AzureClient:
                         time.sleep(5)
                         continue
                     raise
-                resource_graphs = client.resources(request)
-                data += resource_graphs.data
-            break
+
+                table_data = resource_graphs.data
+
+                while resource_graphs.skip_token:
+                    options = QueryRequestOptions(skip_token=resource_graphs.skip_token)
+                    request = QueryRequest(
+                        query=query, subscriptions=[subscription_id], options=options
+                    )
+                    try:
+                        resource_graphs = client.resources(request)
+                    except ServiceRequestError as e:
+                        event_writer.log(
+                            "ERROR", "Error while requesting resource graph: " + str(e)
+                        )
+                        error_count += 1
+                        if error_count < 5:
+                            time.sleep(5)
+                            continue
+                        raise
+                    resource_graphs = client.resources(request)
+                    table_data += resource_graphs.data
+                data += table_data
+                break
         return data
