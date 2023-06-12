@@ -63,10 +63,11 @@ def sub_ids(az):
 def ew():
     class EventWriter:
         def __init__(self):
-            pass
+            self.events = []
 
         def write_event(self, event):
             data = json.loads(event["data"])
             assert "SSPHP_RUN" in data
+            self.events.append(event)
 
     return EventWriter()

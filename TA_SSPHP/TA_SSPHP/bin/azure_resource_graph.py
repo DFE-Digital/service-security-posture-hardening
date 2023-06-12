@@ -95,16 +95,17 @@ class ModInputazure_resource_graph(AzureClient, base_mi.BaseModInput):
 
     def write_events(self, event_writer, collection, metadata):
         """Write a collection of events using the provided eventwriter and metadata"""
-        for data in collection:
-            data["SSPHP_RUN"] = self.ssphp_run
-            event = self.new_event(
-                data=json.dumps(data),
-                source=metadata["source"],
-                index=metadata["index"],
-                sourcetype=metadata["sourcetype"],
-            )
-            event_writer.write_event(event)
-        sys.stdout.flush()
+        for table, array in collection.items():
+            for data in array:
+                data["SSPHP_RUN"] = self.ssphp_run
+                event = self.new_event(
+                    data=json.dumps(data),
+                    source=f"{metadata['source']}:{table}",
+                    index=metadata["index"],
+                    sourcetype=metadata["sourcetype"],
+                )
+                event_writer.write_event(event)
+            sys.stdout.flush()
 
     def collect_events(self, event_writer):
         subscriptions = self.get_subscriptions()

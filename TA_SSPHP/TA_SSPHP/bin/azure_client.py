@@ -129,7 +129,7 @@ class AzureClient:
             "ServiceHealthResources",
             "WorkloadMonitorResources",
         ]
-        data = []
+        data = {}
         for table in tables:
             while True:
                 try:
@@ -178,6 +178,6 @@ class AzureClient:
                         raise
                     resource_graphs = client.resources(request)
                     table_data += resource_graphs.data
-                data += table_data
+                data.setdefault(table, []).extend(table_data)
                 break
         return data
