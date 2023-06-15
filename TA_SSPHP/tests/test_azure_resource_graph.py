@@ -3,6 +3,7 @@ from pprint import PrettyPrinter
 
 import azure_resource_graph
 import pytest
+import json
 
 PP = PrettyPrinter(indent=4, width=300, compact=False).pprint
 
@@ -47,3 +48,5 @@ def test_collect_resource_graph(arg, ew):
     arg.collect_events(ew)
     PP(ew.events)
     assert ew.events
+    assert json.loads(ew.events[0]["data"])["action"] == "start"
+    assert json.loads(ew.events[-1]["data"])["action"] == "complete"
