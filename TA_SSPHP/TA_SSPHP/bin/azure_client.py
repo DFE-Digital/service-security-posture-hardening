@@ -8,7 +8,7 @@ from azure.mgmt.resourcegraph.models import (
     QueryRequestOptions,
     ResultFormat,
 )
-from azure.core.exceptions import ServiceRequestError
+from azure.core.exceptions import ServiceRequestError, HttpResponseError
 import time
 
 
@@ -134,12 +134,16 @@ class AzureClient:
             while True:
                 try:
                     client = ResourceGraphClient(self.get_azure_credentials())
-                except ServiceRequestError as e:
+                except (ServiceRequestError, HttpResponseError) as e:
                     event_writer.log(
-                        "ERROR", "Error while building resource client graph: " + str(e)
+                        str(error_count)
+                        + " errors while buidling ResourceGraphClient graph for "
+                        + str(subscription_id)
+                        + " : "
+                        + str(e),
                     )
                     error_count += 1
-                    if error_count < 5:
+                    if error_count < 50:
                         time.sleep(5)
                         continue
                     raise
@@ -148,12 +152,12 @@ class AzureClient:
                 request = QueryRequest(query=query, subscriptions=[subscription_id])
                 try:
                     resource_graphs = client.resources(request)
-                except ServiceRequestError as e:
+                except (ServiceRequestError, HttpResponseError) as e:
                     error_count += 1
                     event_writer.log(
                         "ERROR",
                         str(error_count)
-                        + " errors while requesting resource graph for "
+                        + " errors while requesting initial resource graph for "
                         + str(subscription_id)
                         + " : "
                         + str(e),
@@ -172,12 +176,12 @@ class AzureClient:
                     )
                     try:
                         resource_graphs = client.resources(request)
-                    except ServiceRequestError as e:
+                    except (ServiceRequestError, HttpResponseError) as e:
                         error_count += 1
                         event_writer.log(
                             "ERROR",
                             str(error_count)
-                            + " errors while requesting resource graph for "
+                            + " errors while requesting additional resource graph for "
                             + str(subscription_id)
                             + " : "
                             + str(e),
