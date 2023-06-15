@@ -160,10 +160,6 @@ class ModInputazure_resource_graph(AzureClient, base_mi.BaseModInput):
             )
 
             stats_subscription_count += 1
-            sub_stats = {
-                "subscription_id": subscription_id,
-                "tables:": {},
-            }
 
             for table, events in resource_graphs.items():
                 event_count = len(events)
