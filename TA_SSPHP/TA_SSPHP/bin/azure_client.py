@@ -153,7 +153,9 @@ class AzureClient:
                     event_writer.log(
                         "ERROR",
                         str(error_count)
-                        + " Error while requesting resource graph: "
+                        + " errors while requesting resource graph for "
+                        + str(subscription_id)
+                        + " : "
                         + str(e),
                     )
                     if error_count < 50:
@@ -175,7 +177,9 @@ class AzureClient:
                         event_writer.log(
                             "ERROR",
                             str(error_count)
-                            + " Error while requesting resource graph: "
+                            + " errors while requesting resource graph for "
+                            + str(subscription_id)
+                            + " : "
                             + str(e),
                         )
 
