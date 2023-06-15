@@ -149,11 +149,14 @@ class AzureClient:
                 try:
                     resource_graphs = client.resources(request)
                 except ServiceRequestError as e:
-                    event_writer.log(
-                        "ERROR", "Error while requesting resource graph: " + str(e)
-                    )
                     error_count += 1
-                    if error_count < 5:
+                    event_writer.log(
+                        "ERROR",
+                        str(error_count)
+                        + " Error while requesting resource graph: "
+                        + str(e),
+                    )
+                    if error_count < 50:
                         time.sleep(5)
                         continue
                     raise
@@ -168,11 +171,15 @@ class AzureClient:
                     try:
                         resource_graphs = client.resources(request)
                     except ServiceRequestError as e:
-                        event_writer.log(
-                            "ERROR", "Error while requesting resource graph: " + str(e)
-                        )
                         error_count += 1
-                        if error_count < 5:
+                        event_writer.log(
+                            "ERROR",
+                            str(error_count)
+                            + " Error while requesting resource graph: "
+                            + str(e),
+                        )
+
+                        if error_count < 50:
                             time.sleep(5)
                             continue
                         raise
