@@ -33,12 +33,17 @@ def arg(ew):
     arg.setup_util.get_proxy_settings = lambda: None
     arg.get_check_point = lambda a: None
     arg.save_check_point = lambda a, b: None
-    arg.new_event = lambda data, source, index, sourcetype: {
-        "data": data,
-        "source": source,
-        "index": index,
-        "sourcetype": sourcetype,
-    }
+
+    def new_event(data=None, source=None, index=None, sourcetype=None, time=None):
+        return {
+            "data": data,
+            "source": source,
+            "index": index,
+            "sourcetype": sourcetype,
+            "time": time,
+        }
+
+    arg.new_event = new_event
     arg.event_writer = ew
     return arg
 
