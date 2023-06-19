@@ -1,0 +1,174 @@
+<dashboard theme="dark" version="1.1" script="js/addtags.js">
+  <label>Azure CMDB Drilldown</label>
+  <row>
+    <panel>
+      <title>Resource Details</title>
+      <event>
+        <search>
+          <query>
+`azure_resource_graph_latest`
+| search ssphp_id=$tkn_drilldown_resource_id$
+          </query>
+        </search>
+        <option name="count">20</option>
+        <option name="list.drilldown">none</option>
+        <option name="list.wrap">1</option>
+        <option name="maxLines">5</option>
+        <option name="raw.drilldown">full</option>
+        <option name="rowNumbers">0</option>
+        <option name="table.drilldown">all</option>
+        <option name="table.sortDirection">asc</option>
+        <option name="table.wrap">1</option>
+        <option name="type">list</option>
+      </event>
+    </panel>
+    
+    <panel>
+      <title>Resource Ownership</title>
+      <table>
+        <search>
+          <query>
+| inputlookup ssphp_azure_resource_cmdb_resources.csv where ssphp_id=$tkn_drilldown_resource_id$
+| transpose
+| rename column as FIelds, "row 1" as Values
+          </query>
+        </search>
+        <option name="count">100</option>
+        <option name="dataOverlayMode">none</option>
+        <option name="drilldown">none</option>
+        <option name="percentagesRow">false</option>
+        <option name="rowNumbers">false</option>
+        <option name="totalsRow">false</option>
+        <option name="wrap">true</option>
+      </table>
+    </panel>
+  </row>
+  
+  
+  
+  <row>
+    <panel>
+      <title>Findings List</title>
+      <html>
+        <style>
+          .green{
+            color:green !important;
+          }
+          .blue{
+            color:cyan !important;
+          }
+          .red{
+            color:red !important;
+          }
+          .orange{
+            color:orange !important;
+          }
+          .yellow{
+            color:yellow !important;
+          }
+          .lightgrey{
+            color:gray !important;
+          }
+          .lightblue{
+            color:#485959 !important;
+          }
+        </style>
+      </html>
+
+      <table>
+        <search>
+          <query>
+| tstats summariesonly=false 
+         count, 
+         values(findings.SSPHP_RUN) as SSPHP_RUN, 
+         values(findings.ssphp_norm_resource_id) as ssphp_norm_resource_id,
+         values(findings.ssphp_norm_description) as ssphp_norm_description, 
+         values(findings.ssphp_norm_remediation) as ssphp_norm_remediation,  
+         values(findings.ssphp_norm_severity) as ssphp_norm_severity,  
+         values(findings.ssphp_norm_impact) as ssphp_norm_impact,  
+         values(findings.ssphp_norm_status) as ssphp_norm_status, 
+         values(findings.ssphp_norm_original_events) as ssphp_norm_original_events
+
+FROM datamodel=SSPHP.findings
+
+WHERE 
+    (findings.ssphp_norm_tech_source="Azure" AND findings.ssphp_norm_use_case="findings" AND findings.ssphp_norm_resource_id="$tkn_drilldown_resource_id$")
+    
+    [| tstats summariesonly=false max(findings.SSPHP_RUN) as findings.SSPHP_RUN FROM datamodel=SSPHP.findings WHERE findings.ssphp_norm_tech_source="Azure" AND findings.ssphp_norm_use_case="findings" | return findings.SSPHP_RUN]
+
+BY findings.ssphp_norm_time,
+   findings.ssphp_norm_tech_source, 
+   findings.ssphp_norm_use_case, 
+   findings.ssphp_norm_resource_parent, 
+   findings.ssphp_norm_resource, 
+   findings.ssphp_norm_title
+
+| rename findings.* as *
+
+| rex field=ssphp_norm_time ".*Creation Time\s*=\s*(?&lt;ssphp_norm_creation_time&gt;\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2})"
+
+| eval lf="
+",
+       ssphp_norm_description=mvjoin(ssphp_norm_description,'lf'),
+       ssphp_norm_description=split(ssphp_norm_description,'lf'),
+       ssphp_norm_remediation=split(ssphp_norm_remediation,'lf'),
+       ssphp_norm_resource_parent=split(ssphp_norm_resource_parent,'lf'),
+       ssphp_norm_resource=split(ssphp_norm_resource,'lf'),
+       ssphp_norm_title=split(ssphp_norm_title,'lf'),
+       ssphp_norm_ownership=split(ssphp_norm_ownership,'lf'),
+       ssphp_norm_contact=split(ssphp_norm_contact,'lf'),
+       ssphp_norm_severity=split(ssphp_norm_severity,'lf'),
+       ssphp_norm_status=split(ssphp_norm_status,'lf'),
+       ssphp_norm_time=split(ssphp_norm_time,'lf'),
+       ssphp_norm_original_events=split(ssphp_norm_original_events,'lf')
+
+| fields SSPHP_RUN, ssphp_*, lf
+
+`ssphp_normalise_display_fields`
+
+`ssphp_add_display_colours`
+
+| rename ssphp_norm_description_display as "Description",
+         ssphp_norm_remediation_display as "Remediation",
+         ssphp_norm_time_display as "Time",
+         ssphp_norm_tech_source_display as "Technology Source", 
+         ssphp_norm_use_case_display as "Use Case", 
+         ssphp_norm_resource_parent_display as "Resource Parent", 
+         ssphp_norm_resource_display as "Resource", 
+         ssphp_norm_title_display as "Title",
+         ssphp_norm_severity_display as "Severity",
+         ssphp_norm_impact_display as "Impact",
+         ssphp_norm_status_display as "Status"
+         
+| eval "Use Case"=case('Use Case'="cve","CVE",1==1,upper(substr('Use Case',1,1)).substr('Use Case',2)),
+       ssphp_ts='Technology Source'.":".'Use Case'
+
+| sort 0 - ssphp_norm_creation_time
+
+| table  "Time",
+         "Technology Source", 
+         "Use Case", 
+         "Resource Parent", 
+         "Resource",
+         "Title",
+         "Description",
+         "Remediation",
+         "Severity",
+         "Impact",
+         "Status"
+          </query>
+          <earliest>-2d@d</earliest>
+          <latest>now</latest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="count">100</option>
+        <option name="dataOverlayMode">none</option>
+        <option name="drilldown">none</option>
+        <option name="percentagesRow">false</option>
+        <option name="rowNumbers">false</option>
+        <option name="totalsRow">false</option>
+        <option name="wrap">true</option>
+      </table>
+    </panel>
+  </row>
+</dashboard>

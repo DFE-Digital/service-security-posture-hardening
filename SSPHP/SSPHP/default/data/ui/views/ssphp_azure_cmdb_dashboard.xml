@@ -1,5 +1,5 @@
 <form theme="dark" version="1.1" script="js/addtags.js">
-  <label>DfE Azure CMDB</label>
+  <label>Azure CMDB</label>
   
   <fieldset submitButton="false">
     <input type="radio" token="tkn_dashboard_view" searchWhenChanged="true">
@@ -11,19 +11,19 @@
       <initialValue>S</initialValue>
       <change>
         <condition value="S">
-          <set token="tkn_show_S">S</set>
-          <unset token="tkn_show_O"></unset>
-          <unset token="tkn_show_F"></unset>
+          <set token="tkn_show_search_panel">S</set>
+          <unset token="tkn_show_overview_panel"></unset>
+          <unset token="tkn_show_filter_panel"></unset>
         </condition>
         <condition value="O">
-          <set token="tkn_show_O">O</set>
-          <unset token="tkn_show_S"></unset>
-          <unset token="tkn_show_F"></unset>
+          <set token="tkn_show_overview_panel">O</set>
+          <unset token="tkn_show_search_panel"></unset>
+          <unset token="tkn_show_filter_panel"></unset>
         </condition>
         <condition value="F">
-          <set token="tkn_show_F">F</set>
-          <unset token="tkn_show_O"></unset>
-          <unset token="tkn_show_S"></unset>
+          <set token="tkn_show_filter_panel">F</set>
+          <unset token="tkn_show_overview_panel"></unset>
+          <unset token="tkn_show_search_panel"></unset>
         </condition>
       </change>
     </input>
@@ -46,7 +46,7 @@
     </input>
     
     
-    <input type="multiselect" token="tkn_search_fields" searchWhenChanged="true" depends="$tkn_show_S$">
+    <input type="multiselect" token="tkn_search_fields" searchWhenChanged="true" depends="$tkn_show_search_panel$">
       <label>Select Fields to Search</label>
       <delimiter>  OR </delimiter>
       <fieldForLabel>ssphp_field_display_text</fieldForLabel>
@@ -67,14 +67,14 @@
       <initialValue>ssphp_all_ip_addresses=~~~~ OR ssphp_business_service_index=~~~~ OR ssphp_cost_centre=~~~~ OR ssphp_devops_site=~~~~ OR ssphp_environment=~~~~ OR ssphp_id=~~~~ OR ssphp_level_1=~~~~ OR ssphp_level_1_display_name=~~~~ OR ssphp_level_2=~~~~ OR ssphp_level_2_display_name=~~~~ OR ssphp_location=~~~~ OR ssphp_name=~~~~ OR ssphp_parent_business=~~~~ OR ssphp_portfolio=~~~~ OR ssphp_private_ip_address=~~~~ OR ssphp_product=~~~~ OR ssphp_provisioning_state=~~~~ OR ssphp_public_ip_address=~~~~ OR ssphp_resource_group=~~~~ OR ssphp_resource_type_category=~~~~ OR ssphp_resource_type_type=~~~~ OR ssphp_service=~~~~ OR ssphp_service_line=~~~~ OR ssphp_service_name=~~~~ OR ssphp_service_offering=~~~~ OR ssphp_service_team=~~~~ OR ssphp_sro=~~~~ OR ssphp_state=~~~~ OR ssphp_subscription=~~~~ OR ssphp_subscription_display_name=~~~~ OR ssphp_tech_contact_email=~~~~ OR ssphp_tech_dir_arch_partner=~~~~ OR ssphp_tech_dir_serv_mgmt_contact=~~~~ OR ssphp_tenant=~~~~ OR ssphp_tenant_name=~~~~ OR ssphp_type=~~~~</initialValue>
     </input>
     
-    <input type="text" token="tkn_search_text" searchWhenChanged="true" depends="$tkn_show_S$">
+    <input type="text" token="tkn_search_text" searchWhenChanged="true" depends="$tkn_show_search_panel$">
       <label>Search Text</label>
       <default></default>
     </input>
     
     
     
-    <input type="dropdown" token="tkn_f_ten" searchWhenChanged="true" depends="$tkn_show_F$">
+    <input type="dropdown" token="tkn_f_ten" searchWhenChanged="true" depends="$tkn_show_filter_panel$">
       <label>Tenancy</label>
       <choice value="*">ALL</choice>
       <default>ALL</default>
@@ -94,7 +94,7 @@
     </input>    
     
     
-    <input type="dropdown" token="tkn_f_sub" searchWhenChanged="true" depends="$tkn_show_F$">
+    <input type="dropdown" token="tkn_f_sub" searchWhenChanged="true" depends="$tkn_show_filter_panel$">
       <label>Subscription</label>
       <choice value="*">ALL</choice>
       <default>ALL</default>
@@ -115,7 +115,7 @@
 
     
     
-    <input type="dropdown" token="tkn_f_rg" searchWhenChanged="true" depends="$tkn_show_F$">
+    <input type="dropdown" token="tkn_f_rg" searchWhenChanged="true" depends="$tkn_show_filter_panel$">
       <label>Resource Group</label>
       <choice value="*">ALL</choice>
       <default>ALL</default>
@@ -135,7 +135,7 @@
     </input>  
     
     
-    <input type="dropdown" token="tkn_f_type" searchWhenChanged="true" depends="$tkn_show_F$">
+    <input type="dropdown" token="tkn_f_type" searchWhenChanged="true" depends="$tkn_show_filter_panel$">
       <label>Resource Type</label>
       <choice value="*">ALL</choice>
       <default>ALL</default>
@@ -158,6 +158,26 @@
   
   <!-- =================================================================================================================================================-->
   
+    <row depends="$never_show$">
+    <panel>
+      <table>
+        <search>
+          <query>
+| makeresults
+| eval app=$env:app|s$
+| table app
+          </query>
+          <done>
+            <set token="tkn_current_app">$result.app$</set>
+          </done>
+        </search>
+      </table>
+    </panel>
+  </row>
+  
+  
+  <!-- =================================================================================================================================================-->
+    
   <row>
     <panel depends="$nevershow$">
       <table>
@@ -182,32 +202,14 @@
     </panel>
   </row>
   
-  <!-- =================================================================================================================================================-->
+  <!-- ========================================= SEARCH ROW ========================================================================================================-->
   
-  <row depends="$tkn_show_S$">
+  <row depends="$tkn_show_search_panel$">
     <panel depends="$nevershow$">
       <html>
         <style>
-          .green{
-            color:green !important;
-          }
-          .blue{
-            color:cyan !important;
-          }
-          .red{
-            color:red !important;
-          }
-          .orange{
-            color:orange !important;
-          }
           .yellow{
             color:yellow !important;
-          }
-          .lightgrey{
-            color:gray !important;
-          }
-          .lightblue{
-            color:#485959 !important;
           }
         </style>
       </html>
@@ -215,14 +217,30 @@
     
     <panel>
       <table>
-        <title>$tkn_record_count$</title>
+        <title># Resources : $tkn_event_count_search$</title>
         <search>
           <query>
 | inputlookup $tkn_data_set$
 | search $tkn_final_search$
 
+``` Get the # findings for the resource ```
+```| lookup ssphp_resource_azure_finding_count.csv ssphp_norm_resource_id as ssphp_id output count as ssphp_resource_azure_finding_count```
+| join type=outer ssphp_id 
+    [| tstats summariesonly=false count
+      FROM datamodel=SSPHP.findings
+      WHERE (findings.ssphp_norm_tech_source="Azure" AND findings.ssphp_norm_use_case="findings")
+            [| tstats summariesonly=false max(findings.SSPHP_RUN) as findings.SSPHP_RUN FROM datamodel=SSPHP.findings WHERE findings.ssphp_norm_tech_source="Azure" AND findings.ssphp_norm_use_case="findings" | return findings.SSPHP_RUN]
+      BY findings.ssphp_norm_resource_id
+     | rename findings.ssphp_norm_resource_id as ssphp_id, count as ssphp_resource_azure_finding_count]
+| fillnull value=0 ssphp_resource_azure_finding_count
+
+
+| eval drilldown_resource_id='ssphp_id'
+| rename * as zz_*, zz_drilldown_resource_id as drilldown_resource_id
+
 ```| foreach * [| eval rep=$tkn_search_text|s$, &lt;&lt;FIELD&gt;&gt;=replace(&lt;&lt;FIELD&gt;&gt;,'rep',"~!span class=\"yellow\"~!".'rep'."~!/span~!")]```
-| foreach * [| rex field=&lt;&lt;FIELD&gt;&gt; mode=sed "s/(?i)($tkn_search_text$)/~!span class=\"yellow\"~!\1~!\/span~!/g"]
+| foreach zz_* [| rex field=&lt;&lt;FIELD&gt;&gt; mode=sed "s/(?i)($tkn_search_text$)/~!span class=\"yellow\"~!\1~!\/span~!/g"]
+| rename zz_* as *
 
 | rename [| inputlookup ssphp_azzure_fields.csv
 | eval s="\"".ssphp_field_name."\" AS \"".ssphp_field_display_text."\""
@@ -231,21 +249,30 @@
     | return $s]
     
 | rename ssphp_resource_azure_finding_count as "Total # Findings for Resource"
-| eventstats count as record_count
+| eventstats count as event_count
           </query>
+          <earliest>-2d@d</earliest>
+          <latest>now</latest>
           <done>
-            <set token="tkn_record_count">$result.record_count$</set>
+            <set token="tkn_event_count_search">$result.event_count$</set>
           </done>
         </search>
+        <option name="drilldown">cell</option>
         <fields>"Tenancy", "Tenancy Name", "Subscription", "Subscription Name", "Resource Group", "Resource ID", "Resource", "Business Service Index", "Category", "Environemt", "Location", "Provisioning State", "Resource Type", "State", "IP Address : All", "IP Address : Private", "IP Address : Public", "Tag : Architecture Partner", "Tag : Contact EMail", "Tag : Cost Centre", "Tag : Devops Site", "Tag : Parent Business", "Tag : Porfolio", "Tag : Product", "Tag : SRO", "Tag : Service", "Tag : Service Line", "Tag : Service Management Contact", "Tag : Service Name", "Tag : Service Offering", "Tag : Service Team", "Taxonomy : Group", "Taxonomy : Group Name", "Taxonomy : Service", "Taxonomy : Service Name", "Type", "Total # Findings for Resource"</fields>
+        <drilldown>
+          <link target="_blank">/app/$tkn_current_app$/ssphp_cmdb_json_drilldown?tkn_drilldown_resource_id=$row.drilldown_resource_id$</link>
+        </drilldown>
       </table>
     </panel>
   </row>
   
-  <!-- =================================================================================================================================================-->
+
   
   
-  <row depends="$tkn_show_O$">
+  <!-- ============================================ OVERIEW ROW =====================================================================================================-->
+  
+  
+  <row depends="$tkn_show_overview_panel$">
     <panel>
       <title>Tenancies > Subscriptions</title>
       <viz type="treemap_app.treemap">
@@ -305,7 +332,7 @@
   
   <!-- =================================================================================================================================================-->
   
-  <row depends="$tkn_show_O$">
+  <row depends="$tkn_show_overview_panel$">
     <panel>
       <html>
         <p>Tenancy : $tkn_dd_ten$</p>
@@ -330,39 +357,32 @@
   
   <!-- =================================================================================================================================================-->
   
-  <row depends="$tkn_show_O$">
+  <row depends="$tkn_show_overview_panel$">
     <panel>
       <table>
+        <title># Resources : $tkn_record_count_overview$</title>
         <search>
           <query>
 | inputlookup $tkn_data_set$ where (ssphp_tenant_name=$tkn_dd_ten|s$ AND ssphp_subscription_display_name=$tkn_dd_subs|s$ AND ssphp_resource_group=$tkn_dd_rg|s$ AND ssphp_resource_type_type=$tkn_dd_type|s$)
 
-| table *
-          </query>
-        </search>
-        <option name="count">100</option>
-        <option name="dataOverlayMode">none</option>
-        <option name="drilldown">none</option>
-        <option name="percentagesRow">false</option>
-        <option name="rowNumbers">false</option>
-        <option name="totalsRow">false</option>
-        <option name="wrap">true</option>
-      </table>
-    </panel>
-  </row>
-  
-  <!-- =================================================================================================================================================-->
-  
-  <row depends="$tkn_show_F$">
-    <panel>
-      <table>
-        <title>$tkn_record_count_F$</title>
-        <search>
-          <query>
-| inputlookup $tkn_data_set$ where (ssphp_tenant_name=* AND ssphp_subscription_display_name=* AND ssphp_resource_group=$tkn_filter_rg|s$ AND ssphp_resource_type_type=$tkn_filter_type|s$)
+``` Get the # findings for the resource ```
+```| lookup ssphp_resource_azure_finding_count.csv ssphp_norm_resource_id as ssphp_id output count as ssphp_resource_azure_finding_count```
+| join type=outer ssphp_id 
+    [| tstats summariesonly=false count
+      FROM datamodel=SSPHP.findings
+      WHERE (findings.ssphp_norm_tech_source="Azure" AND findings.ssphp_norm_use_case="findings")
+            [| tstats summariesonly=false max(findings.SSPHP_RUN) as findings.SSPHP_RUN FROM datamodel=SSPHP.findings WHERE findings.ssphp_norm_tech_source="Azure" AND findings.ssphp_norm_use_case="findings" | return findings.SSPHP_RUN]
+      BY findings.ssphp_norm_resource_id
+     | rename findings.ssphp_norm_resource_id as ssphp_id, count as ssphp_resource_azure_finding_count]
+| fillnull value=0 ssphp_resource_azure_finding_count
+
+
+| eval drilldown_resource_id='ssphp_id'
+| rename * as zz_*, zz_drilldown_resource_id as drilldown_resource_id
 
 ```| foreach * [| eval rep=$tkn_search_text|s$, &lt;&lt;FIELD&gt;&gt;=replace(&lt;&lt;FIELD&gt;&gt;,'rep',"~!span class=\"yellow\"~!".'rep'."~!/span~!")]```
-| foreach * [| rex field=&lt;&lt;FIELD&gt;&gt; mode=sed "s/(?i)($tkn_search_text$)/~!span class=\"yellow\"~!\1~!\/span~!/g"]
+| foreach zz_* [| rex field=&lt;&lt;FIELD&gt;&gt; mode=sed "s/(?i)($tkn_search_text$)/~!span class=\"yellow\"~!\1~!\/span~!/g"]
+| rename zz_* as *
 
 | rename [| inputlookup ssphp_azzure_fields.csv
 | eval s="\"".ssphp_field_name."\" AS \"".ssphp_field_display_text."\""
@@ -371,13 +391,74 @@
     | return $s]
     
 | rename ssphp_resource_azure_finding_count as "Total # Findings for Resource"
-| eventstats count as record_count
+| eventstats count as event_count
           </query>
           <done>
-            <set token="tkn_record_count_F">$result.record_count$</set>
+            <set token="tkn_record_count_overview">$result.event_count$</set>
           </done>
         </search>
+        <option name="drilldown">cell</option>
         <fields>"Tenancy", "Tenancy Name", "Subscription", "Subscription Name", "Resource Group", "Resource ID", "Resource", "Business Service Index", "Category", "Environemt", "Location", "Provisioning State", "Resource Type", "State", "IP Address : All", "IP Address : Private", "IP Address : Public", "Tag : Architecture Partner", "Tag : Contact EMail", "Tag : Cost Centre", "Tag : Devops Site", "Tag : Parent Business", "Tag : Porfolio", "Tag : Product", "Tag : SRO", "Tag : Service", "Tag : Service Line", "Tag : Service Management Contact", "Tag : Service Name", "Tag : Service Offering", "Tag : Service Team", "Taxonomy : Group", "Taxonomy : Group Name", "Taxonomy : Service", "Taxonomy : Service Name", "Type", "Total # Findings for Resource"</fields>
+        <drilldown>
+          <link target="_blank">/app/$tkn_current_app$/ssphp_cmdb_json_drilldown?tkn_drilldown_resource_id=$row.drilldown_resource_id$</link>
+        </drilldown>
+        <option name="count">100</option>
+        <option name="dataOverlayMode">none</option>
+        <option name="percentagesRow">false</option>
+        <option name="rowNumbers">false</option>
+        <option name="totalsRow">false</option>
+        <option name="wrap">true</option>
+      </table>
+    </panel>
+  </row>
+  
+  <!-- ========================================== FILTER ROW =======================================================================================================-->
+  
+  <row depends="$tkn_show_filter_panel$">
+    <panel>
+      <table>
+        <title># Resources : $tkn_record_count_filter$</title>
+        <search>
+          <query>
+| inputlookup $tkn_data_set$ where (ssphp_tenant_name=* AND ssphp_subscription_display_name=* AND ssphp_resource_group=$tkn_filter_rg|s$ AND ssphp_resource_type_type=$tkn_filter_type|s$)
+
+``` Get the # findings for the resource ```
+```| lookup ssphp_resource_azure_finding_count.csv ssphp_norm_resource_id as ssphp_id output count as ssphp_resource_azure_finding_count```
+| join type=outer ssphp_id 
+    [| tstats summariesonly=false count
+      FROM datamodel=SSPHP.findings
+      WHERE (findings.ssphp_norm_tech_source="Azure" AND findings.ssphp_norm_use_case="findings")
+            [| tstats summariesonly=false max(findings.SSPHP_RUN) as findings.SSPHP_RUN FROM datamodel=SSPHP.findings WHERE findings.ssphp_norm_tech_source="Azure" AND findings.ssphp_norm_use_case="findings" | return findings.SSPHP_RUN]
+      BY findings.ssphp_norm_resource_id
+     | rename findings.ssphp_norm_resource_id as ssphp_id, count as ssphp_resource_azure_finding_count]
+| fillnull value=0 ssphp_resource_azure_finding_count
+
+
+| eval drilldown_resource_id='ssphp_id'
+| rename * as zz_*, zz_drilldown_resource_id as drilldown_resource_id
+
+```| foreach * [| eval rep=$tkn_search_text|s$, &lt;&lt;FIELD&gt;&gt;=replace(&lt;&lt;FIELD&gt;&gt;,'rep',"~!span class=\"yellow\"~!".'rep'."~!/span~!")]```
+| foreach zz_* [| rex field=&lt;&lt;FIELD&gt;&gt; mode=sed "s/(?i)($tkn_search_text$)/~!span class=\"yellow\"~!\1~!\/span~!/g"]
+| rename zz_* as *
+
+| rename [| inputlookup ssphp_azzure_fields.csv
+| eval s="\"".ssphp_field_name."\" AS \"".ssphp_field_display_text."\""
+| stats values(s) as s
+| eval s=mvjoin(s,", ")
+    | return $s]
+    
+| rename ssphp_resource_azure_finding_count as "Total # Findings for Resource"
+| eventstats count as event_count
+          </query>
+          <done>
+            <set token="tkn_record_count_filter">$result.event_count$</set>
+          </done>
+        </search>
+        <option name="drilldown">cell</option>
+        <fields>"Tenancy", "Tenancy Name", "Subscription", "Subscription Name", "Resource Group", "Resource ID", "Resource", "Business Service Index", "Category", "Environemt", "Location", "Provisioning State", "Resource Type", "State", "IP Address : All", "IP Address : Private", "IP Address : Public", "Tag : Architecture Partner", "Tag : Contact EMail", "Tag : Cost Centre", "Tag : Devops Site", "Tag : Parent Business", "Tag : Porfolio", "Tag : Product", "Tag : SRO", "Tag : Service", "Tag : Service Line", "Tag : Service Management Contact", "Tag : Service Name", "Tag : Service Offering", "Tag : Service Team", "Taxonomy : Group", "Taxonomy : Group Name", "Taxonomy : Service", "Taxonomy : Service Name", "Type", "Total # Findings for Resource"</fields>
+        <drilldown>
+          <link target="_blank">/app/$tkn_current_app$/ssphp_cmdb_json_drilldown?tkn_drilldown_resource_id=$row.drilldown_resource_id$</link>
+        </drilldown>
       </table>
     </panel>
   </row>
