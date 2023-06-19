@@ -3,6 +3,7 @@ from pprint import PrettyPrinter
 
 import azure_resource_graph
 import pytest
+import json
 
 PP = PrettyPrinter(indent=4, width=300, compact=False).pprint
 
@@ -32,12 +33,17 @@ def arg(ew):
     arg.setup_util.get_proxy_settings = lambda: None
     arg.get_check_point = lambda a: None
     arg.save_check_point = lambda a, b: None
-    arg.new_event = lambda data, source, index, sourcetype: {
-        "data": data,
-        "source": source,
-        "index": index,
-        "sourcetype": sourcetype,
-    }
+
+    def new_event(data=None, source=None, index=None, sourcetype=None, time=None):
+        return {
+            "data": data,
+            "source": source,
+            "index": index,
+            "sourcetype": sourcetype,
+            "time": time,
+        }
+
+    arg.new_event = new_event
     arg.event_writer = ew
     return arg
 
@@ -47,3 +53,5 @@ def test_collect_resource_graph(arg, ew):
     arg.collect_events(ew)
     PP(ew.events)
     assert ew.events
+    assert json.loads(ew.events[0]["data"])["action"] == "start"
+    assert json.loads(ew.events[-1]["data"])["action"] == "complete"

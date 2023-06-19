@@ -100,6 +100,7 @@ class ModInputazure_resource_graph(AzureClient, base_mi.BaseModInput):
                 data["SSPHP_RUN"] = self.ssphp_run
                 event = self.new_event(
                     data=json.dumps(data),
+                    time=datetime.now().timestamp(),
                     source=f"{metadata['source']}:{table}",
                     index=metadata["index"],
                     sourcetype=metadata["sourcetype"],
@@ -107,9 +108,52 @@ class ModInputazure_resource_graph(AzureClient, base_mi.BaseModInput):
                 event_writer.write_event(event)
             sys.stdout.flush()
 
+    def start_event(self, event_writer):
+        data = {
+            "SSPHP_RUN": self.ssphp_run,
+            "action": "start",
+            "input": "azure_resource_graph",
+            "app": "TA_SSPHP",
+        }
+        event = self.new_event(
+            data=json.dumps(data),
+            time=datetime.now().timestamp(),
+            sourcetype=f"{self.get_arg('source_type')}:SSPHP_RUN",
+            index=self.get_output_index(),
+            source=f"{self.input_type}:resource_graph",
+        )
+        event_writer.write_event(event)
+        sys.stdout.flush()
+
+    def complete_event(self, event_writer, subscription_count, event_count, details):
+        data = {
+            "SSPHP_RUN": self.ssphp_run,
+            "SSPHP_RUN_COMPLETE": datetime.now().timestamp(),
+            "action": "complete",
+            "input": "azure_resource_graph",
+            "app": "TA_SSPHP",
+            "events": event_count,
+            "subscriptions": subscription_count,
+            "details": details,
+        }
+        event = self.new_event(
+            data=json.dumps(data),
+            time=datetime.now().timestamp(),
+            sourcetype=f"{self.get_arg('source_type')}:SSPHP_RUN",
+            index=self.get_output_index(),
+            source=f"{self.input_type}:resource_graph",
+        )
+        event_writer.write_event(event)
+        sys.stdout.flush()
+
     def collect_events(self, event_writer):
+        self.start_event(event_writer)
+
         subscriptions = self.get_subscriptions()
 
+        stats_subscription_count = 0
+        stats_event_count = 0
+        stats_details = {}
         for subscription_id in self.subscription_ids(subscriptions):
             resource_graphs = self.get_resource_graph(subscription_id, event_writer)
 
@@ -119,6 +163,18 @@ class ModInputazure_resource_graph(AzureClient, base_mi.BaseModInput):
                 self.resource_graph_metadata(),
             )
 
+            stats_subscription_count += 1
+
+            for table, events in resource_graphs.items():
+                event_count = len(events)
+                stats_event_count += event_count
+                stats_details.setdefault(subscription_id, {}).setdefault(
+                    table, event_count
+                )
+
+        self.complete_event(
+            event_writer, stats_subscription_count, stats_event_count, stats_details
+        )
         return resource_graphs
 
     def resource_graph_metadata(self):
