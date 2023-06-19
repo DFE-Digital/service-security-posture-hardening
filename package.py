@@ -107,16 +107,14 @@ class SplunkAppInspect:
         return self
 
     def wait_for_processing(self):
-        status_url = (
-            f"https://appinspect.splunk.com/v1/app/validate/status/{self.request_id}?included_tags=private_victoria"
-        )
+        status_url = f"https://appinspect.splunk.com/v1/app/validate/status/{self.request_id}?included_tags=private_victoria"
 
         sleep = 0
         while True:
             status_res = requests.get(
                 status_url, headers=self.headers, timeout=self.timeout
             )
-            #pprint(status_res.json(), indent=4, width=200)
+            # pprint(status_res.json(), indent=4, width=200)
             time.sleep(sleep)
             sleep += 1
             if status_res.json().get("status", "") != "PROCESSING":
@@ -135,7 +133,7 @@ class SplunkAppInspect:
 
         report_res = requests.get(report_url, headers=headers, timeout=self.timeout)
         report_json = report_res.json()
-        #pprint(report_json, indent=4, width=200)
+        # pprint(report_json, indent=4, width=200)
         return report_json
 
     def validate_package(self, packagetargz):
@@ -217,6 +215,19 @@ class SplunkAppInspect:
                 contents = contents.replace("~^ENV^~", environment)
                 target_file.write(contents)
 
+    def concat_conf_files(self, app_directory):
+        directories = glob.glob(f"{app_directory}/default/*.conf.d/", recursive=True)
+        for directory in directories:
+            target = open(".".join(directory.split(".")[:-1]), "w")
+
+            conf_files = glob.glob(f"{directory}*")
+            for conf_file in conf_files:
+                with open(conf_file) as cf:
+                    data = cf.read()
+                    target.write(f"# {conf_file}\n\n")
+                    target.write(data)
+                    target.write("\n\n")
+
 
 @click.command()
 @click.argument(
@@ -268,10 +279,7 @@ class SplunkAppInspect:
     required=False,
     default=None,
 )
-
-
 def main(app_package, splunkuser, splunkpassword, justvalidate, outfile, dev, nodeploy):
-
     # All the code relating to Building the Package
     sai = SplunkAppInspect(splunkuser, splunkpassword, packagetargz=outfile)
 
@@ -285,18 +293,19 @@ def main(app_package, splunkuser, splunkpassword, justvalidate, outfile, dev, no
             suffix = ""
 
         app_package = sai.copy_app(app_package, suffix)
+        sai.concat_conf_files(app_package)
         sai.replace_dev_tag_and_tripple_quotes(app_package, suffix)
         report = sai.package_then_validate(app_package)
 
     report = SplunkAppInspectReport(report)
     report.print_manual_checks()
     report.print_failed_checks()
-    
-    #print(f"token={sai.token}")
+
+    # print(f"token={sai.token}")
 
     # All the code relating to installing the package using Victoria Experience
     if report.report_valid() and not nodeploy:
-        acs_token = os.getenv('ACS_TOKEN')
+        acs_token = os.getenv("ACS_TOKEN")
         acs = SplunkACS("dfe", acs_token, sai.token)
 
         # if acs_response:
@@ -305,6 +314,7 @@ def main(app_package, splunkuser, splunkpassword, justvalidate, outfile, dev, no
 
     elif not nodeploy:
         print("Package Not Uploaded because it failed validation")
+
 
 if __name__ == "__main__":
     main()
