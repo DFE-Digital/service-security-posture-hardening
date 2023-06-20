@@ -1,5 +1,6 @@
 <form theme="dark" version="1.1" script="js/addtags.js">
   <label>Azure CMDB</label>
+  <description>Service Security Posture Hardening Programme : v1.0</description>
   
   <fieldset submitButton="false">
     <input type="radio" token="tkn_dashboard_view" searchWhenChanged="true">
