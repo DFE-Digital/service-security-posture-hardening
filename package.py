@@ -227,6 +227,7 @@ class SplunkAppInspect:
                     target.write(f"# {conf_file}\n\n")
                     target.write(data)
                     target.write("\n\n")
+            shutil.rmtree(directory)
 
 
 @click.command()
