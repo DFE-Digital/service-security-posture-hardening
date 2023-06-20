@@ -1,6 +1,6 @@
 <form theme="dark" version="1.1" script="js/addtags.js">
   <label>Azure CMDB</label>
-  
+
   <fieldset submitButton="false">
     <input type="radio" token="tkn_dashboard_view" searchWhenChanged="true">
       <label>Select Dashboard View</label>
@@ -44,8 +44,8 @@
         </condition>
       </change>
     </input>
-    
-    
+
+
     <input type="multiselect" token="tkn_search_fields" searchWhenChanged="true" depends="$tkn_show_search_panel$">
       <label>Select Fields to Search</label>
       <delimiter>  OR </delimiter>
@@ -55,7 +55,7 @@
         <query>| inputlookup ssphp_azure_fields.csv
 | eval ssphp_field_name=ssphp_field_name."=~~~~"
 | table ssphp_field_name, ssphp_field_display_text
-| append 
+| append
     [| inputlookup ssphp_azure_fields.csv
 | stats values(ssphp_field_name) as ssphp_field_name
 | eval ssphp_field_name=mvjoin(ssphp_field_name,"=~~~~ OR ")."=~~~~",ssphp_field_display_text="ALL"]
@@ -66,14 +66,14 @@
       <default>ssphp_all_ip_addresses=~~~~ OR ssphp_business_service_index=~~~~ OR ssphp_cost_centre=~~~~ OR ssphp_devops_site=~~~~ OR ssphp_environment=~~~~ OR ssphp_id=~~~~ OR ssphp_level_1=~~~~ OR ssphp_level_1_display_name=~~~~ OR ssphp_level_2=~~~~ OR ssphp_level_2_display_name=~~~~ OR ssphp_location=~~~~ OR ssphp_name=~~~~ OR ssphp_parent_business=~~~~ OR ssphp_portfolio=~~~~ OR ssphp_private_ip_address=~~~~ OR ssphp_product=~~~~ OR ssphp_provisioning_state=~~~~ OR ssphp_public_ip_address=~~~~ OR ssphp_resource_group=~~~~ OR ssphp_resource_type_category=~~~~ OR ssphp_resource_type_type=~~~~ OR ssphp_service=~~~~ OR ssphp_service_line=~~~~ OR ssphp_service_name=~~~~ OR ssphp_service_offering=~~~~ OR ssphp_service_team=~~~~ OR ssphp_sro=~~~~ OR ssphp_state=~~~~ OR ssphp_subscription=~~~~ OR ssphp_subscription_display_name=~~~~ OR ssphp_tech_contact_email=~~~~ OR ssphp_tech_dir_arch_partner=~~~~ OR ssphp_tech_dir_serv_mgmt_contact=~~~~ OR ssphp_tenant=~~~~ OR ssphp_tenant_name=~~~~ OR ssphp_type=~~~~</default>
       <initialValue>ssphp_all_ip_addresses=~~~~ OR ssphp_business_service_index=~~~~ OR ssphp_cost_centre=~~~~ OR ssphp_devops_site=~~~~ OR ssphp_environment=~~~~ OR ssphp_id=~~~~ OR ssphp_level_1=~~~~ OR ssphp_level_1_display_name=~~~~ OR ssphp_level_2=~~~~ OR ssphp_level_2_display_name=~~~~ OR ssphp_location=~~~~ OR ssphp_name=~~~~ OR ssphp_parent_business=~~~~ OR ssphp_portfolio=~~~~ OR ssphp_private_ip_address=~~~~ OR ssphp_product=~~~~ OR ssphp_provisioning_state=~~~~ OR ssphp_public_ip_address=~~~~ OR ssphp_resource_group=~~~~ OR ssphp_resource_type_category=~~~~ OR ssphp_resource_type_type=~~~~ OR ssphp_service=~~~~ OR ssphp_service_line=~~~~ OR ssphp_service_name=~~~~ OR ssphp_service_offering=~~~~ OR ssphp_service_team=~~~~ OR ssphp_sro=~~~~ OR ssphp_state=~~~~ OR ssphp_subscription=~~~~ OR ssphp_subscription_display_name=~~~~ OR ssphp_tech_contact_email=~~~~ OR ssphp_tech_dir_arch_partner=~~~~ OR ssphp_tech_dir_serv_mgmt_contact=~~~~ OR ssphp_tenant=~~~~ OR ssphp_tenant_name=~~~~ OR ssphp_type=~~~~</initialValue>
     </input>
-    
+
     <input type="text" token="tkn_search_text" searchWhenChanged="true" depends="$tkn_show_search_panel$">
       <label>Search Text</label>
       <default></default>
     </input>
-    
-    
-    
+
+
+
     <input type="dropdown" token="tkn_f_ten" searchWhenChanged="true" depends="$tkn_show_filter_panel$">
       <label>Tenancy</label>
       <choice value="*">ALL</choice>
@@ -91,9 +91,9 @@
       <change>
         <set token="tkn_filter_ten">$value$</set>
       </change>
-    </input>    
-    
-    
+    </input>
+
+
     <input type="dropdown" token="tkn_f_sub" searchWhenChanged="true" depends="$tkn_show_filter_panel$">
       <label>Subscription</label>
       <choice value="*">ALL</choice>
@@ -111,10 +111,10 @@
       <change>
         <set token="tkn_filter_sub">$value$</set>
       </change>
-    </input>    
+    </input>
 
-    
-    
+
+
     <input type="dropdown" token="tkn_f_rg" searchWhenChanged="true" depends="$tkn_show_filter_panel$">
       <label>Resource Group</label>
       <choice value="*">ALL</choice>
@@ -132,9 +132,9 @@
       <change>
         <set token="tkn_filter_rg">$value$</set>
       </change>
-    </input>  
-    
-    
+    </input>
+
+
     <input type="dropdown" token="tkn_f_type" searchWhenChanged="true" depends="$tkn_show_filter_panel$">
       <label>Resource Type</label>
       <choice value="*">ALL</choice>
@@ -152,12 +152,12 @@
       <change>
         <set token="tkn_filter_type">$value$</set>
       </change>
-    </input>    
+    </input>
   </fieldset>
-  
-  
+
+
   <!-- =================================================================================================================================================-->
-  
+
     <row depends="$never_show$">
     <panel>
       <table>
@@ -174,10 +174,10 @@
       </table>
     </panel>
   </row>
-  
-  
+
+
   <!-- =================================================================================================================================================-->
-    
+
   <row>
     <panel depends="$nevershow$">
       <table>
@@ -194,16 +194,16 @@
         </search>
       </table>
     </panel>
-    
+
     <panel depends="$nevershow$">
       <html>
         <p>$tkn_final_search$</p>
       </html>
     </panel>
   </row>
-  
+
   <!-- ========================================= SEARCH ROW ========================================================================================================-->
-  
+
   <row depends="$tkn_show_search_panel$">
     <panel depends="$nevershow$">
       <html>
@@ -214,7 +214,7 @@
         </style>
       </html>
     </panel>
-    
+
     <panel>
       <table>
         <title># Resources : $tkn_event_count_search$</title>
@@ -225,7 +225,7 @@
 
 ``` Get the # findings for the resource ```
 ```| lookup ssphp_resource_azure_finding_count.csv ssphp_norm_resource_id as ssphp_id output count as ssphp_resource_azure_finding_count```
-| join type=outer ssphp_id 
+| join type=outer ssphp_id
     [| tstats summariesonly=false count
       FROM datamodel=SSPHP.findings
       WHERE (findings.ssphp_norm_tech_source="Azure" AND findings.ssphp_norm_use_case="findings")
@@ -247,7 +247,7 @@
 | stats values(s) as s
 | eval s=mvjoin(s,", ")
     | return $s]
-    
+
 | rename ssphp_resource_azure_finding_count as "Total # Findings for Resource"
 | eventstats count as event_count
           </query>
@@ -260,18 +260,18 @@
         <option name="drilldown">cell</option>
         <fields>"Tenancy", "Tenancy Name", "Subscription", "Subscription Name", "Resource Group", "Resource ID", "Resource", "Business Service Index", "Category", "Environemt", "Location", "Provisioning State", "Resource Type", "State", "IP Address : All", "IP Address : Private", "IP Address : Public", "Tag : Architecture Partner", "Tag : Contact EMail", "Tag : Cost Centre", "Tag : Devops Site", "Tag : Parent Business", "Tag : Porfolio", "Tag : Product", "Tag : SRO", "Tag : Service", "Tag : Service Line", "Tag : Service Management Contact", "Tag : Service Name", "Tag : Service Offering", "Tag : Service Team", "Taxonomy : Group", "Taxonomy : Group Name", "Taxonomy : Service", "Taxonomy : Service Name", "Type", "Total # Findings for Resource"</fields>
         <drilldown>
-          <link target="_blank">/app/$tkn_current_app$/ssphp_cmdb_json_drilldown?tkn_drilldown_resource_id=$row.drilldown_resource_id$</link>
+          <link target="_blank">/app/$tkn_current_app$/ssphp_azure_cmdb_json_drilldown?tkn_drilldown_resource_id=$row.drilldown_resource_id$</link>
         </drilldown>
       </table>
     </panel>
   </row>
-  
 
-  
-  
+
+
+
   <!-- ============================================ OVERIEW ROW =====================================================================================================-->
-  
-  
+
+
   <row depends="$tkn_show_overview_panel$">
     <panel>
       <title>Tenancies > Subscriptions</title>
@@ -300,7 +300,7 @@
         </drilldown>
       </viz>
     </panel>
-    
+
     <panel>
       <title>Resource Groups > Types</title>
       <viz type="treemap_app.treemap">
@@ -329,9 +329,9 @@
       </viz>
     </panel>
   </row>
-  
+
   <!-- =================================================================================================================================================-->
-  
+
   <row depends="$tkn_show_overview_panel$">
     <panel>
       <html>
@@ -354,9 +354,9 @@
       </html>
     </panel>
   </row>
-  
+
   <!-- =================================================================================================================================================-->
-  
+
   <row depends="$tkn_show_overview_panel$">
     <panel>
       <table>
@@ -367,7 +367,7 @@
 
 ``` Get the # findings for the resource ```
 ```| lookup ssphp_resource_azure_finding_count.csv ssphp_norm_resource_id as ssphp_id output count as ssphp_resource_azure_finding_count```
-| join type=outer ssphp_id 
+| join type=outer ssphp_id
     [| tstats summariesonly=false count
       FROM datamodel=SSPHP.findings
       WHERE (findings.ssphp_norm_tech_source="Azure" AND findings.ssphp_norm_use_case="findings")
@@ -389,7 +389,7 @@
 | stats values(s) as s
 | eval s=mvjoin(s,", ")
     | return $s]
-    
+
 | rename ssphp_resource_azure_finding_count as "Total # Findings for Resource"
 | eventstats count as event_count
           </query>
@@ -400,7 +400,7 @@
         <option name="drilldown">cell</option>
         <fields>"Tenancy", "Tenancy Name", "Subscription", "Subscription Name", "Resource Group", "Resource ID", "Resource", "Business Service Index", "Category", "Environemt", "Location", "Provisioning State", "Resource Type", "State", "IP Address : All", "IP Address : Private", "IP Address : Public", "Tag : Architecture Partner", "Tag : Contact EMail", "Tag : Cost Centre", "Tag : Devops Site", "Tag : Parent Business", "Tag : Porfolio", "Tag : Product", "Tag : SRO", "Tag : Service", "Tag : Service Line", "Tag : Service Management Contact", "Tag : Service Name", "Tag : Service Offering", "Tag : Service Team", "Taxonomy : Group", "Taxonomy : Group Name", "Taxonomy : Service", "Taxonomy : Service Name", "Type", "Total # Findings for Resource"</fields>
         <drilldown>
-          <link target="_blank">/app/$tkn_current_app$/ssphp_cmdb_json_drilldown?tkn_drilldown_resource_id=$row.drilldown_resource_id$</link>
+          <link target="_blank">/app/$tkn_current_app$/ssphp_azure_cmdb_json_drilldown?tkn_drilldown_resource_id=$row.drilldown_resource_id$</link>
         </drilldown>
         <option name="count">100</option>
         <option name="dataOverlayMode">none</option>
@@ -411,9 +411,9 @@
       </table>
     </panel>
   </row>
-  
+
   <!-- ========================================== FILTER ROW =======================================================================================================-->
-  
+
   <row depends="$tkn_show_filter_panel$">
     <panel>
       <table>
@@ -424,7 +424,7 @@
 
 ``` Get the # findings for the resource ```
 ```| lookup ssphp_resource_azure_finding_count.csv ssphp_norm_resource_id as ssphp_id output count as ssphp_resource_azure_finding_count```
-| join type=outer ssphp_id 
+| join type=outer ssphp_id
     [| tstats summariesonly=false count
       FROM datamodel=SSPHP.findings
       WHERE (findings.ssphp_norm_tech_source="Azure" AND findings.ssphp_norm_use_case="findings")
@@ -446,7 +446,7 @@
 | stats values(s) as s
 | eval s=mvjoin(s,", ")
     | return $s]
-    
+
 | rename ssphp_resource_azure_finding_count as "Total # Findings for Resource"
 | eventstats count as event_count
           </query>
@@ -457,7 +457,7 @@
         <option name="drilldown">cell</option>
         <fields>"Tenancy", "Tenancy Name", "Subscription", "Subscription Name", "Resource Group", "Resource ID", "Resource", "Business Service Index", "Category", "Environemt", "Location", "Provisioning State", "Resource Type", "State", "IP Address : All", "IP Address : Private", "IP Address : Public", "Tag : Architecture Partner", "Tag : Contact EMail", "Tag : Cost Centre", "Tag : Devops Site", "Tag : Parent Business", "Tag : Porfolio", "Tag : Product", "Tag : SRO", "Tag : Service", "Tag : Service Line", "Tag : Service Management Contact", "Tag : Service Name", "Tag : Service Offering", "Tag : Service Team", "Taxonomy : Group", "Taxonomy : Group Name", "Taxonomy : Service", "Taxonomy : Service Name", "Type", "Total # Findings for Resource"</fields>
         <drilldown>
-          <link target="_blank">/app/$tkn_current_app$/ssphp_cmdb_json_drilldown?tkn_drilldown_resource_id=$row.drilldown_resource_id$</link>
+          <link target="_blank">/app/$tkn_current_app$/ssphp_azure_cmdb_json_drilldown?tkn_drilldown_resource_id=$row.drilldown_resource_id$</link>
         </drilldown>
       </table>
     </panel>
