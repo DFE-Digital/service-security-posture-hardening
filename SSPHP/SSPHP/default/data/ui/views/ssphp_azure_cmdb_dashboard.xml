@@ -52,11 +52,11 @@
       <fieldForLabel>ssphp_field_display_text</fieldForLabel>
       <fieldForValue>ssphp_field_name</fieldForValue>
       <search>
-        <query>| inputlookup ssphp_azzure_fields.csv
+        <query>| inputlookup ssphp_azure_fields.csv
 | eval ssphp_field_name=ssphp_field_name."=~~~~"
 | table ssphp_field_name, ssphp_field_display_text
 | append 
-    [| inputlookup ssphp_azzure_fields.csv
+    [| inputlookup ssphp_azure_fields.csv
 | stats values(ssphp_field_name) as ssphp_field_name
 | eval ssphp_field_name=mvjoin(ssphp_field_name,"=~~~~ OR ")."=~~~~",ssphp_field_display_text="ALL"]
 | sort 0 ssphp_field_display_text</query>
@@ -242,7 +242,7 @@
 | foreach zz_* [| rex field=&lt;&lt;FIELD&gt;&gt; mode=sed "s/(?i)($tkn_search_text$)/~!span class=\"yellow\"~!\1~!\/span~!/g"]
 | rename zz_* as *
 
-| rename [| inputlookup ssphp_azzure_fields.csv
+| rename [| inputlookup ssphp_azure_fields.csv
 | eval s="\"".ssphp_field_name."\" AS \"".ssphp_field_display_text."\""
 | stats values(s) as s
 | eval s=mvjoin(s,", ")
@@ -384,7 +384,7 @@
 | foreach zz_* [| rex field=&lt;&lt;FIELD&gt;&gt; mode=sed "s/(?i)($tkn_search_text$)/~!span class=\"yellow\"~!\1~!\/span~!/g"]
 | rename zz_* as *
 
-| rename [| inputlookup ssphp_azzure_fields.csv
+| rename [| inputlookup ssphp_azure_fields.csv
 | eval s="\"".ssphp_field_name."\" AS \"".ssphp_field_display_text."\""
 | stats values(s) as s
 | eval s=mvjoin(s,", ")
@@ -441,7 +441,7 @@
 | foreach zz_* [| rex field=&lt;&lt;FIELD&gt;&gt; mode=sed "s/(?i)($tkn_search_text$)/~!span class=\"yellow\"~!\1~!\/span~!/g"]
 | rename zz_* as *
 
-| rename [| inputlookup ssphp_azzure_fields.csv
+| rename [| inputlookup ssphp_azure_fields.csv
 | eval s="\"".ssphp_field_name."\" AS \"".ssphp_field_display_text."\""
 | stats values(s) as s
 | eval s=mvjoin(s,", ")

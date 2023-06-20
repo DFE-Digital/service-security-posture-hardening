@@ -231,6 +231,18 @@
                     "comment": ""
                 },
                 {
+                    "fieldName": "ssphp_norm_resource_id",
+                    "owner": "findings",
+                    "type": "string",
+                    "fieldSearch": "",
+                    "required": false,
+                    "multivalue": false,
+                    "hidden": false,
+                    "editable": true,
+                    "displayName": "ssphp_norm_resource_id",
+                    "comment": ""
+                },
+                {
                     "fieldName": "_time",
                     "owner": "BaseEvent",
                     "type": "timestamp",
@@ -282,7 +294,7 @@
             "calculations": [],
             "constraints": [
                 {
-                    "search": "index=ssphp_findings_summary~^ENV^~",
+                    "search": "index=ssphp_findings_summary_~^ENV^~",
                     "owner": "findings"
                 }
             ],
