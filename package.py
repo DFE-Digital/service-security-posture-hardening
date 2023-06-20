@@ -220,7 +220,7 @@ class SplunkAppInspect:
         for directory in directories:
             target = open(".".join(directory.split(".")[:-1]), "w")
 
-            conf_files = glob.glob(f"{directory}*conf")
+            conf_files = glob.glob(f"{directory}*.conf")
             for conf_file in conf_files:
                 with open(conf_file) as cf:
                     data = cf.read()
