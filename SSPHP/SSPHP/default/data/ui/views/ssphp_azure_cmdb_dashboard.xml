@@ -1,6 +1,6 @@
 <form theme="dark" version="1.1" script="js/addtags.js">
   <label>Azure CMDB</label>
-  <description>Service Security Posture Hardening Programme : v1.0</description>
+  <description>Service Security Posture Hardening Programme : v1.5</description>
   
   <fieldset submitButton="false">
     <input type="radio" token="tkn_dashboard_view" searchWhenChanged="true">
@@ -227,17 +227,23 @@
 ``` Get the # findings for the resource ```
 ```| lookup ssphp_resource_azure_finding_count.csv ssphp_norm_resource_id as ssphp_id output count as ssphp_resource_azure_finding_count```
 | join type=outer ssphp_id
-    [| tstats summariesonly=false count
+    [| tstats summariesonly=false count, values(findings.ssphp_norm_severity) as ssphp_norm_severity
       FROM datamodel=SSPHP.findings
       WHERE (findings.ssphp_norm_tech_source="Azure" AND findings.ssphp_norm_use_case="findings")
             [| tstats summariesonly=false max(findings.SSPHP_RUN) as findings.SSPHP_RUN FROM datamodel=SSPHP.findings WHERE findings.ssphp_norm_tech_source="Azure" AND findings.ssphp_norm_use_case="findings" | return findings.SSPHP_RUN]
-      BY findings.ssphp_norm_resource_id
-     | rename findings.ssphp_norm_resource_id as ssphp_id, count as ssphp_resource_azure_finding_count]
-| fillnull value=0 ssphp_resource_azure_finding_count
-
+      BY findings.ssphp_norm_time,
+         findings.ssphp_norm_tech_source, 
+         findings.ssphp_norm_use_case,
+         findings.ssphp_norm_resource_id,
+         findings.ssphp_norm_title,
+         findings.ssphp_norm_original_events,
+         findings.ssphp_norm_resource
+| rename findings.ssphp_norm_resource_id as ssphp_id, findings.* as *
+| stats count as ssphp_resource_azure_finding_count, sum(eval(if(like(ssphp_norm_severity,"%IG1%"),1,0))) as ssphp_resource_azure_finding_ig1_count by ssphp_id]
+| fillnull value=0 ssphp_resource_azure_finding_count, ssphp_resource_azure_finding_ig1_count
 
 | eval drilldown_resource_id='ssphp_id'
-| rename * as zz_*, zz_drilldown_resource_id as drilldown_resource_id
+| rename * as zz_*, zz_drilldown_resource_id as drilldown_resource_id, zz_ssphp_resource_azure_finding_count as ssphp_resource_azure_finding_count, zz_ssphp_resource_azure_finding_ig1_count as ssphp_resource_azure_finding_ig1_count
 
 ```| foreach * [| eval rep=$tkn_search_text|s$, &lt;&lt;FIELD&gt;&gt;=replace(&lt;&lt;FIELD&gt;&gt;,'rep',"~!span class=\"yellow\"~!".'rep'."~!/span~!")]```
 | foreach zz_* [| rex field=&lt;&lt;FIELD&gt;&gt; mode=sed "s/(?i)($tkn_search_text$)/~!span class=\"yellow\"~!\1~!\/span~!/g"]
@@ -249,7 +255,7 @@
 | eval s=mvjoin(s,", ")
     | return $s]
 
-| rename ssphp_resource_azure_finding_count as "Total # Findings for Resource"
+| rename ssphp_resource_azure_finding_count as "Total # Findings for Resource", ssphp_resource_azure_finding_ig1_count as "Total # IG1 Findings for Resource"
 | eventstats count as event_count
           </query>
           <earliest>-2d@d</earliest>
@@ -259,9 +265,9 @@
           </done>
         </search>
         <option name="drilldown">cell</option>
-        <fields>"Tenancy", "Tenancy Name", "Subscription", "Subscription Name", "Resource Group", "Resource ID", "Resource", "Business Service Index", "Category", "Environemt", "Location", "Provisioning State", "Resource Type", "State", "IP Address : All", "IP Address : Private", "IP Address : Public", "Tag : Architecture Partner", "Tag : Contact EMail", "Tag : Cost Centre", "Tag : Devops Site", "Tag : Parent Business", "Tag : Porfolio", "Tag : Product", "Tag : SRO", "Tag : Service", "Tag : Service Line", "Tag : Service Management Contact", "Tag : Service Name", "Tag : Service Offering", "Tag : Service Team", "Taxonomy : Group", "Taxonomy : Group Name", "Taxonomy : Service", "Taxonomy : Service Name", "Type", "Total # Findings for Resource"</fields>
+        <fields>"Tenancy", "Tenancy Name", "Subscription", "Subscription Name", "Resource Group", "Resource ID", "Resource", "Business Service Index", "Category", "Environemt", "Location", "Provisioning State", "Resource Type", "State", "IP Address : All", "IP Address : Private", "IP Address : Public", "Tag : Architecture Partner", "Tag : Contact EMail", "Tag : Cost Centre", "Tag : Devops Site", "Tag : Parent Business", "Tag : Porfolio", "Tag : Product", "Tag : SRO", "Tag : Service", "Tag : Service Line", "Tag : Service Management Contact", "Tag : Service Name", "Tag : Service Offering", "Tag : Service Team", "Taxonomy : Group", "Taxonomy : Group Name", "Taxonomy : Service", "Taxonomy : Service Name", "Type", "Total # Findings for Resource", "Total # IG1 Findings for Resource"</fields>
         <drilldown>
-          <link target="_blank">/app/$tkn_current_app$/ssphp_azure_cmdb_json_drilldown?tkn_drilldown_resource_id=$row.drilldown_resource_id$</link>
+          <link target="_blank">/app/$tkn_current_app$/ssphp_azure_cmdb_dashboard_drilldown?tkn_drilldown_resource_id=$row.drilldown_resource_id$</link>
         </drilldown>
       </table>
     </panel>
@@ -369,17 +375,23 @@
 ``` Get the # findings for the resource ```
 ```| lookup ssphp_resource_azure_finding_count.csv ssphp_norm_resource_id as ssphp_id output count as ssphp_resource_azure_finding_count```
 | join type=outer ssphp_id
-    [| tstats summariesonly=false count
+    [| tstats summariesonly=false count, values(findings.ssphp_norm_severity) as ssphp_norm_severity
       FROM datamodel=SSPHP.findings
       WHERE (findings.ssphp_norm_tech_source="Azure" AND findings.ssphp_norm_use_case="findings")
             [| tstats summariesonly=false max(findings.SSPHP_RUN) as findings.SSPHP_RUN FROM datamodel=SSPHP.findings WHERE findings.ssphp_norm_tech_source="Azure" AND findings.ssphp_norm_use_case="findings" | return findings.SSPHP_RUN]
-      BY findings.ssphp_norm_resource_id
-     | rename findings.ssphp_norm_resource_id as ssphp_id, count as ssphp_resource_azure_finding_count]
-| fillnull value=0 ssphp_resource_azure_finding_count
-
+      BY findings.ssphp_norm_time,
+         findings.ssphp_norm_tech_source, 
+         findings.ssphp_norm_use_case,
+         findings.ssphp_norm_resource_id,
+         findings.ssphp_norm_title,
+         findings.ssphp_norm_original_events,
+         findings.ssphp_norm_resource
+| rename findings.ssphp_norm_resource_id as ssphp_id, findings.* as *
+| stats count as ssphp_resource_azure_finding_count, sum(eval(if(like(ssphp_norm_severity,"%IG1%"),1,0))) as ssphp_resource_azure_finding_ig1_count by ssphp_id]
+| fillnull value=0 ssphp_resource_azure_finding_count, ssphp_resource_azure_finding_ig1_count
 
 | eval drilldown_resource_id='ssphp_id'
-| rename * as zz_*, zz_drilldown_resource_id as drilldown_resource_id
+| rename * as zz_*, zz_drilldown_resource_id as drilldown_resource_id, zz_ssphp_resource_azure_finding_count as ssphp_resource_azure_finding_count, zz_ssphp_resource_azure_finding_ig1_count as ssphp_resource_azure_finding_ig1_count
 
 ```| foreach * [| eval rep=$tkn_search_text|s$, &lt;&lt;FIELD&gt;&gt;=replace(&lt;&lt;FIELD&gt;&gt;,'rep',"~!span class=\"yellow\"~!".'rep'."~!/span~!")]```
 | foreach zz_* [| rex field=&lt;&lt;FIELD&gt;&gt; mode=sed "s/(?i)($tkn_search_text$)/~!span class=\"yellow\"~!\1~!\/span~!/g"]
@@ -391,7 +403,7 @@
 | eval s=mvjoin(s,", ")
     | return $s]
 
-| rename ssphp_resource_azure_finding_count as "Total # Findings for Resource"
+| rename ssphp_resource_azure_finding_count as "Total # Findings for Resource", ssphp_resource_azure_finding_ig1_count as "Total # IG1 Findings for Resource"
 | eventstats count as event_count
           </query>
           <done>
@@ -399,9 +411,9 @@
           </done>
         </search>
         <option name="drilldown">cell</option>
-        <fields>"Tenancy", "Tenancy Name", "Subscription", "Subscription Name", "Resource Group", "Resource ID", "Resource", "Business Service Index", "Category", "Environemt", "Location", "Provisioning State", "Resource Type", "State", "IP Address : All", "IP Address : Private", "IP Address : Public", "Tag : Architecture Partner", "Tag : Contact EMail", "Tag : Cost Centre", "Tag : Devops Site", "Tag : Parent Business", "Tag : Porfolio", "Tag : Product", "Tag : SRO", "Tag : Service", "Tag : Service Line", "Tag : Service Management Contact", "Tag : Service Name", "Tag : Service Offering", "Tag : Service Team", "Taxonomy : Group", "Taxonomy : Group Name", "Taxonomy : Service", "Taxonomy : Service Name", "Type", "Total # Findings for Resource"</fields>
+        <fields>"Tenancy", "Tenancy Name", "Subscription", "Subscription Name", "Resource Group", "Resource ID", "Resource", "Business Service Index", "Category", "Environemt", "Location", "Provisioning State", "Resource Type", "State", "IP Address : All", "IP Address : Private", "IP Address : Public", "Tag : Architecture Partner", "Tag : Contact EMail", "Tag : Cost Centre", "Tag : Devops Site", "Tag : Parent Business", "Tag : Porfolio", "Tag : Product", "Tag : SRO", "Tag : Service", "Tag : Service Line", "Tag : Service Management Contact", "Tag : Service Name", "Tag : Service Offering", "Tag : Service Team", "Taxonomy : Group", "Taxonomy : Group Name", "Taxonomy : Service", "Taxonomy : Service Name", "Type", "Total # Findings for Resource", "Total # IG1 Findings for Resource"</fields>
         <drilldown>
-          <link target="_blank">/app/$tkn_current_app$/ssphp_azure_cmdb_json_drilldown?tkn_drilldown_resource_id=$row.drilldown_resource_id$</link>
+          <link target="_blank">/app/$tkn_current_app$/ssphp_azure_cmdb_dashboard_drilldown?tkn_drilldown_resource_id=$row.drilldown_resource_id$</link>
         </drilldown>
         <option name="count">100</option>
         <option name="dataOverlayMode">none</option>
@@ -426,17 +438,23 @@
 ``` Get the # findings for the resource ```
 ```| lookup ssphp_resource_azure_finding_count.csv ssphp_norm_resource_id as ssphp_id output count as ssphp_resource_azure_finding_count```
 | join type=outer ssphp_id
-    [| tstats summariesonly=false count
+    [| tstats summariesonly=false count, values(findings.ssphp_norm_severity) as ssphp_norm_severity
       FROM datamodel=SSPHP.findings
       WHERE (findings.ssphp_norm_tech_source="Azure" AND findings.ssphp_norm_use_case="findings")
             [| tstats summariesonly=false max(findings.SSPHP_RUN) as findings.SSPHP_RUN FROM datamodel=SSPHP.findings WHERE findings.ssphp_norm_tech_source="Azure" AND findings.ssphp_norm_use_case="findings" | return findings.SSPHP_RUN]
-      BY findings.ssphp_norm_resource_id
-     | rename findings.ssphp_norm_resource_id as ssphp_id, count as ssphp_resource_azure_finding_count]
-| fillnull value=0 ssphp_resource_azure_finding_count
-
+      BY findings.ssphp_norm_time,
+         findings.ssphp_norm_tech_source, 
+         findings.ssphp_norm_use_case,
+         findings.ssphp_norm_resource_id,
+         findings.ssphp_norm_title,
+         findings.ssphp_norm_original_events,
+         findings.ssphp_norm_resource
+| rename findings.ssphp_norm_resource_id as ssphp_id, findings.* as *
+| stats count as ssphp_resource_azure_finding_count, sum(eval(if(like(ssphp_norm_severity,"%IG1%"),1,0))) as ssphp_resource_azure_finding_ig1_count by ssphp_id]
+| fillnull value=0 ssphp_resource_azure_finding_count, ssphp_resource_azure_finding_ig1_count
 
 | eval drilldown_resource_id='ssphp_id'
-| rename * as zz_*, zz_drilldown_resource_id as drilldown_resource_id
+| rename * as zz_*, zz_drilldown_resource_id as drilldown_resource_id, zz_ssphp_resource_azure_finding_count as ssphp_resource_azure_finding_count, zz_ssphp_resource_azure_finding_ig1_count as ssphp_resource_azure_finding_ig1_count
 
 ```| foreach * [| eval rep=$tkn_search_text|s$, &lt;&lt;FIELD&gt;&gt;=replace(&lt;&lt;FIELD&gt;&gt;,'rep',"~!span class=\"yellow\"~!".'rep'."~!/span~!")]```
 | foreach zz_* [| rex field=&lt;&lt;FIELD&gt;&gt; mode=sed "s/(?i)($tkn_search_text$)/~!span class=\"yellow\"~!\1~!\/span~!/g"]
@@ -448,7 +466,7 @@
 | eval s=mvjoin(s,", ")
     | return $s]
 
-| rename ssphp_resource_azure_finding_count as "Total # Findings for Resource"
+| rename ssphp_resource_azure_finding_count as "Total # Findings for Resource", ssphp_resource_azure_finding_ig1_count as "Total # IG1 Findings for Resource"
 | eventstats count as event_count
           </query>
           <done>
@@ -456,9 +474,9 @@
           </done>
         </search>
         <option name="drilldown">cell</option>
-        <fields>"Tenancy", "Tenancy Name", "Subscription", "Subscription Name", "Resource Group", "Resource ID", "Resource", "Business Service Index", "Category", "Environemt", "Location", "Provisioning State", "Resource Type", "State", "IP Address : All", "IP Address : Private", "IP Address : Public", "Tag : Architecture Partner", "Tag : Contact EMail", "Tag : Cost Centre", "Tag : Devops Site", "Tag : Parent Business", "Tag : Porfolio", "Tag : Product", "Tag : SRO", "Tag : Service", "Tag : Service Line", "Tag : Service Management Contact", "Tag : Service Name", "Tag : Service Offering", "Tag : Service Team", "Taxonomy : Group", "Taxonomy : Group Name", "Taxonomy : Service", "Taxonomy : Service Name", "Type", "Total # Findings for Resource"</fields>
+        <fields>"Tenancy", "Tenancy Name", "Subscription", "Subscription Name", "Resource Group", "Resource ID", "Resource", "Business Service Index", "Category", "Environemt", "Location", "Provisioning State", "Resource Type", "State", "IP Address : All", "IP Address : Private", "IP Address : Public", "Tag : Architecture Partner", "Tag : Contact EMail", "Tag : Cost Centre", "Tag : Devops Site", "Tag : Parent Business", "Tag : Porfolio", "Tag : Product", "Tag : SRO", "Tag : Service", "Tag : Service Line", "Tag : Service Management Contact", "Tag : Service Name", "Tag : Service Offering", "Tag : Service Team", "Taxonomy : Group", "Taxonomy : Group Name", "Taxonomy : Service", "Taxonomy : Service Name", "Type", "Total # Findings for Resource", "Total # IG1 Findings for Resource"</fields>
         <drilldown>
-          <link target="_blank">/app/$tkn_current_app$/ssphp_azure_cmdb_json_drilldown?tkn_drilldown_resource_id=$row.drilldown_resource_id$</link>
+          <link target="_blank">/app/$tkn_current_app$/ssphp_azure_cmdb_dashboard_drilldown?tkn_drilldown_resource_id=$row.drilldown_resource_id$</link>
         </drilldown>
       </table>
     </panel>

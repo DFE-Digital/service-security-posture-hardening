@@ -1,6 +1,6 @@
 <dashboard theme="dark" version="1.1" script="js/addtags.js">
   <label>Consolidated Findings Dashboard</label>
-  <description>Service Security Posture Hardening Programme : v2.8</description>
+  <description>Service Security Posture Hardening Programme : v2.9</description>
   
   
 <!-- ****************************************************** Initial Values **************************************************************************** -->
@@ -13,7 +13,7 @@
 
   <search id="base_2">
     <query>
-| inputlookup ssphp_resource_service_map.csv
+| inputlookup ssphp_azure_resource_cmdb_resources.csv
 | search ssphp_resource_group!="mc*"
 | table ssphp_level_1_display_name, ssphp_level_2_display_name, ssphp_resource_group, ssphp_subscription, ssphp_subscription_display_name, ssphp_service_team, ssphp_tenant, ssphp_tenant_name
     </query>
