@@ -1,5 +1,6 @@
 <dashboard theme="dark" version="1.1" script="js/addtags.js">
-  <label>Azure CMDB Drilldown</label>
+  <label>Azure Resource List Drilldown</label>
+  <description>Service Security Posture Hardening Programme : v1.3</description>
   <row>
     <panel>
       <title>Resource Details</title>
@@ -76,6 +77,7 @@
       </html>
 
       <table>
+        <title># Findings for this Resource : $tkn_record_count_filter$</title>
         <search>
           <query>
 | tstats summariesonly=false 
@@ -156,7 +158,12 @@ BY findings.ssphp_norm_time,
          "Severity",
          "Impact",
          "Status"
+
+| eventstats count as event_count
           </query>
+          <done>
+            <set token="tkn_record_count_filter">$result.event_count$</set>
+          </done>
           <earliest>-2d@d</earliest>
           <latest>now</latest>
           <sampleRatio>1</sampleRatio>
@@ -168,6 +175,17 @@ BY findings.ssphp_norm_time,
         <option name="rowNumbers">false</option>
         <option name="totalsRow">false</option>
         <option name="wrap">true</option>
+        <fields>"Time",
+         "Technology Source", 
+         "Use Case", 
+         "Resource Parent", 
+         "Resource",
+         "Title",
+         "Description",
+         "Remediation",
+         "Severity",
+         "Impact",
+         "Status"</fields>
       </table>
     </panel>
   </row>
