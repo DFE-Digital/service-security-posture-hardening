@@ -1,6 +1,6 @@
 <dashboard theme="dark" version="1.1" script="js/addtags.js">
   <label>Azure Resource List Drilldown</label>
-  <description>Service Security Posture Hardening Programme : v1.3</description>
+  <description>Service Security Posture Hardening Programme : v1.4</description>
   <row>
     <panel>
       <title>Resource Details</title>
@@ -82,14 +82,12 @@
           <query>
 | tstats summariesonly=false 
          count, 
-         values(findings.SSPHP_RUN) as SSPHP_RUN, 
-         values(findings.ssphp_norm_resource_id) as ssphp_norm_resource_id,
+         values(findings.SSPHP_RUN) as SSPHP_RUN,
          values(findings.ssphp_norm_description) as ssphp_norm_description, 
          values(findings.ssphp_norm_remediation) as ssphp_norm_remediation,  
          values(findings.ssphp_norm_severity) as ssphp_norm_severity,  
          values(findings.ssphp_norm_impact) as ssphp_norm_impact,  
-         values(findings.ssphp_norm_status) as ssphp_norm_status, 
-         values(findings.ssphp_norm_original_events) as ssphp_norm_original_events
+         values(findings.ssphp_norm_status) as ssphp_norm_status
 
 FROM datamodel=SSPHP.findings
 
@@ -98,12 +96,13 @@ WHERE
     
     [| tstats summariesonly=false max(findings.SSPHP_RUN) as findings.SSPHP_RUN FROM datamodel=SSPHP.findings WHERE findings.ssphp_norm_tech_source="Azure" AND findings.ssphp_norm_use_case="findings" | return findings.SSPHP_RUN]
 
-BY findings.ssphp_norm_time,
-   findings.ssphp_norm_tech_source, 
-   findings.ssphp_norm_use_case, 
-   findings.ssphp_norm_resource_parent, 
-   findings.ssphp_norm_resource, 
-   findings.ssphp_norm_title
+ BY findings.ssphp_norm_time,
+   findings.ssphp_norm_tech_source,
+   findings.ssphp_norm_use_case,
+   findings.ssphp_norm_resource_id,
+   findings.ssphp_norm_title,
+   findings.ssphp_norm_original_events,
+   findings.ssphp_norm_resource
 
 | rename findings.* as *
 
