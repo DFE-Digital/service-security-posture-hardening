@@ -174,8 +174,8 @@ class SplunkAppInspect:
 
     def copy_app(self, app_directory, suffix=""):
         path = Path(app_directory)
-        app_directory = path.absolute().name
-        target_dir = f"target/{app_directory}{suffix}"
+        app_directory = path.absolute()
+        target_dir = f"target/{app_directory.name}{suffix}"
 
         try:
             shutil.rmtree(target_dir)
