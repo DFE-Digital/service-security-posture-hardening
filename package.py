@@ -173,7 +173,10 @@ class SplunkAppInspect:
             config.write(conf)
 
     def copy_app(self, app_directory, suffix=""):
-        target_dir = f"target/{app_directory[:-1]}{suffix}"
+        path = Path(app_directory)
+        app_directory = path.absolute().name
+        target_dir = f"target/{app_directory}{suffix}"
+
         try:
             shutil.rmtree(target_dir)
         except FileNotFoundError:
