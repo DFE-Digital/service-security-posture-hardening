@@ -1,6 +1,10 @@
 <form theme="dark" version="1.1" script="js/addtags.js">
   <label>Azure Resource List Dashboard</label>
   <description>Service Security Posture Hardening Programme : v1.20</description>
+
+  <init>
+    <set token="tkn_data_set">ssphp_azure_resource_cmdb_resources.csv</set>
+  </init>
   
   <fieldset submitButton="false">
     <input type="radio" token="tkn_dashboard_view" searchWhenChanged="true">
@@ -29,6 +33,7 @@
       </change>
     </input>
 
+<!-- by IanP (2023-07-06), now set in the init because needed to go back to only having a single csv file with types controlled by different csv
 
     <input type="radio" token="tkn_ds" searchWhenChanged="true">
       <label>Dataset</label>
@@ -49,7 +54,7 @@
         </condition>
       </change>
     </input>
-
+-->
 
     <input type="multiselect" token="tkn_search_fields" searchWhenChanged="true" depends="$tkn_show_search_panel$">
       <label>Select Fields to Search</label>

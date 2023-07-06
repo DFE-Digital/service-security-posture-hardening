@@ -1,2 +1,8 @@
 []
 access = read : [ dfe_ssphp_service_power, dfe_ssphp_service_user_s184, power, admin, sc_admin ], write : [ admin, sc_admin ]
+
+[lookups]
+export = system
+
+[macros]
+export = system
