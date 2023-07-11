@@ -1,0 +1,225 @@
+<form theme="dark" version="1.1">
+  <label>Azure Metrics</label>
+  <description>Service Security Posture Hardening Programme : v1.1</description>
+  <search id="basesearch">
+    <query>
+`azure_index` sourcetype="azure:security:score"
+| rename meta.id.subscription as ssphp_subscription 
+| lookup ssphp_resource_service_map.csv ssphp_subscription OUTPUT ssphp_subscription_display_name 
+| eval compliant_percent='properties.score.percentage' * 100 
+| fields _time ssphp_subscription ssphp_subscription_display_name properties.score.current properties.score.max properties.weight compliant_percent 
+</query>
+    <earliest>0</earliest>
+    <latest>now</latest>
+  </search>
+  <search id="trellis" base="basesearch">
+    <query> stats 
+    avg(properties.score.current) as current_score,
+    avg(properties.score.max) as maximum_score,
+    avg(compliant_percent) as compliant_percent,
+    by ssphp_subscription_display_name, _time 
+| eventstats max(maximum_score) as max_secure_score,
+    range(compliant_percent) as range,
+    earliest(compliant_percent) as earliest, 
+    latest(compliant_percent) as latest
+    by ssphp_subscription_display_name 
+| eval trend_difference=abs(earliest - latest) 
+</query>
+  </search>
+  <search id="drilldown" base="basesearch">
+    <query>                                 
+  | where ssphp_subscription_display_name=$lookup_subscription_name|s$</query>
+    <done>
+      <link target="_blank">/app/SSPHP/ssphp_findings_dashboard?tkn_drilldown_subscription=$result.ssphp_subscription$</link>
+    </done>
+  </search>
+  <fieldset submitButton="false"></fieldset>
+  <row>
+    <panel depends="$nevershow$">
+      <html>
+<style>
+#panel1{
+width:20% !important;
+}
+#panel2{
+width:60% !important;
+}
+#panel3{
+width:20% !important;
+}
+</style>
+</html>
+    </panel>
+    <panel id="panel1">
+      <title>Average Score for Azure Estate</title>
+      <single>
+        <search id="overall_score" base="basesearch">
+          <!-- https://techcommunity.microsoft.com/t5/microsoft-defender-for-cloud/querying-your-secure-score-across-multiple-subscriptions-in/ba-p/1749193 -->
+          <query>
+| eval ssphp_subscription_display_name=mvdedup(ssphp_subscription_display_name) 
+| eval compliant_percent='properties.score.percentage' * 100 
+| eval subscriptionScore = 'properties.score.current' / 'properties.score.max' 
+| eval subScoreXsubWeight = 'subscriptionScore' * 'properties.weight' 
+| stats values(subscriptionScore) values(compliant_percent) values( properties.weight) sum(subScoreXsubWeight) as upperValue, sum(properties.weight) as underValue by _time
+| eval overallScore = 100*((upperValue)/(underValue))
+| timechart values(overallScore) cont=f</query>
+        </search>
+        <option name="colorBy">trend</option>
+        <option name="colorMode">none</option>
+        <option name="drilldown">none</option>
+        <option name="numberPrecision">0.00</option>
+        <option name="rangeColors">["0xd41f1f","0x118832","0xdc4e41"]</option>
+        <option name="rangeValues">[0,100]</option>
+        <option name="trendColorInterpretation">standard</option>
+        <option name="useColors">1</option>
+      </single>
+    </panel>
+    <panel id="panel2">
+      <title>Average Score for Azure Estate</title>
+      <chart>
+        <search base="overall_score">
+          <query/>
+        </search>
+        <option name="charting.axisTitleY.text">Compliance %</option>
+        <option name="charting.chart">line</option>
+        <option name="charting.drilldown">none</option>
+      </chart>
+    </panel>
+    <panel id="panel3">
+      <single>
+        <title>Number of subscriptions</title>
+        <search base="basesearch">
+          <query>
+| timechart dc(ssphp_subscription_display_name) cont=f</query>
+        </search>
+        <option name="colorBy">trend</option>
+        <option name="colorMode">none</option>
+        <option name="drilldown">none</option>
+        <option name="numberPrecision">0</option>
+        <option name="rangeColors">["0xd41f1f","0x118832","0xdc4e41"]</option>
+        <option name="rangeValues">[0,100]</option>
+        <option name="trendColorInterpretation">standard</option>
+        <option name="useColors">1</option>
+      </single>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>Security Score compliance % by account size</title>
+      <input type="radio" token="color" searchWhenChanged="true">
+        <label>Color by</label>
+        <choice value="compliant_percent">Percent</choice>
+        <choice value="secure_score">Secure Score</choice>
+        <default>compliant_percent</default>
+      </input>
+      <viz type="treemap_app.treemap">
+        <search base="basesearch">
+          <query>| eval cat="Azure" | rename properties.score.current as secure_score
+| stats latest(properties.weight) as weight, latest($color$) as $color$,  max(ssphp_subscription) as ssphp_subscription by cat, ssphp_subscription_display_name</query>
+        </search>
+        <option name="drilldown">all</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="treemap_app.treemap.colorMode">sequential</option>
+        <option name="treemap_app.treemap.maxCategories">500</option>
+        <option name="treemap_app.treemap.maxColor">#00ff00</option>
+        <option name="treemap_app.treemap.minColor">#ff0000</option>
+        <option name="treemap_app.treemap.numOfBins">20</option>
+        <option name="treemap_app.treemap.showLabels">false</option>
+        <option name="treemap_app.treemap.showLegend">true</option>
+        <option name="treemap_app.treemap.showTooltip">true</option>
+        <option name="treemap_app.treemap.useColors">true</option>
+        <option name="treemap_app.treemap.useZoom">true</option>
+        <drilldown>
+          <set token="lookup_subscription_name">$row.ssphp_subscription_display_name$</set>
+        </drilldown>
+      </viz>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <chart>
+        <title>Accounts with the most movement in their compliance percent over time</title>
+        <search base="trellis">
+          <query>| where range&gt;2| timechart useother=f avg(current_score) by ssphp_subscription_display_name</query>
+        </search>
+        <option name="charting.axisTitleY.text">Compliance %</option>
+        <option name="charting.chart">line</option>
+        <option name="charting.chart.nullValueMode">connect</option>
+        <option name="charting.drilldown">none</option>
+        <option name="charting.legend.mode">seriesCompare</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>Drill down into data</title>
+      <input type="radio" token="trend" searchWhenChanged="true">
+        <label>Trend</label>
+        <choice value="latest &gt; earliest">Postive</choice>
+        <choice value="earliest &gt; latest">Negative</choice>
+        <choice value="1=1">All</choice>
+        <default>earliest &gt; latest</default>
+      </input>
+      <input type="text" token="trend_difference" searchWhenChanged="true">
+        <label>Trend start/end difference</label>
+        <default>1</default>
+      </input>
+      <input type="text" token="min_range" searchWhenChanged="true">
+        <label>Minimum series variance</label>
+        <default>0</default>
+      </input>
+      <input type="text" token="min_secure_score" searchWhenChanged="true">
+        <label>Minimum Secure Score</label>
+        <default>0</default>
+      </input>
+      <chart>
+        <search base="trellis">
+          <query> where $trend$ AND trend_difference&gt;$trend_difference$ AND range&gt;$min_range$ AND max_secure_score&gt;$min_secure_score$| fields - trend_difference range latest earliest max_secure_score
+</query>
+        </search>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
+        <option name="charting.axisTitleX.text">Time</option>
+        <option name="charting.axisTitleX.visibility">visible</option>
+        <option name="charting.axisTitleY.text">Secure Score</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.text">Score Percent</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.abbreviation">none</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.abbreviation">auto</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.abbreviation">none</option>
+        <option name="charting.axisY2.enabled">1</option>
+        <option name="charting.axisY2.maximumNumber">100</option>
+        <option name="charting.axisY2.minimumNumber">0</option>
+        <option name="charting.axisY2.scale">linear</option>
+        <option name="charting.chart">line</option>
+        <option name="charting.chart.bubbleMaximumSize">50</option>
+        <option name="charting.chart.bubbleMinimumSize">10</option>
+        <option name="charting.chart.bubbleSizeBy">area</option>
+        <option name="charting.chart.nullValueMode">connect</option>
+        <option name="charting.chart.overlayFields">compliant_percent</option>
+        <option name="charting.chart.showDataLabels">none</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.stackMode">default</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">all</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.layout.splitSeries.allowIndependentYRanges">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.mode">standard</option>
+        <option name="charting.legend.placement">top</option>
+        <option name="charting.lineWidth">2</option>
+        <option name="trellis.enabled">1</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+        <option name="trellis.splitBy">ssphp_subscription_display_name</option>
+        <drilldown>
+          <set token="lookup_subscription_name">$trellis.split.ssphp_subscription_display_name$</set>
+        </drilldown>
+      </chart>
+    </panel>
+  </row>
+</form>

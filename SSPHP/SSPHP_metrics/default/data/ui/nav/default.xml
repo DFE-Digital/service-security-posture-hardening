@@ -1,0 +1,5 @@
+<nav search_view="search">
+  <view name="search" />
+  <view name="ssphp_consolidated_findings_dashboard" default='true' />
+  <view name="ssphp_azure_cmdb_dashboard" />
+</nav>
