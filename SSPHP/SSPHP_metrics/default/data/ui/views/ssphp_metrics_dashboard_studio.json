@@ -1,0 +1,422 @@
+{
+	"visualizations": {
+		"viz_single_1": {
+			"type": "splunk.singlevalue",
+			"options": {
+				"drilldown": "none",
+				"backgroundColor": "> majorValue | rangeValue(backgroundColorEditorConfig)",
+				"majorColor": "#000000"
+			},
+			"dataSources": {
+				"primary": "ds_search_1"
+			},
+			"title": "DNS",
+			"description": "Overall DNS Score",
+			"context": {
+				"backgroundColorEditorConfig": [
+					{
+						"value": "#D41F1F",
+						"to": 30
+					},
+					{
+						"value": "#d97a0d",
+						"from": 30,
+						"to": 80
+					},
+					{
+						"value": "#118832",
+						"from": 80
+					}
+				]
+			}
+		},
+		"viz_single_2": {
+			"type": "splunk.singlevalue",
+			"options": {
+				"drilldown": "none",
+				"trellis.enabled": 1,
+				"majorColor": "> majorValue | rangeValue(majorColorEditorConfig)",
+				"majorValue": "> sparklineValues | lastPoint()",
+				"trendValue": "> sparklineValues | delta(-2)",
+				"sparklineValues": "> primary | seriesByName('dns_001')"
+			},
+			"dataSources": {
+				"primary": "ds_search_2"
+			},
+			"context": {
+				"convertedColorRange": [
+					{
+						"from": 100,
+						"value": "#dc4e41"
+					},
+					{
+						"from": 70,
+						"to": 100,
+						"value": "#f1813f"
+					},
+					{
+						"from": 30,
+						"to": 70,
+						"value": "#f8be34"
+					},
+					{
+						"from": 0,
+						"to": 30,
+						"value": "#0877a6"
+					},
+					{
+						"to": 0,
+						"value": "#53a051"
+					}
+				],
+				"majorColorEditorConfig": [
+					{
+						"value": "#D41F1F",
+						"to": 30
+					},
+					{
+						"value": "#d97a0d",
+						"from": 30,
+						"to": 80
+					},
+					{
+						"value": "#118832",
+						"from": 80
+					}
+				]
+			},
+			"title": "DNS 001",
+			"description": "No MFA"
+		},
+		"viz_XUm8C1DA": {
+			"type": "splunk.singlevalue",
+			"options": {
+				"drilldown": "none",
+				"trellis.enabled": 1,
+				"majorColor": "> majorValue | rangeValue(majorColorEditorConfig)",
+				"majorValue": "> sparklineValues | lastPoint()",
+				"trendValue": "> sparklineValues | delta(-2)",
+				"sparklineValues": "> primary | seriesByName('dns_002')"
+			},
+			"dataSources": {
+				"primary": "ds_nMs0mEq4_ds_search_2"
+			},
+			"context": {
+				"convertedColorRange": [
+					{
+						"from": 100,
+						"value": "#dc4e41"
+					},
+					{
+						"from": 70,
+						"to": 100,
+						"value": "#f1813f"
+					},
+					{
+						"from": 30,
+						"to": 70,
+						"value": "#f8be34"
+					},
+					{
+						"from": 0,
+						"to": 30,
+						"value": "#0877a6"
+					},
+					{
+						"to": 0,
+						"value": "#53a051"
+					}
+				],
+				"majorColorEditorConfig": [
+					{
+						"value": "#d41f1f",
+						"to": 40
+					},
+					{
+						"value": "#d97a0d",
+						"from": 40,
+						"to": 80
+					},
+					{
+						"value": "#669922",
+						"from": 80
+					}
+				]
+			},
+			"title": "DNS 002",
+			"description": "No Policies"
+		},
+		"viz_9Ztp5sFT": {
+			"type": "splunk.markdown",
+			"options": {
+				"markdown": ""
+			}
+		},
+		"viz_9ZxNDiH9": {
+			"type": "splunk.singlevalue",
+			"options": {
+				"drilldown": "none",
+				"trellis.enabled": 1,
+				"majorColor": "> majorValue | rangeValue(majorColorEditorConfig)",
+				"majorValue": "> sparklineValues | lastPoint()",
+				"trendValue": "> sparklineValues | delta(-2)",
+				"sparklineValues": "> primary | seriesByName('dns_003')"
+			},
+			"dataSources": {
+				"primary": "ds_1ZSs8kdb_ds_nMs0mEq4_ds_search_2"
+			},
+			"context": {
+				"convertedColorRange": [
+					{
+						"from": 100,
+						"value": "#dc4e41"
+					},
+					{
+						"from": 70,
+						"to": 100,
+						"value": "#f1813f"
+					},
+					{
+						"from": 30,
+						"to": 70,
+						"value": "#f8be34"
+					},
+					{
+						"from": 0,
+						"to": 30,
+						"value": "#0877a6"
+					},
+					{
+						"to": 0,
+						"value": "#53a051"
+					}
+				],
+				"majorColorEditorConfig": [
+					{
+						"value": "#D41F1F",
+						"to": 30
+					},
+					{
+						"value": "#d97a0d",
+						"from": 30,
+						"to": 80
+					},
+					{
+						"value": "#118832",
+						"from": 80
+					}
+				]
+			},
+			"title": "DNS 003",
+			"description": "Cloudtrail Working"
+		},
+		"viz_YZt1LLbf": {
+			"type": "splunk.singlevalue",
+			"options": {
+				"drilldown": "none",
+				"trellis.enabled": 1,
+				"majorColor": "> majorValue | rangeValue(majorColorEditorConfig)",
+				"majorValue": "> sparklineValues | lastPoint()",
+				"trendValue": "> sparklineValues | delta(-2)",
+				"sparklineValues": "> primary | seriesByName('dns_004')"
+			},
+			"dataSources": {
+				"primary": "ds_CAD4d3tY_ds_1ZSs8kdb_ds_nMs0mEq4_ds_search_2"
+			},
+			"context": {
+				"convertedColorRange": [
+					{
+						"from": 100,
+						"value": "#dc4e41"
+					},
+					{
+						"from": 70,
+						"to": 100,
+						"value": "#f1813f"
+					},
+					{
+						"from": 30,
+						"to": 70,
+						"value": "#f8be34"
+					},
+					{
+						"from": 0,
+						"to": 30,
+						"value": "#0877a6"
+					},
+					{
+						"to": 0,
+						"value": "#53a051"
+					}
+				],
+				"majorColorEditorConfig": [
+					{
+						"value": "#D41F1F",
+						"to": 95
+					},
+					{
+						"value": "#118832",
+						"from": 95
+					}
+				]
+			},
+			"title": "DNS 004",
+			"description": "Accounts in Organization"
+		}
+	},
+	"dataSources": {
+		"ds_search_1": {
+			"type": "ds.search",
+			"options": {
+				"query": "\nindex=\"ssphp_metrics\" ssphp.use_case.id=\"dns_rollup\"\n    [| search index=\"ssphp_metrics\"\n     | stats max(SSPHP_RUN) as SSPHP_RUN by ssphp.use_case.id\n     | eval search_text=\"(\\\"ssphp.use_case.id\\\"=\\\"\".'ssphp.use_case.id'.\"\\\" AND SSPHP_RUN=\\\"\".SSPHP_RUN.\"\\\")\"\n     | stats values(search_text) as search_text\n     | eval search_text=\"(\".mvjoin(search_text,\" OR \").\")\"\n    | return $$search_text]\n| table ssphp.score\n          ",
+				"queryParameters": {
+					"earliest": "0"
+				}
+			}
+		},
+		"ds_search_2": {
+			"type": "ds.search",
+			"options": {
+				"query": "\nindex=\"ssphp_metrics\" ssphp.use_case.id!=\"dns_rollup\"\n    [| search index=\"ssphp_metrics\"\n     | stats max(SSPHP_RUN) as SSPHP_RUN by ssphp.use_case.id\n     | eval search_text=\"(\\\"ssphp.use_case.id\\\"=\\\"\".'ssphp.use_case.id'.\"\\\" AND SSPHP_RUN=\\\"\".SSPHP_RUN.\"\\\")\"\n     | stats values(search_text) as search_text\n     | eval search_text=\"(\".mvjoin(search_text,\" OR \").\")\"\n    | return $search_text]\n| table ssphp.use_case.id, ssphp.score\n| transpose header_field=ssphp.use_case.id\n| fields - column\n          ",
+				"queryParameters": {
+					"earliest": "0"
+				}
+			}
+		},
+		"ds_YQX8n2bc_ds_search_2": {
+			"type": "ds.search",
+			"options": {
+				"query": "\nindex=\"ssphp_metrics\" ssphp.use_case.id!=\"dns_rollup\"\n    [| search index=\"ssphp_metrics\"\n     | stats max(SSPHP_RUN) as SSPHP_RUN by ssphp.use_case.id\n     | eval search_text=\"(\\\"ssphp.use_case.id\\\"=\\\"\".'ssphp.use_case.id'.\"\\\" AND SSPHP_RUN=\\\"\".SSPHP_RUN.\"\\\")\"\n     | stats values(search_text) as search_text\n     | eval search_text=\"(\".mvjoin(search_text,\" OR \").\")\"\n    | return $search_text]\n| table ssphp.use_case.id, ssphp.score\n| transpose header_field=ssphp.use_case.id\n| fields - column\n          ",
+				"queryParameters": {
+					"earliest": "0"
+				}
+			}
+		},
+		"ds_fVU9oJD7_ds_search_2": {
+			"type": "ds.search",
+			"options": {
+				"query": "\nindex=\"ssphp_metrics\" ssphp.use_case.id!=\"dns_rollup\"\n    [| search index=\"ssphp_metrics\"\n     | stats max(SSPHP_RUN) as SSPHP_RUN by ssphp.use_case.id\n     | eval search_text=\"(\\\"ssphp.use_case.id\\\"=\\\"\".'ssphp.use_case.id'.\"\\\" AND SSPHP_RUN=\\\"\".SSPHP_RUN.\"\\\")\"\n     | stats values(search_text) as search_text\n     | eval search_text=\"(\".mvjoin(search_text,\" OR \").\")\"\n    | return $search_text]\n| table ssphp.use_case.id, ssphp.score\n| transpose header_field=ssphp.use_case.id\n| fields - column\n          ",
+				"queryParameters": {
+					"earliest": "0"
+				}
+			}
+		},
+		"ds_nMs0mEq4_ds_search_2": {
+			"type": "ds.search",
+			"options": {
+				"query": "\nindex=\"ssphp_metrics\" ssphp.use_case.id!=\"dns_rollup\"\n    [| search index=\"ssphp_metrics\"\n     | stats max(SSPHP_RUN) as SSPHP_RUN by ssphp.use_case.id\n     | eval search_text=\"(\\\"ssphp.use_case.id\\\"=\\\"\".'ssphp.use_case.id'.\"\\\" AND SSPHP_RUN=\\\"\".SSPHP_RUN.\"\\\")\"\n     | stats values(search_text) as search_text\n     | eval search_text=\"(\".mvjoin(search_text,\" OR \").\")\"\n    | return $search_text]\n| table ssphp.use_case.id, ssphp.score\n| transpose header_field=ssphp.use_case.id\n| fields - column\n          ",
+				"queryParameters": {
+					"earliest": "0"
+				}
+			}
+		},
+		"ds_0YRgZNiZ_ds_nMs0mEq4_ds_search_2": {
+			"type": "ds.search",
+			"options": {
+				"query": "\nindex=\"ssphp_metrics\" ssphp.use_case.id!=\"dns_rollup\"\n    [| search index=\"ssphp_metrics\"\n     | stats max(SSPHP_RUN) as SSPHP_RUN by ssphp.use_case.id\n     | eval search_text=\"(\\\"ssphp.use_case.id\\\"=\\\"\".'ssphp.use_case.id'.\"\\\" AND SSPHP_RUN=\\\"\".SSPHP_RUN.\"\\\")\"\n     | stats values(search_text) as search_text\n     | eval search_text=\"(\".mvjoin(search_text,\" OR \").\")\"\n    | return $search_text]\n| table ssphp.use_case.id, ssphp.score\n| transpose header_field=ssphp.use_case.id\n| fields - column\n          ",
+				"queryParameters": {
+					"earliest": "0"
+				}
+			}
+		},
+		"ds_1ZSs8kdb_ds_nMs0mEq4_ds_search_2": {
+			"type": "ds.search",
+			"options": {
+				"query": "\nindex=\"ssphp_metrics\" ssphp.use_case.id!=\"dns_rollup\"\n    [| search index=\"ssphp_metrics\"\n     | stats max(SSPHP_RUN) as SSPHP_RUN by ssphp.use_case.id\n     | eval search_text=\"(\\\"ssphp.use_case.id\\\"=\\\"\".'ssphp.use_case.id'.\"\\\" AND SSPHP_RUN=\\\"\".SSPHP_RUN.\"\\\")\"\n     | stats values(search_text) as search_text\n     | eval search_text=\"(\".mvjoin(search_text,\" OR \").\")\"\n    | return $search_text]\n| table ssphp.use_case.id, ssphp.score\n| transpose header_field=ssphp.use_case.id\n| fields - column\n          ",
+				"queryParameters": {
+					"earliest": "0"
+				}
+			}
+		},
+		"ds_CAD4d3tY_ds_1ZSs8kdb_ds_nMs0mEq4_ds_search_2": {
+			"type": "ds.search",
+			"options": {
+				"query": "\nindex=\"ssphp_metrics\" ssphp.use_case.id!=\"dns_rollup\"\n    [| search index=\"ssphp_metrics\"\n     | stats max(SSPHP_RUN) as SSPHP_RUN by ssphp.use_case.id\n     | eval search_text=\"(\\\"ssphp.use_case.id\\\"=\\\"\".'ssphp.use_case.id'.\"\\\" AND SSPHP_RUN=\\\"\".SSPHP_RUN.\"\\\")\"\n     | stats values(search_text) as search_text\n     | eval search_text=\"(\".mvjoin(search_text,\" OR \").\")\"\n    | return $search_text]\n| table ssphp.use_case.id, ssphp.score\n| transpose header_field=ssphp.use_case.id\n| fields - column\n          ",
+				"queryParameters": {
+					"earliest": "0"
+				}
+			}
+		}
+	},
+	"defaults": {
+		"dataSources": {
+			"ds.search": {
+				"options": {
+					"queryParameters": {}
+				}
+			}
+		}
+	},
+	"inputs": {},
+	"layout": {
+		"type": "grid",
+		"options": {
+			"height": 300
+		},
+		"structure": [
+			{
+				"item": "viz_single_1",
+				"type": "block",
+				"position": {
+					"x": 0,
+					"y": 0,
+					"w": 302,
+					"h": 145
+				}
+			},
+			{
+				"item": "viz_single_2",
+				"type": "block",
+				"position": {
+					"x": 302,
+					"y": 0,
+					"w": 114,
+					"h": 145
+				}
+			},
+			{
+				"item": "viz_XUm8C1DA",
+				"type": "block",
+				"position": {
+					"x": 416,
+					"y": 0,
+					"w": 103,
+					"h": 145
+				}
+			},
+			{
+				"item": "viz_9ZxNDiH9",
+				"type": "block",
+				"position": {
+					"x": 519,
+					"y": 0,
+					"w": 100,
+					"h": 145
+				}
+			},
+			{
+				"item": "viz_YZt1LLbf",
+				"type": "block",
+				"position": {
+					"x": 619,
+					"y": 0,
+					"w": 111,
+					"h": 145
+				}
+			},
+			{
+				"item": "viz_9Ztp5sFT",
+				"type": "block",
+				"position": {
+					"x": 730,
+					"y": 0,
+					"w": 470,
+					"h": 145
+				}
+			}
+		],
+		"globalInputs": []
+	},
+	"description": "",
+	"title": "SSPHP METRICS DASHBOARD"
+}
