@@ -71,6 +71,9 @@
              color: #777777; 
              display: block;
           }
+          .dashboard-cell.dashboard-layout-panel.last-visible div:empty {
+             background: #171d21;
+          }
         </style>
       </html>
     </panel>
@@ -276,13 +279,21 @@ index="ssphp_metrics" ssphp.use_case.id="dns_*"
        dns_004_colour=$tkn_dns_004_colour$,
        dns_005_colour=$tkn_dns_005_colour$,
        dns_rollup="1",
-       dns_001=case(dns_001_colour=$c_red$,1,red_only="N",1,1==1,0),
-       dns_002=case(dns_002_colour=$c_red$,1,red_only="N",1,1==1,0),
-       dns_003=case(dns_003_colour=$c_red$,1,red_only="N",1,1==1,0),
-       dns_004=case(dns_004_colour=$c_red$,1,red_only="N",1,1==1,0),
-       dns_005=case(dns_005_colour=$c_red$,1,red_only="N",1,1==1,0)
+       dns_001_val=$tkn_dns_001_val$,
+       dns_002_val=$tkn_dns_002_val$,
+       dns_003_val=$tkn_dns_003_val$,
+       dns_004_val=$tkn_dns_004_val$,
+       dns_005_val=$tkn_dns_005_val$
+       
+| fillnull value="null" dns_001_val dns_002_val dns_003_val dns_004_val dns_005_val
 
-| table column, dns_rollup, dns_001,dns_002, dns_003, dns_004, dns_005, dns_001_colour, dns_002_colour, dns_003_colour, dns_004_colour, dns_005_colour
+| eval dns_001=case(dns_001_colour=$c_red$,1,dns_001_val="null",0,red_only="N",1,1==1,0),
+       dns_002=case(dns_002_colour=$c_red$,1,dns_002_val="null",0,red_only="N",1,1==1,0),
+       dns_003=case(dns_003_colour=$c_red$,1,dns_003_val="null",0,red_only="N",1,1==1,0),
+       dns_004=case(dns_004_colour=$c_red$,1,dns_004_val="null",0,red_only="N",1,1==1,0),
+       dns_005=case(dns_005_colour=$c_red$,1,dns_005_val="null",0,red_only="N",1,1==1,0)
+
+| table column, dns_rollup, dns_001,dns_002, dns_003, dns_004, dns_005, dns_001_colour, dns_002_colour, dns_003_colour, dns_004_colour, dns_005_colour, dns_001_val, dns_002_val, dns_003_val, dns_004_val, dns_005_val
           </query>
           <done>
             <set token="tkn_dns_rollup_is_visible">true</set>
@@ -657,7 +668,7 @@ index="ssphp_metrics" ssphp.use_case.id="aad_*"
 
 
 <!-- ###****************** Panel visible **********************### -->
-    <panel depends="$never_show$">>
+    <panel depends="$nevershow$">
       <table>
         <search>
           <query>
@@ -670,13 +681,21 @@ index="ssphp_metrics" ssphp.use_case.id="aad_*"
        aad_004_colour=$tkn_aad_004_colour$,
        aad_005_colour=$tkn_aad_005_colour$,
        aad_rollup="1",
-       aad_001=case(aad_001_colour=$c_red$,1,red_only="N",1,1==1,0),
-       aad_002=case(aad_002_colour=$c_red$,1,red_only="N",1,1==1,0),
-       aad_003=case(aad_003_colour=$c_red$,1,red_only="N",1,1==1,0),
-       aad_004=case(aad_004_colour=$c_red$,1,red_only="N",1,1==1,0),
-       aad_005=case(aad_005_colour=$c_red$,1,red_only="N",1,1==1,0)
+       aad_001_val=$tkn_aad_001_val$,
+       aad_002_val=$tkn_aad_002_val$,
+       aad_003_val=$tkn_aad_003_val$,
+       aad_004_val=$tkn_aad_004_val$,
+       aad_005_val=$tkn_aad_005_val$
+       
+| fillnull value="null" aad_001_val aad_002_val aad_003_val aad_004_val aad_005_val
 
-| table column, aad_rollup, aad_001,aad_002, aad_003, aad_004, aad_005, aad_001_colour, aad_002_colour, aad_003_colour, aad_004_colour, aad_005_colour
+| eval aad_001=case(aad_001_colour=$c_red$,1,aad_001_val="null",0,red_only="N",1,1==1,0),
+       aad_002=case(aad_002_colour=$c_red$,1,aad_002_val="null",0,red_only="N",1,1==1,0),
+       aad_003=case(aad_003_colour=$c_red$,1,aad_003_val="null",0,red_only="N",1,1==1,0),
+       aad_004=case(aad_004_colour=$c_red$,1,aad_004_val="null",0,red_only="N",1,1==1,0),
+       aad_005=case(aad_005_colour=$c_red$,1,aad_005_val="null",0,red_only="N",1,1==1,0)
+
+| table column, aad_rollup, aad_001,aad_002, aad_003, aad_004, aad_005, aad_001_colour, aad_002_colour, aad_003_colour, aad_004_colour, aad_005_colour, aad_001_val, aad_002_val, aad_003_val, aad_004_val, aad_005_val
           </query>
           <done>
             <set token="tkn_aad_rollup_is_visible">true</set>
@@ -1064,13 +1083,21 @@ index="ssphp_metrics" ssphp.use_case.id="o365_*"
        o365_004_colour=$tkn_o365_004_colour$,
        o365_005_colour=$tkn_o365_005_colour$,
        o365_rollup="1",
-       o365_001=case(o365_001_colour=$c_red$,1,red_only="N",1,1==1,0),
-       o365_002=case(o365_002_colour=$c_red$,1,red_only="N",1,1==1,0),
-       o365_003=case(o365_003_colour=$c_red$,1,red_only="N",1,1==1,0),
-       o365_004=case(o365_004_colour=$c_red$,1,red_only="N",1,1==1,0),
-       o365_005=case(o365_005_colour=$c_red$,1,red_only="N",1,1==1,0)
+       o365_001_val=$tkn_o365_001_val$,
+       o365_002_val=$tkn_o365_002_val$,
+       o365_003_val=$tkn_o365_003_val$,
+       o365_004_val=$tkn_o365_004_val$,
+       o365_005_val=$tkn_o365_005_val$
+       
+| fillnull value="null" o365_001_val o365_002_val o365_003_val o365_004_val o365_005_val
 
-| table column, o365_rollup, o365_001,o365_002, o365_003, o365_004, o365_005, o365_001_colour, o365_002_colour, o365_003_colour, o365_004_colour, o365_005_colour
+| eval o365_001=case(o365_001_colour=$c_red$,1,o365_001_val="null",0,red_only="N",1,1==1,0),
+       o365_002=case(o365_002_colour=$c_red$,1,o365_002_val="null",0,red_only="N",1,1==1,0),
+       o365_003=case(o365_003_colour=$c_red$,1,o365_003_val="null",0,red_only="N",1,1==1,0),
+       o365_004=case(o365_004_colour=$c_red$,1,o365_004_val="null",0,red_only="N",1,1==1,0),
+       o365_005=case(o365_005_colour=$c_red$,1,o365_005_val="null",0,red_only="N",1,1==1,0)
+
+| table column, o365_rollup, o365_001,o365_002, o365_003, o365_004, o365_005, o365_001_colour, o365_002_colour, o365_003_colour, o365_004_colour, o365_005_colour, o365_001_val, o365_002_val, o365_003_val, o365_004_val, o365_005_val
           </query>
           <done>
             <set token="tkn_o365_rollup_is_visible">true</set>
@@ -1255,7 +1282,7 @@ index="ssphp_metrics" ssphp.use_case.id="o365_*"
 
 
 <!-- ############################################################################################################################################### -->
-<!-- ############################################################ ROLLED UP SUMMARY ROW ############################################################ -->
+<!-- ############################################################ ROLLED UP SUMMARY ROWs ########################################################### -->
 <!-- ############################################################################################################################################### -->
 
 
@@ -1268,6 +1295,7 @@ index="ssphp_metrics" ssphp.use_case.id="o365_*"
   <row>
     <panel depends="$tkn_view_summary_panels$">
       <single>
+      <title>All Foundational Services</title>
         <search>
           <query>
 | makeresults
@@ -1280,13 +1308,74 @@ index="ssphp_metrics" ssphp.use_case.id="o365_*"
           </query>
         </search>
         <option name="colorMode">block</option>
-        <option name="height">750</option>
+        <option name="height">500</option>
         <option name="drilldown">none</option>
         <option name="rangeColors">[$c_green$,$c_orange$,$c_red$]</option>
         <option name="rangeValues">[30,90]</option>
         <option name="useColors">1</option>
       </single>
+    </panel>
+  </row>
+
+  <row>
+    <panel>
+      <single>
+      <title>DNS</title>
+        <search>
+          <query>
+| makeresults
+| eval display_val=$tkn_dns_rollup_val$
+| table display_val
+          </query>
+        </search>
+        <option name="colorMode">block</option>
+        <option name="drilldown">none</option>
+        <option name="height">$data_panel_height$</option>
+        <option name="rangeColors">[$tkn_dns_rollup_colour$,$tkn_dns_rollup_colour$]</option>
+        <option name="rangeValues">[0]</option>
+        <option name="useColors">1</option>
+      </single>
     </panel>    
+ 
+    <panel>
+      <single>
+      <title>Azure AD</title>
+        <search>
+          <query>
+| makeresults
+| eval display_val=$tkn_aad_rollup_val$
+| table display_val
+          </query>
+        </search>
+        <option name="colorMode">block</option>
+        <option name="drilldown">none</option>
+        <option name="height">$data_panel_height$</option>
+        <option name="rangeColors">[$tkn_aad_rollup_colour$,$tkn_aad_rollup_colour$]</option>
+        <option name="rangeValues">[0]</option>
+        <option name="useColors">1</option>
+      </single>
+    </panel>       
+ 
+    <panel>
+      <single>
+      <title>Office 365</title>
+        <search>
+          <query>
+| makeresults
+| eval display_val=$tkn_o365_rollup_val$
+| table display_val
+          </query>
+        </search>
+        <option name="colorMode">block</option>
+        <option name="drilldown">none</option>
+        <option name="height">$data_panel_height$</option>
+        <option name="rangeColors">[$tkn_o365_rollup_colour$,$tkn_o365_rollup_colour$]</option>
+        <option name="rangeValues">[0]</option>
+        <option name="useColors">1</option>
+      </single>
+    </panel>    
+    
+    
   </row>
 
 </dashboard>
