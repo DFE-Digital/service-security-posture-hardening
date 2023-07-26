@@ -1,0 +1,212 @@
+<dashboard version="1.1" theme="dark">
+    <label>DfE FOUNDATIONAL SERVICES : SECURITY POSTURE METRICS DRILLDOWN DASHBOARD</label>
+    
+    <init>
+  <!-- #    <set token="tkn_use_case_id">"dns_002"</set>## -->
+  
+      <set token="rollup_panel_width">40%</set>
+      <set token="data_panel_width">20%</set>
+      <set token="data_panel_height">170</set>
+      <set token="c_red">"0xFF0000"</set>
+      <set token="c_green">"0x00FF00"</set>
+      <set token="c_orange">"0xd94e17"</set>
+      <set token="c_blue">"0x0000FF"</set>
+    </init>
+    
+    
+  <!-- ################################################# DEFINE HEADER PANEL STYLES FOR ALL ROWS #################################################### -->
+    
+    <row>
+      <panel>
+        <html>
+  
+        </html>
+      </panel>
+    </row>
+    
+    <row depends="$nevershow$">
+      <panel>
+        <html>
+          <style>
+            .header_r1{
+               height: auto; 
+               margin: 0px auto 0px auto;
+               font-size: 1.1em;
+               font-family: Arial, Helvetica, sans-serif;
+               color: #AAAAAA; 
+            }
+            .header_r2{
+               height: auto; 
+               margin: 0px auto 0px auto;
+               font-size: 1em;
+               font-family: Arial, Helvetica, sans-serif;
+               color: #777777; 
+               display: block;
+            }
+            .dashboard-cell.dashboard-layout-panel.last-visible div:empty {
+               background: #171d21;
+            }
+          </style>
+        </html>
+      </panel>
+      
+      <panel>
+        <html>
+          <style>
+            #panel_dns_hdr_rollup{
+              width:$rollup_panel_width$ !important;
+            }
+            #panel_hdr_001{
+              width:$data_panel_width$ !important;
+            }
+            #panel_hdr_002{
+              width:$rollup_panel_width$ !important;
+            }
+            #panel_hdr_003{
+              width:$data_panel_width$ !important;
+            }
+            #panel_hdr_004{
+              width:$data_panel_width$ !important;
+            }
+            #panel_hdr_005{
+              width:$data_panel_width$ !important;
+            }
+            #panel_hdr_filler{
+              width:1% !important;
+            }
+          </style>
+        </html>
+      </panel>
+    </row>
+    
+    
+  <!-- ################################################# TOP ROW FOR DESCRIBING THE USE CASE #################################################### -->
+  
+    <row depends="$never_show$">
+      
+      <panel>
+        <table>
+          <title>test</title>
+          <search>
+            <query>
+  | makeresults
+  | eval macro=$tkn_use_case_id|s$, macro="ssphp_use_case_".macro
+  | table macro
+            </query>
+            <done>
+              <set token="tkn_use_case_macro">$result.macro$</set>
+            </done>
+          </search>
+        </table>
+      </panel>
+      
+  
+      <panel>
+        <table>
+          <search>
+            <query>
+  index="ssphp_metrics" ssphp.use_case.id=$tkn_use_case_id$
+      [| search index="ssphp_metrics"
+       | stats max(SSPHP_RUN) as SSPHP_RUN by ssphp.use_case.id
+       | eval search_text="(\"ssphp.use_case.id\"=\"".'ssphp.use_case.id'."\" AND SSPHP_RUN=\"".SSPHP_RUN."\")"
+       | stats values(search_text) as search_text
+       | eval search_text="(".mvjoin(search_text," OR ").")"
+      | return $search_text]
+  | table ssphp.use_case.display.title, ssphp.use_case.id, ssphp.use_case.display.short_description, ssphp.use_case.description, ssphp.score, ssphp.color, ssphp.use_case.treshhold.green, ssphp.use_case.treshhold.orange, ssphp.use_case.treshhold.red
+            </query>
+            <done>
+              <set token="tkn_row1_display_title">$result.ssphp.use_case.display.title$</set>
+              <set token="tkn_row1_use_case_id">$result.ssphp.use_case.id$</set>
+              <set token="tkn_row1_display_short_description">$result.ssphp.use_case.display.short_description$</set>
+              <set token="tkn_row1_display_description">$result.ssphp.use_case.description$</set>
+              <set token="tkn_row1_score">$result.ssphp.score$</set>
+              <set token="tkn_row1_color">$result.ssphp.ssphp.color$</set>
+              <set token="tkn_row1_threshhold_green">$result.ssphp.use_case.treshhold.green$</set>
+              <set token="tkn_row1_threshhold_orange">$result.ssphp.use_case.treshhold.orange$</set>
+              <set token="tkn_row1_threshhold_red">$result.ssphp.use_case.treshhold.red$</set>
+            </done>
+            <earliest>0</earliest>
+            <sampleRatio>1</sampleRatio>
+          </search>
+        </table>
+      </panel>
+    </row>
+    
+    <row>
+      <panel id="panel_hdr_001">
+        <html>
+          <span class="header_r1">$tkn_row1_display_title$</span>
+          <span class="header_r2">$tkn_row1_display_short_description$</span>
+        </html>
+      </panel>
+      
+      <panel id="panel_hdr_002">
+        <html>
+          <span class="header_r1">$tkn_row1_display_description$</span>
+        </html>
+      </panel>
+      
+    
+      <panel id="panel_hdr_003">
+        <single>
+          <search>
+            <query>
+  | makeresults
+  | eval score=$tkn_row1_score$, color=$tkn_row1_color$
+  | table score, color
+            </query>
+            <done>
+              <eval token="tkn_score_colour">case($result.color$="red",$c_red$,$result.color$="orange",$c_orange$,$result.color$="green",$c_green$</eval>
+            </done>
+          </search>
+          <option name="rangeColors">$tkn_score_colour$</option>
+          <option name="rangeValues">[0]</option>
+          <option name="useColors">1</option>
+        </single>
+      </panel>
+      
+      
+      
+      <panel id="panel_hdr_004">
+        <html>
+          <span class="header_r1">Threshholds :</span>
+          <span class="header_r2">Green : $tkn_row1_threshhold_green$</span>
+          <span class="header_r2">Orange : $tkn_row1_threshhold_orange$</span>
+          <span class="header_r2">Red : $tkn_row1_threshhold_red$</span>
+        </html>
+      </panel>
+    </row>
+    
+    <row>
+      <panel>
+        <html>
+  
+        </html>
+      </panel>
+    </row>
+    
+    
+  <!-- ################################################# USE CASE SEARCH ROW #################################################### -->
+    
+    <row>
+      <panel>
+        <table>
+          <search>
+            <query>`$tkn_use_case_macro$`</query>
+            <earliest>0</earliest>
+            <latest>now</latest>
+            <sampleRatio>1</sampleRatio>
+          </search>
+          <option name="count">100</option>
+          <option name="dataOverlayMode">none</option>
+          <option name="drilldown">none</option>
+          <option name="percentagesRow">false</option>
+          <option name="rowNumbers">false</option>
+          <option name="totalsRow">false</option>
+          <option name="wrap">true</option>
+        </table>
+      </panel>
+  
+    </row>
+    
+  </dashboard>

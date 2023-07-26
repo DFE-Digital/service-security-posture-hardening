@@ -116,11 +116,68 @@
       </html>
     </panel>
     
+    <panel depends="$never_show$">
+      <table>
+        <search>
+          <query>
+| makeresults
+| eval app=$env:app|s$
+| table app
+          </query>
+          <done>
+            <set token="tkn_current_app">$result.app$</set>
+          </done>
+        </search>
+      </table>
+    </panel>
+    
+    
+<!-- ###****************** Panel Heading Values **********************### -->
+    <panel depends="$never_show$">
+      <table>
+        <search>
+          <query>
+index="ssphp_metrics" ssphp.use_case.id="dns_*"
+    [| search index="ssphp_metrics"
+     | stats max(SSPHP_RUN) as SSPHP_RUN by ssphp.use_case.id
+     | eval search_text="(\"ssphp.use_case.id\"=\"".'ssphp.use_case.id'."\" AND SSPHP_RUN=\"".SSPHP_RUN."\")"
+     | stats values(search_text) as search_text
+     | eval search_text="(".mvjoin(search_text," OR ").")"
+    | return $search_text]
+| eval ssphp_desc='ssphp.use_case.display.title'."~~~".'ssphp.use_case.display.short_description'
+| stats values(ssphp_desc) as ssphp_desc by ssphp.use_case.id
+| transpose 0 header_field=ssphp.use_case.id
+| fields - column
+| foreach * 
+    [| eval "&lt;&lt;FIELD&gt;&gt;_display_title"=mvindex(split(&lt;&lt;FIELD&gt;&gt;,"~~~"),0),
+            "&lt;&lt;FIELD&gt;&gt;_display_short_desc"=mvindex(split(&lt;&lt;FIELD&gt;&gt;,"~~~"),1)]
+| fields *_display_title, *_display_short_desc
+          </query>
+          <done>
+            <set token="tkn_dns_rollup_display_title">$result.dns_rollup_display_title$</set>
+            <set token="tkn_dns_001_display_title">$result.dns_001_display_title$</set>
+            <set token="tkn_dns_002_display_title">$result.dns_002_display_title$</set>
+            <set token="tkn_dns_003_display_title">$result.dns_003_display_title$</set>
+            <set token="tkn_dns_004_display_title">$result.dns_004_display_title$</set>
+            <set token="tkn_dns_005_display_title">$result.dns_005_display_title$</set>
+            <set token="tkn_dns_rollup_display_short_desc">$result.dns_rollup_display_short_desc$</set>
+            <set token="tkn_dns_001_display_short_desc">$result.dns_001_display_short_desc$</set>
+            <set token="tkn_dns_002_display_short_desc">$result.dns_002_display_short_desc$</set>
+            <set token="tkn_dns_003_display_short_desc">$result.dns_003_display_short_desc$</set>
+            <set token="tkn_dns_004_display_short_desc">$result.dns_004_display_short_desc$</set>
+            <set token="tkn_dns_005_display_short_desc">$result.dns_005_display_short_desc$</set>
+          </done>
+          <earliest>0</earliest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+      </table>
+    </panel>
+    
     
     <panel id="panel_dns_hdr_rollup" depends="$tkn_dns_rollup_is_visible$,$tkn_view_details_panels$">
       <html>
-        <span class="header_r1">DNS</span>
-        <span class="header_r2">Overall Score</span>
+        <span class="header_r1">$tkn_dns_rollup_display_title$</span>
+        <span class="header_r2">$tkn_dns_rollup_display_short_desc$</span>
       </html>
     </panel>
     
@@ -132,36 +189,36 @@
     
     <panel id="panel_dns_hdr_001" depends="$tkn_dns_001_is_visible$,$tkn_view_details_panels$">
       <html>
-        <span class="header_r1">DNS 001</span>
-        <span class="header_r2">No MFA</span>
+        <span class="header_r1">$tkn_dns_001_display_title$</span>
+        <span class="header_r2">$tkn_dns_001_display_short_desc$</span>
       </html>
     </panel>
     
     <panel id="panel_dns_hdr_002" depends="$tkn_dns_002_is_visible$,$tkn_view_details_panels$">
       <html>
-        <span class="header_r1">DNS 002</span>
-        <span class="header_r2">No Policies</span>
+        <span class="header_r1">$tkn_dns_002_display_title$</span>
+        <span class="header_r2">$tkn_dns_002_display_short_desc$</span>
       </html>
     </panel>
     
     <panel id="panel_dns_hdr_003" depends="$tkn_dns_003_is_visible$,$tkn_view_details_panels$">
       <html>
-        <span class="header_r1">DNS 003</span>
-        <span class="header_r2">Cloudtrail Working</span>
+        <span class="header_r1">$tkn_dns_003_display_title$</span>
+        <span class="header_r2">$tkn_dns_003_display_short_desc$</span>
       </html>
     </panel>
     
     <panel id="panel_dns_hdr_004" depends="$tkn_dns_004_is_visible$,$tkn_view_details_panels$">
       <html>
-        <span class="header_r1">DNS 004</span>
-        <span class="header_r2">Accounts in Organization</span>
+        <span class="header_r1">$tkn_dns_004_display_title$</span>
+        <span class="header_r2">$tkn_dns_004_display_short_desc$</span>
       </html>
     </panel>
     
     <panel id="panel_dns_hdr_005" depends="$tkn_dns_005_is_visible$,$tkn_view_details_panels$">
       <html>
-        <span class="header_r1">DNS 005</span>
-        <span class="header_r2">DNS = Route53</span>
+        <span class="header_r1">$tkn_dns_005_display_title$</span>
+        <span class="header_r2">$tkn_dns_005_display_short_desc$</span>
       </html>
     </panel>
   </row>
@@ -349,13 +406,17 @@ index="ssphp_metrics" ssphp.use_case.id="dns_*"
 | eval display_val=$tkn_dns_rollup_val$
 | table display_val
           </query>
-        </search>
-        <option name="colorMode">block</option>
-        <option name="drilldown">none</option>
-        <option name="height">$data_panel_height$</option>
-        <option name="rangeColors">[$tkn_dns_rollup_colour$,$tkn_dns_rollup_colour$]</option>
-        <option name="rangeValues">[0]</option>
-        <option name="useColors">1</option>
+          </search>
+          <option name="colorMode">block</option>
+          <option name="drilldown">none</option>
+          <option name="height">$data_panel_height$</option>
+          <option name="rangeColors">[$tkn_dns_rollup_colour$,$tkn_dns_rollup_colour$]</option>
+          <option name="rangeValues">[0]</option>
+          <option name="useColors">1</option>
+          <option name="drilldown">all</option>
+          <drilldown>
+            <link target="_blank">/app/$tkn_current_app$/dfe_foundational_services__secuity_posture_metrics_drilldown_dashboard?tkn_use_case_id=dns_rollup</link>
+          </drilldown>
       </single>
     </panel>    
 
@@ -373,13 +434,17 @@ index="ssphp_metrics" ssphp.use_case.id="dns_*"
 | eval display_val=$tkn_dns_001_val$
 | table display_val
           </query>
-        </search>
-        <option name="colorMode">none</option>
-        <option name="drilldown">none</option>
-        <option name="height">$data_panel_height$</option>
-        <option name="rangeColors">[$tkn_dns_001_colour$,$tkn_dns_001_colour$]</option>
-        <option name="rangeValues">[0]</option>
-        <option name="useColors">1</option>
+          </search>
+          <option name="colorMode">none</option>
+          <option name="drilldown">none</option>
+          <option name="height">$data_panel_height$</option>
+          <option name="rangeColors">[$tkn_dns_001_colour$,$tkn_dns_001_colour$]</option>
+          <option name="rangeValues">[0]</option>
+          <option name="useColors">1</option>
+          <option name="drilldown">all</option>
+          <drilldown>
+            <link target="_blank">/app/$tkn_current_app$/dfe_foundational_services__secuity_posture_metrics_drilldown_dashboard?tkn_use_case_id=dns_001</link>
+          </drilldown>
       </single>
     </panel>
     
@@ -392,13 +457,17 @@ index="ssphp_metrics" ssphp.use_case.id="dns_*"
 | eval display_val=$tkn_dns_002_val$
 | table display_val
           </query>
-        </search>
-        <option name="colorMode">none</option>
-        <option name="drilldown">none</option>
-        <option name="height">$data_panel_height$</option>
-        <option name="rangeColors">[$tkn_dns_002_colour$,$tkn_dns_002_colour$]</option>
-        <option name="rangeValues">[0]</option>
-        <option name="useColors">1</option>
+          </search>
+          <option name="colorMode">none</option>
+          <option name="drilldown">none</option>
+          <option name="height">$data_panel_height$</option>
+          <option name="rangeColors">[$tkn_dns_002_colour$,$tkn_dns_002_colour$]</option>
+          <option name="rangeValues">[0]</option>
+          <option name="useColors">1</option>
+          <option name="drilldown">all</option>
+          <drilldown>
+            <link target="_blank">/app/$tkn_current_app$/dfe_foundational_services__secuity_posture_metrics_drilldown_dashboard?tkn_use_case_id=dns_002</link>
+          </drilldown>
       </single>
     </panel>
     
@@ -411,13 +480,17 @@ index="ssphp_metrics" ssphp.use_case.id="dns_*"
 | eval display_val=$tkn_dns_003_val$
 | table display_val
           </query>
-        </search>
-        <option name="colorMode">none</option>
-        <option name="drilldown">none</option>
-        <option name="height">$data_panel_height$</option>
-        <option name="rangeColors">[$tkn_dns_003_colour$,$tkn_dns_003_colour$]</option>
-        <option name="rangeValues">[0]</option>
-        <option name="useColors">1</option>
+          </search>
+          <option name="colorMode">none</option>
+          <option name="drilldown">none</option>
+          <option name="height">$data_panel_height$</option>
+          <option name="rangeColors">[$tkn_dns_003_colour$,$tkn_dns_003_colour$]</option>
+          <option name="rangeValues">[0]</option>
+          <option name="useColors">1</option>
+          <option name="drilldown">all</option>
+          <drilldown>
+            <link target="_blank">/app/$tkn_current_app$/dfe_foundational_services__secuity_posture_metrics_drilldown_dashboard?tkn_use_case_id=dns_003</link>
+          </drilldown>
       </single>
     </panel>
     
@@ -430,13 +503,17 @@ index="ssphp_metrics" ssphp.use_case.id="dns_*"
 | eval display_val=$tkn_dns_004_val$
 | table display_val
           </query>
-        </search>
-        <option name="colorMode">none</option>
-        <option name="drilldown">none</option>
-        <option name="height">$data_panel_height$</option>
-        <option name="rangeColors">[$tkn_dns_004_colour$,$tkn_dns_004_colour$]</option>
-        <option name="rangeValues">[0]</option>
-        <option name="useColors">1</option>
+          </search>
+          <option name="colorMode">none</option>
+          <option name="drilldown">none</option>
+          <option name="height">$data_panel_height$</option>
+          <option name="rangeColors">[$tkn_dns_004_colour$,$tkn_dns_004_colour$]</option>
+          <option name="rangeValues">[0]</option>
+          <option name="useColors">1</option>
+          <option name="drilldown">all</option>
+          <drilldown>
+            <link target="_blank">/app/$tkn_current_app$/dfe_foundational_services__secuity_posture_metrics_drilldown_dashboard?tkn_use_case_id=dns_004</link>
+          </drilldown>
       </single>
     </panel>
     
@@ -449,13 +526,17 @@ index="ssphp_metrics" ssphp.use_case.id="dns_*"
 | eval display_val=$tkn_dns_005_val$
 | table display_val
           </query>
-        </search>
-        <option name="colorMode">none</option>
-        <option name="drilldown">none</option>
-        <option name="height">$data_panel_height$</option>
-        <option name="rangeColors">[$tkn_dns_005_colour$,$tkn_dns_005_colour$]</option>
-        <option name="rangeValues">[0]</option>
-        <option name="useColors">1</option>
+          </search>
+          <option name="colorMode">none</option>
+          <option name="drilldown">none</option>
+          <option name="height">$data_panel_height$</option>
+          <option name="rangeColors">[$tkn_dns_005_colour$,$tkn_dns_005_colour$]</option>
+          <option name="rangeValues">[0]</option>
+          <option name="useColors">1</option>
+          <option name="drilldown">all</option>
+          <drilldown>
+            <link target="_blank">/app/$tkn_current_app$/dfe_foundational_services__secuity_posture_metrics_drilldown_dashboard?tkn_use_case_id=dns_005</link>
+          </drilldown>
       </single>
     </panel>
   </row>
@@ -481,14 +562,15 @@ index="ssphp_metrics" ssphp.use_case.id="dns_*"
     </panel>
   </row>
 
+
   
   
 <!-- ############################################################################################################################################### -->
-<!-- ############################################################ AZURE AD ROWS #################################################################### -->
+<!-- ############################################################ Azure AD ROWS ######################################################################### -->
 <!-- ############################################################################################################################################### -->
 
   
-<!-- ################################# aad HEADER ROW ################################# -->
+<!-- ################################# AAD HEADER ROW ################################# -->
   <row>
     <panel depends="$nevershow$">
       <html>
@@ -519,10 +601,52 @@ index="ssphp_metrics" ssphp.use_case.id="dns_*"
     </panel>
     
     
+<!-- ###****************** Panel Heading Values **********************### -->
+    <panel depends="$never_show$">
+      <table>
+        <search>
+          <query>
+index="ssphp_metrics" ssphp.use_case.id="aad_*"
+    [| search index="ssphp_metrics"
+     | stats max(SSPHP_RUN) as SSPHP_RUN by ssphp.use_case.id
+     | eval search_text="(\"ssphp.use_case.id\"=\"".'ssphp.use_case.id'."\" AND SSPHP_RUN=\"".SSPHP_RUN."\")"
+     | stats values(search_text) as search_text
+     | eval search_text="(".mvjoin(search_text," OR ").")"
+    | return $search_text]
+| eval ssphp_desc='ssphp.use_case.display.title'."~~~".'ssphp.use_case.display.short_description'
+| stats values(ssphp_desc) as ssphp_desc by ssphp.use_case.id
+| transpose 0 header_field=ssphp.use_case.id
+| fields - column
+| foreach * 
+    [| eval "&lt;&lt;FIELD&gt;&gt;_display_title"=mvindex(split(&lt;&lt;FIELD&gt;&gt;,"~~~"),0),
+            "&lt;&lt;FIELD&gt;&gt;_display_short_desc"=mvindex(split(&lt;&lt;FIELD&gt;&gt;,"~~~"),1)]
+| fields *_display_title, *_display_short_desc
+          </query>
+          <done>
+            <set token="tkn_aad_rollup_display_title">$result.aad_rollup_display_title$</set>
+            <set token="tkn_aad_001_display_title">$result.aad_001_display_title$</set>
+            <set token="tkn_aad_002_display_title">$result.aad_002_display_title$</set>
+            <set token="tkn_aad_003_display_title">$result.aad_003_display_title$</set>
+            <set token="tkn_aad_004_display_title">$result.aad_004_display_title$</set>
+            <set token="tkn_aad_005_display_title">$result.aad_005_display_title$</set>
+            <set token="tkn_aad_rollup_display_short_desc">$result.aad_rollup_display_short_desc$</set>
+            <set token="tkn_aad_001_display_short_desc">$result.aad_001_display_short_desc$</set>
+            <set token="tkn_aad_002_display_short_desc">$result.aad_002_display_short_desc$</set>
+            <set token="tkn_aad_003_display_short_desc">$result.aad_003_display_short_desc$</set>
+            <set token="tkn_aad_004_display_short_desc">$result.aad_004_display_short_desc$</set>
+            <set token="tkn_aad_005_display_short_desc">$result.aad_005_display_short_desc$</set>
+          </done>
+          <earliest>0</earliest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+      </table>
+    </panel>
+    
+    
     <panel id="panel_aad_hdr_rollup" depends="$tkn_aad_rollup_is_visible$,$tkn_view_details_panels$">
       <html>
-        <span class="header_r1">AZURE AD</span>
-        <span class="header_r2">Overall Score</span>
+        <span class="header_r1">$tkn_aad_rollup_display_title$</span>
+        <span class="header_r2">$tkn_aad_rollup_display_short_desc$</span>
       </html>
     </panel>
     
@@ -534,36 +658,36 @@ index="ssphp_metrics" ssphp.use_case.id="dns_*"
     
     <panel id="panel_aad_hdr_001" depends="$tkn_aad_001_is_visible$,$tkn_view_details_panels$">
       <html>
-        <span class="header_r1">AAD 001</span>
-        <span class="header_r2">Admins no MFA</span>
+        <span class="header_r1">$tkn_aad_001_display_title$</span>
+        <span class="header_r2">$tkn_aad_001_display_short_desc$</span>
       </html>
     </panel>
     
     <panel id="panel_aad_hdr_002" depends="$tkn_aad_002_is_visible$,$tkn_view_details_panels$">
       <html>
-        <span class="header_r1">AAD 002</span>
-        <span class="header_r2">Admins no Conditional Policies</span>
+        <span class="header_r1">$tkn_aad_002_display_title$</span>
+        <span class="header_r2">$tkn_aad_002_display_short_desc$</span>
       </html>
     </panel>
     
     <panel id="panel_aad_hdr_003" depends="$tkn_aad_003_is_visible$,$tkn_view_details_panels$">
       <html>
-        <span class="header_r1">AAD 003</span>
-        <span class="header_r2">Cloudtrail Working</span>
+        <span class="header_r1">$tkn_aad_003_display_title$</span>
+        <span class="header_r2">$tkn_aad_003_display_short_desc$</span>
       </html>
     </panel>
     
     <panel id="panel_aad_hdr_004" depends="$tkn_aad_004_is_visible$,$tkn_view_details_panels$">
       <html>
-        <span class="header_r1">AAD 004</span>
-        <span class="header_r2">Accounts in Organization</span>
+        <span class="header_r1">$tkn_aad_004_display_title$</span>
+        <span class="header_r2">$tkn_aad_004_display_short_desc$</span>
       </html>
     </panel>
     
     <panel id="panel_aad_hdr_005" depends="$tkn_aad_005_is_visible$,$tkn_view_details_panels$">
       <html>
-        <span class="header_r1">AAD 005</span>
-        <span class="header_r2">aad = Route53</span>
+        <span class="header_r1">$tkn_aad_005_display_title$</span>
+        <span class="header_r2">$tkn_aad_005_display_short_desc$</span>
       </html>
     </panel>
   </row>
@@ -668,7 +792,7 @@ index="ssphp_metrics" ssphp.use_case.id="aad_*"
 
 
 <!-- ###****************** Panel visible **********************### -->
-    <panel depends="$nevershow$">
+    <panel depends="$never_show$">>
       <table>
         <search>
           <query>
@@ -758,6 +882,10 @@ index="ssphp_metrics" ssphp.use_case.id="aad_*"
         <option name="rangeColors">[$tkn_aad_rollup_colour$,$tkn_aad_rollup_colour$]</option>
         <option name="rangeValues">[0]</option>
         <option name="useColors">1</option>
+        <option name="drilldown">all</option>
+        <drilldown>
+          <link target="_blank">/app/$tkn_current_app$/dfe_foundational_services__secuity_posture_metrics_drilldown_dashboard?tkn_use_case_id=aad_rollup</link>
+        </drilldown>
       </single>
     </panel>    
 
@@ -782,6 +910,10 @@ index="ssphp_metrics" ssphp.use_case.id="aad_*"
         <option name="rangeColors">[$tkn_aad_001_colour$,$tkn_aad_001_colour$]</option>
         <option name="rangeValues">[0]</option>
         <option name="useColors">1</option>
+        <option name="drilldown">all</option>
+        <drilldown>
+          <link target="_blank">/app/$tkn_current_app$/dfe_foundational_services__secuity_posture_metrics_drilldown_dashboard?tkn_use_case_id=aad_001</link>
+        </drilldown>
       </single>
     </panel>
     
@@ -801,6 +933,10 @@ index="ssphp_metrics" ssphp.use_case.id="aad_*"
         <option name="rangeColors">[$tkn_aad_002_colour$,$tkn_aad_002_colour$]</option>
         <option name="rangeValues">[0]</option>
         <option name="useColors">1</option>
+        <option name="drilldown">all</option>
+        <drilldown>
+          <link target="_blank">/app/$tkn_current_app$/dfe_foundational_services__secuity_posture_metrics_drilldown_dashboard?tkn_use_case_id=aad_002</link>
+        </drilldown>
       </single>
     </panel>
     
@@ -820,6 +956,10 @@ index="ssphp_metrics" ssphp.use_case.id="aad_*"
         <option name="rangeColors">[$tkn_aad_003_colour$,$tkn_aad_003_colour$]</option>
         <option name="rangeValues">[0]</option>
         <option name="useColors">1</option>
+        <option name="drilldown">all</option>
+        <drilldown>
+          <link target="_blank">/app/$tkn_current_app$/dfe_foundational_services__secuity_posture_metrics_drilldown_dashboard?tkn_use_case_id=aad_003</link>
+        </drilldown>
       </single>
     </panel>
     
@@ -839,6 +979,10 @@ index="ssphp_metrics" ssphp.use_case.id="aad_*"
         <option name="rangeColors">[$tkn_aad_004_colour$,$tkn_aad_004_colour$]</option>
         <option name="rangeValues">[0]</option>
         <option name="useColors">1</option>
+        <option name="drilldown">all</option>
+        <drilldown>
+          <link target="_blank">/app/$tkn_current_app$/dfe_foundational_services__secuity_posture_metrics_drilldown_dashboard?tkn_use_case_id=aad_004</link>
+        </drilldown>
       </single>
     </panel>
     
@@ -858,6 +1002,10 @@ index="ssphp_metrics" ssphp.use_case.id="aad_*"
         <option name="rangeColors">[$tkn_aad_005_colour$,$tkn_aad_005_colour$]</option>
         <option name="rangeValues">[0]</option>
         <option name="useColors">1</option>
+        <option name="drilldown">all</option>
+        <drilldown>
+          <link target="_blank">/app/$tkn_current_app$/dfe_foundational_services__secuity_posture_metrics_drilldown_dashboard?tkn_use_case_id=aad_005</link>
+        </drilldown>
       </single>
     </panel>
   </row>
@@ -865,13 +1013,13 @@ index="ssphp_metrics" ssphp.use_case.id="aad_*"
   <row depends="$tkn_aad_data_feed_problem$,$tkn_view_details_panels$">
     <panel>
       <html>
-        <div style="background-color: red; color:black">There is a problem with aad Data Feeds!</div>
+        <div style="background-color: red; color:black">There is a problem with Azure AD Data Feeds!</div>
       </html>
     </panel>
   </row>
 
 <!-- ############################################################################################################################################### -->
-<!-- ############################################################ END OF AZURE AD ROWS ############################################################# -->
+<!-- ############################################################ END OF Azure AD ROWS ################################################################## -->
 <!-- ############################################################################################################################################### -->
 
 
@@ -883,14 +1031,15 @@ index="ssphp_metrics" ssphp.use_case.id="aad_*"
     </panel>
   </row>
 
+
   
   
 <!-- ############################################################################################################################################### -->
-<!-- ############################################################ OFFICE 365 ROWS ################################################################## -->
+<!-- ############################################################ OFFICE 365 ROWS ######################################################################### -->
 <!-- ############################################################################################################################################### -->
 
   
-<!-- ################################# OFFICE 365 HEADER ROW ################################# -->
+<!-- ################################# O365 HEADER ROW ################################# -->
   <row>
     <panel depends="$nevershow$">
       <html>
@@ -921,10 +1070,54 @@ index="ssphp_metrics" ssphp.use_case.id="aad_*"
     </panel>
     
     
+<!-- ###****************** Panel Heading Values **********************### -->
+    <panel depends="$never_show$">
+      <table>
+        <search>
+          <query>
+index="ssphp_metrics" ssphp.use_case.id="o365_*"
+    [| search index="ssphp_metrics"
+     | stats max(SSPHP_RUN) as SSPHP_RUN by ssphp.use_case.id
+     | eval search_text="(\"ssphp.use_case.id\"=\"".'ssphp.use_case.id'."\" AND SSPHP_RUN=\"".SSPHP_RUN."\")"
+     | stats values(search_text) as search_text
+     | eval search_text="(".mvjoin(search_text," OR ").")"
+    | return $search_text]
+| eval ssphp_desc='ssphp.use_case.display.title'."~~~".'ssphp.use_case.display.short_description'
+| stats values(ssphp_desc) as ssphp_desc by ssphp.use_case.id
+| transpose 0 header_field=ssphp.use_case.id
+| fields - column
+| foreach * 
+    [| eval "&lt;&lt;FIELD&gt;&gt;_display_title"=mvindex(split(&lt;&lt;FIELD&gt;&gt;,"~~~"),0),
+            "&lt;&lt;FIELD&gt;&gt;_display_short_desc"=mvindex(split(&lt;&lt;FIELD&gt;&gt;,"~~~"),1)]
+| fields *_display_title, *_display_short_desc
+          </query>
+          <done>
+            <set token="tkn_o365_rollup_display_title">$result.o365_rollup_display_title$</set>
+            <set token="tkn_o365_001_display_title">$result.o365_001_display_title$</set>
+            <set token="tkn_o365_002_display_title">$result.o365_002_display_title$</set>
+            <set token="tkn_o365_003_display_title">$result.o365_003_display_title$</set>
+            <set token="tkn_o365_004_display_title">$result.o365_004_display_title$</set>
+            <set token="tkn_o365_005_display_title">$result.o365_005_display_title$</set>
+            <set token="tkn_o365_rollup_display_short_desc">$result.o365_rollup_display_short_desc$</set>
+            <set token="tkn_o365_001_display_short_desc">$result.o365_001_display_short_desc$</set>
+            <set token="tkn_o365_002_display_short_desc">$result.o365_002_display_short_desc$</set>
+            <set token="tkn_o365_003_display_short_desc">$result.o365_003_display_short_desc$</set>
+            <set token="tkn_o365_004_display_short_desc">$result.o365_004_display_short_desc$</set>
+            <set token="tkn_o365_005_display_short_desc">$result.o365_005_display_short_desc$</set>
+          </done>
+          <earliest>0</earliest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+      </table>
+    </panel>
+    
+    
     <panel id="panel_o365_hdr_rollup" depends="$tkn_o365_rollup_is_visible$,$tkn_view_details_panels$">
       <html>
+<!-- #        <span class="header_r1">$tkn_o365_rollup_display_title$</span>
+        <span class="header_r2">$tkn_o365_rollup_display_short_desc$</span>## -->
         <span class="header_r1">OFFICE 365</span>
-        <span class="header_r2">Overall Score</span>
+        <span class="header_r2">OVERALL SCORE</span>
       </html>
     </panel>
     
@@ -936,42 +1129,42 @@ index="ssphp_metrics" ssphp.use_case.id="aad_*"
     
     <panel id="panel_o365_hdr_001" depends="$tkn_o365_001_is_visible$,$tkn_view_details_panels$">
       <html>
-        <span class="header_r1">O365 001</span>
-        <span class="header_r2">No MFA</span>
+        <span class="header_r1">$tkn_o365_001_display_title$</span>
+        <span class="header_r2">$tkn_o365_001_display_short_desc$</span>
       </html>
     </panel>
     
     <panel id="panel_o365_hdr_002" depends="$tkn_o365_002_is_visible$,$tkn_view_details_panels$">
       <html>
-        <span class="header_r1">O365 002</span>
-        <span class="header_r2">No Policies</span>
+        <span class="header_r1">$tkn_o365_002_display_title$</span>
+        <span class="header_r2">$tkn_o365_002_display_short_desc$</span>
       </html>
     </panel>
     
     <panel id="panel_o365_hdr_003" depends="$tkn_o365_003_is_visible$,$tkn_view_details_panels$">
       <html>
-        <span class="header_r1">O365 003</span>
-        <span class="header_r2">Cloudtrail Working</span>
+        <span class="header_r1">$tkn_o365_003_display_title$</span>
+        <span class="header_r2">$tkn_o365_003_display_short_desc$</span>
       </html>
     </panel>
     
     <panel id="panel_o365_hdr_004" depends="$tkn_o365_004_is_visible$,$tkn_view_details_panels$">
       <html>
-        <span class="header_r1">O365 004</span>
-        <span class="header_r2">Accounts in Organization</span>
+        <span class="header_r1">$tkn_o365_004_display_title$</span>
+        <span class="header_r2">$tkn_o365_004_display_short_desc$</span>
       </html>
     </panel>
     
     <panel id="panel_o365_hdr_005" depends="$tkn_o365_005_is_visible$,$tkn_view_details_panels$">
       <html>
-        <span class="header_r1">O365 005</span>
-        <span class="header_r2">o365 = Route53</span>
+        <span class="header_r1">$tkn_o365_005_display_title$</span>
+        <span class="header_r2">$tkn_o365_005_display_short_desc$</span>
       </html>
     </panel>
   </row>
 
 
-<!-- ################################# OFFICE 365 PRE-CALC, CONFIG, & VISIBILITY ROW ################################# -->
+<!-- ################################# O365 PRE-CALC, CONFIG, & VISIBILITY ROW ################################# -->
 
 <!-- ###****************** Check that all data feeds have been sending data **********************### -->
   <row>
@@ -1160,6 +1353,10 @@ index="ssphp_metrics" ssphp.use_case.id="o365_*"
         <option name="rangeColors">[$tkn_o365_rollup_colour$,$tkn_o365_rollup_colour$]</option>
         <option name="rangeValues">[0]</option>
         <option name="useColors">1</option>
+        <option name="drilldown">all</option>
+        <drilldown>
+          <link target="_blank">/app/$tkn_current_app$/dfe_foundational_services__secuity_posture_metrics_drilldown_dashboard?tkn_use_case_id=o365_rollup</link>
+        </drilldown>
       </single>
     </panel>    
 
@@ -1184,6 +1381,10 @@ index="ssphp_metrics" ssphp.use_case.id="o365_*"
         <option name="rangeColors">[$tkn_o365_001_colour$,$tkn_o365_001_colour$]</option>
         <option name="rangeValues">[0]</option>
         <option name="useColors">1</option>
+        <option name="drilldown">all</option>
+        <drilldown>
+          <link target="_blank">/app/$tkn_current_app$/dfe_foundational_services__secuity_posture_metrics_drilldown_dashboard?tkn_use_case_id=o365_001</link>
+        </drilldown>
       </single>
     </panel>
     
@@ -1203,6 +1404,10 @@ index="ssphp_metrics" ssphp.use_case.id="o365_*"
         <option name="rangeColors">[$tkn_o365_002_colour$,$tkn_o365_002_colour$]</option>
         <option name="rangeValues">[0]</option>
         <option name="useColors">1</option>
+        <option name="drilldown">all</option>
+        <drilldown>
+          <link target="_blank">/app/$tkn_current_app$/dfe_foundational_services__secuity_posture_metrics_drilldown_dashboard?tkn_use_case_id=o365_002</link>
+        </drilldown>
       </single>
     </panel>
     
@@ -1222,6 +1427,10 @@ index="ssphp_metrics" ssphp.use_case.id="o365_*"
         <option name="rangeColors">[$tkn_o365_003_colour$,$tkn_o365_003_colour$]</option>
         <option name="rangeValues">[0]</option>
         <option name="useColors">1</option>
+        <option name="drilldown">all</option>
+        <drilldown>
+          <link target="_blank">/app/$tkn_current_app$/dfe_foundational_services__secuity_posture_metrics_drilldown_dashboard?tkn_use_case_id=o365_003</link>
+        </drilldown>
       </single>
     </panel>
     
@@ -1241,6 +1450,10 @@ index="ssphp_metrics" ssphp.use_case.id="o365_*"
         <option name="rangeColors">[$tkn_o365_004_colour$,$tkn_o365_004_colour$]</option>
         <option name="rangeValues">[0]</option>
         <option name="useColors">1</option>
+        <option name="drilldown">all</option>
+        <drilldown>
+          <link target="_blank">/app/$tkn_current_app$/dfe_foundational_services__secuity_posture_metrics_drilldown_dashboard?tkn_use_case_id=o365_004</link>
+        </drilldown>
       </single>
     </panel>
     
@@ -1260,6 +1473,10 @@ index="ssphp_metrics" ssphp.use_case.id="o365_*"
         <option name="rangeColors">[$tkn_o365_005_colour$,$tkn_o365_005_colour$]</option>
         <option name="rangeValues">[0]</option>
         <option name="useColors">1</option>
+        <option name="drilldown">all</option>
+        <drilldown>
+          <link target="_blank">/app/$tkn_current_app$/dfe_foundational_services__secuity_posture_metrics_drilldown_dashboard?tkn_use_case_id=o365_005</link>
+        </drilldown>
       </single>
     </panel>
   </row>
@@ -1267,16 +1484,14 @@ index="ssphp_metrics" ssphp.use_case.id="o365_*"
   <row depends="$tkn_o365_data_feed_problem$,$tkn_view_details_panels$">
     <panel>
       <html>
-        <div style="background-color: red; color:black">There is a problem with o365 Data Feeds!</div>
+        <div style="background-color: red; color:black">There is a problem with OFFICE 365 Data Feeds!</div>
       </html>
     </panel>
   </row>
 
 <!-- ############################################################################################################################################### -->
-<!-- ############################################################ END OF OFFICE 365 ROWS ########################################################### -->
+<!-- ############################################################ END OF OFFICE 365 ROWS ################################################################## -->
 <!-- ############################################################################################################################################### -->
-
-
 
 
 
@@ -1286,14 +1501,9 @@ index="ssphp_metrics" ssphp.use_case.id="o365_*"
 <!-- ############################################################################################################################################### -->
 
 
-
-
-
-
-
 <!-- ###****************** Display Panels **********************### -->
-  <row>
-    <panel depends="$tkn_view_summary_panels$">
+  <row depends="$tkn_view_summary_panels$">
+    <panel>
       <single>
       <title>All Foundational Services</title>
         <search>
@@ -1302,7 +1512,7 @@ index="ssphp_metrics" ssphp.use_case.id="o365_*"
 | eval display_val_dns=$tkn_dns_rollup_val$,
        display_val_aad=$tkn_aad_rollup_val$,
        display_val_o365=$tkn_o365_rollup_val$,
-       display_val=max(display_val_dns,display_val_aad,display_val_o365)
+       display_val=min(display_val_dns,display_val_aad,display_val_o365)
        
 | table display_val
           </query>
@@ -1317,7 +1527,7 @@ index="ssphp_metrics" ssphp.use_case.id="o365_*"
     </panel>
   </row>
 
-  <row>
+  <row depends="$tkn_view_summary_panels$">
     <panel>
       <single>
       <title>DNS</title>
