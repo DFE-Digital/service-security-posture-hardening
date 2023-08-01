@@ -1,10 +1,10 @@
-<dashboard version="1.1" theme="dark">
-  <label>DfE FOUNDATIONAL SERVICES : SECUITY POSTURE METRICS DASHBOARD</label>
+<dashboard theme="dark" version="1.1">
+  <label>DfE FOUNDATIONAL SERVICES : SECURITY POSTURE METRICS DASHBOARD</label>
   
   <init>
-    <set token="rollup_panel_width">30%</set>
+  <!-- ###    <set token="rollup_panel_width">30%</set>
     <set token="data_panel_width">13%</set>
-    <set token="data_panel_height">170</set>
+    <set token="data_panel_height">200</set>##### -->
     <set token="c_red">"0xFF0000"</set>
     <set token="c_green">"0x00FF00"</set>
     <set token="c_orange">"0xd94e17"</set>
@@ -78,7 +78,41 @@
       </html>
     </panel>
   </row>
+  
 
+    
+    
+<!-- ###****************** Auto calculate panel widths and height **********************### -->
+  <row depends="$never_show$">
+    <panel>
+      <table>
+        <search>
+          <query>
+index="ssphp_metrics" ssphp.use_case.id="*"
+    [| search index="ssphp_metrics"
+     | stats max(SSPHP_RUN) as SSPHP_RUN by ssphp.use_case.id
+     | eval search_text="(\"ssphp.use_case.id\"=\"".'ssphp.use_case.id'."\" AND SSPHP_RUN=\"".SSPHP_RUN."\")"
+     | stats values(search_text) as search_text
+     | eval search_text="(".mvjoin(search_text," OR ").")"
+    | return $search_text]
+| stats count by ssphp.use_case.id
+| rex field=ssphp.use_case.id "^(?&lt;uc_type&gt;[^_]*)_(?&lt;uc_no&gt;\d{3})$"
+| stats max(uc_no) as max_no_panels, dc(uc_type) as no_rows
+| eval no_rows=no_rows+1 ``` for dev only ```
+| eval filler_panel_width=1, panel_width=(100-filler_panel_width)/(max_no_panels+2), header_panel_width=panel_width*2, total_width=header_panel_width+filler_panel_width+(panel_width*max_no_panels), panel_width=panel_width."%", header_panel_width=header_panel_width."%", filler_panel_width=filler_panel_width."%", row_height=450/no_rows
+          </query>
+          <done>
+            <set token="rollup_panel_width">$result.header_panel_width$</set>
+            <set token="data_panel_width">$result.panel_width$</set>
+            <set token="filler_panel_width">$result.filler_panel_width$</set>
+            <set token="data_panel_height">$result.row_height$</set>
+          </done>
+          <earliest>0</earliest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+      </table>
+    </panel>
+  </row>
   
   
 <!-- ############################################################################################################################################### -->
@@ -87,7 +121,7 @@
 
   
 <!-- ################################# DNS HEADER ROW ################################# -->
-  <row>
+  <row depends="$tkn_show_dns_row$">
     <panel depends="$nevershow$">
       <html>
         <style>
@@ -110,7 +144,7 @@
             width:$data_panel_width$ !important;
           }
           #panel_dns_hdr_filler{
-            width:1% !important;
+            width:$filler_panel_width$ !important;
           }
         </style>
       </html>
@@ -127,6 +161,29 @@
           <done>
             <set token="tkn_current_app">$result.app$</set>
           </done>
+        </search>
+      </table>
+    </panel>
+    
+    
+<!-- ###****************** Show DNS row? **********************### -->
+    <panel depends="$never_show$">
+      <table>
+        <search>
+          <query>
+index="ssphp_metrics" ssphp.use_case.id="dns_rollup"
+| stats count
+          </query>
+          <done>
+            <condition match="$result.count$&gt;0">
+              <set token="tkn_show_dns_row">Y</set>
+            </condition>
+            <condition>
+              <unset token="tkn_show_dns_row"></unset>
+            </condition>
+          </done>
+          <earliest>0</earliest>
+          <sampleRatio>1</sampleRatio>
         </search>
       </table>
     </panel>
@@ -176,7 +233,7 @@ index="ssphp_metrics" ssphp.use_case.id="dns_*"
     
     <panel id="panel_dns_hdr_rollup" depends="$tkn_dns_rollup_is_visible$,$tkn_view_details_panels$">
       <html>
-        <span class="header_r1">$tkn_dns_rollup_display_title$</span>
+        <span class="header_r1" style="color:	darkcyan">$tkn_dns_rollup_display_title$</span>
         <span class="header_r2">$tkn_dns_rollup_display_short_desc$</span>
       </html>
     </panel>
@@ -369,7 +426,7 @@ index="ssphp_metrics" ssphp.use_case.id="dns_*"
 
 
 <!-- ###****************** Display Panels **********************### -->
-  <row>
+  <row depends="$tkn_show_dns_row$">
     <panel depends="$nevershow$">
       <html>
         <style>
@@ -541,7 +598,7 @@ index="ssphp_metrics" ssphp.use_case.id="dns_*"
     </panel>
   </row>
   
-  <row depends="$tkn_dns_data_feed_problem$,$tkn_view_details_panels$">
+  <row depends=" depends=$tkn_show_dns_row$,$tkn_dns_data_feed_problem$,$tkn_view_details_panels$">
     <panel>
       <html>
         <div style="background-color: red; color:black">There is a problem with DNS Data Feeds!</div>
@@ -554,7 +611,7 @@ index="ssphp_metrics" ssphp.use_case.id="dns_*"
 <!-- ############################################################################################################################################### -->
 
 
-  <row depends="$tkn_view_details_panels$">
+  <row depends=" depends=$tkn_show_dns_row$,$tkn_view_details_panels$">
     <panel>
       <html>
 
@@ -570,8 +627,8 @@ index="ssphp_metrics" ssphp.use_case.id="dns_*"
 <!-- ############################################################################################################################################### -->
 
   
-<!-- ################################# AAD HEADER ROW ################################# -->
-  <row>
+<!-- ################################# Azure AD HEADER ROW ################################# -->
+  <row depends="$tkn_show_aad_row$">
     <panel depends="$nevershow$">
       <html>
         <style>
@@ -594,10 +651,48 @@ index="ssphp_metrics" ssphp.use_case.id="dns_*"
             width:$data_panel_width$ !important;
           }
           #panel_aad_hdr_filler{
-            width:1% !important;
+            width:$filler_panel_width$ !important;
           }
         </style>
       </html>
+    </panel>
+    
+    <panel depends="$never_show$">
+      <table>
+        <search>
+          <query>
+| makeresults
+| eval app=$env:app|s$
+| table app
+          </query>
+          <done>
+            <set token="tkn_current_app">$result.app$</set>
+          </done>
+        </search>
+      </table>
+    </panel>
+    
+    
+<!-- ###****************** Show Azure AD row? **********************### -->
+    <panel depends="$never_show$">
+      <table>
+        <search>
+          <query>
+index="ssphp_metrics" ssphp.use_case.id="aad_rollup"
+| stats count
+          </query>
+          <done>
+            <condition match="$result.count$&gt;0">
+              <set token="tkn_show_aad_row">Y</set>
+            </condition>
+            <condition>
+              <unset token="tkn_show_aad_row"></unset>
+            </condition>
+          </done>
+          <earliest>0</earliest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+      </table>
     </panel>
     
     
@@ -645,7 +740,7 @@ index="ssphp_metrics" ssphp.use_case.id="aad_*"
     
     <panel id="panel_aad_hdr_rollup" depends="$tkn_aad_rollup_is_visible$,$tkn_view_details_panels$">
       <html>
-        <span class="header_r1">$tkn_aad_rollup_display_title$</span>
+        <span class="header_r1" style="color:	darkcyan">$tkn_aad_rollup_display_title$</span>
         <span class="header_r2">$tkn_aad_rollup_display_short_desc$</span>
       </html>
     </panel>
@@ -693,7 +788,7 @@ index="ssphp_metrics" ssphp.use_case.id="aad_*"
   </row>
 
 
-<!-- ################################# AAD PRE-CALC, CONFIG, & VISIBILITY ROW ################################# -->
+<!-- ################################# Azure AD PRE-CALC, CONFIG, & VISIBILITY ROW ################################# -->
 
 <!-- ###****************** Check that all data feeds have been sending data **********************### -->
   <row>
@@ -838,7 +933,7 @@ index="ssphp_metrics" ssphp.use_case.id="aad_*"
 
 
 <!-- ###****************** Display Panels **********************### -->
-  <row>
+  <row depends="$tkn_show_aad_row$">
     <panel depends="$nevershow$">
       <html>
         <style>
@@ -875,17 +970,17 @@ index="ssphp_metrics" ssphp.use_case.id="aad_*"
 | eval display_val=$tkn_aad_rollup_val$
 | table display_val
           </query>
-        </search>
-        <option name="colorMode">block</option>
-        <option name="drilldown">none</option>
-        <option name="height">$data_panel_height$</option>
-        <option name="rangeColors">[$tkn_aad_rollup_colour$,$tkn_aad_rollup_colour$]</option>
-        <option name="rangeValues">[0]</option>
-        <option name="useColors">1</option>
-        <option name="drilldown">all</option>
-        <drilldown>
-          <link target="_blank">/app/$tkn_current_app$/dfe_foundational_services__secuity_posture_metrics_drilldown_dashboard?tkn_use_case_id=aad_rollup</link>
-        </drilldown>
+          </search>
+          <option name="colorMode">block</option>
+          <option name="drilldown">none</option>
+          <option name="height">$data_panel_height$</option>
+          <option name="rangeColors">[$tkn_aad_rollup_colour$,$tkn_aad_rollup_colour$]</option>
+          <option name="rangeValues">[0]</option>
+          <option name="useColors">1</option>
+          <option name="drilldown">all</option>
+          <drilldown>
+            <link target="_blank">/app/$tkn_current_app$/dfe_foundational_services__secuity_posture_metrics_drilldown_dashboard?tkn_use_case_id=aad_rollup</link>
+          </drilldown>
       </single>
     </panel>    
 
@@ -903,17 +998,17 @@ index="ssphp_metrics" ssphp.use_case.id="aad_*"
 | eval display_val=$tkn_aad_001_val$
 | table display_val
           </query>
-        </search>
-        <option name="colorMode">none</option>
-        <option name="drilldown">none</option>
-        <option name="height">$data_panel_height$</option>
-        <option name="rangeColors">[$tkn_aad_001_colour$,$tkn_aad_001_colour$]</option>
-        <option name="rangeValues">[0]</option>
-        <option name="useColors">1</option>
-        <option name="drilldown">all</option>
-        <drilldown>
-          <link target="_blank">/app/$tkn_current_app$/dfe_foundational_services__secuity_posture_metrics_drilldown_dashboard?tkn_use_case_id=aad_001</link>
-        </drilldown>
+          </search>
+          <option name="colorMode">none</option>
+          <option name="drilldown">none</option>
+          <option name="height">$data_panel_height$</option>
+          <option name="rangeColors">[$tkn_aad_001_colour$,$tkn_aad_001_colour$]</option>
+          <option name="rangeValues">[0]</option>
+          <option name="useColors">1</option>
+          <option name="drilldown">all</option>
+          <drilldown>
+            <link target="_blank">/app/$tkn_current_app$/dfe_foundational_services__secuity_posture_metrics_drilldown_dashboard?tkn_use_case_id=aad_001</link>
+          </drilldown>
       </single>
     </panel>
     
@@ -926,17 +1021,17 @@ index="ssphp_metrics" ssphp.use_case.id="aad_*"
 | eval display_val=$tkn_aad_002_val$
 | table display_val
           </query>
-        </search>
-        <option name="colorMode">none</option>
-        <option name="drilldown">none</option>
-        <option name="height">$data_panel_height$</option>
-        <option name="rangeColors">[$tkn_aad_002_colour$,$tkn_aad_002_colour$]</option>
-        <option name="rangeValues">[0]</option>
-        <option name="useColors">1</option>
-        <option name="drilldown">all</option>
-        <drilldown>
-          <link target="_blank">/app/$tkn_current_app$/dfe_foundational_services__secuity_posture_metrics_drilldown_dashboard?tkn_use_case_id=aad_002</link>
-        </drilldown>
+          </search>
+          <option name="colorMode">none</option>
+          <option name="drilldown">none</option>
+          <option name="height">$data_panel_height$</option>
+          <option name="rangeColors">[$tkn_aad_002_colour$,$tkn_aad_002_colour$]</option>
+          <option name="rangeValues">[0]</option>
+          <option name="useColors">1</option>
+          <option name="drilldown">all</option>
+          <drilldown>
+            <link target="_blank">/app/$tkn_current_app$/dfe_foundational_services__secuity_posture_metrics_drilldown_dashboard?tkn_use_case_id=aad_002</link>
+          </drilldown>
       </single>
     </panel>
     
@@ -949,17 +1044,17 @@ index="ssphp_metrics" ssphp.use_case.id="aad_*"
 | eval display_val=$tkn_aad_003_val$
 | table display_val
           </query>
-        </search>
-        <option name="colorMode">none</option>
-        <option name="drilldown">none</option>
-        <option name="height">$data_panel_height$</option>
-        <option name="rangeColors">[$tkn_aad_003_colour$,$tkn_aad_003_colour$]</option>
-        <option name="rangeValues">[0]</option>
-        <option name="useColors">1</option>
-        <option name="drilldown">all</option>
-        <drilldown>
-          <link target="_blank">/app/$tkn_current_app$/dfe_foundational_services__secuity_posture_metrics_drilldown_dashboard?tkn_use_case_id=aad_003</link>
-        </drilldown>
+          </search>
+          <option name="colorMode">none</option>
+          <option name="drilldown">none</option>
+          <option name="height">$data_panel_height$</option>
+          <option name="rangeColors">[$tkn_aad_003_colour$,$tkn_aad_003_colour$]</option>
+          <option name="rangeValues">[0]</option>
+          <option name="useColors">1</option>
+          <option name="drilldown">all</option>
+          <drilldown>
+            <link target="_blank">/app/$tkn_current_app$/dfe_foundational_services__secuity_posture_metrics_drilldown_dashboard?tkn_use_case_id=aad_003</link>
+          </drilldown>
       </single>
     </panel>
     
@@ -972,17 +1067,17 @@ index="ssphp_metrics" ssphp.use_case.id="aad_*"
 | eval display_val=$tkn_aad_004_val$
 | table display_val
           </query>
-        </search>
-        <option name="colorMode">none</option>
-        <option name="drilldown">none</option>
-        <option name="height">$data_panel_height$</option>
-        <option name="rangeColors">[$tkn_aad_004_colour$,$tkn_aad_004_colour$]</option>
-        <option name="rangeValues">[0]</option>
-        <option name="useColors">1</option>
-        <option name="drilldown">all</option>
-        <drilldown>
-          <link target="_blank">/app/$tkn_current_app$/dfe_foundational_services__secuity_posture_metrics_drilldown_dashboard?tkn_use_case_id=aad_004</link>
-        </drilldown>
+          </search>
+          <option name="colorMode">none</option>
+          <option name="drilldown">none</option>
+          <option name="height">$data_panel_height$</option>
+          <option name="rangeColors">[$tkn_aad_004_colour$,$tkn_aad_004_colour$]</option>
+          <option name="rangeValues">[0]</option>
+          <option name="useColors">1</option>
+          <option name="drilldown">all</option>
+          <drilldown>
+            <link target="_blank">/app/$tkn_current_app$/dfe_foundational_services__secuity_posture_metrics_drilldown_dashboard?tkn_use_case_id=aad_004</link>
+          </drilldown>
       </single>
     </panel>
     
@@ -995,22 +1090,22 @@ index="ssphp_metrics" ssphp.use_case.id="aad_*"
 | eval display_val=$tkn_aad_005_val$
 | table display_val
           </query>
-        </search>
-        <option name="colorMode">none</option>
-        <option name="drilldown">none</option>
-        <option name="height">$data_panel_height$</option>
-        <option name="rangeColors">[$tkn_aad_005_colour$,$tkn_aad_005_colour$]</option>
-        <option name="rangeValues">[0]</option>
-        <option name="useColors">1</option>
-        <option name="drilldown">all</option>
-        <drilldown>
-          <link target="_blank">/app/$tkn_current_app$/dfe_foundational_services__secuity_posture_metrics_drilldown_dashboard?tkn_use_case_id=aad_005</link>
-        </drilldown>
+          </search>
+          <option name="colorMode">none</option>
+          <option name="drilldown">none</option>
+          <option name="height">$data_panel_height$</option>
+          <option name="rangeColors">[$tkn_aad_005_colour$,$tkn_aad_005_colour$]</option>
+          <option name="rangeValues">[0]</option>
+          <option name="useColors">1</option>
+          <option name="drilldown">all</option>
+          <drilldown>
+            <link target="_blank">/app/$tkn_current_app$/dfe_foundational_services__secuity_posture_metrics_drilldown_dashboard?tkn_use_case_id=aad_005</link>
+          </drilldown>
       </single>
     </panel>
   </row>
   
-  <row depends="$tkn_aad_data_feed_problem$,$tkn_view_details_panels$">
+  <row depends=" depends=$tkn_show_aad_row$,$tkn_aad_data_feed_problem$,$tkn_view_details_panels$">
     <panel>
       <html>
         <div style="background-color: red; color:black">There is a problem with Azure AD Data Feeds!</div>
@@ -1018,12 +1113,14 @@ index="ssphp_metrics" ssphp.use_case.id="aad_*"
     </panel>
   </row>
 
+
+
 <!-- ############################################################################################################################################### -->
 <!-- ############################################################ END OF Azure AD ROWS ################################################################## -->
 <!-- ############################################################################################################################################### -->
 
 
-  <row depends="$tkn_view_details_panels$">
+  <row depends=" depends=$tkn_show_aad_row$,$tkn_view_details_panels$">
     <panel>
       <html>
 
@@ -1032,41 +1129,80 @@ index="ssphp_metrics" ssphp.use_case.id="aad_*"
   </row>
 
 
+
   
   
 <!-- ############################################################################################################################################### -->
-<!-- ############################################################ OFFICE 365 ROWS ######################################################################### -->
+<!-- ############################################################ M365 ROWS ######################################################################### -->
 <!-- ############################################################################################################################################### -->
 
   
-<!-- ################################# O365 HEADER ROW ################################# -->
-  <row>
+<!-- ################################# M365 HEADER ROW ################################# -->
+  <row depends="$tkn_show_m365_row$">
     <panel depends="$nevershow$">
       <html>
         <style>
-          #panel_o365_hdr_rollup{
+          #panel_m365_hdr_rollup{
             width:$rollup_panel_width$ !important;
           }
-          #panel_o365_hdr_001{
+          #panel_m365_hdr_001{
             width:$data_panel_width$ !important;
           }
-          #panel_o365_hdr_002{
+          #panel_m365_hdr_002{
             width:$data_panel_width$ !important;
           }
-          #panel_o365_hdr_003{
+          #panel_m365_hdr_003{
             width:$data_panel_width$ !important;
           }
-          #panel_o365_hdr_004{
+          #panel_m365_hdr_004{
             width:$data_panel_width$ !important;
           }
-          #panel_o365_hdr_005{
+          #panel_m365_hdr_005{
             width:$data_panel_width$ !important;
           }
-          #panel_o365_hdr_filler{
-            width:1% !important;
+          #panel_m365_hdr_filler{
+            width:$filler_panel_width$ !important;
           }
         </style>
       </html>
+    </panel>
+    
+    <panel depends="$never_show$">
+      <table>
+        <search>
+          <query>
+| makeresults
+| eval app=$env:app|s$
+| table app
+          </query>
+          <done>
+            <set token="tkn_current_app">$result.app$</set>
+          </done>
+        </search>
+      </table>
+    </panel>
+    
+    
+<!-- ###****************** Show M365 row? **********************### -->
+    <panel depends="$never_show$">
+      <table>
+        <search>
+          <query>
+index="ssphp_metrics" ssphp.use_case.id="m365_rollup"
+| stats count
+          </query>
+          <done>
+            <condition match="$result.count$&gt;0">
+              <set token="tkn_show_m365_row">Y</set>
+            </condition>
+            <condition>
+              <unset token="tkn_show_m365_row"></unset>
+            </condition>
+          </done>
+          <earliest>0</earliest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+      </table>
     </panel>
     
     
@@ -1075,7 +1211,7 @@ index="ssphp_metrics" ssphp.use_case.id="aad_*"
       <table>
         <search>
           <query>
-index="ssphp_metrics" ssphp.use_case.id="o365_*"
+index="ssphp_metrics" ssphp.use_case.id="m365_*"
     [| search index="ssphp_metrics"
      | stats max(SSPHP_RUN) as SSPHP_RUN by ssphp.use_case.id
      | eval search_text="(\"ssphp.use_case.id\"=\"".'ssphp.use_case.id'."\" AND SSPHP_RUN=\"".SSPHP_RUN."\")"
@@ -1092,18 +1228,18 @@ index="ssphp_metrics" ssphp.use_case.id="o365_*"
 | fields *_display_title, *_display_short_desc
           </query>
           <done>
-            <set token="tkn_o365_rollup_display_title">$result.o365_rollup_display_title$</set>
-            <set token="tkn_o365_001_display_title">$result.o365_001_display_title$</set>
-            <set token="tkn_o365_002_display_title">$result.o365_002_display_title$</set>
-            <set token="tkn_o365_003_display_title">$result.o365_003_display_title$</set>
-            <set token="tkn_o365_004_display_title">$result.o365_004_display_title$</set>
-            <set token="tkn_o365_005_display_title">$result.o365_005_display_title$</set>
-            <set token="tkn_o365_rollup_display_short_desc">$result.o365_rollup_display_short_desc$</set>
-            <set token="tkn_o365_001_display_short_desc">$result.o365_001_display_short_desc$</set>
-            <set token="tkn_o365_002_display_short_desc">$result.o365_002_display_short_desc$</set>
-            <set token="tkn_o365_003_display_short_desc">$result.o365_003_display_short_desc$</set>
-            <set token="tkn_o365_004_display_short_desc">$result.o365_004_display_short_desc$</set>
-            <set token="tkn_o365_005_display_short_desc">$result.o365_005_display_short_desc$</set>
+            <set token="tkn_m365_rollup_display_title">$result.m365_rollup_display_title$</set>
+            <set token="tkn_m365_001_display_title">$result.m365_001_display_title$</set>
+            <set token="tkn_m365_002_display_title">$result.m365_002_display_title$</set>
+            <set token="tkn_m365_003_display_title">$result.m365_003_display_title$</set>
+            <set token="tkn_m365_004_display_title">$result.m365_004_display_title$</set>
+            <set token="tkn_m365_005_display_title">$result.m365_005_display_title$</set>
+            <set token="tkn_m365_rollup_display_short_desc">$result.m365_rollup_display_short_desc$</set>
+            <set token="tkn_m365_001_display_short_desc">$result.m365_001_display_short_desc$</set>
+            <set token="tkn_m365_002_display_short_desc">$result.m365_002_display_short_desc$</set>
+            <set token="tkn_m365_003_display_short_desc">$result.m365_003_display_short_desc$</set>
+            <set token="tkn_m365_004_display_short_desc">$result.m365_004_display_short_desc$</set>
+            <set token="tkn_m365_005_display_short_desc">$result.m365_005_display_short_desc$</set>
           </done>
           <earliest>0</earliest>
           <sampleRatio>1</sampleRatio>
@@ -1112,59 +1248,57 @@ index="ssphp_metrics" ssphp.use_case.id="o365_*"
     </panel>
     
     
-    <panel id="panel_o365_hdr_rollup" depends="$tkn_o365_rollup_is_visible$,$tkn_view_details_panels$">
+    <panel id="panel_m365_hdr_rollup" depends="$tkn_m365_rollup_is_visible$,$tkn_view_details_panels$">
       <html>
-<!-- #        <span class="header_r1">$tkn_o365_rollup_display_title$</span>
-        <span class="header_r2">$tkn_o365_rollup_display_short_desc$</span>## -->
-        <span class="header_r1">OFFICE 365</span>
-        <span class="header_r2">OVERALL SCORE</span>
+        <span class="header_r1" style="color:	darkcyan">$tkn_m365_rollup_display_title$</span>
+        <span class="header_r2">$tkn_m365_rollup_display_short_desc$</span>
       </html>
     </panel>
     
-    <panel id="panel_o365_hdr_filler" depends="$tkn_o365_rollup_is_visible$,$tkn_view_details_panels$">
+    <panel id="panel_m365_hdr_filler" depends="$tkn_m365_rollup_is_visible$,$tkn_view_details_panels$">
       <html>
 
       </html>
     </panel>
     
-    <panel id="panel_o365_hdr_001" depends="$tkn_o365_001_is_visible$,$tkn_view_details_panels$">
+    <panel id="panel_m365_hdr_001" depends="$tkn_m365_001_is_visible$,$tkn_view_details_panels$">
       <html>
-        <span class="header_r1">$tkn_o365_001_display_title$</span>
-        <span class="header_r2">$tkn_o365_001_display_short_desc$</span>
+        <span class="header_r1">$tkn_m365_001_display_title$</span>
+        <span class="header_r2">$tkn_m365_001_display_short_desc$</span>
       </html>
     </panel>
     
-    <panel id="panel_o365_hdr_002" depends="$tkn_o365_002_is_visible$,$tkn_view_details_panels$">
+    <panel id="panel_m365_hdr_002" depends="$tkn_m365_002_is_visible$,$tkn_view_details_panels$">
       <html>
-        <span class="header_r1">$tkn_o365_002_display_title$</span>
-        <span class="header_r2">$tkn_o365_002_display_short_desc$</span>
+        <span class="header_r1">$tkn_m365_002_display_title$</span>
+        <span class="header_r2">$tkn_m365_002_display_short_desc$</span>
       </html>
     </panel>
     
-    <panel id="panel_o365_hdr_003" depends="$tkn_o365_003_is_visible$,$tkn_view_details_panels$">
+    <panel id="panel_m365_hdr_003" depends="$tkn_m365_003_is_visible$,$tkn_view_details_panels$">
       <html>
-        <span class="header_r1">$tkn_o365_003_display_title$</span>
-        <span class="header_r2">$tkn_o365_003_display_short_desc$</span>
+        <span class="header_r1">$tkn_m365_003_display_title$</span>
+        <span class="header_r2">$tkn_m365_003_display_short_desc$</span>
       </html>
     </panel>
     
-    <panel id="panel_o365_hdr_004" depends="$tkn_o365_004_is_visible$,$tkn_view_details_panels$">
+    <panel id="panel_m365_hdr_004" depends="$tkn_m365_004_is_visible$,$tkn_view_details_panels$">
       <html>
-        <span class="header_r1">$tkn_o365_004_display_title$</span>
-        <span class="header_r2">$tkn_o365_004_display_short_desc$</span>
+        <span class="header_r1">$tkn_m365_004_display_title$</span>
+        <span class="header_r2">$tkn_m365_004_display_short_desc$</span>
       </html>
     </panel>
     
-    <panel id="panel_o365_hdr_005" depends="$tkn_o365_005_is_visible$,$tkn_view_details_panels$">
+    <panel id="panel_m365_hdr_005" depends="$tkn_m365_005_is_visible$,$tkn_view_details_panels$">
       <html>
-        <span class="header_r1">$tkn_o365_005_display_title$</span>
-        <span class="header_r2">$tkn_o365_005_display_short_desc$</span>
+        <span class="header_r1">$tkn_m365_005_display_title$</span>
+        <span class="header_r2">$tkn_m365_005_display_short_desc$</span>
       </html>
     </panel>
   </row>
 
 
-<!-- ################################# O365 PRE-CALC, CONFIG, & VISIBILITY ROW ################################# -->
+<!-- ################################# M365 PRE-CALC, CONFIG, & VISIBILITY ROW ################################# -->
 
 <!-- ###****************** Check that all data feeds have been sending data **********************### -->
   <row>
@@ -1188,10 +1322,10 @@ BY index, sourcetype
           </query>
           <done>
             <condition match="$result.ssphp.score$&gt;90">
-              <set token="tkn_o365_data_feed_problem">true</set>
+              <set token="tkn_m365_data_feed_problem">true</set>
             </condition>
             <condition>
-              <unset token="tkn_o365_data_feed_problem"></unset>
+              <unset token="tkn_m365_data_feed_problem"></unset>
             </condition>
           </done>
           <earliest>0</earliest>
@@ -1206,7 +1340,7 @@ BY index, sourcetype
       <table>
         <search>
           <query>
-index="ssphp_metrics" ssphp.use_case.id="o365_*"
+index="ssphp_metrics" ssphp.use_case.id="m365_*"
     [| search index="ssphp_metrics"
      | stats max(SSPHP_RUN) as SSPHP_RUN by ssphp.use_case.id
      | eval search_text="(\"ssphp.use_case.id\"=\"".'ssphp.use_case.id'."\" AND SSPHP_RUN=\"".SSPHP_RUN."\")"
@@ -1217,12 +1351,12 @@ index="ssphp_metrics" ssphp.use_case.id="o365_*"
 | transpose 0 header_field=ssphp.use_case.id
           </query>
           <done>
-            <set token="tkn_o365_rollup_val">$result.o365_rollup$</set>
-            <set token="tkn_o365_001_val">$result.o365_001$</set>
-            <set token="tkn_o365_002_val">$result.o365_002$</set>
-            <set token="tkn_o365_003_val">$result.o365_003$</set>
-            <set token="tkn_o365_004_val">$result.o365_004$</set>
-            <set token="tkn_o365_005_val">$result.o365_005$</set>
+            <set token="tkn_m365_rollup_val">$result.m365_rollup$</set>
+            <set token="tkn_m365_001_val">$result.m365_001$</set>
+            <set token="tkn_m365_002_val">$result.m365_002$</set>
+            <set token="tkn_m365_003_val">$result.m365_003$</set>
+            <set token="tkn_m365_004_val">$result.m365_004$</set>
+            <set token="tkn_m365_005_val">$result.m365_005$</set>
           </done>
           <earliest>0</earliest>
           <sampleRatio>1</sampleRatio>
@@ -1236,7 +1370,7 @@ index="ssphp_metrics" ssphp.use_case.id="o365_*"
       <table>
         <search>
           <query>
-index="ssphp_metrics" ssphp.use_case.id="o365_*"
+index="ssphp_metrics" ssphp.use_case.id="m365_*"
     [| search index="ssphp_metrics"
      | stats max(SSPHP_RUN) as SSPHP_RUN by ssphp.use_case.id
      | eval search_text="(\"ssphp.use_case.id\"=\"".'ssphp.use_case.id'."\" AND SSPHP_RUN=\"".SSPHP_RUN."\")"
@@ -1247,13 +1381,13 @@ index="ssphp_metrics" ssphp.use_case.id="o365_*"
 | transpose 0 header_field=ssphp.use_case.id
           </query>
           <done>
-            <set token="tkn_o365_rollup_colour">$result.o365_rollup$</set>
-            <eval token="tkn_o365_rollup_colour">case($result.o365_rollup$="red",$c_red$,$result.o365_rollup$="orange",$c_orange$,$result.o365_rollup$="green",$c_green$</eval>
-            <eval token="tkn_o365_001_colour">case($result.o365_001$="red",$c_red$,$result.o365_001$="orange",$c_orange$,$result.o365_001$="green",$c_green$</eval>
-            <eval token="tkn_o365_002_colour">case($result.o365_002$="red",$c_red$,$result.o365_002$="orange",$c_orange$,$result.o365_002$="green",$c_green$</eval>
-            <eval token="tkn_o365_003_colour">case($result.o365_003$="red",$c_red$,$result.o365_003$="orange",$c_orange$,$result.o365_003$="green",$c_green$</eval>
-            <eval token="tkn_o365_004_colour">case($result.o365_004$="red",$c_red$,$result.o365_004$="orange",$c_orange$,$result.o365_004$="green",$c_green$</eval>
-            <eval token="tkn_o365_005_colour">case($result.o365_005$="red",$c_red$,$result.o365_005$="orange",$c_orange$,$result.o365_005$="green",$c_green$</eval>
+            <set token="tkn_m365_rollup_colour">$result.m365_rollup$</set>
+            <eval token="tkn_m365_rollup_colour">case($result.m365_rollup$="red",$c_red$,$result.m365_rollup$="orange",$c_orange$,$result.m365_rollup$="green",$c_green$</eval>
+            <eval token="tkn_m365_001_colour">case($result.m365_001$="red",$c_red$,$result.m365_001$="orange",$c_orange$,$result.m365_001$="green",$c_green$</eval>
+            <eval token="tkn_m365_002_colour">case($result.m365_002$="red",$c_red$,$result.m365_002$="orange",$c_orange$,$result.m365_002$="green",$c_green$</eval>
+            <eval token="tkn_m365_003_colour">case($result.m365_003$="red",$c_red$,$result.m365_003$="orange",$c_orange$,$result.m365_003$="green",$c_green$</eval>
+            <eval token="tkn_m365_004_colour">case($result.m365_004$="red",$c_red$,$result.m365_004$="orange",$c_orange$,$result.m365_004$="green",$c_green$</eval>
+            <eval token="tkn_m365_005_colour">case($result.m365_005$="red",$c_red$,$result.m365_005$="orange",$c_orange$,$result.m365_005$="green",$c_green$</eval>
           </done>
           <earliest>0</earliest>
           <sampleRatio>1</sampleRatio>
@@ -1270,35 +1404,35 @@ index="ssphp_metrics" ssphp.use_case.id="o365_*"
 | makeresults
 | eval red_only=$tkn_view_only_red|s$,
        column="ssphp_visible",
-       o365_001_colour=$tkn_o365_001_colour$,
-       o365_002_colour=$tkn_o365_002_colour$,
-       o365_003_colour=$tkn_o365_003_colour$,
-       o365_004_colour=$tkn_o365_004_colour$,
-       o365_005_colour=$tkn_o365_005_colour$,
-       o365_rollup="1",
-       o365_001_val=$tkn_o365_001_val$,
-       o365_002_val=$tkn_o365_002_val$,
-       o365_003_val=$tkn_o365_003_val$,
-       o365_004_val=$tkn_o365_004_val$,
-       o365_005_val=$tkn_o365_005_val$
+       m365_001_colour=$tkn_m365_001_colour$,
+       m365_002_colour=$tkn_m365_002_colour$,
+       m365_003_colour=$tkn_m365_003_colour$,
+       m365_004_colour=$tkn_m365_004_colour$,
+       m365_005_colour=$tkn_m365_005_colour$,
+       m365_rollup="1",
+       m365_001_val=$tkn_m365_001_val$,
+       m365_002_val=$tkn_m365_002_val$,
+       m365_003_val=$tkn_m365_003_val$,
+       m365_004_val=$tkn_m365_004_val$,
+       m365_005_val=$tkn_m365_005_val$
        
-| fillnull value="null" o365_001_val o365_002_val o365_003_val o365_004_val o365_005_val
+| fillnull value="null" m365_001_val m365_002_val m365_003_val m365_004_val m365_005_val
 
-| eval o365_001=case(o365_001_colour=$c_red$,1,o365_001_val="null",0,red_only="N",1,1==1,0),
-       o365_002=case(o365_002_colour=$c_red$,1,o365_002_val="null",0,red_only="N",1,1==1,0),
-       o365_003=case(o365_003_colour=$c_red$,1,o365_003_val="null",0,red_only="N",1,1==1,0),
-       o365_004=case(o365_004_colour=$c_red$,1,o365_004_val="null",0,red_only="N",1,1==1,0),
-       o365_005=case(o365_005_colour=$c_red$,1,o365_005_val="null",0,red_only="N",1,1==1,0)
+| eval m365_001=case(m365_001_colour=$c_red$,1,m365_001_val="null",0,red_only="N",1,1==1,0),
+       m365_002=case(m365_002_colour=$c_red$,1,m365_002_val="null",0,red_only="N",1,1==1,0),
+       m365_003=case(m365_003_colour=$c_red$,1,m365_003_val="null",0,red_only="N",1,1==1,0),
+       m365_004=case(m365_004_colour=$c_red$,1,m365_004_val="null",0,red_only="N",1,1==1,0),
+       m365_005=case(m365_005_colour=$c_red$,1,m365_005_val="null",0,red_only="N",1,1==1,0)
 
-| table column, o365_rollup, o365_001,o365_002, o365_003, o365_004, o365_005, o365_001_colour, o365_002_colour, o365_003_colour, o365_004_colour, o365_005_colour, o365_001_val, o365_002_val, o365_003_val, o365_004_val, o365_005_val
+| table column, m365_rollup, m365_001,m365_002, m365_003, m365_004, m365_005, m365_001_colour, m365_002_colour, m365_003_colour, m365_004_colour, m365_005_colour, m365_001_val, m365_002_val, m365_003_val, m365_004_val, m365_005_val
           </query>
           <done>
-            <set token="tkn_o365_rollup_is_visible">true</set>
-            <eval token="tkn_o365_001_is_visible">if($result.o365_001$="1","true",null())</eval>
-            <eval token="tkn_o365_002_is_visible">if($result.o365_002$="1","true",null())</eval>
-            <eval token="tkn_o365_003_is_visible">if($result.o365_003$="1","true",null())</eval>
-            <eval token="tkn_o365_004_is_visible">if($result.o365_004$="1","true",null())</eval>
-            <eval token="tkn_o365_005_is_visible">if($result.o365_005$="1","true",null())</eval>
+            <set token="tkn_m365_rollup_is_visible">true</set>
+            <eval token="tkn_m365_001_is_visible">if($result.m365_001$="1","true",null())</eval>
+            <eval token="tkn_m365_002_is_visible">if($result.m365_002$="1","true",null())</eval>
+            <eval token="tkn_m365_003_is_visible">if($result.m365_003$="1","true",null())</eval>
+            <eval token="tkn_m365_004_is_visible">if($result.m365_004$="1","true",null())</eval>
+            <eval token="tkn_m365_005_is_visible">if($result.m365_005$="1","true",null())</eval>
           </done>
           <earliest>0</earliest>
           <sampleRatio>1</sampleRatio>
@@ -1309,189 +1443,1214 @@ index="ssphp_metrics" ssphp.use_case.id="o365_*"
 
 
 <!-- ###****************** Display Panels **********************### -->
-  <row>
+  <row depends="$tkn_show_m365_row$">
     <panel depends="$nevershow$">
       <html>
         <style>
-          #panel_o365_data_rollup{
+          #panel_m365_data_rollup{
             width:$rollup_panel_width$ !important;
           }
-          #panel_o365_data_001{
+          #panel_m365_data_001{
             width:$data_panel_width$ !important;
           }
-          #panel_o365_data_002{
+          #panel_m365_data_002{
             width:$data_panel_width$ !important;
           }
-          #panel_o365_data_003{
+          #panel_m365_data_003{
             width:$data_panel_width$ !important;
           }
-          #panel_o365_data_004{
+          #panel_m365_data_004{
             width:$data_panel_width$ !important;
           }
-          #panel_o365_data_005{
+          #panel_m365_data_005{
             width:$data_panel_width$ !important;
           }
-          #panel_o365_data_filler{
+          #panel_m365_data_filler{
             width:1% !important;
           }
         </style>
       </html>
     </panel>
 
-    <panel id="panel_o365_data_rollup" depends="$tkn_o365_rollup_is_visible$,$tkn_view_details_panels$">
+    <panel id="panel_m365_data_rollup" depends="$tkn_m365_rollup_is_visible$,$tkn_view_details_panels$">
       <single>
         <search>
           <query>
 | makeresults
-| eval display_val=$tkn_o365_rollup_val$
+| eval display_val=$tkn_m365_rollup_val$
 | table display_val
           </query>
-        </search>
-        <option name="colorMode">block</option>
-        <option name="drilldown">none</option>
-        <option name="height">$data_panel_height$</option>
-        <option name="rangeColors">[$tkn_o365_rollup_colour$,$tkn_o365_rollup_colour$]</option>
-        <option name="rangeValues">[0]</option>
-        <option name="useColors">1</option>
-        <option name="drilldown">all</option>
-        <drilldown>
-          <link target="_blank">/app/$tkn_current_app$/dfe_foundational_services__secuity_posture_metrics_drilldown_dashboard?tkn_use_case_id=o365_rollup</link>
-        </drilldown>
+          </search>
+          <option name="colorMode">block</option>
+          <option name="drilldown">none</option>
+          <option name="height">$data_panel_height$</option>
+          <option name="rangeColors">[$tkn_m365_rollup_colour$,$tkn_m365_rollup_colour$]</option>
+          <option name="rangeValues">[0]</option>
+          <option name="useColors">1</option>
+          <option name="drilldown">all</option>
+          <drilldown>
+            <link target="_blank">/app/$tkn_current_app$/dfe_foundational_services__secuity_posture_metrics_drilldown_dashboard?tkn_use_case_id=m365_rollup</link>
+          </drilldown>
       </single>
     </panel>    
 
-    <panel id="panel_o365_data_filler" depends="$tkn_o365_rollup_is_visible$,$tkn_view_details_panels$">
+    <panel id="panel_m365_data_filler" depends="$tkn_m365_rollup_is_visible$,$tkn_view_details_panels$">
       <html>
       </html>
     </panel>
     
     
-    <panel id="panel_o365_data_001" depends="$tkn_o365_001_is_visible$,$tkn_view_details_panels$">
+    <panel id="panel_m365_data_001" depends="$tkn_m365_001_is_visible$,$tkn_view_details_panels$">
       <single>
         <search>
           <query>
 | makeresults
-| eval display_val=$tkn_o365_001_val$
+| eval display_val=$tkn_m365_001_val$
 | table display_val
           </query>
-        </search>
-        <option name="colorMode">none</option>
-        <option name="drilldown">none</option>
-        <option name="height">$data_panel_height$</option>
-        <option name="rangeColors">[$tkn_o365_001_colour$,$tkn_o365_001_colour$]</option>
-        <option name="rangeValues">[0]</option>
-        <option name="useColors">1</option>
-        <option name="drilldown">all</option>
-        <drilldown>
-          <link target="_blank">/app/$tkn_current_app$/dfe_foundational_services__secuity_posture_metrics_drilldown_dashboard?tkn_use_case_id=o365_001</link>
-        </drilldown>
+          </search>
+          <option name="colorMode">none</option>
+          <option name="drilldown">none</option>
+          <option name="height">$data_panel_height$</option>
+          <option name="rangeColors">[$tkn_m365_001_colour$,$tkn_m365_001_colour$]</option>
+          <option name="rangeValues">[0]</option>
+          <option name="useColors">1</option>
+          <option name="drilldown">all</option>
+          <drilldown>
+            <link target="_blank">/app/$tkn_current_app$/dfe_foundational_services__secuity_posture_metrics_drilldown_dashboard?tkn_use_case_id=m365_001</link>
+          </drilldown>
       </single>
     </panel>
     
     
-    <panel id="panel_o365_data_002" depends="$tkn_o365_002_is_visible$,$tkn_view_details_panels$">
+    <panel id="panel_m365_data_002" depends="$tkn_m365_002_is_visible$,$tkn_view_details_panels$">
       <single>
         <search>
           <query>
 | makeresults
-| eval display_val=$tkn_o365_002_val$
+| eval display_val=$tkn_m365_002_val$
 | table display_val
           </query>
-        </search>
-        <option name="colorMode">none</option>
-        <option name="drilldown">none</option>
-        <option name="height">$data_panel_height$</option>
-        <option name="rangeColors">[$tkn_o365_002_colour$,$tkn_o365_002_colour$]</option>
-        <option name="rangeValues">[0]</option>
-        <option name="useColors">1</option>
-        <option name="drilldown">all</option>
-        <drilldown>
-          <link target="_blank">/app/$tkn_current_app$/dfe_foundational_services__secuity_posture_metrics_drilldown_dashboard?tkn_use_case_id=o365_002</link>
-        </drilldown>
+          </search>
+          <option name="colorMode">none</option>
+          <option name="drilldown">none</option>
+          <option name="height">$data_panel_height$</option>
+          <option name="rangeColors">[$tkn_m365_002_colour$,$tkn_m365_002_colour$]</option>
+          <option name="rangeValues">[0]</option>
+          <option name="useColors">1</option>
+          <option name="drilldown">all</option>
+          <drilldown>
+            <link target="_blank">/app/$tkn_current_app$/dfe_foundational_services__secuity_posture_metrics_drilldown_dashboard?tkn_use_case_id=m365_002</link>
+          </drilldown>
       </single>
     </panel>
     
     
-    <panel id="panel_o365_data_003" depends="$tkn_o365_003_is_visible$,$tkn_view_details_panels$">
+    <panel id="panel_m365_data_003" depends="$tkn_m365_003_is_visible$,$tkn_view_details_panels$">
       <single>
         <search>
           <query>
 | makeresults
-| eval display_val=$tkn_o365_003_val$
+| eval display_val=$tkn_m365_003_val$
 | table display_val
           </query>
-        </search>
-        <option name="colorMode">none</option>
-        <option name="drilldown">none</option>
-        <option name="height">$data_panel_height$</option>
-        <option name="rangeColors">[$tkn_o365_003_colour$,$tkn_o365_003_colour$]</option>
-        <option name="rangeValues">[0]</option>
-        <option name="useColors">1</option>
-        <option name="drilldown">all</option>
-        <drilldown>
-          <link target="_blank">/app/$tkn_current_app$/dfe_foundational_services__secuity_posture_metrics_drilldown_dashboard?tkn_use_case_id=o365_003</link>
-        </drilldown>
+          </search>
+          <option name="colorMode">none</option>
+          <option name="drilldown">none</option>
+          <option name="height">$data_panel_height$</option>
+          <option name="rangeColors">[$tkn_m365_003_colour$,$tkn_m365_003_colour$]</option>
+          <option name="rangeValues">[0]</option>
+          <option name="useColors">1</option>
+          <option name="drilldown">all</option>
+          <drilldown>
+            <link target="_blank">/app/$tkn_current_app$/dfe_foundational_services__secuity_posture_metrics_drilldown_dashboard?tkn_use_case_id=m365_003</link>
+          </drilldown>
       </single>
     </panel>
     
     
-    <panel id="panel_o365_data_004" depends="$tkn_o365_004_is_visible$,$tkn_view_details_panels$">
+    <panel id="panel_m365_data_004" depends="$tkn_m365_004_is_visible$,$tkn_view_details_panels$">
       <single>
         <search>
           <query>
 | makeresults
-| eval display_val=$tkn_o365_004_val$
+| eval display_val=$tkn_m365_004_val$
 | table display_val
           </query>
-        </search>
-        <option name="colorMode">none</option>
-        <option name="drilldown">none</option>
-        <option name="height">$data_panel_height$</option>
-        <option name="rangeColors">[$tkn_o365_004_colour$,$tkn_o365_004_colour$]</option>
-        <option name="rangeValues">[0]</option>
-        <option name="useColors">1</option>
-        <option name="drilldown">all</option>
-        <drilldown>
-          <link target="_blank">/app/$tkn_current_app$/dfe_foundational_services__secuity_posture_metrics_drilldown_dashboard?tkn_use_case_id=o365_004</link>
-        </drilldown>
+          </search>
+          <option name="colorMode">none</option>
+          <option name="drilldown">none</option>
+          <option name="height">$data_panel_height$</option>
+          <option name="rangeColors">[$tkn_m365_004_colour$,$tkn_m365_004_colour$]</option>
+          <option name="rangeValues">[0]</option>
+          <option name="useColors">1</option>
+          <option name="drilldown">all</option>
+          <drilldown>
+            <link target="_blank">/app/$tkn_current_app$/dfe_foundational_services__secuity_posture_metrics_drilldown_dashboard?tkn_use_case_id=m365_004</link>
+          </drilldown>
       </single>
     </panel>
     
     
-    <panel id="panel_o365_data_005" depends="$tkn_o365_005_is_visible$,$tkn_view_details_panels$">
+    <panel id="panel_m365_data_005" depends="$tkn_m365_005_is_visible$,$tkn_view_details_panels$">
       <single>
         <search>
           <query>
 | makeresults
-| eval display_val=$tkn_o365_005_val$
+| eval display_val=$tkn_m365_005_val$
 | table display_val
           </query>
-        </search>
-        <option name="colorMode">none</option>
-        <option name="drilldown">none</option>
-        <option name="height">$data_panel_height$</option>
-        <option name="rangeColors">[$tkn_o365_005_colour$,$tkn_o365_005_colour$]</option>
-        <option name="rangeValues">[0]</option>
-        <option name="useColors">1</option>
-        <option name="drilldown">all</option>
-        <drilldown>
-          <link target="_blank">/app/$tkn_current_app$/dfe_foundational_services__secuity_posture_metrics_drilldown_dashboard?tkn_use_case_id=o365_005</link>
-        </drilldown>
+          </search>
+          <option name="colorMode">none</option>
+          <option name="drilldown">none</option>
+          <option name="height">$data_panel_height$</option>
+          <option name="rangeColors">[$tkn_m365_005_colour$,$tkn_m365_005_colour$]</option>
+          <option name="rangeValues">[0]</option>
+          <option name="useColors">1</option>
+          <option name="drilldown">all</option>
+          <drilldown>
+            <link target="_blank">/app/$tkn_current_app$/dfe_foundational_services__secuity_posture_metrics_drilldown_dashboard?tkn_use_case_id=m365_005</link>
+          </drilldown>
       </single>
     </panel>
   </row>
   
-  <row depends="$tkn_o365_data_feed_problem$,$tkn_view_details_panels$">
+  <row depends=" depends=$tkn_show_m365_row$,$tkn_m365_data_feed_problem$,$tkn_view_details_panels$">
     <panel>
       <html>
-        <div style="background-color: red; color:black">There is a problem with OFFICE 365 Data Feeds!</div>
+        <div style="background-color: red; color:black">There is a problem with M365 Data Feeds!</div>
       </html>
     </panel>
   </row>
 
 <!-- ############################################################################################################################################### -->
-<!-- ############################################################ END OF OFFICE 365 ROWS ################################################################## -->
+<!-- ############################################################ END OF M365 ROWS ################################################################## -->
 <!-- ############################################################################################################################################### -->
+
+
+  <row depends=" depends=$tkn_show_m365_row$,$tkn_view_details_panels$">
+    <panel>
+      <html>
+
+      </html>
+    </panel>
+  </row>
+
+
+  
+  
+<!-- ############################################################################################################################################### -->
+<!-- ############################################################ Azure ROWS ######################################################################### -->
+<!-- ############################################################################################################################################### -->
+
+  
+<!-- ################################# Azure HEADER ROW ################################# -->
+  <row depends="$tkn_show_azr_row$">
+    <panel depends="$nevershow$">
+      <html>
+        <style>
+          #panel_azr_hdr_rollup{
+            width:$rollup_panel_width$ !important;
+          }
+          #panel_azr_hdr_001{
+            width:$data_panel_width$ !important;
+          }
+          #panel_azr_hdr_002{
+            width:$data_panel_width$ !important;
+          }
+          #panel_azr_hdr_003{
+            width:$data_panel_width$ !important;
+          }
+          #panel_azr_hdr_004{
+            width:$data_panel_width$ !important;
+          }
+          #panel_azr_hdr_005{
+            width:$data_panel_width$ !important;
+          }
+          #panel_azr_hdr_filler{
+            width:$filler_panel_width$ !important;
+          }
+        </style>
+      </html>
+    </panel>
+    
+    <panel depends="$never_show$">
+      <table>
+        <search>
+          <query>
+| makeresults
+| eval app=$env:app|s$
+| table app
+          </query>
+          <done>
+            <set token="tkn_current_app">$result.app$</set>
+          </done>
+        </search>
+      </table>
+    </panel>
+    
+    
+<!-- ###****************** Show Azure row? **********************### -->
+    <panel depends="$never_show$">
+      <table>
+        <search>
+          <query>
+index="ssphp_metrics" ssphp.use_case.id="azr_rollup"
+| stats count
+          </query>
+          <done>
+            <condition match="$result.count$&gt;0">
+              <set token="tkn_show_azr_row">Y</set>
+            </condition>
+            <condition>
+              <unset token="tkn_show_azr_row"></unset>
+            </condition>
+          </done>
+          <earliest>0</earliest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+      </table>
+    </panel>
+    
+    
+<!-- ###****************** Panel Heading Values **********************### -->
+    <panel depends="$never_show$">
+      <table>
+        <search>
+          <query>
+index="ssphp_metrics" ssphp.use_case.id="azr_*"
+    [| search index="ssphp_metrics"
+     | stats max(SSPHP_RUN) as SSPHP_RUN by ssphp.use_case.id
+     | eval search_text="(\"ssphp.use_case.id\"=\"".'ssphp.use_case.id'."\" AND SSPHP_RUN=\"".SSPHP_RUN."\")"
+     | stats values(search_text) as search_text
+     | eval search_text="(".mvjoin(search_text," OR ").")"
+    | return $search_text]
+| eval ssphp_desc='ssphp.use_case.display.title'."~~~".'ssphp.use_case.display.short_description'
+| stats values(ssphp_desc) as ssphp_desc by ssphp.use_case.id
+| transpose 0 header_field=ssphp.use_case.id
+| fields - column
+| foreach * 
+    [| eval "&lt;&lt;FIELD&gt;&gt;_display_title"=mvindex(split(&lt;&lt;FIELD&gt;&gt;,"~~~"),0),
+            "&lt;&lt;FIELD&gt;&gt;_display_short_desc"=mvindex(split(&lt;&lt;FIELD&gt;&gt;,"~~~"),1)]
+| fields *_display_title, *_display_short_desc
+          </query>
+          <done>
+            <set token="tkn_azr_rollup_display_title">$result.azr_rollup_display_title$</set>
+            <set token="tkn_azr_001_display_title">$result.azr_001_display_title$</set>
+            <set token="tkn_azr_002_display_title">$result.azr_002_display_title$</set>
+            <set token="tkn_azr_003_display_title">$result.azr_003_display_title$</set>
+            <set token="tkn_azr_004_display_title">$result.azr_004_display_title$</set>
+            <set token="tkn_azr_005_display_title">$result.azr_005_display_title$</set>
+            <set token="tkn_azr_rollup_display_short_desc">$result.azr_rollup_display_short_desc$</set>
+            <set token="tkn_azr_001_display_short_desc">$result.azr_001_display_short_desc$</set>
+            <set token="tkn_azr_002_display_short_desc">$result.azr_002_display_short_desc$</set>
+            <set token="tkn_azr_003_display_short_desc">$result.azr_003_display_short_desc$</set>
+            <set token="tkn_azr_004_display_short_desc">$result.azr_004_display_short_desc$</set>
+            <set token="tkn_azr_005_display_short_desc">$result.azr_005_display_short_desc$</set>
+          </done>
+          <earliest>0</earliest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+      </table>
+    </panel>
+    
+    
+    <panel id="panel_azr_hdr_rollup" depends="$tkn_azr_rollup_is_visible$,$tkn_view_details_panels$">
+      <html>
+        <span class="header_r1" style="color:	darkcyan">$tkn_azr_rollup_display_title$</span>
+        <span class="header_r2">$tkn_azr_rollup_display_short_desc$</span>
+      </html>
+    </panel>
+    
+    <panel id="panel_azr_hdr_filler" depends="$tkn_azr_rollup_is_visible$,$tkn_view_details_panels$">
+      <html>
+
+      </html>
+    </panel>
+    
+    <panel id="panel_azr_hdr_001" depends="$tkn_azr_001_is_visible$,$tkn_view_details_panels$">
+      <html>
+        <span class="header_r1">$tkn_azr_001_display_title$</span>
+        <span class="header_r2">$tkn_azr_001_display_short_desc$</span>
+      </html>
+    </panel>
+    
+    <panel id="panel_azr_hdr_002" depends="$tkn_azr_002_is_visible$,$tkn_view_details_panels$">
+      <html>
+        <span class="header_r1">$tkn_azr_002_display_title$</span>
+        <span class="header_r2">$tkn_azr_002_display_short_desc$</span>
+      </html>
+    </panel>
+    
+    <panel id="panel_azr_hdr_003" depends="$tkn_azr_003_is_visible$,$tkn_view_details_panels$">
+      <html>
+        <span class="header_r1">$tkn_azr_003_display_title$</span>
+        <span class="header_r2">$tkn_azr_003_display_short_desc$</span>
+      </html>
+    </panel>
+    
+    <panel id="panel_azr_hdr_004" depends="$tkn_azr_004_is_visible$,$tkn_view_details_panels$">
+      <html>
+        <span class="header_r1">$tkn_azr_004_display_title$</span>
+        <span class="header_r2">$tkn_azr_004_display_short_desc$</span>
+      </html>
+    </panel>
+    
+    <panel id="panel_azr_hdr_005" depends="$tkn_azr_005_is_visible$,$tkn_view_details_panels$">
+      <html>
+        <span class="header_r1">$tkn_azr_005_display_title$</span>
+        <span class="header_r2">$tkn_azr_005_display_short_desc$</span>
+      </html>
+    </panel>
+  </row>
+
+
+<!-- ################################# Azure PRE-CALC, CONFIG, & VISIBILITY ROW ################################# -->
+
+<!-- ###****************** Check that all data feeds have been sending data **********************### -->
+  <row>
+    <panel depends="$never_show$">
+      <table>
+        <search>
+          <query>
+| tstats count
+WHERE 
+    [| tstats values(sourcetype) as search_start WHERE (index=test NOT sourcetype="azure*") earliest=0 latest=now
+     | eval search_start="index=\"test\" AND ((sourcetype=\"".mvjoin(search_start,"\") OR (sourcetype=\"")."\"))"
+     | return $search_start] 
+     earliest=-1d@d
+BY index, sourcetype
+| eventstats count as no_sourcetypes
+| where count=0
+| eventstats count as no_sourcetypes_without_data
+| head 1
+| eval ssphp.score=round(no_sourcetypes_without_data*100/no_sourcetypes)
+| fields ssphp.score
+          </query>
+          <done>
+            <condition match="$result.ssphp.score$&gt;90">
+              <set token="tkn_azr_data_feed_problem">true</set>
+            </condition>
+            <condition>
+              <unset token="tkn_azr_data_feed_problem"></unset>
+            </condition>
+          </done>
+          <earliest>0</earliest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+      </table>
+    </panel>
+    
+    
+<!-- ###****************** Panel Values **********************### -->
+    <panel depends="$never_show$">
+      <table>
+        <search>
+          <query>
+index="ssphp_metrics" ssphp.use_case.id="azr_*"
+    [| search index="ssphp_metrics"
+     | stats max(SSPHP_RUN) as SSPHP_RUN by ssphp.use_case.id
+     | eval search_text="(\"ssphp.use_case.id\"=\"".'ssphp.use_case.id'."\" AND SSPHP_RUN=\"".SSPHP_RUN."\")"
+     | stats values(search_text) as search_text
+     | eval search_text="(".mvjoin(search_text," OR ").")"
+    | return $$search_text]
+| stats values(ssphp.score) as ssphp.score by ssphp.use_case.id
+| transpose 0 header_field=ssphp.use_case.id
+          </query>
+          <done>
+            <set token="tkn_azr_rollup_val">$result.azr_rollup$</set>
+            <set token="tkn_azr_001_val">$result.azr_001$</set>
+            <set token="tkn_azr_002_val">$result.azr_002$</set>
+            <set token="tkn_azr_003_val">$result.azr_003$</set>
+            <set token="tkn_azr_004_val">$result.azr_004$</set>
+            <set token="tkn_azr_005_val">$result.azr_005$</set>
+          </done>
+          <earliest>0</earliest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+      </table>
+    </panel>
+
+
+<!-- ###****************** Panel Colours **********************### -->
+    <panel depends="$never_show$">
+      <table>
+        <search>
+          <query>
+index="ssphp_metrics" ssphp.use_case.id="azr_*"
+    [| search index="ssphp_metrics"
+     | stats max(SSPHP_RUN) as SSPHP_RUN by ssphp.use_case.id
+     | eval search_text="(\"ssphp.use_case.id\"=\"".'ssphp.use_case.id'."\" AND SSPHP_RUN=\"".SSPHP_RUN."\")"
+     | stats values(search_text) as search_text
+     | eval search_text="(".mvjoin(search_text," OR ").")"
+    | return $$search_text]
+| stats values(ssphp.color) as ssphp.color by ssphp.use_case.id
+| transpose 0 header_field=ssphp.use_case.id
+          </query>
+          <done>
+            <set token="tkn_azr_rollup_colour">$result.azr_rollup$</set>
+            <eval token="tkn_azr_rollup_colour">case($result.azr_rollup$="red",$c_red$,$result.azr_rollup$="orange",$c_orange$,$result.azr_rollup$="green",$c_green$</eval>
+            <eval token="tkn_azr_001_colour">case($result.azr_001$="red",$c_red$,$result.azr_001$="orange",$c_orange$,$result.azr_001$="green",$c_green$</eval>
+            <eval token="tkn_azr_002_colour">case($result.azr_002$="red",$c_red$,$result.azr_002$="orange",$c_orange$,$result.azr_002$="green",$c_green$</eval>
+            <eval token="tkn_azr_003_colour">case($result.azr_003$="red",$c_red$,$result.azr_003$="orange",$c_orange$,$result.azr_003$="green",$c_green$</eval>
+            <eval token="tkn_azr_004_colour">case($result.azr_004$="red",$c_red$,$result.azr_004$="orange",$c_orange$,$result.azr_004$="green",$c_green$</eval>
+            <eval token="tkn_azr_005_colour">case($result.azr_005$="red",$c_red$,$result.azr_005$="orange",$c_orange$,$result.azr_005$="green",$c_green$</eval>
+          </done>
+          <earliest>0</earliest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+      </table>
+    </panel>
+
+
+<!-- ###****************** Panel visible **********************### -->
+    <panel depends="$never_show$">>
+      <table>
+        <search>
+          <query>
+| makeresults
+| eval red_only=$tkn_view_only_red|s$,
+       column="ssphp_visible",
+       azr_001_colour=$tkn_azr_001_colour$,
+       azr_002_colour=$tkn_azr_002_colour$,
+       azr_003_colour=$tkn_azr_003_colour$,
+       azr_004_colour=$tkn_azr_004_colour$,
+       azr_005_colour=$tkn_azr_005_colour$,
+       azr_rollup="1",
+       azr_001_val=$tkn_azr_001_val$,
+       azr_002_val=$tkn_azr_002_val$,
+       azr_003_val=$tkn_azr_003_val$,
+       azr_004_val=$tkn_azr_004_val$,
+       azr_005_val=$tkn_azr_005_val$
+       
+| fillnull value="null" azr_001_val azr_002_val azr_003_val azr_004_val azr_005_val
+
+| eval azr_001=case(azr_001_colour=$c_red$,1,azr_001_val="null",0,red_only="N",1,1==1,0),
+       azr_002=case(azr_002_colour=$c_red$,1,azr_002_val="null",0,red_only="N",1,1==1,0),
+       azr_003=case(azr_003_colour=$c_red$,1,azr_003_val="null",0,red_only="N",1,1==1,0),
+       azr_004=case(azr_004_colour=$c_red$,1,azr_004_val="null",0,red_only="N",1,1==1,0),
+       azr_005=case(azr_005_colour=$c_red$,1,azr_005_val="null",0,red_only="N",1,1==1,0)
+
+| table column, azr_rollup, azr_001,azr_002, azr_003, azr_004, azr_005, azr_001_colour, azr_002_colour, azr_003_colour, azr_004_colour, azr_005_colour, azr_001_val, azr_002_val, azr_003_val, azr_004_val, azr_005_val
+          </query>
+          <done>
+            <set token="tkn_azr_rollup_is_visible">true</set>
+            <eval token="tkn_azr_001_is_visible">if($result.azr_001$="1","true",null())</eval>
+            <eval token="tkn_azr_002_is_visible">if($result.azr_002$="1","true",null())</eval>
+            <eval token="tkn_azr_003_is_visible">if($result.azr_003$="1","true",null())</eval>
+            <eval token="tkn_azr_004_is_visible">if($result.azr_004$="1","true",null())</eval>
+            <eval token="tkn_azr_005_is_visible">if($result.azr_005$="1","true",null())</eval>
+          </done>
+          <earliest>0</earliest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+      </table>
+    </panel>
+  </row>
+
+
+<!-- ###****************** Display Panels **********************### -->
+  <row depends="$tkn_show_azr_row$">
+    <panel depends="$nevershow$">
+      <html>
+        <style>
+          #panel_azr_data_rollup{
+            width:$rollup_panel_width$ !important;
+          }
+          #panel_azr_data_001{
+            width:$data_panel_width$ !important;
+          }
+          #panel_azr_data_002{
+            width:$data_panel_width$ !important;
+          }
+          #panel_azr_data_003{
+            width:$data_panel_width$ !important;
+          }
+          #panel_azr_data_004{
+            width:$data_panel_width$ !important;
+          }
+          #panel_azr_data_005{
+            width:$data_panel_width$ !important;
+          }
+          #panel_azr_data_filler{
+            width:1% !important;
+          }
+        </style>
+      </html>
+    </panel>
+
+    <panel id="panel_azr_data_rollup" depends="$tkn_azr_rollup_is_visible$,$tkn_view_details_panels$">
+      <single>
+        <search>
+          <query>
+| makeresults
+| eval display_val=$tkn_azr_rollup_val$
+| table display_val
+          </query>
+          </search>
+          <option name="colorMode">block</option>
+          <option name="drilldown">none</option>
+          <option name="height">$data_panel_height$</option>
+          <option name="rangeColors">[$tkn_azr_rollup_colour$,$tkn_azr_rollup_colour$]</option>
+          <option name="rangeValues">[0]</option>
+          <option name="useColors">1</option>
+          <option name="drilldown">all</option>
+          <drilldown>
+            <link target="_blank">/app/$tkn_current_app$/dfe_foundational_services__secuity_posture_metrics_drilldown_dashboard?tkn_use_case_id=azr_rollup</link>
+          </drilldown>
+      </single>
+    </panel>    
+
+    <panel id="panel_azr_data_filler" depends="$tkn_azr_rollup_is_visible$,$tkn_view_details_panels$">
+      <html>
+      </html>
+    </panel>
+    
+    
+    <panel id="panel_azr_data_001" depends="$tkn_azr_001_is_visible$,$tkn_view_details_panels$">
+      <single>
+        <search>
+          <query>
+| makeresults
+| eval display_val=$tkn_azr_001_val$
+| table display_val
+          </query>
+          </search>
+          <option name="colorMode">none</option>
+          <option name="drilldown">none</option>
+          <option name="height">$data_panel_height$</option>
+          <option name="rangeColors">[$tkn_azr_001_colour$,$tkn_azr_001_colour$]</option>
+          <option name="rangeValues">[0]</option>
+          <option name="useColors">1</option>
+          <option name="drilldown">all</option>
+          <drilldown>
+            <link target="_blank">/app/$tkn_current_app$/dfe_foundational_services__secuity_posture_metrics_drilldown_dashboard?tkn_use_case_id=azr_001</link>
+          </drilldown>
+      </single>
+    </panel>
+    
+    
+    <panel id="panel_azr_data_002" depends="$tkn_azr_002_is_visible$,$tkn_view_details_panels$">
+      <single>
+        <search>
+          <query>
+| makeresults
+| eval display_val=$tkn_azr_002_val$
+| table display_val
+          </query>
+          </search>
+          <option name="colorMode">none</option>
+          <option name="drilldown">none</option>
+          <option name="height">$data_panel_height$</option>
+          <option name="rangeColors">[$tkn_azr_002_colour$,$tkn_azr_002_colour$]</option>
+          <option name="rangeValues">[0]</option>
+          <option name="useColors">1</option>
+          <option name="drilldown">all</option>
+          <drilldown>
+            <link target="_blank">/app/$tkn_current_app$/dfe_foundational_services__secuity_posture_metrics_drilldown_dashboard?tkn_use_case_id=azr_002</link>
+          </drilldown>
+      </single>
+    </panel>
+    
+    
+    <panel id="panel_azr_data_003" depends="$tkn_azr_003_is_visible$,$tkn_view_details_panels$">
+      <single>
+        <search>
+          <query>
+| makeresults
+| eval display_val=$tkn_azr_003_val$
+| table display_val
+          </query>
+          </search>
+          <option name="colorMode">none</option>
+          <option name="drilldown">none</option>
+          <option name="height">$data_panel_height$</option>
+          <option name="rangeColors">[$tkn_azr_003_colour$,$tkn_azr_003_colour$]</option>
+          <option name="rangeValues">[0]</option>
+          <option name="useColors">1</option>
+          <option name="drilldown">all</option>
+          <drilldown>
+            <link target="_blank">/app/$tkn_current_app$/dfe_foundational_services__secuity_posture_metrics_drilldown_dashboard?tkn_use_case_id=azr_003</link>
+          </drilldown>
+      </single>
+    </panel>
+    
+    
+    <panel id="panel_azr_data_004" depends="$tkn_azr_004_is_visible$,$tkn_view_details_panels$">
+      <single>
+        <search>
+          <query>
+| makeresults
+| eval display_val=$tkn_azr_004_val$
+| table display_val
+          </query>
+          </search>
+          <option name="colorMode">none</option>
+          <option name="drilldown">none</option>
+          <option name="height">$data_panel_height$</option>
+          <option name="rangeColors">[$tkn_azr_004_colour$,$tkn_azr_004_colour$]</option>
+          <option name="rangeValues">[0]</option>
+          <option name="useColors">1</option>
+          <option name="drilldown">all</option>
+          <drilldown>
+            <link target="_blank">/app/$tkn_current_app$/dfe_foundational_services__secuity_posture_metrics_drilldown_dashboard?tkn_use_case_id=azr_004</link>
+          </drilldown>
+      </single>
+    </panel>
+    
+    
+    <panel id="panel_azr_data_005" depends="$tkn_azr_005_is_visible$,$tkn_view_details_panels$">
+      <single>
+        <search>
+          <query>
+| makeresults
+| eval display_val=$tkn_azr_005_val$
+| table display_val
+          </query>
+          </search>
+          <option name="colorMode">none</option>
+          <option name="drilldown">none</option>
+          <option name="height">$data_panel_height$</option>
+          <option name="rangeColors">[$tkn_azr_005_colour$,$tkn_azr_005_colour$]</option>
+          <option name="rangeValues">[0]</option>
+          <option name="useColors">1</option>
+          <option name="drilldown">all</option>
+          <drilldown>
+            <link target="_blank">/app/$tkn_current_app$/dfe_foundational_services__secuity_posture_metrics_drilldown_dashboard?tkn_use_case_id=azr_005</link>
+          </drilldown>
+      </single>
+    </panel>
+  </row>
+  
+  <row depends=" depends=$tkn_show_azr_row$,$tkn_azr_data_feed_problem$,$tkn_view_details_panels$">
+    <panel>
+      <html>
+        <div style="background-color: red; color:black">There is a problem with Azure Data Feeds!</div>
+      </html>
+    </panel>
+  </row>
+
+<!-- ############################################################################################################################################### -->
+<!-- ############################################################ END OF Azure ROWS ################################################################## -->
+<!-- ############################################################################################################################################### -->
+
+
+  <row depends=" depends=$tkn_show_azr_row$,$tkn_view_details_panels$">
+    <panel>
+      <html>
+
+      </html>
+    </panel>
+  </row>
+
+
+
+
+  
+  
+<!-- ############################################################################################################################################### -->
+<!-- ############################################################ Business Central ROWS ######################################################################### -->
+<!-- ############################################################################################################################################### -->
+
+  
+<!-- ################################# Business Central HEADER ROW ################################# -->
+  <row depends="$tkn_show_busc_row$">
+    <panel depends="$nevershow$">
+      <html>
+        <style>
+          #panel_busc_hdr_rollup{
+            width:$rollup_panel_width$ !important;
+          }
+          #panel_busc_hdr_001{
+            width:$data_panel_width$ !important;
+          }
+          #panel_busc_hdr_002{
+            width:$data_panel_width$ !important;
+          }
+          #panel_busc_hdr_003{
+            width:$data_panel_width$ !important;
+          }
+          #panel_busc_hdr_004{
+            width:$data_panel_width$ !important;
+          }
+          #panel_busc_hdr_005{
+            width:$data_panel_width$ !important;
+          }
+          #panel_busc_hdr_filler{
+            width:$filler_panel_width$ !important;
+          }
+        </style>
+      </html>
+    </panel>
+    
+    <panel depends="$never_show$">
+      <table>
+        <search>
+          <query>
+| makeresults
+| eval app=$env:app|s$
+| table app
+          </query>
+          <done>
+            <set token="tkn_current_app">$result.app$</set>
+          </done>
+        </search>
+      </table>
+    </panel>
+    
+    
+<!-- ###****************** Show Business Central row? **********************### -->
+    <panel depends="$never_show$">
+      <table>
+        <search>
+          <query>
+index="ssphp_metrics" ssphp.use_case.id="busc_rollup"
+| stats count
+          </query>
+          <done>
+            <condition match="$result.count$&gt;0">
+              <set token="tkn_show_busc_row">Y</set>
+            </condition>
+            <condition>
+              <unset token="tkn_show_busc_row"></unset>
+            </condition>
+          </done>
+          <earliest>0</earliest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+      </table>
+    </panel>
+    
+    
+<!-- ###****************** Panel Heading Values **********************### -->
+    <panel depends="$never_show$">
+      <table>
+        <search>
+          <query>
+index="ssphp_metrics" ssphp.use_case.id="busc_*"
+    [| search index="ssphp_metrics"
+     | stats max(SSPHP_RUN) as SSPHP_RUN by ssphp.use_case.id
+     | eval search_text="(\"ssphp.use_case.id\"=\"".'ssphp.use_case.id'."\" AND SSPHP_RUN=\"".SSPHP_RUN."\")"
+     | stats values(search_text) as search_text
+     | eval search_text="(".mvjoin(search_text," OR ").")"
+    | return $search_text]
+| eval ssphp_desc='ssphp.use_case.display.title'."~~~".'ssphp.use_case.display.short_description'
+| stats values(ssphp_desc) as ssphp_desc by ssphp.use_case.id
+| transpose 0 header_field=ssphp.use_case.id
+| fields - column
+| foreach * 
+    [| eval "&lt;&lt;FIELD&gt;&gt;_display_title"=mvindex(split(&lt;&lt;FIELD&gt;&gt;,"~~~"),0),
+            "&lt;&lt;FIELD&gt;&gt;_display_short_desc"=mvindex(split(&lt;&lt;FIELD&gt;&gt;,"~~~"),1)]
+| fields *_display_title, *_display_short_desc
+          </query>
+          <done>
+            <set token="tkn_busc_rollup_display_title">$result.busc_rollup_display_title$</set>
+            <set token="tkn_busc_001_display_title">$result.busc_001_display_title$</set>
+            <set token="tkn_busc_002_display_title">$result.busc_002_display_title$</set>
+            <set token="tkn_busc_003_display_title">$result.busc_003_display_title$</set>
+            <set token="tkn_busc_004_display_title">$result.busc_004_display_title$</set>
+            <set token="tkn_busc_005_display_title">$result.busc_005_display_title$</set>
+            <set token="tkn_busc_rollup_display_short_desc">$result.busc_rollup_display_short_desc$</set>
+            <set token="tkn_busc_001_display_short_desc">$result.busc_001_display_short_desc$</set>
+            <set token="tkn_busc_002_display_short_desc">$result.busc_002_display_short_desc$</set>
+            <set token="tkn_busc_003_display_short_desc">$result.busc_003_display_short_desc$</set>
+            <set token="tkn_busc_004_display_short_desc">$result.busc_004_display_short_desc$</set>
+            <set token="tkn_busc_005_display_short_desc">$result.busc_005_display_short_desc$</set>
+          </done>
+          <earliest>0</earliest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+      </table>
+    </panel>
+    
+    
+    <panel id="panel_busc_hdr_rollup" depends="$tkn_busc_rollup_is_visible$,$tkn_view_details_panels$">
+      <html>
+        <span class="header_r1" style="color:	darkcyan">$tkn_busc_rollup_display_title$</span>
+        <span class="header_r2">$tkn_busc_rollup_display_short_desc$</span>
+      </html>
+    </panel>
+    
+    <panel id="panel_busc_hdr_filler" depends="$tkn_busc_rollup_is_visible$,$tkn_view_details_panels$">
+      <html>
+
+      </html>
+    </panel>
+    
+    <panel id="panel_busc_hdr_001" depends="$tkn_busc_001_is_visible$,$tkn_view_details_panels$">
+      <html>
+        <span class="header_r1">$tkn_busc_001_display_title$</span>
+        <span class="header_r2">$tkn_busc_001_display_short_desc$</span>
+      </html>
+    </panel>
+    
+    <panel id="panel_busc_hdr_002" depends="$tkn_busc_002_is_visible$,$tkn_view_details_panels$">
+      <html>
+        <span class="header_r1">$tkn_busc_002_display_title$</span>
+        <span class="header_r2">$tkn_busc_002_display_short_desc$</span>
+      </html>
+    </panel>
+    
+    <panel id="panel_busc_hdr_003" depends="$tkn_busc_003_is_visible$,$tkn_view_details_panels$">
+      <html>
+        <span class="header_r1">$tkn_busc_003_display_title$</span>
+        <span class="header_r2">$tkn_busc_003_display_short_desc$</span>
+      </html>
+    </panel>
+    
+    <panel id="panel_busc_hdr_004" depends="$tkn_busc_004_is_visible$,$tkn_view_details_panels$">
+      <html>
+        <span class="header_r1">$tkn_busc_004_display_title$</span>
+        <span class="header_r2">$tkn_busc_004_display_short_desc$</span>
+      </html>
+    </panel>
+    
+    <panel id="panel_busc_hdr_005" depends="$tkn_busc_005_is_visible$,$tkn_view_details_panels$">
+      <html>
+        <span class="header_r1">$tkn_busc_005_display_title$</span>
+        <span class="header_r2">$tkn_busc_005_display_short_desc$</span>
+      </html>
+    </panel>
+  </row>
+
+
+<!-- ################################# Business Central PRE-CALC, CONFIG, & VISIBILITY ROW ################################# -->
+
+<!-- ###****************** Check that all data feeds have been sending data **********************### -->
+  <row>
+    <panel depends="$never_show$">
+      <table>
+        <search>
+          <query>
+| tstats count
+WHERE 
+    [| tstats values(sourcetype) as search_start WHERE (index=test NOT sourcetype="azure*") earliest=0 latest=now
+     | eval search_start="index=\"test\" AND ((sourcetype=\"".mvjoin(search_start,"\") OR (sourcetype=\"")."\"))"
+     | return $search_start] 
+     earliest=-1d@d
+BY index, sourcetype
+| eventstats count as no_sourcetypes
+| where count=0
+| eventstats count as no_sourcetypes_without_data
+| head 1
+| eval ssphp.score=round(no_sourcetypes_without_data*100/no_sourcetypes)
+| fields ssphp.score
+          </query>
+          <done>
+            <condition match="$result.ssphp.score$&gt;90">
+              <set token="tkn_busc_data_feed_problem">true</set>
+            </condition>
+            <condition>
+              <unset token="tkn_busc_data_feed_problem"></unset>
+            </condition>
+          </done>
+          <earliest>0</earliest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+      </table>
+    </panel>
+    
+    
+<!-- ###****************** Panel Values **********************### -->
+    <panel depends="$never_show$">
+      <table>
+        <search>
+          <query>
+index="ssphp_metrics" ssphp.use_case.id="busc_*"
+    [| search index="ssphp_metrics"
+     | stats max(SSPHP_RUN) as SSPHP_RUN by ssphp.use_case.id
+     | eval search_text="(\"ssphp.use_case.id\"=\"".'ssphp.use_case.id'."\" AND SSPHP_RUN=\"".SSPHP_RUN."\")"
+     | stats values(search_text) as search_text
+     | eval search_text="(".mvjoin(search_text," OR ").")"
+    | return $$search_text]
+| stats values(ssphp.score) as ssphp.score by ssphp.use_case.id
+| transpose 0 header_field=ssphp.use_case.id
+          </query>
+          <done>
+            <set token="tkn_busc_rollup_val">$result.busc_rollup$</set>
+            <set token="tkn_busc_001_val">$result.busc_001$</set>
+            <set token="tkn_busc_002_val">$result.busc_002$</set>
+            <set token="tkn_busc_003_val">$result.busc_003$</set>
+            <set token="tkn_busc_004_val">$result.busc_004$</set>
+            <set token="tkn_busc_005_val">$result.busc_005$</set>
+          </done>
+          <earliest>0</earliest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+      </table>
+    </panel>
+
+
+<!-- ###****************** Panel Colours **********************### -->
+    <panel depends="$never_show$">
+      <table>
+        <search>
+          <query>
+index="ssphp_metrics" ssphp.use_case.id="busc_*"
+    [| search index="ssphp_metrics"
+     | stats max(SSPHP_RUN) as SSPHP_RUN by ssphp.use_case.id
+     | eval search_text="(\"ssphp.use_case.id\"=\"".'ssphp.use_case.id'."\" AND SSPHP_RUN=\"".SSPHP_RUN."\")"
+     | stats values(search_text) as search_text
+     | eval search_text="(".mvjoin(search_text," OR ").")"
+    | return $$search_text]
+| stats values(ssphp.color) as ssphp.color by ssphp.use_case.id
+| transpose 0 header_field=ssphp.use_case.id
+          </query>
+          <done>
+            <set token="tkn_busc_rollup_colour">$result.busc_rollup$</set>
+            <eval token="tkn_busc_rollup_colour">case($result.busc_rollup$="red",$c_red$,$result.busc_rollup$="orange",$c_orange$,$result.busc_rollup$="green",$c_green$</eval>
+            <eval token="tkn_busc_001_colour">case($result.busc_001$="red",$c_red$,$result.busc_001$="orange",$c_orange$,$result.busc_001$="green",$c_green$</eval>
+            <eval token="tkn_busc_002_colour">case($result.busc_002$="red",$c_red$,$result.busc_002$="orange",$c_orange$,$result.busc_002$="green",$c_green$</eval>
+            <eval token="tkn_busc_003_colour">case($result.busc_003$="red",$c_red$,$result.busc_003$="orange",$c_orange$,$result.busc_003$="green",$c_green$</eval>
+            <eval token="tkn_busc_004_colour">case($result.busc_004$="red",$c_red$,$result.busc_004$="orange",$c_orange$,$result.busc_004$="green",$c_green$</eval>
+            <eval token="tkn_busc_005_colour">case($result.busc_005$="red",$c_red$,$result.busc_005$="orange",$c_orange$,$result.busc_005$="green",$c_green$</eval>
+          </done>
+          <earliest>0</earliest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+      </table>
+    </panel>
+
+
+<!-- ###****************** Panel visible **********************### -->
+    <panel depends="$never_show$">>
+      <table>
+        <search>
+          <query>
+| makeresults
+| eval red_only=$tkn_view_only_red|s$,
+       column="ssphp_visible",
+       busc_001_colour=$tkn_busc_001_colour$,
+       busc_002_colour=$tkn_busc_002_colour$,
+       busc_003_colour=$tkn_busc_003_colour$,
+       busc_004_colour=$tkn_busc_004_colour$,
+       busc_005_colour=$tkn_busc_005_colour$,
+       busc_rollup="1",
+       busc_001_val=$tkn_busc_001_val$,
+       busc_002_val=$tkn_busc_002_val$,
+       busc_003_val=$tkn_busc_003_val$,
+       busc_004_val=$tkn_busc_004_val$,
+       busc_005_val=$tkn_busc_005_val$
+       
+| fillnull value="null" busc_001_val busc_002_val busc_003_val busc_004_val busc_005_val
+
+| eval busc_001=case(busc_001_colour=$c_red$,1,busc_001_val="null",0,red_only="N",1,1==1,0),
+       busc_002=case(busc_002_colour=$c_red$,1,busc_002_val="null",0,red_only="N",1,1==1,0),
+       busc_003=case(busc_003_colour=$c_red$,1,busc_003_val="null",0,red_only="N",1,1==1,0),
+       busc_004=case(busc_004_colour=$c_red$,1,busc_004_val="null",0,red_only="N",1,1==1,0),
+       busc_005=case(busc_005_colour=$c_red$,1,busc_005_val="null",0,red_only="N",1,1==1,0)
+
+| table column, busc_rollup, busc_001,busc_002, busc_003, busc_004, busc_005, busc_001_colour, busc_002_colour, busc_003_colour, busc_004_colour, busc_005_colour, busc_001_val, busc_002_val, busc_003_val, busc_004_val, busc_005_val
+          </query>
+          <done>
+            <set token="tkn_busc_rollup_is_visible">true</set>
+            <eval token="tkn_busc_001_is_visible">if($result.busc_001$="1","true",null())</eval>
+            <eval token="tkn_busc_002_is_visible">if($result.busc_002$="1","true",null())</eval>
+            <eval token="tkn_busc_003_is_visible">if($result.busc_003$="1","true",null())</eval>
+            <eval token="tkn_busc_004_is_visible">if($result.busc_004$="1","true",null())</eval>
+            <eval token="tkn_busc_005_is_visible">if($result.busc_005$="1","true",null())</eval>
+          </done>
+          <earliest>0</earliest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+      </table>
+    </panel>
+  </row>
+
+
+<!-- ###****************** Display Panels **********************### -->
+  <row depends="$tkn_show_busc_row$">
+    <panel depends="$nevershow$">
+      <html>
+        <style>
+          #panel_busc_data_rollup{
+            width:$rollup_panel_width$ !important;
+          }
+          #panel_busc_data_001{
+            width:$data_panel_width$ !important;
+          }
+          #panel_busc_data_002{
+            width:$data_panel_width$ !important;
+          }
+          #panel_busc_data_003{
+            width:$data_panel_width$ !important;
+          }
+          #panel_busc_data_004{
+            width:$data_panel_width$ !important;
+          }
+          #panel_busc_data_005{
+            width:$data_panel_width$ !important;
+          }
+          #panel_busc_data_filler{
+            width:1% !important;
+          }
+        </style>
+      </html>
+    </panel>
+
+    <panel id="panel_busc_data_rollup" depends="$tkn_busc_rollup_is_visible$,$tkn_view_details_panels$">
+      <single>
+        <search>
+          <query>
+| makeresults
+| eval display_val=$tkn_busc_rollup_val$
+| table display_val
+          </query>
+          </search>
+          <option name="colorMode">block</option>
+          <option name="drilldown">none</option>
+          <option name="height">$data_panel_height$</option>
+          <option name="rangeColors">[$tkn_busc_rollup_colour$,$tkn_busc_rollup_colour$]</option>
+          <option name="rangeValues">[0]</option>
+          <option name="useColors">1</option>
+          <option name="drilldown">all</option>
+          <drilldown>
+            <link target="_blank">/app/$tkn_current_app$/dfe_foundational_services__secuity_posture_metrics_drilldown_dashboard?tkn_use_case_id=busc_rollup</link>
+          </drilldown>
+      </single>
+    </panel>    
+
+    <panel id="panel_busc_data_filler" depends="$tkn_busc_rollup_is_visible$,$tkn_view_details_panels$">
+      <html>
+      </html>
+    </panel>
+    
+    
+    <panel id="panel_busc_data_001" depends="$tkn_busc_001_is_visible$,$tkn_view_details_panels$">
+      <single>
+        <search>
+          <query>
+| makeresults
+| eval display_val=$tkn_busc_001_val$
+| table display_val
+          </query>
+          </search>
+          <option name="colorMode">none</option>
+          <option name="drilldown">none</option>
+          <option name="height">$data_panel_height$</option>
+          <option name="rangeColors">[$tkn_busc_001_colour$,$tkn_busc_001_colour$]</option>
+          <option name="rangeValues">[0]</option>
+          <option name="useColors">1</option>
+          <option name="drilldown">all</option>
+          <drilldown>
+            <link target="_blank">/app/$tkn_current_app$/dfe_foundational_services__secuity_posture_metrics_drilldown_dashboard?tkn_use_case_id=busc_001</link>
+          </drilldown>
+      </single>
+    </panel>
+    
+    
+    <panel id="panel_busc_data_002" depends="$tkn_busc_002_is_visible$,$tkn_view_details_panels$">
+      <single>
+        <search>
+          <query>
+| makeresults
+| eval display_val=$tkn_busc_002_val$
+| table display_val
+          </query>
+          </search>
+          <option name="colorMode">none</option>
+          <option name="drilldown">none</option>
+          <option name="height">$data_panel_height$</option>
+          <option name="rangeColors">[$tkn_busc_002_colour$,$tkn_busc_002_colour$]</option>
+          <option name="rangeValues">[0]</option>
+          <option name="useColors">1</option>
+          <option name="drilldown">all</option>
+          <drilldown>
+            <link target="_blank">/app/$tkn_current_app$/dfe_foundational_services__secuity_posture_metrics_drilldown_dashboard?tkn_use_case_id=busc_002</link>
+          </drilldown>
+      </single>
+    </panel>
+    
+    
+    <panel id="panel_busc_data_003" depends="$tkn_busc_003_is_visible$,$tkn_view_details_panels$">
+      <single>
+        <search>
+          <query>
+| makeresults
+| eval display_val=$tkn_busc_003_val$
+| table display_val
+          </query>
+          </search>
+          <option name="colorMode">none</option>
+          <option name="drilldown">none</option>
+          <option name="height">$data_panel_height$</option>
+          <option name="rangeColors">[$tkn_busc_003_colour$,$tkn_busc_003_colour$]</option>
+          <option name="rangeValues">[0]</option>
+          <option name="useColors">1</option>
+          <option name="drilldown">all</option>
+          <drilldown>
+            <link target="_blank">/app/$tkn_current_app$/dfe_foundational_services__secuity_posture_metrics_drilldown_dashboard?tkn_use_case_id=busc_003</link>
+          </drilldown>
+      </single>
+    </panel>
+    
+    
+    <panel id="panel_busc_data_004" depends="$tkn_busc_004_is_visible$,$tkn_view_details_panels$">
+      <single>
+        <search>
+          <query>
+| makeresults
+| eval display_val=$tkn_busc_004_val$
+| table display_val
+          </query>
+          </search>
+          <option name="colorMode">none</option>
+          <option name="drilldown">none</option>
+          <option name="height">$data_panel_height$</option>
+          <option name="rangeColors">[$tkn_busc_004_colour$,$tkn_busc_004_colour$]</option>
+          <option name="rangeValues">[0]</option>
+          <option name="useColors">1</option>
+          <option name="drilldown">all</option>
+          <drilldown>
+            <link target="_blank">/app/$tkn_current_app$/dfe_foundational_services__secuity_posture_metrics_drilldown_dashboard?tkn_use_case_id=busc_004</link>
+          </drilldown>
+      </single>
+    </panel>
+    
+    
+    <panel id="panel_busc_data_005" depends="$tkn_busc_005_is_visible$,$tkn_view_details_panels$">
+      <single>
+        <search>
+          <query>
+| makeresults
+| eval display_val=$tkn_busc_005_val$
+| table display_val
+          </query>
+          </search>
+          <option name="colorMode">none</option>
+          <option name="drilldown">none</option>
+          <option name="height">$data_panel_height$</option>
+          <option name="rangeColors">[$tkn_busc_005_colour$,$tkn_busc_005_colour$]</option>
+          <option name="rangeValues">[0]</option>
+          <option name="useColors">1</option>
+          <option name="drilldown">all</option>
+          <drilldown>
+            <link target="_blank">/app/$tkn_current_app$/dfe_foundational_services__secuity_posture_metrics_drilldown_dashboard?tkn_use_case_id=busc_005</link>
+          </drilldown>
+      </single>
+    </panel>
+  </row>
+  
+  <row depends=" depends=$tkn_show_busc_row$,$tkn_busc_data_feed_problem$,$tkn_view_details_panels$">
+    <panel>
+      <html>
+        <div style="background-color: red; color:black">There is a problem with Business Central Data Feeds!</div>
+      </html>
+    </panel>
+  </row>
+
+<!-- ############################################################################################################################################### -->
+<!-- ############################################################ END OF Business Central ROWS ################################################################## -->
+<!-- ############################################################################################################################################### -->
+
+
+  <row depends=" depends=$tkn_show_busc_row$,$tkn_view_details_panels$">
+    <panel>
+      <html>
+
+      </html>
+    </panel>
+  </row>
 
 
 
@@ -1572,7 +2731,7 @@ index="ssphp_metrics" ssphp.use_case.id="o365_*"
         <search>
           <query>
 | makeresults
-| eval display_val=$tkn_o365_rollup_val$
+| eval display_val=$tkn_m365_rollup_val$
 | table display_val
           </query>
         </search>
@@ -1583,7 +2742,45 @@ index="ssphp_metrics" ssphp.use_case.id="o365_*"
         <option name="rangeValues">[0]</option>
         <option name="useColors">1</option>
       </single>
-    </panel>    
+    </panel>          
+ 
+    <panel>
+      <single>
+      <title>Azure</title>
+        <search>
+          <query>
+| makeresults
+| eval display_val=$tkn_azr_rollup_val$
+| table display_val
+          </query>
+        </search>
+        <option name="colorMode">block</option>
+        <option name="drilldown">none</option>
+        <option name="height">$data_panel_height$</option>
+        <option name="rangeColors">[$tkn_o365_rollup_colour$,$tkn_o365_rollup_colour$]</option>
+        <option name="rangeValues">[0]</option>
+        <option name="useColors">1</option>
+      </single>
+    </panel>           
+ 
+    <panel>
+      <single>
+      <title>Business Central</title>
+        <search>
+          <query>
+| makeresults
+| eval display_val=$tkn_busc_rollup_val$
+| table display_val
+          </query>
+        </search>
+        <option name="colorMode">block</option>
+        <option name="drilldown">none</option>
+        <option name="height">$data_panel_height$</option>
+        <option name="rangeColors">[$tkn_o365_rollup_colour$,$tkn_o365_rollup_colour$]</option>
+        <option name="rangeValues">[0]</option>
+        <option name="useColors">1</option>
+      </single>
+    </panel>     
     
     
   </row>
