@@ -1,0 +1,503 @@
+<!-- ############################################################################################################################################### -->
+<!-- ############################################################ ^^^^ ROWS ######################################################################### -->
+<!-- ############################################################################################################################################### -->
+
+  
+<!-- ################################# ^^^^ HEADER ROW ################################# -->
+  <row depends="$tkn_show_~~~~_row$">
+    <panel depends="$nevershow$">
+      <html>
+        <style>
+          #panel_~~~~_hdr_rollup{
+            width:$rollup_panel_width$ !important;
+          }
+          #panel_~~~~_hdr_001{
+            width:$data_panel_width$ !important;
+          }
+          #panel_~~~~_hdr_002{
+            width:$data_panel_width$ !important;
+          }
+          #panel_~~~~_hdr_003{
+            width:$data_panel_width$ !important;
+          }
+          #panel_~~~~_hdr_004{
+            width:$data_panel_width$ !important;
+          }
+          #panel_~~~~_hdr_005{
+            width:$data_panel_width$ !important;
+          }
+          #panel_~~~~_hdr_filler{
+            width:$filler_panel_width$ !important;
+          }
+        </style>
+      </html>
+    </panel>
+    
+    <panel depends="$never_show$">
+      <table>
+        <search>
+          <query>
+| makeresults
+| eval app=$env:app|s$
+| table app
+          </query>
+          <done>
+            <set token="tkn_current_app">$result.app$</set>
+          </done>
+        </search>
+      </table>
+    </panel>
+    
+    
+<!-- ###****************** Show ^^^^ row? **********************### -->
+    <panel depends="$never_show$">
+      <table>
+        <search>
+          <query>
+index="ssphp_metrics" ssphp.use_case.id="~~~~_rollup"
+| stats count
+          </query>
+          <done>
+            <condition match="$result.count$&gt;0">
+              <set token="tkn_show_~~~~_row">Y</set>
+            </condition>
+            <condition>
+              <unset token="tkn_show_~~~~_row"></unset>
+            </condition>
+          </done>
+          <earliest>0</earliest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+      </table>
+    </panel>
+    
+    
+<!-- ###****************** Panel Heading Values **********************### -->
+    <panel depends="$never_show$">
+      <table>
+        <search>
+          <query>
+index="ssphp_metrics" ssphp.use_case.id="~~~~_*"
+    [| search index="ssphp_metrics"
+     | stats max(SSPHP_RUN) as SSPHP_RUN by ssphp.use_case.id
+     | eval search_text="(\"ssphp.use_case.id\"=\"".'ssphp.use_case.id'."\" AND SSPHP_RUN=\"".SSPHP_RUN."\")"
+     | stats values(search_text) as search_text
+     | eval search_text="(".mvjoin(search_text," OR ").")"
+    | return $search_text]
+| eval ssphp_desc='ssphp.use_case.display.title'."~~~".'ssphp.use_case.display.short_description'
+| stats values(ssphp_desc) as ssphp_desc by ssphp.use_case.id
+| transpose 0 header_field=ssphp.use_case.id
+| fields - column
+| foreach * 
+    [| eval "&lt;&lt;FIELD&gt;&gt;_display_title"=mvindex(split(&lt;&lt;FIELD&gt;&gt;,"~~~"),0),
+            "&lt;&lt;FIELD&gt;&gt;_display_short_desc"=mvindex(split(&lt;&lt;FIELD&gt;&gt;,"~~~"),1)]
+| fields *_display_title, *_display_short_desc
+          </query>
+          <done>
+            <set token="tkn_~~~~_rollup_display_title">$result.~~~~_rollup_display_title$</set>
+            <set token="tkn_~~~~_001_display_title">$result.~~~~_001_display_title$</set>
+            <set token="tkn_~~~~_002_display_title">$result.~~~~_002_display_title$</set>
+            <set token="tkn_~~~~_003_display_title">$result.~~~~_003_display_title$</set>
+            <set token="tkn_~~~~_004_display_title">$result.~~~~_004_display_title$</set>
+            <set token="tkn_~~~~_005_display_title">$result.~~~~_005_display_title$</set>
+            <set token="tkn_~~~~_rollup_display_short_desc">$result.~~~~_rollup_display_short_desc$</set>
+            <set token="tkn_~~~~_001_display_short_desc">$result.~~~~_001_display_short_desc$</set>
+            <set token="tkn_~~~~_002_display_short_desc">$result.~~~~_002_display_short_desc$</set>
+            <set token="tkn_~~~~_003_display_short_desc">$result.~~~~_003_display_short_desc$</set>
+            <set token="tkn_~~~~_004_display_short_desc">$result.~~~~_004_display_short_desc$</set>
+            <set token="tkn_~~~~_005_display_short_desc">$result.~~~~_005_display_short_desc$</set>
+          </done>
+          <earliest>0</earliest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+      </table>
+    </panel>
+    
+    
+    <panel id="panel_~~~~_hdr_rollup" depends="$tkn_~~~~_rollup_is_visible$,$tkn_view_details_panels$">
+      <html>
+        <span class="header_r1" style="color:	darkcyan">$tkn_~~~~_rollup_display_title$</span>
+        <span class="header_r2">$tkn_~~~~_rollup_display_short_desc$</span>
+      </html>
+    </panel>
+    
+    <panel id="panel_~~~~_hdr_filler" depends="$tkn_~~~~_rollup_is_visible$,$tkn_view_details_panels$">
+      <html>
+
+      </html>
+    </panel>
+    
+    <panel id="panel_~~~~_hdr_001" depends="$tkn_~~~~_001_is_visible$,$tkn_view_details_panels$">
+      <html>
+        <span class="header_r1">$tkn_~~~~_001_display_title$</span>
+        <span class="header_r2">$tkn_~~~~_001_display_short_desc$</span>
+      </html>
+    </panel>
+    
+    <panel id="panel_~~~~_hdr_002" depends="$tkn_~~~~_002_is_visible$,$tkn_view_details_panels$">
+      <html>
+        <span class="header_r1">$tkn_~~~~_002_display_title$</span>
+        <span class="header_r2">$tkn_~~~~_002_display_short_desc$</span>
+      </html>
+    </panel>
+    
+    <panel id="panel_~~~~_hdr_003" depends="$tkn_~~~~_003_is_visible$,$tkn_view_details_panels$">
+      <html>
+        <span class="header_r1">$tkn_~~~~_003_display_title$</span>
+        <span class="header_r2">$tkn_~~~~_003_display_short_desc$</span>
+      </html>
+    </panel>
+    
+    <panel id="panel_~~~~_hdr_004" depends="$tkn_~~~~_004_is_visible$,$tkn_view_details_panels$">
+      <html>
+        <span class="header_r1">$tkn_~~~~_004_display_title$</span>
+        <span class="header_r2">$tkn_~~~~_004_display_short_desc$</span>
+      </html>
+    </panel>
+    
+    <panel id="panel_~~~~_hdr_005" depends="$tkn_~~~~_005_is_visible$,$tkn_view_details_panels$">
+      <html>
+        <span class="header_r1">$tkn_~~~~_005_display_title$</span>
+        <span class="header_r2">$tkn_~~~~_005_display_short_desc$</span>
+      </html>
+    </panel>
+  </row>
+
+
+<!-- ################################# ^^^^ PRE-CALC, CONFIG, & VISIBILITY ROW ################################# -->
+
+<!-- ###****************** Check that all data feeds have been sending data **********************### -->
+  <row>
+    <panel depends="$never_show$">
+      <table>
+        <search>
+          <query>
+| tstats count
+WHERE 
+    [| tstats values(sourcetype) as search_start WHERE (index=test NOT sourcetype="azure*") earliest=0 latest=now
+     | eval search_start="index=\"test\" AND ((sourcetype=\"".mvjoin(search_start,"\") OR (sourcetype=\"")."\"))"
+     | return $search_start] 
+     earliest=-1d@d
+BY index, sourcetype
+| eventstats count as no_sourcetypes
+| where count=0
+| eventstats count as no_sourcetypes_without_data
+| head 1
+| eval ssphp.score=round(no_sourcetypes_without_data*100/no_sourcetypes)
+| fields ssphp.score
+          </query>
+          <done>
+            <condition match="$result.ssphp.score$&gt;90">
+              <set token="tkn_~~~~_data_feed_problem">true</set>
+            </condition>
+            <condition>
+              <unset token="tkn_~~~~_data_feed_problem"></unset>
+            </condition>
+          </done>
+          <earliest>0</earliest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+      </table>
+    </panel>
+    
+    
+<!-- ###****************** Panel Values **********************### -->
+    <panel depends="$never_show$">
+      <table>
+        <search>
+          <query>
+index="ssphp_metrics" ssphp.use_case.id="~~~~_*"
+    [| search index="ssphp_metrics"
+     | stats max(SSPHP_RUN) as SSPHP_RUN by ssphp.use_case.id
+     | eval search_text="(\"ssphp.use_case.id\"=\"".'ssphp.use_case.id'."\" AND SSPHP_RUN=\"".SSPHP_RUN."\")"
+     | stats values(search_text) as search_text
+     | eval search_text="(".mvjoin(search_text," OR ").")"
+    | return $$search_text]
+| stats values(ssphp.score) as ssphp.score by ssphp.use_case.id
+| transpose 0 header_field=ssphp.use_case.id
+          </query>
+          <done>
+            <set token="tkn_~~~~_rollup_val">$result.~~~~_rollup$</set>
+            <set token="tkn_~~~~_001_val">$result.~~~~_001$</set>
+            <set token="tkn_~~~~_002_val">$result.~~~~_002$</set>
+            <set token="tkn_~~~~_003_val">$result.~~~~_003$</set>
+            <set token="tkn_~~~~_004_val">$result.~~~~_004$</set>
+            <set token="tkn_~~~~_005_val">$result.~~~~_005$</set>
+          </done>
+          <earliest>0</earliest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+      </table>
+    </panel>
+
+
+<!-- ###****************** Panel Colours **********************### -->
+    <panel depends="$never_show$">
+      <table>
+        <search>
+          <query>
+index="ssphp_metrics" ssphp.use_case.id="~~~~_*"
+    [| search index="ssphp_metrics"
+     | stats max(SSPHP_RUN) as SSPHP_RUN by ssphp.use_case.id
+     | eval search_text="(\"ssphp.use_case.id\"=\"".'ssphp.use_case.id'."\" AND SSPHP_RUN=\"".SSPHP_RUN."\")"
+     | stats values(search_text) as search_text
+     | eval search_text="(".mvjoin(search_text," OR ").")"
+    | return $$search_text]
+| stats values(ssphp.color) as ssphp.color by ssphp.use_case.id
+| transpose 0 header_field=ssphp.use_case.id
+          </query>
+          <done>
+            <set token="tkn_~~~~_rollup_colour">$result.~~~~_rollup$</set>
+            <eval token="tkn_~~~~_rollup_colour">case($result.~~~~_rollup$="red",$c_red$,$result.~~~~_rollup$="orange",$c_orange$,$result.~~~~_rollup$="green",$c_green$</eval>
+            <eval token="tkn_~~~~_001_colour">case($result.~~~~_001$="red",$c_red$,$result.~~~~_001$="orange",$c_orange$,$result.~~~~_001$="green",$c_green$</eval>
+            <eval token="tkn_~~~~_002_colour">case($result.~~~~_002$="red",$c_red$,$result.~~~~_002$="orange",$c_orange$,$result.~~~~_002$="green",$c_green$</eval>
+            <eval token="tkn_~~~~_003_colour">case($result.~~~~_003$="red",$c_red$,$result.~~~~_003$="orange",$c_orange$,$result.~~~~_003$="green",$c_green$</eval>
+            <eval token="tkn_~~~~_004_colour">case($result.~~~~_004$="red",$c_red$,$result.~~~~_004$="orange",$c_orange$,$result.~~~~_004$="green",$c_green$</eval>
+            <eval token="tkn_~~~~_005_colour">case($result.~~~~_005$="red",$c_red$,$result.~~~~_005$="orange",$c_orange$,$result.~~~~_005$="green",$c_green$</eval>
+          </done>
+          <earliest>0</earliest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+      </table>
+    </panel>
+
+
+<!-- ###****************** Panel visible **********************### -->
+    <panel depends="$never_show$">>
+      <table>
+        <search>
+          <query>
+| makeresults
+| eval red_only=$tkn_view_only_red|s$,
+       column="ssphp_visible",
+       ~~~~_001_colour=$tkn_~~~~_001_colour$,
+       ~~~~_002_colour=$tkn_~~~~_002_colour$,
+       ~~~~_003_colour=$tkn_~~~~_003_colour$,
+       ~~~~_004_colour=$tkn_~~~~_004_colour$,
+       ~~~~_005_colour=$tkn_~~~~_005_colour$,
+       ~~~~_rollup="1",
+       ~~~~_001_val=$tkn_~~~~_001_val$,
+       ~~~~_002_val=$tkn_~~~~_002_val$,
+       ~~~~_003_val=$tkn_~~~~_003_val$,
+       ~~~~_004_val=$tkn_~~~~_004_val$,
+       ~~~~_005_val=$tkn_~~~~_005_val$
+       
+| fillnull value="null" ~~~~_001_val ~~~~_002_val ~~~~_003_val ~~~~_004_val ~~~~_005_val
+
+| eval ~~~~_001=case(~~~~_001_colour=$c_red$,1,~~~~_001_val="null",0,red_only="N",1,1==1,0),
+       ~~~~_002=case(~~~~_002_colour=$c_red$,1,~~~~_002_val="null",0,red_only="N",1,1==1,0),
+       ~~~~_003=case(~~~~_003_colour=$c_red$,1,~~~~_003_val="null",0,red_only="N",1,1==1,0),
+       ~~~~_004=case(~~~~_004_colour=$c_red$,1,~~~~_004_val="null",0,red_only="N",1,1==1,0),
+       ~~~~_005=case(~~~~_005_colour=$c_red$,1,~~~~_005_val="null",0,red_only="N",1,1==1,0)
+
+| table column, ~~~~_rollup, ~~~~_001,~~~~_002, ~~~~_003, ~~~~_004, ~~~~_005, ~~~~_001_colour, ~~~~_002_colour, ~~~~_003_colour, ~~~~_004_colour, ~~~~_005_colour, ~~~~_001_val, ~~~~_002_val, ~~~~_003_val, ~~~~_004_val, ~~~~_005_val
+          </query>
+          <done>
+            <set token="tkn_~~~~_rollup_is_visible">true</set>
+            <eval token="tkn_~~~~_001_is_visible">if($result.~~~~_001$="1","true",null())</eval>
+            <eval token="tkn_~~~~_002_is_visible">if($result.~~~~_002$="1","true",null())</eval>
+            <eval token="tkn_~~~~_003_is_visible">if($result.~~~~_003$="1","true",null())</eval>
+            <eval token="tkn_~~~~_004_is_visible">if($result.~~~~_004$="1","true",null())</eval>
+            <eval token="tkn_~~~~_005_is_visible">if($result.~~~~_005$="1","true",null())</eval>
+          </done>
+          <earliest>0</earliest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+      </table>
+    </panel>
+  </row>
+
+
+<!-- ###****************** Display Panels **********************### -->
+  <row depends="$tkn_show_~~~~_row$">
+    <panel depends="$nevershow$">
+      <html>
+        <style>
+          #panel_~~~~_data_rollup{
+            width:$rollup_panel_width$ !important;
+          }
+          #panel_~~~~_data_001{
+            width:$data_panel_width$ !important;
+          }
+          #panel_~~~~_data_002{
+            width:$data_panel_width$ !important;
+          }
+          #panel_~~~~_data_003{
+            width:$data_panel_width$ !important;
+          }
+          #panel_~~~~_data_004{
+            width:$data_panel_width$ !important;
+          }
+          #panel_~~~~_data_005{
+            width:$data_panel_width$ !important;
+          }
+          #panel_~~~~_data_filler{
+            width:1% !important;
+          }
+        </style>
+      </html>
+    </panel>
+
+    <panel id="panel_~~~~_data_rollup" depends="$tkn_~~~~_rollup_is_visible$,$tkn_view_details_panels$">
+      <single>
+        <search>
+          <query>
+| makeresults
+| eval display_val=$tkn_~~~~_rollup_val$
+| table display_val
+          </query>
+          </search>
+          <option name="colorMode">block</option>
+          <option name="drilldown">none</option>
+          <option name="height">$data_panel_height$</option>
+          <option name="rangeColors">[$tkn_~~~~_rollup_colour$,$tkn_~~~~_rollup_colour$]</option>
+          <option name="rangeValues">[0]</option>
+          <option name="useColors">1</option>
+          <option name="drilldown">all</option>
+          <drilldown>
+            <link target="_blank">/app/$tkn_current_app$/dfe_foundational_services__secuity_posture_metrics_drilldown_dashboard?tkn_use_case_id=~~~~_rollup</link>
+          </drilldown>
+      </single>
+    </panel>    
+
+    <panel id="panel_~~~~_data_filler" depends="$tkn_~~~~_rollup_is_visible$,$tkn_view_details_panels$">
+      <html>
+      </html>
+    </panel>
+    
+    
+    <panel id="panel_~~~~_data_001" depends="$tkn_~~~~_001_is_visible$,$tkn_view_details_panels$">
+      <single>
+        <search>
+          <query>
+| makeresults
+| eval display_val=$tkn_~~~~_001_val$
+| table display_val
+          </query>
+          </search>
+          <option name="colorMode">none</option>
+          <option name="drilldown">none</option>
+          <option name="height">$data_panel_height$</option>
+          <option name="rangeColors">[$tkn_~~~~_001_colour$,$tkn_~~~~_001_colour$]</option>
+          <option name="rangeValues">[0]</option>
+          <option name="useColors">1</option>
+          <option name="drilldown">all</option>
+          <drilldown>
+            <link target="_blank">/app/$tkn_current_app$/dfe_foundational_services__secuity_posture_metrics_drilldown_dashboard?tkn_use_case_id=~~~~_001</link>
+          </drilldown>
+      </single>
+    </panel>
+    
+    
+    <panel id="panel_~~~~_data_002" depends="$tkn_~~~~_002_is_visible$,$tkn_view_details_panels$">
+      <single>
+        <search>
+          <query>
+| makeresults
+| eval display_val=$tkn_~~~~_002_val$
+| table display_val
+          </query>
+          </search>
+          <option name="colorMode">none</option>
+          <option name="drilldown">none</option>
+          <option name="height">$data_panel_height$</option>
+          <option name="rangeColors">[$tkn_~~~~_002_colour$,$tkn_~~~~_002_colour$]</option>
+          <option name="rangeValues">[0]</option>
+          <option name="useColors">1</option>
+          <option name="drilldown">all</option>
+          <drilldown>
+            <link target="_blank">/app/$tkn_current_app$/dfe_foundational_services__secuity_posture_metrics_drilldown_dashboard?tkn_use_case_id=~~~~_002</link>
+          </drilldown>
+      </single>
+    </panel>
+    
+    
+    <panel id="panel_~~~~_data_003" depends="$tkn_~~~~_003_is_visible$,$tkn_view_details_panels$">
+      <single>
+        <search>
+          <query>
+| makeresults
+| eval display_val=$tkn_~~~~_003_val$
+| table display_val
+          </query>
+          </search>
+          <option name="colorMode">none</option>
+          <option name="drilldown">none</option>
+          <option name="height">$data_panel_height$</option>
+          <option name="rangeColors">[$tkn_~~~~_003_colour$,$tkn_~~~~_003_colour$]</option>
+          <option name="rangeValues">[0]</option>
+          <option name="useColors">1</option>
+          <option name="drilldown">all</option>
+          <drilldown>
+            <link target="_blank">/app/$tkn_current_app$/dfe_foundational_services__secuity_posture_metrics_drilldown_dashboard?tkn_use_case_id=~~~~_003</link>
+          </drilldown>
+      </single>
+    </panel>
+    
+    
+    <panel id="panel_~~~~_data_004" depends="$tkn_~~~~_004_is_visible$,$tkn_view_details_panels$">
+      <single>
+        <search>
+          <query>
+| makeresults
+| eval display_val=$tkn_~~~~_004_val$
+| table display_val
+          </query>
+          </search>
+          <option name="colorMode">none</option>
+          <option name="drilldown">none</option>
+          <option name="height">$data_panel_height$</option>
+          <option name="rangeColors">[$tkn_~~~~_004_colour$,$tkn_~~~~_004_colour$]</option>
+          <option name="rangeValues">[0]</option>
+          <option name="useColors">1</option>
+          <option name="drilldown">all</option>
+          <drilldown>
+            <link target="_blank">/app/$tkn_current_app$/dfe_foundational_services__secuity_posture_metrics_drilldown_dashboard?tkn_use_case_id=~~~~_004</link>
+          </drilldown>
+      </single>
+    </panel>
+    
+    
+    <panel id="panel_~~~~_data_005" depends="$tkn_~~~~_005_is_visible$,$tkn_view_details_panels$">
+      <single>
+        <search>
+          <query>
+| makeresults
+| eval display_val=$tkn_~~~~_005_val$
+| table display_val
+          </query>
+          </search>
+          <option name="colorMode">none</option>
+          <option name="drilldown">none</option>
+          <option name="height">$data_panel_height$</option>
+          <option name="rangeColors">[$tkn_~~~~_005_colour$,$tkn_~~~~_005_colour$]</option>
+          <option name="rangeValues">[0]</option>
+          <option name="useColors">1</option>
+          <option name="drilldown">all</option>
+          <drilldown>
+            <link target="_blank">/app/$tkn_current_app$/dfe_foundational_services__secuity_posture_metrics_drilldown_dashboard?tkn_use_case_id=~~~~_005</link>
+          </drilldown>
+      </single>
+    </panel>
+  </row>
+  
+  <row depends=" depends=$tkn_show_~~~~_row$,$tkn_~~~~_data_feed_problem$,$tkn_view_details_panels$">
+    <panel>
+      <html>
+        <div style="background-color: red; color:black">There is a problem with ^^^^ Data Feeds!</div>
+      </html>
+    </panel>
+  </row>
+  
+
+  <row depends=" depends=$tkn_show_~~~~_row$,$tkn_view_details_panels$">
+    <panel>
+      <html>
+
+      </html>
+    </panel>
+  </row>
+
+<!-- ############################################################################################################################################### -->
+<!-- ############################################################ END OF ^^^^ ROWS ################################################################## -->
+<!-- ############################################################################################################################################### -->
