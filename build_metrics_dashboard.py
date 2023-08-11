@@ -17,8 +17,8 @@ def main():
                 #print(x)
                 v=re.search(r' : v(\d*\.\d*)\<\/description\>', x)
                 version_old=float(v.group(1))
-                version_new=str((f'{version_old+0.01:.2f}'))
-                version_old=str(f'{version_old:.2f}')
+                version_new=f'{version_old+0.01:.2f}'
+                version_old=f'{version_old:.2f}'
                 x=x.replace(version_old,version_new)
 
                 #print(x)
