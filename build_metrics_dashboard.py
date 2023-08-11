@@ -1,11 +1,36 @@
 #!/usr/bin/env python3
 import os
+import re
 
 
 def main():
 
     # print("started\n")
-    
+# Increment the version in the first file
+    out_string=""
+    version_string="Service Security Posture Hardening Programme : v"
+
+    filename=os.path.dirname(__file__)+"\\SSPHP\SSPHP_metrics\\default\\data\\ui\\views\\ssphp_metrics_dashboard.d\\ssphp_metrics_dashboard_block_1.xml"
+    with open(filename, "r") as f:
+        for x in f:
+            if version_string in x:
+                #print(x)
+                v=re.search(r' : v(\d*\.\d*)\<\/description\>', x)
+                version_old=float(v.group(1))
+                version_new=str((f'{version_old+0.01:.2f}'))
+                version_old=str(f'{version_old:.2f}')
+                x=x.replace(version_old,version_new)
+
+                #print(x)
+            out_string=out_string+x
+
+    with open(filename, "w") as f:
+        for x in out_string:
+          f.write(x)  
+
+
+# Process the files
+
     out_string=""
 
     filename=os.path.dirname(__file__)+"\\SSPHP\SSPHP_metrics\\default\\data\\ui\\views\\ssphp_metrics_dashboard.d\\ssphp_metrics_dashboard_block_1.xml"
@@ -40,7 +65,8 @@ def main():
         for x in out_string:
           f.write(x)      
 
-    print("\ndone - output file was "+filename)
+    print("\ndone - output file was "+filename+"\nnew version="+version_new)
+
 
 if __name__ == "__main__":
     main()
