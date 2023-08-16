@@ -1,12 +1,14 @@
 import logging
 import time as pytime
+import sys
+import os
 import boto3
 import dns.resolver
-from splunk import HecEvent
+from .splunk import HecEvent
 
-logger = logging.getLogger("aws_data_ingester:aws")
+logger = logging.getLogger("data_ingester_aws")
 logging.basicConfig()
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 
 
 

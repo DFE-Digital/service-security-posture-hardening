@@ -3,11 +3,11 @@ import json
 import time as pytime
 import uuid
 import requests
-from ssphp import SSPHP_RUN
+from .ssphp import SSPHP_RUN
 
-logger = logging.getLogger("aws_data_ingester")
+logger = logging.getLogger("data_ingester_splunk")
 logging.basicConfig()
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 
 
 class Splunk:
@@ -53,6 +53,9 @@ class Splunk:
         return batches
 
     def send(self):
+        if not self.queue:
+            logger.info("Splunk queue empty")            
+            return
         logger.info("Sending batches to Splunk")
         for batch in self.batch():
             response = requests.post(
@@ -63,6 +66,7 @@ class Splunk:
                 timeout=20,
             )
             if self.indexer_ack:
+                logger.info(response.json())
                 ack_id = response.json()["ackId"]
                 self.batches[ack_id] = batch
 

@@ -1,0 +1,12 @@
+{
+    "scriptFile": "ms_graph_data_ingester.py",
+    "entryPoint": "main",
+    "bindings": [
+        {
+            "name": "timer",
+            "schedule": "* 0 * * * *",
+            "direction": "in",
+            "type": "timerTrigger",
+        }
+    ],
+}
