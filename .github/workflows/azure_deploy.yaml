@@ -1,0 +1,21 @@
+---
+name: Data Ingester Azure Terraform
+
+on:
+  push:
+    paths:
+      - data_ingester/**
+  workflow_dispatch:
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+      - name: Run terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.5.5
+      - run: cd data_ingester/terraform/terraform_state; terraform init
