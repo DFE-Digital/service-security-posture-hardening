@@ -13,9 +13,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      -
       - uses: actions/checkout@v3
       - name: Run terraform
         uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: 1.5.5
-      - run: cd data_ingester/terraform/terraform_state; terraform init
+      - run: cd data_ingester/terraform/state_terraform; terraform init
