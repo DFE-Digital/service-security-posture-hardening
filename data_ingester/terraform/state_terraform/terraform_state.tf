@@ -5,9 +5,17 @@ terraform {
       version = "~>3.0"
     }
   }
+
+    backend "azurerm" {
+      resource_group_name  = "s194d00-SSPHP-Metrics"
+      storage_account_name = "tfstatel95cd"
+      container_name       = "tfstate"
+      key                  = "terraform.tfstate"
+  }
 }
 
 provider "azurerm" {
+  skip_provider_registration = true
   features {}
 }
 
@@ -18,11 +26,12 @@ resource "random_string" "resource_code" {
 }
 
 resource "azurerm_resource_group" "tfstate" {
-  name     = "tfstate"
-  location = "West Eurpoe"
+  name     = "s194d00-SSPHP-Metrics"
+  location = "West Europe"
   tags = {
-    "Product"     = ""
-    "Environment" = "Dev"
+    "Product"     = "Protective Monitoring - Splunk SaaS"
+    "Environment" = "Development"
+    "Service Offering" = "Protective Monitoring - Splunk SaaS"
 
   }
 }
