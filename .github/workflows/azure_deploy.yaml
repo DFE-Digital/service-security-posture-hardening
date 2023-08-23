@@ -23,10 +23,13 @@ jobs:
           architecture: 'x64'
           cache: 'pip'
           
-      - run: cd data_ingester/data_ingester; mkdir -p .python_packages/lib/site-packages/; pip install -r requirements.txt --target .python_packages/lib/site-packages/
+      - name: Install python deps
+        run: cd data_ingester/data_ingester; mkdir -p .python_packages/lib/site-packages/; pip install -r requirements.txt --target .python_packages/lib/site-packages/
 
       - name: Deploy terraform
         uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: 1.5.5
-      - run: cd data_ingester/terraform/state_terraform; terraform init; terraform apply -auto-apporove
+          
+      - name: Run terraform
+        run: cd data_ingester/terraform/state_terraform; terraform init; terraform apply -auto-apporove
