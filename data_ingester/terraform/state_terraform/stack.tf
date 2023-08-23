@@ -87,6 +87,7 @@ resource "azurerm_linux_function_app" "SSPHP" {
   }
 
   site_config {
+    linux_fx_version = "python|3.10"
     application_stack {
       python_version = "3.10"
     }
