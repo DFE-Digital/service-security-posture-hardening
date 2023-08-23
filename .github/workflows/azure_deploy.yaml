@@ -15,6 +15,15 @@ jobs:
     steps:
       - name: checkout
         uses: actions/checkout@v3
+
+      - name: Set up Python 3.x
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.7.x'
+          architecture: 'x64'
+          cache: 'pip'
+      - run: cd data_ingester/data_ingester; pip install -r requirements.txt --target .python_packages/lib/site-packages/
+
       - name: Deploy terraform
         uses: hashicorp/setup-terraform@v2
         with:
