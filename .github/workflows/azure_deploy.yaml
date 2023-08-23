@@ -32,4 +32,9 @@ jobs:
           terraform_version: 1.5.5
 
       - name: Run terraform
+        env:
+          ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
+          ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
+          ARM_CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
+          ARM_ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}
         run: cd data_ingester/terraform/state_terraform; terraform init; terraform apply -auto-apporove
