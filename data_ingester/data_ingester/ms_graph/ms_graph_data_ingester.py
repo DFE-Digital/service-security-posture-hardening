@@ -1,4 +1,12 @@
+
 import logging
+logger = logging.getLogger("data_ingester_aad_ms_graph")
+logging.basicConfig()
+logger.setLevel(logging.INFO)
+import sys
+logger.info("Starting AAD MS Graph Collection")
+logger.info(sys.version)
+print(sys.version)
 import os
 from data_ingester_common.aws import AWS
 from data_ingester_common.splunk import Splunk, HecEvent
@@ -6,9 +14,6 @@ from data_ingester_common.ms_graph import Azure
 from azure.keyvault.secrets import SecretClient
 from azure.identity import DefaultAzureCredential
 
-logger = logging.getLogger("data_ingester_aad_ms_graph")
-logging.basicConfig()
-logger.setLevel(logging.INFO)
 
 
 def get_secrets():
