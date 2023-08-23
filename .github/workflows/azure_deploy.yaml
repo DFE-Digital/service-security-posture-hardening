@@ -13,10 +13,28 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      -
-      - uses: actions/checkout@v3
-      - name: Run terraform
+      - name: checkout
+        uses: actions/checkout@v3
+
+      - name: Set up Python 3.x
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.7.x'
+          architecture: 'x64'
+          cache: 'pip'
+
+      - name: Install python deps
+        run: cd data_ingester/data_ingester; mkdir -p .python_packages/lib/site-packages/; pip install -r requirements.txt --target .python_packages/lib/site-packages/
+
+      - name: Deploy terraform
         uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: 1.5.5
-      - run: cd data_ingester/terraform/state_terraform; terraform init
+
+      - name: Run terraform
+        env:
+          ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
+          ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
+          ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
+          ARM_ACCESS_TOKEN: ${{ secrets.ARM_ACCESS_TOKEN }}
+        run: cd data_ingester/terraform/state_terraform; terraform init; terraform apply -auto-apporove
