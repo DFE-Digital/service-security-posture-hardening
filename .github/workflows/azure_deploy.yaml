@@ -22,7 +22,7 @@ jobs:
           python-version: '3.7.x'
           architecture: 'x64'
           cache: 'pip'
-          
+
       - name: Install python deps
         run: cd data_ingester/data_ingester; mkdir -p .python_packages/lib/site-packages/; pip install -r requirements.txt --target .python_packages/lib/site-packages/
 
@@ -30,6 +30,6 @@ jobs:
         uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: 1.5.5
-          
+
       - name: Run terraform
         run: cd data_ingester/terraform/state_terraform; terraform init; terraform apply -auto-apporove
