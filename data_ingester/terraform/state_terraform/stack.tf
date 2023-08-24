@@ -100,7 +100,7 @@ resource "azurerm_linux_function_app" "SSPHP" {
   zip_deploy_file = data.archive_file.deployment.output_path
   app_settings = {
     WEBSITE_RUN_FROM_PACKAGE       = "1"
-    PYTHON_ISOLATE_WORKER_DEPENDENCIES = "1"
+    # PYTHON_ISOLATE_WORKER_DEPENDENCIES = "1"
     APPINSIGHTS_INSTRUMENTATIONKEY = azurerm_application_insights.SSPHP.instrumentation_key
     KEY_VAULT_NAME                 = local.key_vault_name
   }

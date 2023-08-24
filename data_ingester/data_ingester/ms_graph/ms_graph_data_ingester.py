@@ -8,10 +8,10 @@ logger.info("Starting AAD MS Graph Collection")
 logger.info(sys.version)
 print(sys.version)
 import os
-# from data_ingester_common.splunk import Splunk, HecEvent
-# from data_ingester_common.ms_graph import Azure
-# from azure.keyvault.secrets import SecretClient
-# from azure.identity import DefaultAzureCredential
+from data_ingester_common.splunk import Splunk, HecEvent
+from data_ingester_common.ms_graph import Azure
+from azure.keyvault.secrets import SecretClient
+from azure.identity import DefaultAzureCredential
 
 
 
@@ -50,25 +50,25 @@ async def main(timer):
     logger.info(sys.version)
     print(sys.version)
 
-    # secrets = get_secrets()
-    # logger.info("Starting AAD MS Graph Collection")
+    secrets = get_secrets()
+    logger.info("Starting AAD MS Graph Collection")
 
-    # splunk = Splunk(
-    #     secrets["splunk-host"], secrets["splunk-token"], verify=False, indexer_ack=True
-    # )
+    splunk = Splunk(
+        secrets["splunk-host"], secrets["splunk-token"], verify=False, indexer_ack=True
+    )
 
-    # azure = Azure(
-    #     splunk,
-    #     source="Azure",
-    #     host="test",
-    #     tenant_id=secrets["ad-tenant-id"],
-    #     client_id=secrets["ad-client-id"],
-    #     client_secret=secrets["ad-client-secret"],
-    # )
+    azure = Azure(
+        splunk,
+        source="Azure",
+        host="test",
+        tenant_id=secrets["ad-tenant-id"],
+        client_id=secrets["ad-client-id"],
+        client_secret=secrets["ad-client-secret"],
+    )
 
-    # await azure.run()
+    await azure.run()
 
-    # splunk.send()
+    splunk.send()
 
 
 if __name__ == "__main__":
