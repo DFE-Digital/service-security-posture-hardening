@@ -201,9 +201,7 @@ class Azure:
         self.client_id = client_id
         self.client_secret = client_secret
         
-        logging.info("7")        
         self.client()
-        logging.info("8")        
 
     def client(self):
         credential = ClientSecretCredential(
