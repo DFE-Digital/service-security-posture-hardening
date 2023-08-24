@@ -48,6 +48,7 @@ async def main(timer):
     splunk = Splunk(
         secrets["splunk-host"], secrets["splunk-token"], verify=True, indexer_ack=True
     )
+    log_to_splunk(splunk, "Starting AWS Data Ingestion")
 
     aws = AWS(splunk, source="AWS", host="aktest")
 

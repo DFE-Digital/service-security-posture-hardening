@@ -54,8 +54,9 @@ async def main(timer):
     logger.info("Starting AAD MS Graph Collection")
 
     splunk = Splunk(
-        secrets["splunk-host"], secrets["splunk-token"], verify=False, indexer_ack=True
+        secrets["splunk-host"], secrets["splunk-token"], verify=True, indexer_ack=True
     )
+    log_to_splunk(splunk, "Starting MS Graph Data Ingestion")
 
     azure = Azure(
         splunk,
