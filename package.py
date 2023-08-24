@@ -232,6 +232,8 @@ class SplunkAppInspect:
                     target.write("\n\n")
             shutil.rmtree(directory)
 
+        # IP added as a work around 24/8/2023 for package building the metrics dashboard failing
+        shutil.rmtree(f"{app_directory}/default/data/ui/views/ssphp_metrics_dashboard.d")
 
 @click.command()
 @click.argument(
