@@ -1,6 +1,6 @@
 <dashboard theme="dark" version="1.1">
   <label>DfE FOUNDATIONAL SERVICES : METRICS DASHBOARD</label>
-  <description>Service Security Posture Hardening Programme : v1.03</description>
+  <description>Service Security Posture Hardening Programme : v1.00</description>
 
   <init>
   <!-- ###    <set token="rollup_panel_width">30%</set>
