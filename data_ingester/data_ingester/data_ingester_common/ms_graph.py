@@ -401,7 +401,7 @@ class ConditionalAccessPolicy:
 
     def to_dict(self):
         cap = {
-            self.cap['displayName']: self.cap['state'][0],
+            self.cap['id']: self.cap['state'][0],
             "id": self.cap["id"],
             # "templateId": null,
             # "conditions": {
