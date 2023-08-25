@@ -1,0 +1,23 @@
+{
+    "Version": "2012-10-17",
+    "Statement": {
+        "Effect": "Allow",
+        "Action": [
+            "iam:ListUsers",
+            "iam:ListUserTags",
+            "iam:ListUserPolicies",
+            "iam:GetUserPolicy",
+            "iam:ListMFADevices",
+            "iam:ListVirtualMFADevices",
+            "iam:GetAccountSummary",
+            "iam:GenerateCredentialReport",
+            "iam:GetCredentialReport",
+            "cloudtrail:ListTrails",
+            "cloudtrail:GetTrail",
+            "route53:ListHostedZones",
+            "route53:GetHostedZone",
+            "route53:ListResourceRecordSets"
+        ],
+        "Resource": "*"
+    }
+}
