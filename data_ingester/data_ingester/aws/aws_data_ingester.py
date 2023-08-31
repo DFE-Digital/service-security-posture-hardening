@@ -18,11 +18,10 @@ def get_secrets():
     credential = DefaultAzureCredential()
     client = SecretClient(vault_url=KVUri, credential=credential)
     secret_names = [
-        # "ad-client-id",
-        # "ad-client-secret",
-        # "ad-tenant-id",
         "splunk-token",
         "splunk-host",
+        "aws-access-key-id",
+        "aws-secret-access-key",
     ]
     secrets = {}
     for secret in secret_names:
@@ -50,7 +49,13 @@ async def main(timer):
     )
     log_to_splunk(splunk, "Starting AWS Data Ingestion")
 
-    aws = AWS(splunk, source="AWS", host="aktest")
+    aws = AWS(
+        secrets["aws-access-key-id"],
+        secrets["aws-secret-access-key"],
+        splunk,
+        source="AWS",
+        host="aktest",
+    )
 
     users = aws.users()
     aws.policies(users)

@@ -11,11 +11,22 @@ logging.basicConfig()
 logger.setLevel(logging.INFO)
 
 
-
 class AWS:
-    def __init__(self, splunk, source=None, sourcetype=None, host=None):
+    def __init__(
+        self,
+        aws_access_key_id,
+        aws_secret_access_key,
+        splunk,
+        source=None,
+        sourcetype=None,
+        host=None,
+    ):
         self.splunk = splunk
-        self.iam = boto3.client("iam")
+        self.session = boto3.Session(
+            aws_access_key_id=aws_access_key_id,
+            aws_secret_access_key=aws_secret_access_key,
+        )
+        self.iam = self.session.client("iam")
         self.source = source
         self.sourcetype = sourcetype
         self.host = host
@@ -121,7 +132,7 @@ class AWS:
 
     def cloudtrail(self):
         logger.info("Getting iam.list_trails")
-        ct_client = boto3.client("cloudtrail")
+        ct_client = self.session.client("cloudtrail")
         trails = ct_client.list_trails()["Trails"]
         cloudtrails = []
         for trail in trails:
@@ -132,15 +143,17 @@ class AWS:
     def organization(self):
         logger.info("Getting organizations.describe_organization")
         try:
-            org = boto3.client("organizations").describe_organization()["Organization"]
+            org = self.session.client("organizations").describe_organization()[
+                "Organization"
+            ]
         except:
-            account_id = boto3.client("sts").get_caller_identity().get("Account")
+            account_id = self.session.client("sts").get_caller_identity().get("Account")
             org = {"InOrganization": False, "AccountId": account_id}
         self.add_to_splunk(org, sourcetype="describe_organization")
         return org
 
     def route53(self):
-        r53 = boto3.client("route53")
+        r53 = self.session.client("route53")
         hosted_zones = r53.list_hosted_zones()["HostedZones"]
         zones = []
         for hosted_zone in hosted_zones:
