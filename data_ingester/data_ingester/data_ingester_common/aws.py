@@ -183,7 +183,7 @@ class AWS:
                 try:
                     nx_domain_error = None
                     answers = dns.resolver.resolve(name, record_type)
-                except dns.resolver.NXDOMAIN as e:
+                except dns.exception.DNSException as e:
                     answers = []
                     nx_domain_error = e
                 rrs = {
