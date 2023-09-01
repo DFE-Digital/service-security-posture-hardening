@@ -81,7 +81,7 @@ resource "azurerm_linux_function_app" "SSPHP" {
   storage_account_access_key = azurerm_storage_account.tfstate.primary_access_key
   service_plan_id            = azurerm_service_plan.SSPHP.id
   enabled                    = true
-  builtin_logging_enabled    = false
+  builtin_logging_enabled    = true
 
   identity {
     type = "SystemAssigned"
@@ -190,13 +190,11 @@ resource "azurerm_key_vault" "SSPHP" {
     secret_permissions = [
       "Get",
       "List",
-      "Set",
     ]
 
     storage_permissions = [
       "Get",
       "List",
-      "Set",
     ]
   }
 }
