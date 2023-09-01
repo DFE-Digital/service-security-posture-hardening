@@ -13,18 +13,20 @@ logger.setLevel(logging.INFO)
 
 class AWS:
     def __init__(
-        self,
-        aws_access_key_id,
-        aws_secret_access_key,
-        splunk,
-        source=None,
-        sourcetype=None,
-        host=None,
+            self,
+            aws_access_key_id,
+            aws_secret_access_key,
+            region_name,
+            splunk,
+            source=None,
+            sourcetype=None,
+            host=None,
     ):
         self.splunk = splunk
         self.session = boto3.Session(
             aws_access_key_id=aws_access_key_id,
             aws_secret_access_key=aws_secret_access_key,
+            region_name=region_name
         )
         self.iam = self.session.client("iam")
         self.source = source

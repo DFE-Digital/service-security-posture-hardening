@@ -52,6 +52,7 @@ async def main(timer):
     aws = AWS(
         secrets["aws-access-key-id"],
         secrets["aws-secret-access-key"],
+        "eu-west-2",
         splunk,
         source="AWS",
         host="aktest",
