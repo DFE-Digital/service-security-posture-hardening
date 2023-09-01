@@ -174,11 +174,11 @@ class AWS:
         record_sets = []
         for zone in zones:
             for resource_record_set in zone["ResourceRecordSets"]:
-
                 name = resource_record_set["Name"]
                 record_type = resource_record_set["Type"]
+                
                 resource_records = [
-                    rr["Value"] for rr in resource_record_set["ResourceRecords"]
+                    rr.get("Value", None) for rr in resource_record_set.get("ResourceRecords", {}) if rr
                 ]
                 try:
                     nx_domain_error = None
