@@ -174,18 +174,27 @@ class AWS:
         record_sets = []
         for zone in zones:
             for resource_record_set in zone["ResourceRecordSets"]:
+
                 name = resource_record_set["Name"]
                 record_type = resource_record_set["Type"]
                 resource_records = [
                     rr["Value"] for rr in resource_record_set["ResourceRecords"]
                 ]
-                answers = dns.resolver.resolve(name, record_type)
+                try:
+                    nx_domain_error = None
+                    answers = dns.resolver.resolve(name, record_type)
+                except dns.resolver.NXDOMAIN as e:
+                    answers = []
+                    nx_domain_error = e
                 rrs = {
                     "Name": name,
                     "Type": record_type,
                     "ResourceRecords": [],
                     "HostedZone": {"Name": zone["HostedZone"]["Name"]},
                 }
+
+                if nx_domain_error:
+                    rrs["error"] = nx_domain_error
 
                 for rdata in answers:
                     rrs["ResourceRecords"].append(
