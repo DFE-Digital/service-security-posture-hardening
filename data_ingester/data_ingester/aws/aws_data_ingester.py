@@ -5,6 +5,7 @@ from data_ingester_common.splunk import Splunk, HecEvent
 from data_ingester_common.ms_graph import Azure
 from azure.keyvault.secrets import SecretClient
 from azure.identity import DefaultAzureCredential
+import botocore
 
 logger = logging.getLogger("data_ingester_aws")
 logging.basicConfig()
@@ -60,6 +61,10 @@ async def main(timer):
 
     users = aws.users()
     aws.policies(users)
+    try:
+        aws.attached_policies(users)
+    except botocore.exceptions.ClientError as e:
+        log_to_splunk(splunk, f"Error while running aws.attached_policies(): {e}")
     aws.mfa()
     aws.virtual_mfa()
     aws.account_summary()
