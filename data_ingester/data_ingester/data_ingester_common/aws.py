@@ -118,6 +118,30 @@ class AWS:
 
         return (attached_policies, policies)
 
+    def groups(self):
+        logger.info("Getting iam.groups")
+        groups_with_policies = []
+        groups = self.iam.list_groups()["Groups"]
+        for g in groups:
+            name = g["GroupName"]
+            group_response = self.iam.get_group(GroupName=name)
+
+            group = group_response["Group"]
+            group["Users"] = group_response["Users"]
+
+            group["InlinePolicies"] = self.iam.list_group_policies(GroupName=name)[
+                "PolicyNames"
+            ]
+            group["AttachedPolicies"] = self.iam.list_attached_group_policies(
+                GroupName=name
+            )["AttachedPolicies"]
+
+            groups_with_policies.append(group)
+
+        self.add_to_splunk(groups_with_policies, sourcetype="groups")
+
+        return groups_with_policies
+
     def credential_report(self):
         logger.info("Getting iam.get_credential_report")
         while True:

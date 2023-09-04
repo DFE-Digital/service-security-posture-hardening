@@ -65,6 +65,12 @@ async def main(timer):
         aws.attached_policies(users)
     except botocore.exceptions.ClientError as e:
         log_to_splunk(splunk, f"Error while running aws.attached_policies(): {e}")
+
+    try:
+        aws.groups()
+    except botocore.exceptions.ClientError as e:
+        log_to_splunk(splunk, f"Error while running aws.groups(): {e}")
+
     aws.mfa()
     aws.virtual_mfa()
     aws.account_summary()
