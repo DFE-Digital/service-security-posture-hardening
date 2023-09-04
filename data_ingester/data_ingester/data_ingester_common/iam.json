@@ -6,6 +6,8 @@
             "iam:ListUsers",
             "iam:ListUserTags",
             "iam:ListUserPolicies",
+            "iam:ListAttachedUserPolicies",
+            "iam:GetPolicy",
             "iam:GetUserPolicy",
             "iam:ListMFADevices",
             "iam:ListVirtualMFADevices",

@@ -13,20 +13,20 @@ logger.setLevel(logging.INFO)
 
 class AWS:
     def __init__(
-            self,
-            aws_access_key_id,
-            aws_secret_access_key,
-            region_name,
-            splunk,
-            source=None,
-            sourcetype=None,
-            host=None,
+        self,
+        aws_access_key_id,
+        aws_secret_access_key,
+        region_name,
+        splunk,
+        source=None,
+        sourcetype=None,
+        host=None,
     ):
         self.splunk = splunk
         self.session = boto3.Session(
             aws_access_key_id=aws_access_key_id,
             aws_secret_access_key=aws_secret_access_key,
-            region_name=region_name
+            region_name=region_name,
         )
         self.iam = self.session.client("iam")
         self.source = source
@@ -94,7 +94,7 @@ class AWS:
 
     def attached_policies(self, users):
         logger.info("Getting iam.list_attached_user_policies")
-        attached_policies = []
+        user_attached_policies = []
         policies = []
         for user in users:
             attached_policies = self.iam.list_attached_user_policies(
@@ -109,8 +109,12 @@ class AWS:
                 ]
                 policies.append(policy)
 
-        self.add_to_splunk(attached_policies, sourcetype="get_policy")
-        self.add_to_splunk(policies, sourcetype="get_attached_user_policy")
+            user_attached_policies.append(attached_policies)
+
+        self.add_to_splunk(policies, sourcetype="get_policy")
+        self.add_to_splunk(
+            user_attached_policies, sourcetype="get_attached_user_policy"
+        )
 
         return (attached_policies, policies)
 
@@ -133,7 +137,7 @@ class AWS:
         self.add_to_splunk(account_summary, sourcetype="get_account_summary")
 
     def cloudtrail(self):
-        logger.info("Getting iam.list_trails")
+        logger.info("Getting cloudtrail.list_trails")
         ct_client = self.session.client("cloudtrail")
         trails = ct_client.list_trails()["Trails"]
         cloudtrails = []
@@ -176,9 +180,11 @@ class AWS:
             for resource_record_set in zone["ResourceRecordSets"]:
                 name = resource_record_set["Name"]
                 record_type = resource_record_set["Type"]
-                
+
                 resource_records = [
-                    rr.get("Value", None) for rr in resource_record_set.get("ResourceRecords", {}) if rr
+                    rr.get("Value", None)
+                    for rr in resource_record_set.get("ResourceRecords", {})
+                    if rr
                 ]
                 try:
                     nx_domain_error = None
