@@ -1,6 +1,6 @@
 <dashboard theme="dark" version="1.1">
   <label>DfE FOUNDATIONAL SERVICES : METRICS DASHBOARD</label>
-  <description>Service Security Posture Hardening Programme : v1.01</description>
+  <description>Service Security Posture Hardening Programme : v1.03</description>
 
   <init>
   <!-- ###    <set token="rollup_panel_width">30%</set>
@@ -89,8 +89,8 @@
       <table>
         <search>
           <query>
-index="ssphp_metrics" ssphp.use_case.id="*"
-    [| search index="ssphp_metrics"
+`ssphp_metrics_index` ssphp.use_case.id="*"
+    [| search `ssphp_metrics_index`
      | stats max(SSPHP_RUN) as SSPHP_RUN by ssphp.use_case.id
      | eval search_text="(\"ssphp.use_case.id\"=\"".'ssphp.use_case.id'."\" AND SSPHP_RUN=\"".SSPHP_RUN."\")"
      | stats values(search_text) as search_text
