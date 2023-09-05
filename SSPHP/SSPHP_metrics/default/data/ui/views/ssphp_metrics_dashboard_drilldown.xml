@@ -112,7 +112,7 @@
         <search>
           <query>
 `ssphp_metrics_index` ssphp.use_case.id=$tkn_use_case_id$
-    [| search index="ssphp_metrics"
+    [| search `ssphp_metrics_index`
      | stats max(SSPHP_RUN) as SSPHP_RUN by ssphp.use_case.id
      | eval search_text="(\"ssphp.use_case.id\"=\"".'ssphp.use_case.id'."\" AND SSPHP_RUN=\"".SSPHP_RUN."\")"
      | stats values(search_text) as search_text
