@@ -11,11 +11,24 @@ logging.basicConfig()
 logger.setLevel(logging.INFO)
 
 
-
 class AWS:
-    def __init__(self, splunk, source=None, sourcetype=None, host=None):
+    def __init__(
+        self,
+        aws_access_key_id,
+        aws_secret_access_key,
+        region_name,
+        splunk,
+        source=None,
+        sourcetype=None,
+        host=None,
+    ):
         self.splunk = splunk
-        self.iam = boto3.client("iam")
+        self.session = boto3.Session(
+            aws_access_key_id=aws_access_key_id,
+            aws_secret_access_key=aws_secret_access_key,
+            region_name=region_name,
+        )
+        self.iam = self.session.client("iam")
         self.source = source
         self.sourcetype = sourcetype
         self.host = host
@@ -81,7 +94,7 @@ class AWS:
 
     def attached_policies(self, users):
         logger.info("Getting iam.list_attached_user_policies")
-        attached_policies = []
+        user_attached_policies = []
         policies = []
         for user in users:
             attached_policies = self.iam.list_attached_user_policies(
@@ -96,10 +109,38 @@ class AWS:
                 ]
                 policies.append(policy)
 
-        self.add_to_splunk(attached_policies, sourcetype="get_policy")
-        self.add_to_splunk(policies, sourcetype="get_attached_user_policy")
+            user_attached_policies.append(attached_policies)
+
+        self.add_to_splunk(policies, sourcetype="get_policy")
+        self.add_to_splunk(
+            user_attached_policies, sourcetype="get_attached_user_policy"
+        )
 
         return (attached_policies, policies)
+
+    def groups(self):
+        logger.info("Getting iam.groups")
+        groups_with_policies = []
+        groups = self.iam.list_groups()["Groups"]
+        for g in groups:
+            name = g["GroupName"]
+            group_response = self.iam.get_group(GroupName=name)
+
+            group = group_response["Group"]
+            group["Users"] = group_response["Users"]
+
+            group["InlinePolicies"] = self.iam.list_group_policies(GroupName=name)[
+                "PolicyNames"
+            ]
+            group["AttachedPolicies"] = self.iam.list_attached_group_policies(
+                GroupName=name
+            )["AttachedPolicies"]
+
+            groups_with_policies.append(group)
+
+        self.add_to_splunk(groups_with_policies, sourcetype="groups")
+
+        return groups_with_policies
 
     def credential_report(self):
         logger.info("Getting iam.get_credential_report")
@@ -120,8 +161,8 @@ class AWS:
         self.add_to_splunk(account_summary, sourcetype="get_account_summary")
 
     def cloudtrail(self):
-        logger.info("Getting iam.list_trails")
-        ct_client = boto3.client("cloudtrail")
+        logger.info("Getting cloudtrail.list_trails")
+        ct_client = self.session.client("cloudtrail")
         trails = ct_client.list_trails()["Trails"]
         cloudtrails = []
         for trail in trails:
@@ -132,15 +173,17 @@ class AWS:
     def organization(self):
         logger.info("Getting organizations.describe_organization")
         try:
-            org = boto3.client("organizations").describe_organization()["Organization"]
+            org = self.session.client("organizations").describe_organization()[
+                "Organization"
+            ]
         except:
-            account_id = boto3.client("sts").get_caller_identity().get("Account")
+            account_id = self.session.client("sts").get_caller_identity().get("Account")
             org = {"InOrganization": False, "AccountId": account_id}
         self.add_to_splunk(org, sourcetype="describe_organization")
         return org
 
     def route53(self):
-        r53 = boto3.client("route53")
+        r53 = self.session.client("route53")
         hosted_zones = r53.list_hosted_zones()["HostedZones"]
         zones = []
         for hosted_zone in hosted_zones:
@@ -161,16 +204,27 @@ class AWS:
             for resource_record_set in zone["ResourceRecordSets"]:
                 name = resource_record_set["Name"]
                 record_type = resource_record_set["Type"]
+
                 resource_records = [
-                    rr["Value"] for rr in resource_record_set["ResourceRecords"]
+                    rr.get("Value", None)
+                    for rr in resource_record_set.get("ResourceRecords", {})
+                    if rr
                 ]
-                answers = dns.resolver.resolve(name, record_type)
+                try:
+                    nx_domain_error = None
+                    answers = dns.resolver.resolve(name, record_type)
+                except dns.exception.DNSException as e:
+                    answers = []
+                    nx_domain_error = e
                 rrs = {
                     "Name": name,
                     "Type": record_type,
                     "ResourceRecords": [],
                     "HostedZone": {"Name": zone["HostedZone"]["Name"]},
                 }
+
+                if nx_domain_error:
+                    rrs["error"] = nx_domain_error
 
                 for rdata in answers:
                     rrs["ResourceRecords"].append(

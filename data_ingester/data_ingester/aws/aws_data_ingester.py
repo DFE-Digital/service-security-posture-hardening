@@ -5,6 +5,7 @@ from data_ingester_common.splunk import Splunk, HecEvent
 from data_ingester_common.ms_graph import Azure
 from azure.keyvault.secrets import SecretClient
 from azure.identity import DefaultAzureCredential
+import botocore
 
 logger = logging.getLogger("data_ingester_aws")
 logging.basicConfig()
@@ -18,11 +19,10 @@ def get_secrets():
     credential = DefaultAzureCredential()
     client = SecretClient(vault_url=KVUri, credential=credential)
     secret_names = [
-        # "ad-client-id",
-        # "ad-client-secret",
-        # "ad-tenant-id",
         "splunk-token",
         "splunk-host",
+        "aws-access-key-id",
+        "aws-secret-access-key",
     ]
     secrets = {}
     for secret in secret_names:
@@ -50,10 +50,27 @@ async def main(timer):
     )
     log_to_splunk(splunk, "Starting AWS Data Ingestion")
 
-    aws = AWS(splunk, source="AWS", host="aktest")
+    aws = AWS(
+        secrets["aws-access-key-id"],
+        secrets["aws-secret-access-key"],
+        "eu-west-2",
+        splunk,
+        source="AWS",
+        host="aktest",
+    )
 
     users = aws.users()
     aws.policies(users)
+    try:
+        aws.attached_policies(users)
+    except botocore.exceptions.ClientError as e:
+        log_to_splunk(splunk, f"Error while running aws.attached_policies(): {e}")
+
+    try:
+        aws.groups()
+    except botocore.exceptions.ClientError as e:
+        log_to_splunk(splunk, f"Error while running aws.groups(): {e}")
+
     aws.mfa()
     aws.virtual_mfa()
     aws.account_summary()
