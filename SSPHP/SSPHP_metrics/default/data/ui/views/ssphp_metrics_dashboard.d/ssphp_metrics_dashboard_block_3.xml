@@ -24,7 +24,7 @@
         </query>
       </search>
       <option name="colorMode">block</option>
-      <option name="height">500</option>
+      <option name="height">400</option>
       <option name="drilldown">none</option>
       <option name="rangeColors">[$c_green$,$c_orange$,$c_red$]</option>
       <option name="rangeValues">[30,90]</option>

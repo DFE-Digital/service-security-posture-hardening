@@ -10,3 +10,4 @@ TA_SSPHP/output
 **_DEV
 TA_SSPHP/tests/SPLUNK_HOME
 .python_packages
+.DS_Store

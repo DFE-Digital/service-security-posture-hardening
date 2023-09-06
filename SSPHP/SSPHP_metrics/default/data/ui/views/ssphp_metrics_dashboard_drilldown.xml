@@ -111,8 +111,8 @@
       <table>
         <search>
           <query>
-index="ssphp_metrics" ssphp.use_case.id=$tkn_use_case_id$
-    [| search index="ssphp_metrics"
+`ssphp_metrics_index` ssphp.use_case.id=$tkn_use_case_id$
+    [| search `ssphp_metrics_index`
      | stats max(SSPHP_RUN) as SSPHP_RUN by ssphp.use_case.id
      | eval search_text="(\"ssphp.use_case.id\"=\"".'ssphp.use_case.id'."\" AND SSPHP_RUN=\"".SSPHP_RUN."\")"
      | stats values(search_text) as search_text
@@ -204,7 +204,7 @@ index="ssphp_metrics" ssphp.use_case.id=$tkn_use_case_id$
       <table>
         <search>
           <query>
-index="ssphp_metrics" ssphp.use_case.id=$tkn_use_case_id$
+`ssphp_metrics_index` ssphp.use_case.id=$tkn_use_case_id$
 | stats max(SSPHP_RUN) as SSPHP_RUN
 | eval latest_use_case_data=strftime(SSPHP_RUN,"%Y-%m-%d %H:%M")
 | table latest_use_case_data, SSPHP_RUN
@@ -252,7 +252,7 @@ index="ssphp_metrics" ssphp.use_case.id=$tkn_use_case_id$
     <panel>
       <table>
         <search>
-          <query>`$tkn_use_case_macro$`</query>
+          <query>| `$tkn_use_case_macro$`</query>
           <earliest>0</earliest>
           <latest>now</latest>
           <sampleRatio>1</sampleRatio>
