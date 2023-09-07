@@ -1,6 +1,6 @@
 <dashboard theme="dark" version="1.1">
   <label>DfE FOUNDATIONAL SERVICES : METRICS DASHBOARD</label>
-  <description>Service Security Posture Hardening Programme : v1.03</description>
+  <description>Service Security Posture Hardening Programme : v1.07</description>
 
   <init>
   <!-- ###    <set token="rollup_panel_width">30%</set>
@@ -304,11 +304,11 @@ BY index, sourcetype
 | where count=0
 | eventstats count as no_sourcetypes_without_data
 | head 1
-| eval ssphp.score=round(no_sourcetypes_without_data*100/no_sourcetypes)
-| fields ssphp.score
+| eval ssphp.score.score=round(no_sourcetypes_without_data*100/no_sourcetypes)
+| fields ssphp.score.score
         </query>
         <done>
-          <condition match="$result.ssphp.score$&gt;90">
+          <condition match="$result.ssphp.score.score$&gt;90">
             <set token="tkn_dns_data_feed_problem">true</set>
           </condition>
           <condition>
@@ -334,7 +334,7 @@ BY index, sourcetype
    | stats values(search_text) as search_text
    | eval search_text="(".mvjoin(search_text," OR ").")"
   | return $$search_text]
-| stats values(ssphp.score) as ssphp.score by ssphp.use_case.id
+| stats values(ssphp.score.score) as ssphp.score.score by ssphp.use_case.id
 | transpose 0 header_field=ssphp.use_case.id
         </query>
         <done>
@@ -812,11 +812,11 @@ BY index, sourcetype
 | where count=0
 | eventstats count as no_sourcetypes_without_data
 | head 1
-| eval ssphp.score=round(no_sourcetypes_without_data*100/no_sourcetypes)
-| fields ssphp.score
+| eval ssphp.score.score=round(no_sourcetypes_without_data*100/no_sourcetypes)
+| fields ssphp.score.score
         </query>
         <done>
-          <condition match="$result.ssphp.score$&gt;90">
+          <condition match="$result.ssphp.score.score$&gt;90">
             <set token="tkn_aad_data_feed_problem">true</set>
           </condition>
           <condition>
@@ -842,7 +842,7 @@ BY index, sourcetype
    | stats values(search_text) as search_text
    | eval search_text="(".mvjoin(search_text," OR ").")"
   | return $$search_text]
-| stats values(ssphp.score) as ssphp.score by ssphp.use_case.id
+| stats values(ssphp.score.score) as ssphp.score.score by ssphp.use_case.id
 | transpose 0 header_field=ssphp.use_case.id
         </query>
         <done>
@@ -1320,11 +1320,11 @@ BY index, sourcetype
 | where count=0
 | eventstats count as no_sourcetypes_without_data
 | head 1
-| eval ssphp.score=round(no_sourcetypes_without_data*100/no_sourcetypes)
-| fields ssphp.score
+| eval ssphp.score.score=round(no_sourcetypes_without_data*100/no_sourcetypes)
+| fields ssphp.score.score
         </query>
         <done>
-          <condition match="$result.ssphp.score$&gt;90">
+          <condition match="$result.ssphp.score.score$&gt;90">
             <set token="tkn_azr_data_feed_problem">true</set>
           </condition>
           <condition>
@@ -1350,7 +1350,7 @@ BY index, sourcetype
    | stats values(search_text) as search_text
    | eval search_text="(".mvjoin(search_text," OR ").")"
   | return $$search_text]
-| stats values(ssphp.score) as ssphp.score by ssphp.use_case.id
+| stats values(ssphp.score.score) as ssphp.score.score by ssphp.use_case.id
 | transpose 0 header_field=ssphp.use_case.id
         </query>
         <done>
@@ -1828,11 +1828,11 @@ BY index, sourcetype
 | where count=0
 | eventstats count as no_sourcetypes_without_data
 | head 1
-| eval ssphp.score=round(no_sourcetypes_without_data*100/no_sourcetypes)
-| fields ssphp.score
+| eval ssphp.score.score=round(no_sourcetypes_without_data*100/no_sourcetypes)
+| fields ssphp.score.score
         </query>
         <done>
-          <condition match="$result.ssphp.score$&gt;90">
+          <condition match="$result.ssphp.score.score$&gt;90">
             <set token="tkn_m365_data_feed_problem">true</set>
           </condition>
           <condition>
@@ -1858,7 +1858,7 @@ BY index, sourcetype
    | stats values(search_text) as search_text
    | eval search_text="(".mvjoin(search_text," OR ").")"
   | return $$search_text]
-| stats values(ssphp.score) as ssphp.score by ssphp.use_case.id
+| stats values(ssphp.score.score) as ssphp.score.score by ssphp.use_case.id
 | transpose 0 header_field=ssphp.use_case.id
         </query>
         <done>
@@ -2336,11 +2336,11 @@ BY index, sourcetype
 | where count=0
 | eventstats count as no_sourcetypes_without_data
 | head 1
-| eval ssphp.score=round(no_sourcetypes_without_data*100/no_sourcetypes)
-| fields ssphp.score
+| eval ssphp.score.score=round(no_sourcetypes_without_data*100/no_sourcetypes)
+| fields ssphp.score.score
         </query>
         <done>
-          <condition match="$result.ssphp.score$&gt;90">
+          <condition match="$result.ssphp.score.score$&gt;90">
             <set token="tkn_busc_data_feed_problem">true</set>
           </condition>
           <condition>
@@ -2366,7 +2366,7 @@ BY index, sourcetype
    | stats values(search_text) as search_text
    | eval search_text="(".mvjoin(search_text," OR ").")"
   | return $$search_text]
-| stats values(ssphp.score) as ssphp.score by ssphp.use_case.id
+| stats values(ssphp.score.score) as ssphp.score.score by ssphp.use_case.id
 | transpose 0 header_field=ssphp.use_case.id
         </query>
         <done>
@@ -2676,8 +2676,9 @@ BY index, sourcetype
      display_val_aad=$tkn_aad_rollup_val$,
      display_val_m365=$tkn_m365_rollup_val$,
      display_val_azr=$tkn_azr_rollup_val$,
-     display_val_busc=$tkn_busc_rollup_val$,
-     display_val=min(display_val_dns,display_val_aad,display_val_m365,display_val_azr,display_val_busc)
+     display_val_busc=$tkn_busc_rollup_val$
+
+| eval display_val=avg(display_val_dns, display_val_aad, display_val_m365, display_val_azr, display_val_busc)
      
 | table display_val
         </query>
@@ -2685,8 +2686,8 @@ BY index, sourcetype
       <option name="colorMode">block</option>
       <option name="height">400</option>
       <option name="drilldown">none</option>
-      <option name="rangeColors">[$c_green$,$c_orange$,$c_red$]</option>
-      <option name="rangeValues">[30,90]</option>
+      <option name="rangeColors">[$c_red$,$c_orange$,$c_green$]</option>
+      <option name="rangeValues">[50,90]</option>
       <option name="useColors">1</option>
     </single>
   </panel>

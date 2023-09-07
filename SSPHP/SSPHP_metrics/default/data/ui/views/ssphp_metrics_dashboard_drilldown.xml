@@ -118,7 +118,7 @@
      | stats values(search_text) as search_text
      | eval search_text="(".mvjoin(search_text," OR ").")"
     | return $search_text]
-| table ssphp.use_case.display.title, ssphp.use_case.id, ssphp.use_case.display.short_description, ssphp.use_case.description, ssphp.score, ssphp.color, ssphp.use_case.treshhold.green, ssphp.use_case.treshhold.orange, ssphp.use_case.treshhold.red, ssphp.use_case.scoring_narrative, ssphp.use_case.framework.mitre, ssphp.use_case.framework.ig_1, ssphp.use_case.framework.ig_2, ssphp.use_case.framework.ig_3
+| table ssphp.use_case.display.title, ssphp.use_case.id, ssphp.use_case.display.short_description, ssphp.use_case.description, ssphp.score.score, ssphp.color, ssphp.use_case.treshhold.green, ssphp.use_case.treshhold.orange, ssphp.use_case.treshhold.red, ssphp.use_case.scoring_narrative, ssphp.use_case.framework.mitre, ssphp.use_case.framework.ig_1, ssphp.use_case.framework.ig_2, ssphp.use_case.framework.ig_3
           </query>
           <done>
             <set token="tkn_row1_display_title">$result.ssphp.use_case.display.title$</set>
@@ -126,7 +126,7 @@
             <set token="tkn_row1_display_short_description">$result.ssphp.use_case.display.short_description$</set>
             <set token="tkn_row1_display_description">$result.ssphp.use_case.description$</set>
             <set token="tkn_row1_display_scoring_narrative">$result.ssphp.use_case.scoring_narrative$</set>
-            <set token="tkn_row1_score">$result.ssphp.score$</set>
+            <set token="tkn_row1_score">$result.ssphp.score.score$</set>
             <set token="tkn_row1_color">$result.ssphp.color$</set>
             <eval token="tkn_row1_mitre">if(like($result.ssphp.use_case.id$,"%_rollup"),"N/A",$result.ssphp.use_case.framework.mitre$)</eval>
             <eval token="tkn_row1_ig1">if(like($result.ssphp.use_case.id$,"%_rollup"),"N/A",$result.ssphp.use_case.framework.ig_1$)</eval>
@@ -252,7 +252,10 @@
     <panel>
       <table>
         <search>
-          <query>| `$tkn_use_case_macro$`</query>
+          <query>
+| `$tkn_use_case_macro$`
+| fields - _raw, host, index, eventtype, linecount, max_time, punct, splunk_server, splunk_server_group, tag, "tag::eventtype", "tag::sourcetype", sourcetype, source
+          </query>
           <earliest>0</earliest>
           <latest>now</latest>
           <sampleRatio>1</sampleRatio>

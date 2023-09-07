@@ -185,11 +185,11 @@ BY index, sourcetype
 | where count=0
 | eventstats count as no_sourcetypes_without_data
 | head 1
-| eval ssphp.score=round(no_sourcetypes_without_data*100/no_sourcetypes)
-| fields ssphp.score
+| eval ssphp.score.score=round(no_sourcetypes_without_data*100/no_sourcetypes)
+| fields ssphp.score.score
         </query>
         <done>
-          <condition match="$result.ssphp.score$&gt;90">
+          <condition match="$result.ssphp.score.score$&gt;90">
             <set token="tkn_~~~~_data_feed_problem">true</set>
           </condition>
           <condition>
@@ -215,7 +215,7 @@ BY index, sourcetype
    | stats values(search_text) as search_text
    | eval search_text="(".mvjoin(search_text," OR ").")"
   | return $$search_text]
-| stats values(ssphp.score) as ssphp.score by ssphp.use_case.id
+| stats values(ssphp.score.score) as ssphp.score.score by ssphp.use_case.id
 | transpose 0 header_field=ssphp.use_case.id
         </query>
         <done>
