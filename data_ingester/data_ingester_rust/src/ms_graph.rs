@@ -182,11 +182,12 @@ impl MsGraph {
         roles
     }
 
-    pub async fn list_users(&self) -> Users {
+    pub async fn list_users(&self, ) -> Users {
         let mut stream = self
             .beta_client
             .users()
             .list_user()
+            .filter(&[&format!("startsWith(id, '{}')", "1")])
             .select(&[
                 "id",
                 "displayName",
