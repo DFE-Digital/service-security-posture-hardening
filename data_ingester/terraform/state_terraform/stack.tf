@@ -116,7 +116,7 @@ data "archive_file" "data_ingester_rust" {
 }
 
 resource "azurerm_linux_function_app" "SSPHP_rust" {
-  name                = "SSPHP-Metrics-rust"
+  name                = "SSPHP-Metrics-rust-${random_string.resource_code.result}"
   resource_group_name = azurerm_resource_group.tfstate.name
   location            = azurerm_resource_group.tfstate.location
 
