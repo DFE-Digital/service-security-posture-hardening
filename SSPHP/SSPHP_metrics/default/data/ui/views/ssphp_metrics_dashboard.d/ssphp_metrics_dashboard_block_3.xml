@@ -17,8 +17,9 @@
      display_val_aad=$tkn_aad_rollup_val$,
      display_val_m365=$tkn_m365_rollup_val$,
      display_val_azr=$tkn_azr_rollup_val$,
-     display_val_busc=$tkn_busc_rollup_val$,
-     display_val=min(display_val_dns,display_val_aad,display_val_m365,display_val_azr,display_val_busc)
+     display_val_busc=$tkn_busc_rollup_val$
+
+| eval display_val=avg(display_val_dns, display_val_aad, display_val_m365, display_val_azr, display_val_busc)
      
 | table display_val
         </query>
@@ -26,8 +27,8 @@
       <option name="colorMode">block</option>
       <option name="height">400</option>
       <option name="drilldown">none</option>
-      <option name="rangeColors">[$c_green$,$c_orange$,$c_red$]</option>
-      <option name="rangeValues">[30,90]</option>
+      <option name="rangeColors">[$c_red$,$c_orange$,$c_green$]</option>
+      <option name="rangeValues">[50,90]</option>
       <option name="useColors">1</option>
     </single>
   </panel>
