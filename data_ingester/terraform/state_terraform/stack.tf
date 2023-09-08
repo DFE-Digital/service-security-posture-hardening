@@ -109,6 +109,14 @@ resource "azurerm_linux_function_app" "SSPHP" {
   }
 }
 
+resource "azurerm_service_plan" "SSPHP_rust" {
+  name                = "SSPHP-Metrics_rust"
+  resource_group_name = azurerm_resource_group.tfstate.name
+  location            = azurerm_resource_group.tfstate.location
+  os_type             = "Linux"
+  sku_name            = "Y1"
+}
+
 data "archive_file" "data_ingester_rust" {
   type        = "zip"
   source_dir  = "${path.module}/../../data_ingester_rust/function_zip/"
@@ -122,7 +130,7 @@ resource "azurerm_linux_function_app" "SSPHP_rust" {
 
   storage_account_name       = azurerm_storage_account.tfstate.name
   storage_account_access_key = azurerm_storage_account.tfstate.primary_access_key
-  service_plan_id            = azurerm_service_plan.SSPHP.id
+  service_plan_id            = azurerm_service_plan.SSPHP_rust.id
   enabled                    = true
   builtin_logging_enabled    = true
 
@@ -155,7 +163,6 @@ resource "azurerm_application_insights" "SSPHP" {
   resource_group_name = azurerm_resource_group.tfstate.name
   application_type    = "other"
 }
-
 
 data "azurerm_client_config" "current" {}
 
