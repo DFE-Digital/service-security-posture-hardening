@@ -187,7 +187,7 @@ impl MsGraph {
             .beta_client
             .users()
             .list_user()
-            .filter(&[&format!("startsWith(id, '{}')", "1")])
+            .filter(&[&format!("startsWith(userPrincipalName, '{}')", "c")])
             .select(&[
                 "id",
                 "displayName",
