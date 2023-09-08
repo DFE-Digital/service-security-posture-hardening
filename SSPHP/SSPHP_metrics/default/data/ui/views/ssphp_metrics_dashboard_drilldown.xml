@@ -218,7 +218,7 @@
       </html>
     </panel>
 
-    
+
        
     <panel id="panel_hdr_004">
       <html>
@@ -292,6 +292,7 @@
           <query>
 | `$tkn_use_case_macro$`
 | fields - _raw, host, index, eventtype, linecount, max_time, punct, splunk_server, splunk_server_group, tag, "tag::eventtype", "tag::sourcetype", sourcetype, source
+| table *
           </query>
           <earliest>0</earliest>
           <latest>now</latest>
