@@ -200,7 +200,7 @@ impl MsGraph {
                 "assignedPlans",
             ])
             .expand(&["transitiveMemberOf"])
-        //            .top("1")
+            .top("999")
             //            .skip("3")
             .paging()
             .stream::<Users>()?;
