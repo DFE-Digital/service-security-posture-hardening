@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::splunk::HecEvent;
+use crate::splunk::ToHecEvents;
 use serde::Deserialize;
 use serde::Deserializer;
 use serde::Serialize;
@@ -66,11 +66,24 @@ impl RoleDefinitions {
             value: HashMap::new(),
         }
     }
-
-    pub fn to_hec_event(&self) -> Vec<HecEvent> {
-        self.value
-            .iter()
-            .map(|(_k, v)| HecEvent::new(v, "msgraph", "msgraph:role_definition"))
-            .collect()
-    }
 }
+
+// impl ToHecEvents for RoleDefinitions {
+//     fn source() -> &'static str {
+//         "msgraph"
+//     }
+
+//     fn sourcetype() -> &'static str {
+//         "msgraph:role_definition"
+//     }
+// }
+
+// impl IntoIterator for &RoleDefinitions {
+//     type Item = RoleDefinition;
+//     type IntoIter = std::collections::Hash_map::Iter<'_, std::string::String, RoleDefinition>;
+
+//     fn into_iter(self) -> Self::IntoIter {
+//         self.value
+//             .iter()
+//     }
+// }

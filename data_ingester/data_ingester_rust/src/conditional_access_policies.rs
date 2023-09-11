@@ -1,11 +1,10 @@
 use std::collections::HashSet;
 
+use crate::splunk::ToHecEvents;
 use crate::users::User;
-use crate::splunk::HecEvent;
 use serde::Deserialize;
 use serde::Serialize;
 use serde_with::skip_serializing_none;
-
 #[skip_serializing_none]
 #[derive(Debug, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
@@ -144,12 +143,24 @@ impl ConditionalAccessPolicies {
     pub fn new() -> Self {
         Self { value: Vec::new() }
     }
+}
 
-    pub fn to_hec_event(&self) -> Vec<HecEvent> {
-        self.value
-            .iter()
-            .map(|u| HecEvent::new(u, "msgraph", "msgraph:conditional_access_policy"))
-            .collect()
+impl ToHecEvents for ConditionalAccessPolicies {
+    fn source() -> &'static str {
+        "msgraph"
+    }
+
+    fn sourcetype() -> &'static str {
+        "msgraph:conditional_access_policy"
+    }
+}
+
+impl IntoIterator for ConditionalAccessPolicies {
+    type Item = ConditionalAccessPolicy;
+    type IntoIter = std::vec::IntoIter<Self::Item>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.value.into_iter()
     }
 }
 
@@ -168,7 +179,7 @@ mod conditional_access_policy {
             GroupOrRole::Role(DirectoryRole {
                 id: "role1".to_owned(),
                 display_name: Some("role_1_name".to_owned()),
-                role_template_id: None,
+                role_template_id: "role1id".to_owned(),
                 members: None,
             }),
         ]);
