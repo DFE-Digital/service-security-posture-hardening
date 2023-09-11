@@ -260,19 +260,19 @@ pub async fn azure() -> Result<(), Box<dyn Error>> {
 
     splunk.log("Getting Conditional access policies").await;
     let caps = ms_graph.list_conditional_access_policies().await;
-    dbg!(&caps);
+//    dbg!(&caps);
     // hec_events.extend(caps.to_hec_event().into_iter());
 
     splunk.log("Getting users").await;
     let mut users = ms_graph.list_users(&splunk).await?;
-    dbg!(&users);
+//    dbg!(&users);
     splunk.log("Processing caps").await;
     users.process_caps(&caps);
 
     splunk.log("Processing user is privileged").await;
     users.set_is_privileged(&role_definitions);
     hec_events.extend(users.to_hec_eventss()?.into_iter());
-    dbg!(&hec_events);
+//    dbg!(&hec_events);
     splunk.log("sending users").await;
     splunk.send_batch(&hec_events[..]).await;
     splunk.log("Users sent / Azure Complete").await;    

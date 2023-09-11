@@ -83,7 +83,7 @@ pub(crate) async fn start_server() {
                     //     Ok(_) => "success".to_owned(),
                     //     Err(e) => format!("{:?}:{}", e, e.to_string()),
                     // };
-                    let logs = "NO logs".to_owned();
+                    let logs = "NO logs1".to_owned();
                     AzureInvokeResponse {
                         outputs: None,
                         // TODO Fix logging
