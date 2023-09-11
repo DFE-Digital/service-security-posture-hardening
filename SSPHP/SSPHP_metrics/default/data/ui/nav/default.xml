@@ -1,4 +1,5 @@
 <nav search_view="search">
   <view name="search" />
   <view name="ssphp_metrics_dashboard" default='true' />
+  <view name="ssphp_metrics_dashboard_controls" />
 </nav>
