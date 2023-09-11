@@ -1,8 +1,7 @@
-use crate::splunk::HecEvent;
+use crate::splunk::ToHecEvents;
 use serde::Deserialize;
 use serde::Serialize;
 use serde_with::skip_serializing_none;
-
 use std::borrow::Cow;
 
 // https://learn.microsoft.com/en-us/graph/api/resources/group?view=graph-rest-1.0
@@ -55,17 +54,43 @@ impl Groups<'_> {
         Self { value: Vec::new() }
     }
 
-    pub fn to_hec_event(&self) -> Vec<HecEvent> {
-        self.value
-            .iter()
-            .map(|u| HecEvent::new(u, "msgraph", "msgraph:groups"))
-            .collect()
-    }
-
     pub fn ids(&self) -> Vec<&'_ String> {
         self.value.iter().map(|group| &group.id).collect()
     }
 }
+
+impl ToHecEvents for Groups<'_> {
+    fn source() -> &'static str {
+        "msgraph"
+    }
+
+    fn sourcetype() -> &'static str {
+        "msgraph:group"
+    }
+}
+
+// use std::ops::Deref;
+// impl<'a> Deref for Groups<'a> {
+//   type Target = [Group];
+
+//   fn deref(&self) -> &[Cow<'_, Group] {
+//     &self.value[..]
+//   }
+// }
+
+// impl<'a> IntoIterator for Groups<'a> {
+//     type Item = Group;
+//     type IntoIter = std::vec::IntoIter<Self::Item>;
+
+//     fn into_iter(self) -> Self::IntoIter {
+//         self.value.into_iter()
+//     }
+// }
+
+// impl<'a> Iterator for Group<'a> {
+//     type Item = Group;
+//     fn next(&mut self)
+// }
 
 #[test]
 fn group_role_ids() {

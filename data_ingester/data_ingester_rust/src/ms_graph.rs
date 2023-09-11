@@ -1,16 +1,18 @@
-use std::env;
-use std::error::Error;
-
 use crate::conditional_access_policies::ConditionalAccessPolicies;
 use crate::directory_roles::DirectoryRoleTemplates;
 use crate::directory_roles::DirectoryRoles;
 use crate::groups::Groups;
 use crate::keyvault::get_keyvault_secrets;
 use crate::roles::RoleDefinitions;
-use crate::splunk::Splunk;
+use crate::splunk::ToHecEvents;
+use crate::splunk::ToHecEventss;
+use crate::splunk::{set_ssphp_run, Splunk};
 use crate::users::Users;
 use futures::StreamExt;
+use std::env;
+use std::error::Error;
 //use graph_rs_sdk::http::HttpResponseExt;
+use crate::splunk::HecEvent;
 use graph_rs_sdk::oauth::AccessToken;
 use graph_rs_sdk::oauth::OAuth;
 use graph_rs_sdk::Graph;
@@ -159,35 +161,35 @@ impl MsGraph {
         groups
     }
 
-    pub async fn list_role_definitions(&self) -> RoleDefinitions {
+    pub async fn list_role_definitions(&self) -> Result<RoleDefinitions, Box<dyn Error>> {
         let mut stream = self
             .beta_client
             .role_management()
             .directory()
             .list_role_definitions()
             .paging()
-            .stream::<RoleDefinitions>()
-            .unwrap();
+            .stream::<RoleDefinitions>()?;
 
         let mut roles = RoleDefinitions::new();
         while let Some(result) = stream.next().await {
-            let response = result.unwrap();
+            let response = result?;
             // println!("{:#?}", response);
 
-            let body = response.into_body();
+            let body = response.into_body()?;
             // println!("{:#?}", body);
 
-            roles.value.extend(body.unwrap().value)
+            roles.value.extend(body.value)
         }
-        roles
+        Ok(roles)
     }
 
-    pub async fn list_users(&self, ) -> Users {
+    pub async fn list_users(&self, splunk: &Splunk) -> Result<Users, Box<dyn Error>> {
         let mut stream = self
             .beta_client
             .users()
             .list_user()
-            .filter(&[&format!("startsWith(userPrincipalName, '{}')", "c")])
+            // .filter(&[&format!("startswith(userPrincipalName, '{}')", "")])
+            // .order_by(&["userPrincipalName"])
             .select(&[
                 "id",
                 "displayName",
@@ -198,48 +200,56 @@ impl MsGraph {
                 "assignedPlans",
             ])
             .expand(&["transitiveMemberOf"])
-            .top("1")
+        //            .top("1")
+            //            .skip("3")
             .paging()
-            .stream::<Users>()
-            .unwrap();
+            .stream::<Users>()?;
 
         let mut users = Users::new();
+        let mut batch = 1;
         while let Some(result) = stream.next().await {
-            let response = result.unwrap();
+            let response = result?;
             // println!("{:#?}", response.json());
             // println!("{:#?}", response);
 
             let body = response.into_body();
             // println!("{:#?}", body);
 
-            users.value.extend(body.unwrap().value)
+            users.value.extend(body?.value);
+            splunk.log(&format!("Getting users batch {}, total users: {}", batch, users.value.len())).await;
+            batch +=1;
+            
         }
-        users
+        Ok(users)
     }
 }
 
 
 pub async fn azure() -> Result<(), Box<dyn Error>> {
-    let secrets = get_keyvault_secrets(
-        &env::var("KEY_VAULT_NAME")?,
-    )
-    .await?;
+    let secrets = get_keyvault_secrets(&env::var("KEY_VAULT_NAME")?).await?;
+
+    set_ssphp_run()?;
 
     let splunk = Splunk::new(&secrets.splunk_host, &secrets.splunk_token)?;
+    splunk.log("Starting Azure collection").await;
 
     let ms_graph = login(
         &secrets.azure_client_id,
         &secrets.azure_client_secret,
         &secrets.azure_tenant_id,
     )
-    .await?;
+        .await?;
+
+    splunk.log("Azure logged in").await;
 
     let mut hec_events = vec![];
 
     // let directory_role_templates = ms_graph.list_directory_role_templates().await;
     // hec_events.extend(directory_role_templates.to_hec_event().into_iter());
 
-    let role_definitions = ms_graph.list_role_definitions().await;
+    splunk.log("Getting roles definitions").await;
+    let role_definitions = ms_graph.list_role_definitions().await?;
+    dbg!(&role_definitions);
     // hec_events.extend(role_definitions.to_hec_event().into_iter());
 
     // let groups = ms_graph.list_groups().await;
@@ -248,15 +258,23 @@ pub async fn azure() -> Result<(), Box<dyn Error>> {
     // let roles = ms_graph.list_directory_roles().await;
     // hec_events.extend(roles.to_hec_event().into_iter());
 
+    splunk.log("Getting Conditional access policies").await;
     let caps = ms_graph.list_conditional_access_policies().await;
+    dbg!(&caps);
     // hec_events.extend(caps.to_hec_event().into_iter());
 
-    let mut users = ms_graph.list_users().await;
+    splunk.log("Getting users").await;
+    let mut users = ms_graph.list_users(&splunk).await?;
+    dbg!(&users);
+    splunk.log("Processing caps").await;
     users.process_caps(&caps);
 
+    splunk.log("Processing user is privileged").await;
     users.set_is_privileged(&role_definitions);
-    hec_events.extend(users.to_hec_event().into_iter());
-
-    splunk.send_batch(&hec_events).await;
+    hec_events.extend(users.to_hec_eventss()?.into_iter());
+    dbg!(&hec_events);
+    splunk.log("sending users").await;
+    splunk.send_batch(&hec_events[..]).await;
+    splunk.log("Users sent / Azure Complete").await;    
     Ok(())
 }

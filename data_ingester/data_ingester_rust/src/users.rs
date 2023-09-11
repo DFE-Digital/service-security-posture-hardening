@@ -1,12 +1,11 @@
-use crate::directory_roles::DirectoryRole;
-use crate::groups::Group;
-use crate::groups::Groups;
-use crate::directory_roles::DirectoryRoles;
-use crate::splunk::HecEvent;
-
 use crate::conditional_access_policies::ConditionalAccessPolicies;
 use crate::conditional_access_policies::UserConditionalAccessPolicy;
+use crate::directory_roles::DirectoryRole;
+use crate::directory_roles::DirectoryRoles;
+use crate::groups::Group;
+use crate::groups::Groups;
 use crate::roles::RoleDefinitions;
+use crate::splunk::ToHecEventss;
 use serde::Deserialize;
 use serde::Serialize;
 use serde_with::skip_serializing_none;
@@ -109,7 +108,7 @@ impl<'a> User<'a> {
 
     pub fn set_is_privileged(&mut self, role_definitions: &RoleDefinitions) {
         for role in self.roles().value.iter() {
-            match role_definitions.value.get(&role.id) {
+            match role_definitions.value.get(dbg!(&role.role_template_id)) {
                 Some(role_definition) => {
                     if *role_definition.is_privileged.as_ref().unwrap_or(&false) {
                         self.is_privileged = Some(true);
@@ -119,6 +118,7 @@ impl<'a> User<'a> {
                 None => continue,
             }
         }
+        self.is_privileged = Some(false)
     }
 }
 
@@ -130,13 +130,6 @@ pub struct Users<'a> {
 impl<'a> Users<'a> {
     pub fn new() -> Self {
         Self { value: Vec::new() }
-    }
-
-    pub fn to_hec_event(&self) -> Vec<HecEvent> {
-        self.value
-            .iter()
-            .map(|u| HecEvent::new(u, "msgraph", "SSPHP.AAD.user"))
-            .collect()
     }
 
     pub fn process_caps(&mut self, caps: &'a ConditionalAccessPolicies) {
@@ -155,5 +148,28 @@ impl<'a> Users<'a> {
         for user in self.value.iter_mut() {
             user.set_is_privileged(role_definitions);
         }
+    }
+}
+
+impl<'a> ToHecEventss<'a> for Users<'a> {
+    type Item = User<'a>;
+    fn source() -> &'static str {
+        "msgraph"
+    }
+
+    fn sourcetype() -> &'static str {
+        "SSPHP.AAD.user"
+    }
+    fn collection(&'a self) -> &'a [User<'a>] {
+        &self.value[..]
+    }
+}
+
+use std::ops::Deref;
+impl<'a> Deref for Users<'a> {
+    type Target = [User<'a>];
+
+    fn deref(&self) -> &Self::Target {
+        &self.value[..]
     }
 }

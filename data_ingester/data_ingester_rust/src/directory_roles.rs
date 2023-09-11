@@ -1,9 +1,8 @@
-use crate::splunk::HecEvent;
+use crate::splunk::ToHecEvents;
 use serde::Deserialize;
 use serde::Serialize;
 use serde_with::skip_serializing_none;
 use std::borrow::Cow;
-
 #[skip_serializing_none]
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
@@ -22,7 +21,7 @@ pub struct DirectoryRole {
     // "deletedDateTime": Null,
     // "description": String("Read the definition of custom security attributes."),
     pub(crate) display_name: Option<String>,
-    pub(crate) role_template_id: Option<String>,
+    pub(crate) role_template_id: String,
     pub(crate) members: Option<Vec<DirectoryRoleMember>>,
 }
 
@@ -41,30 +40,42 @@ impl DirectoryRoles<'_> {
         Self { value: Vec::new() }
     }
 
-    pub fn to_hec_event(&self) -> Vec<HecEvent> {
-        self.value
-            .iter()
-            .map(|u| HecEvent::new(u, "msgraph", "msgraph:directory_roles"))
-            .collect()
-    }
-
     pub fn ids(&self) -> Vec<&'_ str> {
         self.value.iter().map(|role| role.id.as_str()).collect()
     }
 }
+
+impl<'a> ToHecEvents for DirectoryRoles<'a> {
+    fn source() -> &'static str {
+        "msgraph"
+    }
+
+    fn sourcetype() -> &'static str {
+        "msgraph:directory_role"
+    }
+}
+
+// impl<'a> IntoIterator for DirectoryRoles<'a> {
+//     type Item = DirectoryRole;
+//     type IntoIter = std::vec::IntoIter<Self::Item>;
+
+//     fn into_iter(self) -> Self::IntoIter {
+//         self.value.into_iter()
+//     }
+// }
 
 #[test]
 fn directory_role_ids() {
     let role1 = DirectoryRole {
         id: "id_1".to_owned(),
         display_name: None,
-        role_template_id: None,
+        role_template_id: "role1id".to_owned(),
         members: None,
     };
     let role2 = DirectoryRole {
         id: "id_2".to_owned(),
         display_name: None,
-        role_template_id: None,
+        role_template_id: "role2id".to_owned(),
         members: None,
     };
     let roles = vec![role1, role2];
@@ -94,11 +105,23 @@ impl DirectoryRoleTemplates {
     pub fn new() -> Self {
         Self { value: Vec::new() }
     }
-
-    pub fn to_hec_event(&self) -> Vec<HecEvent> {
-        self.value
-            .iter()
-            .map(|u| HecEvent::new(u, "msgraph", "msgraph:directory_roles"))
-            .collect()
-    }
 }
+
+// impl ToHecEvents for DirectoryRoleTemplates {
+//     fn source() -> &'static str {
+//         "msgraph"
+//     }
+
+//     fn sourcetype() -> &'static str {
+//         "msgraph:dircetory_role_templates"
+//     }
+// }
+
+// impl IntoIterator for &DirectoryRoleTemplates {
+//     type Item = Cow<'_, DirectoryRoleTemplate>;
+//     type IntoIter = std::vec::Iter<Self::Item>;
+
+//     fn into_iter(self) -> Self::IntoIter {
+//         self.value.iter()
+//     }
+// }
