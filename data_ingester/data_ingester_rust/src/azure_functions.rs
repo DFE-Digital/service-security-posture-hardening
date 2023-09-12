@@ -4,6 +4,7 @@ use std::net::Ipv4Addr;
 use serde::Deserialize;
 use serde::Serialize;
 use warp::{http::Response, Filter};
+use anyhow::Result;
 
 use crate::ms_graph::azure;
 

@@ -19,12 +19,13 @@ use graph_rs_sdk::oauth::OAuth;
 use graph_rs_sdk::Graph;
 use graph_rs_sdk::ODataQuery;
 use tokio::sync::mpsc::UnboundedSender;
+use anyhow::{Context, Result};
 
 pub async fn login(
     client_id: &str,
     client_secret: &str,
     tenant_id: &str,
-) -> Result<MsGraph, Box<dyn Error + Send + Sync>> {
+) -> Result<MsGraph> {
     let mut oauth = OAuth::new();
     oauth
         .client_id(client_id)
@@ -47,13 +48,13 @@ pub async fn login(
     let client = Graph::new(
         oauth
             .get_access_token()
-            .ok_or("no access token")?
+            .context("no access token")?
             .bearer_token(),
     );
     let mut beta_client = Graph::new(
         oauth
             .get_access_token()
-            .ok_or("no access token")?
+            .context("no access token")?
             .bearer_token(),
     );
     beta_client.use_beta();
@@ -75,14 +76,14 @@ pub struct MsGraph {
 impl MsGraph {
     pub async fn list_conditional_access_policies(
         &self,
-    ) -> Result<ConditionalAccessPolicies, Box<dyn Error + Send + Sync>> {
+    ) -> Result<ConditionalAccessPolicies> {
         let mut stream = self
             .client
             .identity()
             .list_policies()
             .paging()
-            .stream::<ConditionalAccessPolicies>()
-            .unwrap();
+            .stream::<ConditionalAccessPolicies>()?;
+
 
         let mut caps = ConditionalAccessPolicies::new();
         while let Some(result) = stream.next().await {
@@ -168,7 +169,7 @@ impl MsGraph {
 
     pub async fn list_role_definitions(
         &self,
-    ) -> Result<RoleDefinitions, Box<dyn std::error::Error + Send + Sync>> {
+    ) -> Result<RoleDefinitions> {
         let mut stream = self
             .beta_client
             .role_management()
@@ -191,7 +192,7 @@ impl MsGraph {
         Ok(roles)
     }
 
-    pub async fn list_users(&self, splunk: &Splunk) -> Result<Users, Box<dyn Error>> {
+    pub async fn list_users(&self, splunk: &Splunk) -> Result<Users> {
         let mut stream = self
             .beta_client
             .users()
@@ -241,7 +242,7 @@ impl MsGraph {
         &self,
         splunk: &Splunk,
         sender: UnboundedSender<Users<'_>>,
-    ) -> Result<(), Box<dyn Error + Send + Sync>> {
+    ) -> Result<()> {
         let mut stream = self
             .beta_client
             .users()
@@ -287,7 +288,7 @@ impl MsGraph {
     }
 }
 
-pub async fn azure() -> Result<(), Box<dyn Error + Send + Sync>> {
+pub async fn azure() -> Result<()> {
     let secrets = get_keyvault_secrets(&env::var("KEY_VAULT_NAME")?).await?;
 
     set_ssphp_run()?;
@@ -351,7 +352,7 @@ pub async fn azure() -> Result<(), Box<dyn Error + Send + Sync>> {
         ms_graph_clone
             .list_users_channel(&splunk_clone, sender)
             .await?;
-        Ok::<(), Box<dyn Error + Send + Sync>>(())
+        anyhow::Ok::<()>(())
     });
 
     let process_to_splunk = tokio::spawn(async move {
@@ -368,7 +369,7 @@ pub async fn azure() -> Result<(), Box<dyn Error + Send + Sync>> {
             splunk.send_batch(&users.to_hec_eventss()?[..]).await?;
         }
         splunk.log("Users sent / Azure Complete").await?;
-        Ok::<(), Box<dyn Error + Send + Sync>>(())
+        anyhow::Ok::<()>(())
     });
 
     let _ = list_users.await?;

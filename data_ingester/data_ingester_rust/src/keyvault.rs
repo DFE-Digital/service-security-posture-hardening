@@ -2,6 +2,7 @@ use std::{error::Error, sync::Arc};
 
 use azure_identity::DefaultAzureCredential;
 use azure_security_keyvault::KeyvaultClient;
+use anyhow::{Context, Result};
 
 pub(crate) struct Secrets {
     pub(crate) splunk_host: String,
@@ -13,7 +14,7 @@ pub(crate) struct Secrets {
 
 pub async fn get_keyvault_secrets(
     keyvault_name: &str,
-) -> Result<Secrets, Box<dyn Error + Send + Sync>> {
+) -> Result<Secrets> {
     let keyvault_url = format!("https://{keyvault_name}.vault.azure.net");
     let credential = Arc::new(DefaultAzureCredential::default());
     let client = KeyvaultClient::new(&keyvault_url, credential)?.secret_client();

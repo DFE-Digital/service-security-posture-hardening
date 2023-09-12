@@ -101,6 +101,7 @@ resource "azurerm_linux_function_app" "SSPHP" {
     WEBSITE_RUN_FROM_PACKAGE       = "1"
     APPINSIGHTS_INSTRUMENTATIONKEY = azurerm_application_insights.SSPHP.instrumentation_key
     KEY_VAULT_NAME                 = local.key_vault_name
+    RUST_BACKTRACE                 = "1"
   }
   # lifecycle {
   #   replace_triggered_by = [

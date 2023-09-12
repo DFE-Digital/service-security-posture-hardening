@@ -8,6 +8,7 @@ use std::sync::RwLock;
 use std::time::{SystemTime, UNIX_EPOCH};
 use uuid::Uuid;
 //use futures::lock::Mutex;
+use anyhow::{Context, Result, anyhow};
 
 static SSPHP_RUN: RwLock<f64> = RwLock::new(0_f64);
 
@@ -27,7 +28,7 @@ struct SsphpEvent<T> {
     event: T,
 }
 
-pub fn set_ssphp_run() -> Result<(), Box<dyn Error + Send + Sync>> {
+pub fn set_ssphp_run() -> Result<()> {
     let start = SystemTime::now();
     let since_the_epoch = start.duration_since(UNIX_EPOCH)?;
 
@@ -41,7 +42,7 @@ impl HecEvent {
         event: &T,
         source: &str,
         sourcetype: &str,
-    ) -> Result<HecEvent, Box<dyn Error + Send + Sync>> {
+    ) -> Result<HecEvent> {
         let ssphp_run = *SSPHP_RUN.read().unwrap();
         let ssphp_event = SsphpEvent { ssphp_run, event };
         let hostname = hostname::get()
@@ -75,19 +76,19 @@ impl HecEvent {
 
 pub trait ToHecEvents<'a> {
     type Item: Serialize;
-    fn to_hec_eventss(&'a self) -> Result<Vec<HecEvent>, Box<dyn Error + Send + Sync>> {
+    fn to_hec_eventss(&'a self) -> Result<Vec<HecEvent>> {
         let (ok, err): (Vec<_>, Vec<_>) = self
             .collection()
             .iter()
             .map(|u| HecEvent::new(u, Self::source(), Self::sourcetype()))
             .partition_result();
         if !err.is_empty() {
-            return Err(err
+            return Err(anyhow!(err
                 .iter()
                 .map(|err| format!("{:?}", err))
                 .collect::<Vec<String>>()
-                .join("\n")
-                .into());
+                .join("\n")))
+
         }
         Ok(ok)
     }
@@ -111,7 +112,7 @@ struct Message {
 }
 
 impl Splunk {
-    pub fn new(host: &str, token: &str) -> Result<Self, Box<dyn Error + Send + Sync>> {
+    pub fn new(host: &str, token: &str) -> Result<Self> {
         let url = format!("https://{}/services/collector", host);
         let client = reqwest::ClientBuilder::new()
             .danger_accept_invalid_certs(true)
@@ -120,7 +121,7 @@ impl Splunk {
         Ok(Self { client, url })
     }
 
-    fn headers(token: &str) -> Result<HeaderMap, Box<dyn Error + Send + Sync>> {
+    fn headers(token: &str) -> Result<HeaderMap> {
         let mut headers = HeaderMap::new();
         let mut auth = HeaderValue::from_str(&format!("Splunk {}", token))?;
         auth.set_sensitive(true);
@@ -139,7 +140,7 @@ impl Splunk {
     pub async fn send_batch(
         &self,
         events: &[HecEvent],
-    ) -> Result<(), Box<dyn Error + Send + Sync>> {
+    ) -> Result<()> {
         for batch in events.iter().batching(batch_lines) {
             let request = self.client.post(&self.url).body(batch).build().unwrap();
             let _response = self.client.execute(request).await.unwrap();
@@ -147,7 +148,7 @@ impl Splunk {
         Ok(())
     }
 
-    pub async fn log(&self, message: &str) -> Result<(), Box<dyn Error + Send + Sync>> {
+    pub async fn log(&self, message: &str) -> Result<()> {
         eprintln!("{}", &message);
         self.send_batch(&[HecEvent::new(
             &Message {
