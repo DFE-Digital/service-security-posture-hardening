@@ -144,6 +144,9 @@ resource "azurerm_linux_function_app" "SSPHP_rust" {
       allowed_origins     = ["https://portal.azure.com", ]
       support_credentials = true
     }
+    application_stack {
+      use_custom_runtime = true
+    }
     elastic_instance_minimum = 1
   }
 
