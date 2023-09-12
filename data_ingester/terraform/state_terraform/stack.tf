@@ -114,7 +114,7 @@ resource "azurerm_service_plan" "SSPHP_rust" {
   resource_group_name = azurerm_resource_group.tfstate.name
   location            = azurerm_resource_group.tfstate.location
   os_type             = "Linux"
-  sku_name            = "Y1"
+  sku_name            = "EP1"
 }
 
 data "archive_file" "data_ingester_rust" {

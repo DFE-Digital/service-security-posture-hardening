@@ -108,7 +108,7 @@ impl<'a> User<'a> {
 
     pub fn set_is_privileged(&mut self, role_definitions: &RoleDefinitions) {
         for role in self.roles().value.iter() {
-            match role_definitions.value.get(dbg!(&role.role_template_id)) {
+            match role_definitions.value.get(&role.role_template_id) {
                 Some(role_definition) => {
                     if *role_definition.is_privileged.as_ref().unwrap_or(&false) {
                         self.is_privileged = Some(true);

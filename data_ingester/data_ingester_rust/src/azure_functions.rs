@@ -77,21 +77,18 @@ pub(crate) async fn start_server() {
             move |bytes: bytes::Bytes| {
                 let t = t.clone();
                 async move {
-                    *t.lock().unwrap() = true;
-                    // let result = azure().await;
-                    // let logs = match result {
-                    //     Ok(_) => "success".to_owned(),
-                    //     Err(e) => format!("{:?}:{}", e, e.to_string()),
-                    // };
-                    let logs = "NO logs1".to_owned();
+                    //*t.lock().unwrap() = true;
+                    //let logs = "NO logs1".to_owned();
+                    let result = azure().await;
+                    let logs = match result {
+                        Ok(_) => "success".to_owned(),
+                        Err(e) => format!("{:?}:{}", e, e.to_string()),
+                    };
+
                     AzureInvokeResponse {
                         outputs: None,
                         // TODO Fix logging
-                        logs: vec![
-                            "azure".to_owned(),
-                            String::from_utf8((*bytes).to_vec()).unwrap_or("no_bytes".to_owned()),
-                            logs,
-                        ],
+                        logs: vec![format!("GIT_HASH: {}", env!("GIT_HASH")), logs],
                         return_value: None,
                     }
                 }
@@ -103,17 +100,17 @@ pub(crate) async fn start_server() {
         Ok(val) => val.parse().expect("Custom Handler port is not a number!"),
         Err(_) => 3000,
     };
-
-    tokio::spawn(warp::serve(routes).run((Ipv4Addr::LOCALHOST, port)));
-    loop {
-        tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
-        if *trigger.lock().unwrap() {
-            println!("Hello, world!");
-            azure().await.unwrap();
-            println!("Azure has run!");
-            *trigger.lock().unwrap() = false;
-        }
-    }
+    warp::serve(routes).run((Ipv4Addr::LOCALHOST, port)).await;
+    // tokio::spawn(warp::serve(routes).run((Ipv4Addr::LOCALHOST, port)));
+    // loop {
+    //     tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+    //     if *trigger.lock().unwrap() {
+    //         println!("Hello, world!");
+    //         azure().await.unwrap();
+    //         println!("Azure has run!");
+    //         *trigger.lock().unwrap() = false;
+    //     }
+    // }
 }
 
 #[tokio::test]

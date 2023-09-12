@@ -366,8 +366,8 @@ pub async fn azure() -> Result<(), Box<dyn Error + Send + Sync>> {
             users.process_caps(&caps);
 
             splunk.send_batch(&users.to_hec_eventss()?[..]).await?;
-            splunk.log("Users sent / Azure Complete").await?;
         }
+        splunk.log("Users sent / Azure Complete").await?;
         Ok::<(), Box<dyn Error + Send + Sync>>(())
     });
 
