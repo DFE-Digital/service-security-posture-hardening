@@ -5,7 +5,7 @@ use crate::directory_roles::DirectoryRoles;
 use crate::groups::Group;
 use crate::groups::Groups;
 use crate::roles::RoleDefinitions;
-use crate::splunk::ToHecEventss;
+use crate::splunk::ToHecEvents;
 use serde::Deserialize;
 use serde::Serialize;
 use serde_with::skip_serializing_none;
@@ -144,14 +144,14 @@ impl<'a> Users<'a> {
         }
     }
 
-    pub fn set_is_privileged(&mut self, role_definitions: &RoleDefinitions) -> () {
+    pub fn set_is_privileged(&mut self, role_definitions: &RoleDefinitions) {
         for user in self.value.iter_mut() {
             user.set_is_privileged(role_definitions);
         }
     }
 }
 
-impl<'a> ToHecEventss<'a> for Users<'a> {
+impl<'a> ToHecEvents<'a> for Users<'a> {
     type Item = User<'a>;
     fn source() -> &'static str {
         "msgraph"

@@ -1,6 +1,5 @@
 use std::collections::HashMap;
-
-use crate::splunk::ToHecEvents;
+//use crate::splunk::ToHecEvents;
 use serde::Deserialize;
 use serde::Deserializer;
 use serde::Serialize;

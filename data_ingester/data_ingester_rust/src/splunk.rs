@@ -7,6 +7,7 @@ use std::error::Error;
 use std::sync::RwLock;
 use std::time::{SystemTime, UNIX_EPOCH};
 use uuid::Uuid;
+//use futures::lock::Mutex;
 
 static SSPHP_RUN: RwLock<f64> = RwLock::new(0_f64);
 
@@ -26,12 +27,11 @@ struct SsphpEvent<T> {
     event: T,
 }
 
-pub fn set_ssphp_run() -> Result<(), Box<dyn Error>> {
+pub fn set_ssphp_run() -> Result<(), Box<dyn Error + Send + Sync>> {
     let start = SystemTime::now();
     let since_the_epoch = start.duration_since(UNIX_EPOCH)?;
 
-    let mut ssphp_run_write_lock = SSPHP_RUN.write()?;
-    *ssphp_run_write_lock = since_the_epoch.as_secs_f64();
+    *SSPHP_RUN.write().unwrap() = since_the_epoch.as_secs_f64();
     Ok(())
 }
 
@@ -42,9 +42,10 @@ impl HecEvent {
         source: &str,
         sourcetype: &str,
     ) -> Result<HecEvent, Box<dyn Error + Send + Sync>> {
-        let ssphp_run = SSPHP_RUN.read().unwrap().clone();
+        let ssphp_run = *SSPHP_RUN.read().unwrap();
         let ssphp_event = SsphpEvent { ssphp_run, event };
-        let hostname = hostname::get().unwrap()
+        let hostname = hostname::get()
+            .unwrap()
             .into_string()
             .unwrap_or("NO HOSTNAME".to_owned());
         Ok(HecEvent {
@@ -56,30 +57,29 @@ impl HecEvent {
     }
 }
 
-#[derive(Serialize, Deserialize)]
-struct Dummy {}
+// #[derive(Debug, Serialize, Deserialize, Default)]
+// struct Dummy {
+// }
 
-pub trait ToHecEvents {
-    fn source() -> &'static str;
-    fn sourcetype() -> &'static str;
-    fn to_hec_events(&self) -> Result<HecEvent, Box<dyn Error + Send + Sync>> {
-        let d = Dummy {};
-        HecEvent::new(&d, "a", "b")
-    }
-}
-struct Logs {}
+// pub trait ToHecEvents {
+//     fn source() -> &'static str;
+//     fn sourcetype() -> &'static str;
+//     fn to_hec_events(&self) -> Result<HecEvent, Box<dyn Error + Send + Sync>> {
+//         let d = Dummy {};
+//         HecEvent::new(&d, "a", "b")
+//     }
+// }
+// struct Logs {}
 
-fn logger() {}
+// fn logger() {}
 
-pub trait ToHecEventss<'a> {
+pub trait ToHecEvents<'a> {
     type Item: Serialize;
-    fn to_hec_eventss(&'a self) -> Result<Vec<HecEvent>, Box<dyn Error>> {
+    fn to_hec_eventss(&'a self) -> Result<Vec<HecEvent>, Box<dyn Error + Send + Sync>> {
         let (ok, err): (Vec<_>, Vec<_>) = self
-            //let ok: Vec<HecEvent> = self
             .collection()
             .iter()
             .map(|u| HecEvent::new(u, Self::source(), Self::sourcetype()))
-            //.collect();
             .partition_result();
         if !err.is_empty() {
             return Err(err
@@ -96,10 +96,14 @@ pub trait ToHecEventss<'a> {
     fn collection(&'a self) -> &'a [Self::Item];
 }
 
+#[derive(Debug, Clone)]
 pub struct Splunk {
     client: Client,
     url: String,
 }
+
+unsafe impl Send for Splunk {}
+unsafe impl Sync for Splunk {}
 
 #[derive(Debug, Serialize, Deserialize, Default)]
 struct Message {
@@ -107,7 +111,7 @@ struct Message {
 }
 
 impl Splunk {
-    pub fn new(host: &str, token: &str) -> Result<Self, Box<dyn Error>> {
+    pub fn new(host: &str, token: &str) -> Result<Self, Box<dyn Error + Send + Sync>> {
         let url = format!("https://{}/services/collector", host);
         let client = reqwest::ClientBuilder::new()
             .danger_accept_invalid_certs(true)
@@ -116,7 +120,7 @@ impl Splunk {
         Ok(Self { client, url })
     }
 
-    fn headers(token: &str) -> Result<HeaderMap, Box<dyn Error>> {
+    fn headers(token: &str) -> Result<HeaderMap, Box<dyn Error + Send + Sync>> {
         let mut headers = HeaderMap::new();
         let mut auth = HeaderValue::from_str(&format!("Splunk {}", token))?;
         auth.set_sensitive(true);
@@ -132,29 +136,28 @@ impl Splunk {
     }
 
     // TODO enable token acknowledgement
-    pub async fn send_batch(&self, events: &[HecEvent]) -> Result<(), Box<dyn Error + Send + Sync>> {
+    pub async fn send_batch(
+        &self,
+        events: &[HecEvent],
+    ) -> Result<(), Box<dyn Error + Send + Sync>> {
         for batch in events.iter().batching(batch_lines) {
             let request = self.client.post(&self.url).body(batch).build().unwrap();
-            let response = self.client.execute(request).await.unwrap();
+            let _response = self.client.execute(request).await.unwrap();
         }
         Ok(())
     }
 
-    pub async fn log(&self, message: &str) -> Result<(), Box<dyn Error + Send + Sync >> {
+    pub async fn log(&self, message: &str) -> Result<(), Box<dyn Error + Send + Sync>> {
         eprintln!("{}", &message);
-        self.send_batch(
-            &[
-                HecEvent::new(
-                    &Message {
-                        event: message.to_owned(),
-                    },
-                    "data_ingester_rust",
-                    "data_ingester_rust_logs",
-                )?
-            ]
-        ).await?;
+        self.send_batch(&[HecEvent::new(
+            &Message {
+                event: message.to_owned(),
+            },
+            "data_ingester_rust",
+            "data_ingester_rust_logs",
+        )?])
+        .await?;
         Ok(())
-            
     }
 }
 
