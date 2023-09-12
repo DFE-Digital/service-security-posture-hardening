@@ -114,15 +114,29 @@
       </table>
     </panel>
     
-    
+
+<!-- ## Panel to find the name of the macro that the savedsearch uses to get it's data. Some savedsearches re-use a different macro ## -->
     <panel depends="$never_show$">
       <table>
         <title>test</title>
         <search>
           <query>
 | makeresults
-| eval macro=$tkn_use_case_id|s$, macro="ssphp_use_case_".macro
-| table macro
+| eval uc_id=$tkn_use_case_id|s$, uc_id="ssphp_use_case_".uc_id
+| fields uc_id
+
+| join type=outer uc_id
+    [| rest /servicesNS/-/-/saved/searches splunk_server=local
+      | rename title as uc_id
+      | search eai:acl.app="SSPHP_metrics" AND uc_id="ssphp_use_case_*"
+      | eval lf="
+", 
+            macro=mvindex(split(search,'lf'),0),
+            macro=replace(macro,"\| ",""),
+            macro=replace(macro,"`","")
+
+      | table uc_id, macro]
+| table uc_id, macro
           </query>
           <done>
             <set token="tkn_use_case_macro">$result.macro$</set>
