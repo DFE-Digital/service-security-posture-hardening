@@ -4,7 +4,7 @@
   <init>
 <!-- #    <set token="tkn_use_case_id">"dns_002"</set>## -->
 
-    <set token="rollup_panel_width">30%</set>
+    <set token="rollup_panel_width">20%</set>
     <set token="data_panel_width">10%</set>
     <set token="data_panel_height">170</set>
     <set token="c_red">"0xFF0000"</set>
@@ -69,6 +69,9 @@
             width:$data_panel_width$ !important;
           }
           #panel_hdr_004{
+            width:$data_panel_width$ !important;
+          }
+          #panel_hdr_009{
             width:$data_panel_width$ !important;
           }
           #panel_hdr_005{
@@ -140,13 +143,14 @@
      | stats values(search_text) as search_text
      | eval search_text="(".mvjoin(search_text," OR ").")"
     | return $search_text]
-| table ssphp.use_case.display.title, ssphp.use_case.id, ssphp.use_case.display.short_description, ssphp.use_case.description, ssphp.score.score, ssphp.score.numerator, ssphp.score.denominator, ssphp.color, ssphp.use_case.treshhold.green, ssphp.use_case.treshhold.orange, ssphp.use_case.treshhold.red, ssphp.use_case.scoring_narrative, ssphp.use_case.framework.mitre, ssphp.use_case.framework.ig_1, ssphp.use_case.framework.ig_2, ssphp.use_case.framework.ig_3
+| table ssphp.use_case.display.title, ssphp.use_case.id, ssphp.use_case.display.short_description, ssphp.use_case.description, ssphp.use_case.control, ssphp.score.score, ssphp.score.numerator, ssphp.score.denominator, ssphp.color, ssphp.use_case.treshhold.green, ssphp.use_case.treshhold.orange, ssphp.use_case.treshhold.red, ssphp.use_case.scoring_narrative, ssphp.use_case.framework.mitre, ssphp.use_case.framework.ig_1, ssphp.use_case.framework.ig_2, ssphp.use_case.framework.ig_3
           </query>
           <done>
             <set token="tkn_row1_display_title">$result.ssphp.use_case.display.title$</set>
             <set token="tkn_row1_use_case_id">$result.ssphp.use_case.id$</set>
             <set token="tkn_row1_display_short_description">$result.ssphp.use_case.display.short_description$</set>
             <set token="tkn_row1_display_description">$result.ssphp.use_case.description$</set>
+            <set token="tkn_row1_display_control">$result.ssphp.use_case.control$</set>
             <set token="tkn_row1_display_scoring_narrative">$result.ssphp.use_case.scoring_narrative$</set>
             <set token="tkn_row1_score">$result.ssphp.score.score$</set>
             <set token="tkn_row1_score_numerator">$result.ssphp.score.numerator$</set>
@@ -219,7 +223,6 @@
     </panel>
 
 
-       
     <panel id="panel_hdr_004">
       <html>
         <span class="header_r1" style="color:	darkcyan">Threshholds</span>
@@ -228,9 +231,16 @@
         <span class="header_r2">Red : $tkn_row1_threshhold_red$</span>
       </html>
     </panel>
+
+
+    <panel id="panel_hdr_009">
+      <html>
+        <span class="header_r1" style="color:	darkcyan">Control</span>
+        <span class="header_r2">$tkn_row1_display_control$</span>
+      </html>
+    </panel>
     
-    
-    
+
     <panel id="panel_hdr_005">
       <html>
         <span class="header_r1" style="color:	darkcyan">Frameworks</span>
