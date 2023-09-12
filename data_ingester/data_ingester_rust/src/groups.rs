@@ -1,4 +1,4 @@
-use crate::splunk::ToHecEvents;
+// use crate::splunk::ToHecEvents;
 use serde::Deserialize;
 use serde::Serialize;
 use serde_with::skip_serializing_none;
@@ -59,15 +59,15 @@ impl Groups<'_> {
     }
 }
 
-impl ToHecEvents for Groups<'_> {
-    fn source() -> &'static str {
-        "msgraph"
-    }
+// impl ToHecEvents for Groups<'_> {
+//     fn source() -> &'static str {
+//         "msgraph"
+//     }
 
-    fn sourcetype() -> &'static str {
-        "msgraph:group"
-    }
-}
+//     fn sourcetype() -> &'static str {
+//         "msgraph:group"
+//     }
+// }
 
 // use std::ops::Deref;
 // impl<'a> Deref for Groups<'a> {

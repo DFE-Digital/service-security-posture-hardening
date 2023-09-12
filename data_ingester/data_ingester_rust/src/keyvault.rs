@@ -11,7 +11,9 @@ pub(crate) struct Secrets {
     pub(crate) azure_tenant_id: String,
 }
 
-pub async fn get_keyvault_secrets(keyvault_name: &str) -> Result<Secrets, Box<dyn Error>> {
+pub async fn get_keyvault_secrets(
+    keyvault_name: &str,
+) -> Result<Secrets, Box<dyn Error + Send + Sync>> {
     let keyvault_url = format!("https://{keyvault_name}.vault.azure.net");
     let credential = Arc::new(DefaultAzureCredential::default());
     let client = KeyvaultClient::new(&keyvault_url, credential)?.secret_client();

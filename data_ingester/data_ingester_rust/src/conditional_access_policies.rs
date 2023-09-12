@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use crate::splunk::ToHecEvents;
+//use crate::splunk::ToHecEvents;
 use crate::users::User;
 use serde::Deserialize;
 use serde::Serialize;
@@ -145,15 +145,15 @@ impl ConditionalAccessPolicies {
     }
 }
 
-impl ToHecEvents for ConditionalAccessPolicies {
-    fn source() -> &'static str {
-        "msgraph"
-    }
+// impl ToHecEvents<'_> for ConditionalAccessPolicies {
+//     fn source() -> &'static str {
+//         "msgraph"
+//     }
 
-    fn sourcetype() -> &'static str {
-        "msgraph:conditional_access_policy"
-    }
-}
+//     fn sourcetype() -> &'static str {
+//         "msgraph:conditional_access_policy"
+//     }
+// }
 
 impl IntoIterator for ConditionalAccessPolicies {
     type Item = ConditionalAccessPolicy;

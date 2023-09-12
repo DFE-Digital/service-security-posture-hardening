@@ -1,4 +1,4 @@
-use crate::splunk::ToHecEvents;
+// use crate::splunk::ToHecEvents;
 use serde::Deserialize;
 use serde::Serialize;
 use serde_with::skip_serializing_none;
@@ -45,15 +45,15 @@ impl DirectoryRoles<'_> {
     }
 }
 
-impl<'a> ToHecEvents for DirectoryRoles<'a> {
-    fn source() -> &'static str {
-        "msgraph"
-    }
+// impl<'a> ToHecEvents for DirectoryRoles<'a> {
+//     fn source() -> &'static str {
+//         "msgraph"
+//     }
 
-    fn sourcetype() -> &'static str {
-        "msgraph:directory_role"
-    }
-}
+//     fn sourcetype() -> &'static str {
+//         "msgraph:directory_role"
+//     }
+// }
 
 // impl<'a> IntoIterator for DirectoryRoles<'a> {
 //     type Item = DirectoryRole;
