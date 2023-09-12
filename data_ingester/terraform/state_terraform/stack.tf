@@ -60,11 +60,11 @@ resource "azurerm_service_plan" "SSPHP" {
   sku_name            = "Y1"
 }
 
-resource "null_resource" "always_run" {
-  triggers = {
-    timestamp = "${formatdate("YYYYMMDDHHmmss", timestamp())}"
-  }
-}
+# resource "null_resource" "always_run" {
+#   triggers = {
+#     timestamp = "${formatdate("YYYYMMDDHHmmss", timestamp())}"
+#   }
+# }
 
 data "archive_file" "deployment" {
   type        = "zip"
@@ -102,15 +102,15 @@ resource "azurerm_linux_function_app" "SSPHP" {
     APPINSIGHTS_INSTRUMENTATIONKEY = azurerm_application_insights.SSPHP.instrumentation_key
     KEY_VAULT_NAME                 = local.key_vault_name
   }
-  lifecycle {
-    replace_triggered_by = [
-      null_resource.always_run
-    ]
-  }
+  # lifecycle {
+  #   replace_triggered_by = [
+  #     null_resource.always_run
+  #   ]
+  # }
 }
 
 resource "azurerm_service_plan" "SSPHP_rust" {
-  name                = "SSPHP-Metrics_rust"
+  name                = "SSPHP-Metrics_rust-${random_string.resource_code.result}"
   resource_group_name = azurerm_resource_group.tfstate.name
   location            = azurerm_resource_group.tfstate.location
   os_type             = "Linux"
@@ -146,7 +146,7 @@ resource "azurerm_linux_function_app" "SSPHP_rust" {
     elastic_instance_minimum = 1
   }
 
-  zip_deploy_file = data.archive_file.data_ingester_rust.output_path
+  # zip_deploy_file = data.archive_file.data_ingester_rust.output_path
   app_settings = {
     WEBSITE_RUN_FROM_PACKAGE       = "1"
     APPINSIGHTS_INSTRUMENTATIONKEY = azurerm_application_insights.SSPHP.instrumentation_key
