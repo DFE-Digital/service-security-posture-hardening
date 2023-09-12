@@ -114,8 +114,8 @@ resource "azurerm_service_plan" "SSPHP_rust" {
   resource_group_name = azurerm_resource_group.tfstate.name
   location            = azurerm_resource_group.tfstate.location
   os_type             = "Linux"
-  # sku_name            = "EP1"
-  sku_name            = "Y1"
+  sku_name            = "EP1"
+  # sku_name            = "Y1"
 }
 
 data "archive_file" "data_ingester_rust" {
@@ -147,7 +147,7 @@ resource "azurerm_linux_function_app" "SSPHP_rust" {
     application_stack {
       use_custom_runtime = true
     }
-    elastic_instance_minimum = 1
+    # elastic_instance_minimum = 1
   }
 
   zip_deploy_file = data.archive_file.data_ingester_rust.output_path
