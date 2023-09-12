@@ -48,7 +48,7 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             data_ingester/data_ingester_rust/target
-          key: cache-rust-target-${{ hashFiles('**/Cargo.lock') }}
+          key: cache-rust-target-${{ hashFiles('data_ingester/data_ingester_rust/Cargo.lock') }}
 
       - uses: awalsh128/cache-apt-pkgs-action@v1
         with:

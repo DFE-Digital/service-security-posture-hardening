@@ -146,7 +146,7 @@ resource "azurerm_linux_function_app" "SSPHP_rust" {
     elastic_instance_minimum = 1
   }
 
-  # zip_deploy_file = data.archive_file.data_ingester_rust.output_path
+  zip_deploy_file = data.archive_file.data_ingester_rust.output_path
   app_settings = {
     WEBSITE_RUN_FROM_PACKAGE       = "1"
     APPINSIGHTS_INSTRUMENTATIONKEY = azurerm_application_insights.SSPHP.instrumentation_key
