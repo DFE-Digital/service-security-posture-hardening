@@ -40,10 +40,14 @@ jobs:
           components: rust-src, clippy
 
       - name: Cache build artifacts
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: |
-            **/target
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            data_ingester/data_ingester_rust/target
           key: cache-rust-target-${{ hashFiles('**/Cargo.lock') }}
 
       - uses: awalsh128/cache-apt-pkgs-action@v1
