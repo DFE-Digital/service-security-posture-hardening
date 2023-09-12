@@ -143,6 +143,7 @@ resource "azurerm_linux_function_app" "SSPHP_rust" {
       allowed_origins     = ["https://portal.azure.com", ]
       support_credentials = true
     }
+    elastic_instance_minimum = 1
   }
 
   zip_deploy_file = data.archive_file.data_ingester_rust.output_path
