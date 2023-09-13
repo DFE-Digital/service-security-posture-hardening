@@ -1,6 +1,8 @@
 <nav search_view="search">
-  <view name="search" />
-  <view name="ssphp_metrics_dashboard" default='true' />
-  <view name="ssphp_metrics_dashboard_controls" />
-  <view name="ssphp_metrics_dashboard_graphs" />
+  <view name="search" default='true' />
+  <collection label="Foundational Systems" >
+    <a href="ssphp_metrics_dashboard">Metrics Dashboard</a>
+    <a href="ssphp_metrics_dashboard_controls">Controls Dashboard</a>
+    <a href="ssphp_metrics_dashboard_graphs">Graph Dashboard</a>
+  </collection>
 </nav>
