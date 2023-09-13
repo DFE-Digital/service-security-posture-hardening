@@ -22,6 +22,7 @@ openssl-sys = {version = "*", features=["vendored"]}
 bytes = "*"
 hyper = "*"
 hostname = "*"
+anyhow = { version = "*", features=["backtrace"]}
 
 [dependencies.uuid]
 version = "1.4.1"
