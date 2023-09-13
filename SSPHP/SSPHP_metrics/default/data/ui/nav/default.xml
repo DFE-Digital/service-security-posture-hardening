@@ -2,4 +2,5 @@
   <view name="search" />
   <view name="ssphp_metrics_dashboard" default='true' />
   <view name="ssphp_metrics_dashboard_controls" />
+  <view name="ssphp_metrics_dashboard_graphs" />
 </nav>

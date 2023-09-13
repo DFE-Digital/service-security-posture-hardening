@@ -1,0 +1,70 @@
+<form version="1.1" theme="dark">
+  <label>DfE FOUNDATIONAL SERVICES : GRAPH DASHBOARD</label>
+  <description>Service Security Posture Hardening Programme : v1.00</description>
+  
+  
+  <fieldset submitButton="false">
+    <input type="dropdown" token="tkn_foundational_system" searchWhenChanged="true">
+      <label>Foundational System</label>
+      <choice value="aad">Azure Active Directory</choice>
+      <choice value="dns">DNS</choice>
+      <default>dns</default>
+      <initialValue>dns</initialValue>
+      <change>
+        <set token="tkn_foundational_Label">$label$</set>
+      </change>
+    </input>
+  </fieldset>
+  
+  
+  <row>
+    <panel>
+      <chart>
+        <search>
+          <query>
+index="ssphp_metrics_summary" ssphp.use_case.id="$tkn_foundational_system$*"
+
+| timechart min(ssphp.score.score) as score by ssphp.use_case.display.title span=1h
+| sort 0 - _time
+          </query>
+          <earliest>-24h@h</earliest>
+          <latest>now</latest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="height">600</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
+        <option name="charting.axisTitleX.visibility">collapsed</option>
+        <option name="charting.axisTitleY.visibility">collapsed</option>
+        <option name="charting.axisTitleY2.visibility">collapsed</option>
+        <option name="charting.axisX.abbreviation">none</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.abbreviation">none</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.abbreviation">none</option>
+        <option name="charting.axisY2.enabled">0</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">line</option>
+        <option name="charting.chart.bubbleMaximumSize">50</option>
+        <option name="charting.chart.bubbleMinimumSize">10</option>
+        <option name="charting.chart.bubbleSizeBy">area</option>
+        <option name="charting.chart.nullValueMode">gaps</option>
+        <option name="charting.chart.showDataLabels">none</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.stackMode">default</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">none</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.layout.splitSeries.allowIndependentYRanges">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.mode">standard</option>
+        <option name="charting.legend.placement">none</option>
+        <option name="charting.lineWidth">2</option>
+        <option name="trellis.enabled">1</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+      </chart>
+    </panel>
+  </row>
+
+</form>
