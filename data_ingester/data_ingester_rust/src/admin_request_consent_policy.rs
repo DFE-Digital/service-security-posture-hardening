@@ -10,7 +10,7 @@ impl ToHecEvent for AdminRequestConsentPolicy {
     }
 
     fn sourcetype() -> &'static str {
-        "admin_request_consent_policy"
+        "m365"
     }
 }
 
