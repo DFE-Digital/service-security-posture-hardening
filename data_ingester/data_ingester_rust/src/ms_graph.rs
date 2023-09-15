@@ -1,31 +1,24 @@
+use crate::admin_request_consent_policy::AdminRequestConsentPolicy;
 use crate::conditional_access_policies::ConditionalAccessPolicies;
 use crate::directory_roles::DirectoryRoleTemplates;
 use crate::directory_roles::DirectoryRoles;
 use crate::groups::Groups;
 use crate::keyvault::get_keyvault_secrets;
 use crate::roles::RoleDefinitions;
+use crate::splunk::ToHecEvent;
 use crate::splunk::ToHecEvents;
-//use crate::splunk::ToHecEventss;
 use crate::splunk::{set_ssphp_run, Splunk};
-//use crate::users::User;
 use crate::users::Users;
+use anyhow::{bail, Context, Result};
 use futures::StreamExt;
-use std::env;
-use std::error::Error;
-//use graph_rs_sdk::http::HttpResponseExt;
-//use crate::splunk::HecEvent;
 use graph_rs_sdk::oauth::AccessToken;
 use graph_rs_sdk::oauth::OAuth;
 use graph_rs_sdk::Graph;
 use graph_rs_sdk::ODataQuery;
+use std::env;
 use tokio::sync::mpsc::UnboundedSender;
-use anyhow::{Context, Result};
 
-pub async fn login(
-    client_id: &str,
-    client_secret: &str,
-    tenant_id: &str,
-) -> Result<MsGraph> {
+pub async fn login(client_id: &str, client_secret: &str, tenant_id: &str) -> Result<MsGraph> {
     let mut oauth = OAuth::new();
     oauth
         .client_id(client_id)
@@ -74,16 +67,13 @@ pub struct MsGraph {
 }
 
 impl MsGraph {
-    pub async fn list_conditional_access_policies(
-        &self,
-    ) -> Result<ConditionalAccessPolicies> {
+    pub async fn list_conditional_access_policies(&self) -> Result<ConditionalAccessPolicies> {
         let mut stream = self
             .client
             .identity()
             .list_policies()
             .paging()
             .stream::<ConditionalAccessPolicies>()?;
-
 
         let mut caps = ConditionalAccessPolicies::new();
         while let Some(result) = stream.next().await {
@@ -167,9 +157,7 @@ impl MsGraph {
         groups
     }
 
-    pub async fn list_role_definitions(
-        &self,
-    ) -> Result<RoleDefinitions> {
+    pub async fn list_role_definitions(&self) -> Result<RoleDefinitions> {
         let mut stream = self
             .beta_client
             .role_management()
@@ -190,6 +178,29 @@ impl MsGraph {
             roles.value.extend(body.value)
         }
         Ok(roles)
+    }
+
+    pub async fn get_admin_request_consent_policy(&self) -> Result<AdminRequestConsentPolicy> {
+        let mut stream = self
+            .client
+            .policies()
+            .get_admin_consent_request_policy()
+            .paging()
+            .stream::<AdminRequestConsentPolicy>()
+            .unwrap();
+
+        //        let mut roles = RoleDefinitions::new();
+        while let Some(result) = stream.next().await {
+            let response = result.unwrap();
+            println!("{:#?}", response);
+
+            let body = response.into_body().unwrap();
+            println!("{:#?}", body);
+
+            return Ok(body);
+        }
+        // TODO
+        bail!("not ok")
     }
 
     pub async fn list_users(&self, splunk: &Splunk) -> Result<Users> {
@@ -288,6 +299,29 @@ impl MsGraph {
     }
 }
 
+#[tokio::test]
+async fn get_admin_request_consent_policy() {
+    let secrets = get_keyvault_secrets(&env::var("KEY_VAULT_NAME").unwrap())
+        .await
+        .unwrap();
+
+    set_ssphp_run().unwrap();
+    let ms_graph = login(
+        &secrets.azure_client_id,
+        &secrets.azure_client_secret,
+        &secrets.azure_tenant_id,
+    )
+    .await
+    .unwrap();
+    let admin_request_consent_policy = ms_graph.get_admin_request_consent_policy().await.unwrap();
+
+    let splunk = Splunk::new(&secrets.splunk_host, &secrets.splunk_token).unwrap();
+    splunk
+        .send_batch(&[admin_request_consent_policy.to_hec_event().unwrap()])
+        .await
+        .unwrap();
+}
+
 pub async fn azure() -> Result<()> {
     let secrets = get_keyvault_secrets(&env::var("KEY_VAULT_NAME")?).await?;
 
@@ -295,6 +329,9 @@ pub async fn azure() -> Result<()> {
 
     let splunk = Splunk::new(&secrets.splunk_host, &secrets.splunk_token)?;
     splunk.log("Starting Azure collection").await?;
+    splunk
+        .log(&format!("GIT_HASH: {}", env!("GIT_HASH")))
+        .await?;
 
     let ms_graph = login(
         &secrets.azure_client_id,
@@ -355,6 +392,8 @@ pub async fn azure() -> Result<()> {
         anyhow::Ok::<()>(())
     });
 
+    let ms_graph_clone = ms_graph.clone();
+    let splunk_clone = splunk.clone();
     let process_to_splunk = tokio::spawn(async move {
         splunk.log("Getting roles definitions").await?;
         let role_definitions = ms_graph.list_role_definitions().await?;
@@ -372,8 +411,47 @@ pub async fn azure() -> Result<()> {
         anyhow::Ok::<()>(())
     });
 
+    let admin_request_consent_policy = ms_graph_clone
+        .get_admin_request_consent_policy()
+        .await
+        .unwrap();
+    splunk_clone
+        .send_batch(&[admin_request_consent_policy.to_hec_event().unwrap()])
+        .await?;
     let _ = list_users.await?;
     let _ = process_to_splunk.await?;
+
+    Ok(())
+}
+
+pub async fn m365() -> Result<()> {
+    let secrets = get_keyvault_secrets(&env::var("KEY_VAULT_NAME")?).await?;
+
+    set_ssphp_run()?;
+
+    let splunk = Splunk::new(&secrets.splunk_host, &secrets.splunk_token)?;
+    splunk.log("Starting M365 collection").await?;
+    splunk
+        .log(&format!("GIT_HASH: {}", env!("GIT_HASH")))
+        .await?;
+
+    let ms_graph = login(
+        &secrets.azure_client_id,
+        &secrets.azure_client_secret,
+        &secrets.azure_tenant_id,
+    )
+    .await?;
+
+    splunk.log("MS Graph logged in").await?;
+
+    splunk.log("Getting users").await?;
+
+    let admin_request_consent_policy = ms_graph.get_admin_request_consent_policy().await.unwrap();
+    splunk
+        .send_batch(&[admin_request_consent_policy.to_hec_event().unwrap()])
+        .await?;
+
+    splunk.log("M365 Collection Complete").await?;
 
     Ok(())
 }
