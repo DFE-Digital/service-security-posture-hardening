@@ -3,7 +3,7 @@ There are 3 dashboards in the app :
 
 ssphp_metrics_dashboard.xml
 ---------------------------
-This is the main user dashoard. The xml source is split into 3 parts which are contained in the folder ssphp_metrics_dashboard.d, and none of these is a complete dashboard file on its own. In order to put these together into a single functioning dasboard run &'C:\Program Files\Python310\python.exe' .\build_metrics_dashboard.py. The resaon for having the parts broken out this way is (a) because it is a 3000 line xml file so navigating it is a pain, and (b) the middle bit is exactly the same for every row on the dashboard, with just the data source changing. So rather than having to make the exact same changes multiple times for each row, the build script makes the changes and concatenates the row for you.
+This is the main user dashoard. The xml source is split into 3 parts which are contained in the folder ssphp_metrics_dashboard.d, and none of these is a complete dashboard file on its own. In order to put these together into a single functioning dasboard run &'C:\Program Files\Python310\python.exe' .\build_metrics_dashboard.py. The resaon for having the parts broken out this way is (a) because it is a large xml file so navigating it is a pain, and (b) the middle bit is exactly the same for every row on the dashboard, with just the data source changing. So rather than having to make the exact same changes multiple times for each row, the build script makes the changes and concatenates the row for you.
 
 
 ssphp_metrics_dashboard_drilldown.xml
@@ -14,3 +14,6 @@ This is the drilldown dashboard based on clicking panels in the above main dashb
 ssphp_metrics_dashboard_controls.xml
 ------------------------------------
 This is a list of sshp metrics controls, and the current metric value for the use cases for each control.
+
+
+There are around 3200 lines of xml in these 3 dashboards, and that is with almost no lines of query - all the hard work is done in the use case savedsearches, and the dashboards only read the summary index writen by the use cases. So the dashboards have a lot of moving parts, with tokens driving everything.
