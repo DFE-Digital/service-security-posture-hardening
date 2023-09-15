@@ -102,7 +102,7 @@ pub(crate) async fn start_server() {
 
     let m365_in_progress = std::sync::Arc::new(std::sync::Mutex::new(false));
     let m365 = warp::post()
-        .and(warp::path("azure"))
+        .and(warp::path("m365"))
         .and(warp::body::bytes())
         .then({
             let in_progress = m365_in_progress.clone();
