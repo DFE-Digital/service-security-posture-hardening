@@ -1,3 +1,4 @@
+mod admin_request_consent_policy;
 mod azure_functions;
 mod conditional_access_policies;
 mod directory_roles;

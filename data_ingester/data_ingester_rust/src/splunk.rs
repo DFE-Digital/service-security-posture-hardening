@@ -8,8 +8,9 @@ use std::sync::RwLock;
 use std::time::{SystemTime, UNIX_EPOCH};
 use uuid::Uuid;
 //use futures::lock::Mutex;
-use anyhow::{Context, Result, anyhow};
+use anyhow::{anyhow, Context, Result};
 
+// TODO Should not be shared between calls to the web endpoint!
 static SSPHP_RUN: RwLock<f64> = RwLock::new(0_f64);
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -38,11 +39,7 @@ pub fn set_ssphp_run() -> Result<()> {
 
 impl HecEvent {
     // TODO: Should return Result
-    pub fn new<T: Serialize>(
-        event: &T,
-        source: &str,
-        sourcetype: &str,
-    ) -> Result<HecEvent> {
+    pub fn new<T: Serialize>(event: &T, source: &str, sourcetype: &str) -> Result<HecEvent> {
         let ssphp_run = *SSPHP_RUN.read().unwrap();
         let ssphp_event = SsphpEvent { ssphp_run, event };
         let hostname = hostname::get()
@@ -87,14 +84,21 @@ pub trait ToHecEvents<'a> {
                 .iter()
                 .map(|err| format!("{:?}", err))
                 .collect::<Vec<String>>()
-                .join("\n")))
-
+                .join("\n")));
         }
         Ok(ok)
     }
     fn source() -> &'static str;
     fn sourcetype() -> &'static str;
     fn collection(&'a self) -> &'a [Self::Item];
+}
+
+pub trait ToHecEvent: Serialize + Sized {
+    fn to_hec_event(&self) -> Result<HecEvent> {
+        HecEvent::new(self, Self::source(), Self::sourcetype())
+    }
+    fn source() -> &'static str;
+    fn sourcetype() -> &'static str;
 }
 
 #[derive(Debug, Clone)]
@@ -137,10 +141,7 @@ impl Splunk {
     }
 
     // TODO enable token acknowledgement
-    pub async fn send_batch(
-        &self,
-        events: &[HecEvent],
-    ) -> Result<()> {
+    pub async fn send_batch(&self, events: &[HecEvent]) -> Result<()> {
         for batch in events.iter().batching(batch_lines) {
             let request = self.client.post(&self.url).body(batch).build().unwrap();
             let _response = self.client.execute(request).await.unwrap();

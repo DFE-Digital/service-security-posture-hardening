@@ -1,12 +1,13 @@
 use std::env;
 use std::net::Ipv4Addr;
 
+use anyhow::Result;
 use serde::Deserialize;
 use serde::Serialize;
 use warp::{http::Response, Filter};
-use anyhow::Result;
 
 use crate::ms_graph::azure;
+use crate::ms_graph::m365;
 
 // Request headers
 // {
@@ -68,33 +69,71 @@ impl warp::Reply for AzureInvokeResponse {
 }
 
 pub(crate) async fn start_server() {
-    let trigger = std::sync::Arc::new(std::sync::Mutex::new(false));
+    let azure_in_progress = std::sync::Arc::new(std::sync::Mutex::new(false));
+    let azure = warp::path("azure").and(warp::body::bytes()).then({
+        let in_progress = azure_in_progress.clone();
+        move |bytes: bytes::Bytes| {
+            let in_progress = in_progress.clone();
+            async move {
+                let mut response = AzureInvokeResponse {
+                    outputs: None,
+                    logs: vec![format!("GIT_HASH: {}", env!("GIT_HASH"))],
+                    return_value: None,
+                };
+                if *in_progress.lock().unwrap() {
+                    response
+                        .logs
+                        .push("Azure collection is already in progress. NOT starting.".to_owned());
+                    return response;
+                } else {
+                    *in_progress.lock().unwrap() = true;
+                    response.logs.push("Aquired lock, starting".to_owned());
+                }
+                let result = match azure().await {
+                    Ok(_) => "Success".to_owned(),
+                    Err(e) => format!("{:?}", e),
+                };
+                response.logs.push(result);
+                *in_progress.lock().unwrap() = false;
+                response
+            }
+        }
+    });
 
-    let routes = warp::post()
-        .and(warp::path("azure"))
+    let m365_in_progress = std::sync::Arc::new(std::sync::Mutex::new(false));
+    let m365 = warp::post()
+        .and(warp::path("m365"))
         .and(warp::body::bytes())
         .then({
-            let t = trigger.clone();
+            let in_progress = m365_in_progress.clone();
             move |bytes: bytes::Bytes| {
-                let t = t.clone();
+                let in_progress = in_progress.clone();
                 async move {
-                    //*t.lock().unwrap() = true;
-                    //let logs = "NO logs1".to_owned();
-                    let result = azure().await;
-                    let logs = match result {
-                        Ok(_) => "success".to_owned(),
-                        Err(e) => format!("{:?}:{}", e, e.to_string()),
-                    };
-
-                    AzureInvokeResponse {
+                    let mut response = AzureInvokeResponse {
                         outputs: None,
-                        // TODO Fix logging
-                        logs: vec![format!("GIT_HASH: {}", env!("GIT_HASH")), logs],
+                        logs: vec![format!("GIT_HASH: {}", env!("GIT_HASH"))],
                         return_value: None,
+                    };
+                    if *in_progress.lock().unwrap() {
+                        response.logs.push(
+                            "Azure collection is already in progress. NOT starting.".to_owned(),
+                        );
+                        return response;
+                    } else {
+                        *in_progress.lock().unwrap() = true;
+                        response.logs.push("Aquired lock, starting".to_owned());
                     }
+                    let result = match m365().await {
+                        Ok(_) => "Success".to_owned(),
+                        Err(e) => format!("{:?}", e),
+                    };
+                    response.logs.push(result);
+                    *in_progress.lock().unwrap() = false;
+                    response
                 }
             }
         });
+    let routes = warp::post().and(azure).or(m365);
 
     let port_key = "FUNCTIONS_CUSTOMHANDLER_PORT";
     let port: u16 = match env::var(port_key) {
@@ -102,16 +141,6 @@ pub(crate) async fn start_server() {
         Err(_) => 3000,
     };
     warp::serve(routes).run((Ipv4Addr::LOCALHOST, port)).await;
-    // tokio::spawn(warp::serve(routes).run((Ipv4Addr::LOCALHOST, port)));
-    // loop {
-    //     tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
-    //     if *trigger.lock().unwrap() {
-    //         println!("Hello, world!");
-    //         azure().await.unwrap();
-    //         println!("Azure has run!");
-    //         *trigger.lock().unwrap() = false;
-    //     }
-    // }
 }
 
 #[tokio::test]
