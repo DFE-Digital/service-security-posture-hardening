@@ -1,7 +1,7 @@
 <dashboard theme="dark" version="1.1">
   
   <label>DfE FOUNDATIONAL SERVICES : METRICS DASHBOARD</label>
-  <description>Service Security Posture Hardening Programme : v1.20</description>
+  <description>Service Security Posture Hardening Programme : v1.21</description>
 
   <init>
   <!-- ###    <set token="rollup_panel_width">30%</set>
@@ -334,7 +334,7 @@ BY index, sourcetype
    | eval search_text="(\"ssphp.use_case.id\"=\"".'ssphp.use_case.id'."\" AND SSPHP_RUN=\"".SSPHP_RUN."\")"
    | stats values(search_text) as search_text
    | eval search_text="(".mvjoin(search_text," OR ").")"
-  | return $$search_text]
+  | return $search_text]
 | stats values(ssphp.score.score) as ssphp.score.score by ssphp.use_case.id
 | transpose 0 header_field=ssphp.use_case.id
         </query>
@@ -842,7 +842,7 @@ BY index, sourcetype
    | eval search_text="(\"ssphp.use_case.id\"=\"".'ssphp.use_case.id'."\" AND SSPHP_RUN=\"".SSPHP_RUN."\")"
    | stats values(search_text) as search_text
    | eval search_text="(".mvjoin(search_text," OR ").")"
-  | return $$search_text]
+  | return $search_text]
 | stats values(ssphp.score.score) as ssphp.score.score by ssphp.use_case.id
 | transpose 0 header_field=ssphp.use_case.id
         </query>
@@ -1350,7 +1350,7 @@ BY index, sourcetype
    | eval search_text="(\"ssphp.use_case.id\"=\"".'ssphp.use_case.id'."\" AND SSPHP_RUN=\"".SSPHP_RUN."\")"
    | stats values(search_text) as search_text
    | eval search_text="(".mvjoin(search_text," OR ").")"
-  | return $$search_text]
+  | return $search_text]
 | stats values(ssphp.score.score) as ssphp.score.score by ssphp.use_case.id
 | transpose 0 header_field=ssphp.use_case.id
         </query>
@@ -1858,7 +1858,7 @@ BY index, sourcetype
    | eval search_text="(\"ssphp.use_case.id\"=\"".'ssphp.use_case.id'."\" AND SSPHP_RUN=\"".SSPHP_RUN."\")"
    | stats values(search_text) as search_text
    | eval search_text="(".mvjoin(search_text," OR ").")"
-  | return $$search_text]
+  | return $search_text]
 | stats values(ssphp.score.score) as ssphp.score.score by ssphp.use_case.id
 | transpose 0 header_field=ssphp.use_case.id
         </query>
@@ -2366,7 +2366,7 @@ BY index, sourcetype
    | eval search_text="(\"ssphp.use_case.id\"=\"".'ssphp.use_case.id'."\" AND SSPHP_RUN=\"".SSPHP_RUN."\")"
    | stats values(search_text) as search_text
    | eval search_text="(".mvjoin(search_text," OR ").")"
-  | return $$search_text]
+  | return $search_text]
 | stats values(ssphp.score.score) as ssphp.score.score by ssphp.use_case.id
 | transpose 0 header_field=ssphp.use_case.id
         </query>
