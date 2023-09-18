@@ -6,6 +6,7 @@ mod groups;
 mod keyvault;
 mod ms_graph;
 mod roles;
+mod security_score;
 mod splunk;
 mod users;
 

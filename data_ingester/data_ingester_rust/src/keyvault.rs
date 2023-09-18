@@ -1,6 +1,6 @@
-use std::{error::Error, sync::Arc};
+use std::sync::Arc;
 
-use anyhow::{Context, Result};
+use anyhow::Result;
 use azure_identity::DefaultAzureCredential;
 use azure_security_keyvault::KeyvaultClient;
 
