@@ -214,7 +214,7 @@ BY index, sourcetype
    | eval search_text="(\"ssphp.use_case.id\"=\"".'ssphp.use_case.id'."\" AND SSPHP_RUN=\"".SSPHP_RUN."\")"
    | stats values(search_text) as search_text
    | eval search_text="(".mvjoin(search_text," OR ").")"
-  | return $$search_text]
+  | return $search_text]
 | stats values(ssphp.score.score) as ssphp.score.score by ssphp.use_case.id
 | transpose 0 header_field=ssphp.use_case.id
         </query>
