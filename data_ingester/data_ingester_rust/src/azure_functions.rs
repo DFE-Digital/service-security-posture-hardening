@@ -1,7 +1,6 @@
 use std::env;
 use std::net::Ipv4Addr;
 
-use anyhow::Result;
 use serde::Deserialize;
 use serde::Serialize;
 use warp::{http::Response, Filter};

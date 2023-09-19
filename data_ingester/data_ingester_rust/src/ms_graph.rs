@@ -5,11 +5,12 @@ use crate::directory_roles::DirectoryRoles;
 use crate::groups::Groups;
 use crate::keyvault::get_keyvault_secrets;
 use crate::roles::RoleDefinitions;
+use crate::security_score::SecurityScores;
 use crate::splunk::ToHecEvent;
 use crate::splunk::ToHecEvents;
 use crate::splunk::{set_ssphp_run, Splunk};
 use crate::users::Users;
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result};
 use futures::StreamExt;
 use graph_rs_sdk::oauth::AccessToken;
 use graph_rs_sdk::oauth::OAuth;
@@ -180,29 +181,6 @@ impl MsGraph {
         Ok(roles)
     }
 
-    pub async fn get_admin_request_consent_policy(&self) -> Result<AdminRequestConsentPolicy> {
-        let mut stream = self
-            .client
-            .policies()
-            .get_admin_consent_request_policy()
-            .paging()
-            .stream::<AdminRequestConsentPolicy>()
-            .unwrap();
-
-        //        let mut roles = RoleDefinitions::new();
-        while let Some(result) = stream.next().await {
-            let response = result.unwrap();
-            println!("{:#?}", response);
-
-            let body = response.into_body().unwrap();
-            println!("{:#?}", body);
-
-            return Ok(body);
-        }
-        // TODO
-        bail!("not ok")
-    }
-
     pub async fn list_users(&self, splunk: &Splunk) -> Result<Users> {
         let mut stream = self
             .beta_client
@@ -297,31 +275,79 @@ impl MsGraph {
         }
         Ok(())
     }
+
+    pub async fn get_admin_request_consent_policy(&self) -> Result<AdminRequestConsentPolicy> {
+        let response = self
+            .client
+            .policies()
+            .get_admin_consent_request_policy()
+            .send()
+            .await?;
+        let body = response.json::<AdminRequestConsentPolicy>().await?;
+        Ok(body)
+    }
+
+    pub async fn get_security_secure_scores(&self) -> Result<SecurityScores> {
+        let response = self
+            .beta_client
+            .security()
+            .list_secure_scores()
+            .top("1")
+            .send()
+            .await?;
+        let body: SecurityScores = response.json().await?;
+        Ok(body)
+    }
 }
 
-#[tokio::test]
-async fn get_admin_request_consent_policy() {
-    let secrets = get_keyvault_secrets(&env::var("KEY_VAULT_NAME").unwrap())
-        .await
-        .unwrap();
+#[cfg(test)]
+mod test {
+    use std::env;
 
-    set_ssphp_run().unwrap();
-    let ms_graph = login(
-        &secrets.azure_client_id,
-        &secrets.azure_client_secret,
-        &secrets.azure_tenant_id,
-    )
-    .await
-    .unwrap();
-    let admin_request_consent_policy = ms_graph.get_admin_request_consent_policy().await.unwrap();
+    use super::{login, MsGraph};
+    use crate::{
+        keyvault::get_keyvault_secrets,
+        splunk::{set_ssphp_run, Splunk, ToHecEvent},
+    };
+    use anyhow::{Context, Result};
 
-    let splunk = Splunk::new(&secrets.splunk_host, &secrets.splunk_token).unwrap();
-    splunk
-        .send_batch(&[admin_request_consent_policy.to_hec_event().unwrap()])
-        .await
-        .unwrap();
+    async fn setup() -> Result<(Splunk, MsGraph)> {
+        let secrets = get_keyvault_secrets(&env::var("KEY_VAULT_NAME")?).await?;
+
+        set_ssphp_run()?;
+        let ms_graph = login(
+            &secrets.azure_client_id,
+            &secrets.azure_client_secret,
+            &secrets.azure_tenant_id,
+        )
+        .await?;
+        let splunk = Splunk::new(&secrets.splunk_host, &secrets.splunk_token)?;
+        Ok((splunk, ms_graph))
+    }
+
+    #[tokio::test]
+    async fn get_admin_request_consent_policy() -> Result<()> {
+        let (splunk, ms_graph) = setup().await?;
+        let admin_request_consent_policy = ms_graph.get_admin_request_consent_policy().await?;
+        splunk
+            .send_batch(&[admin_request_consent_policy.to_hec_event()?])
+            .await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn get_security_secure_scores() -> Result<()> {
+        let (splunk, ms_graph) = setup().await?;
+        let mut security_scores = ms_graph.get_security_secure_scores().await?;
+        let mut security_score = security_scores
+            .value
+            .first_mut()
+            .context("Unable to get first SecrurityScore")?;
+        security_score.odata_context = Some(security_scores.odata_context.to_owned());
+        splunk.send_batch(&[security_score.to_hec_event()?]).await?;
+        Ok(())
+    }
 }
-
 pub async fn azure() -> Result<()> {
     let secrets = get_keyvault_secrets(&env::var("KEY_VAULT_NAME")?).await?;
 
@@ -444,12 +470,30 @@ pub async fn m365() -> Result<()> {
 
     splunk.log("MS Graph logged in").await?;
 
-    splunk.log("Getting users").await?;
+    splunk.log("Getting AdminRequestConsentPolicy").await?;
 
     let admin_request_consent_policy = ms_graph.get_admin_request_consent_policy().await.unwrap();
     splunk
         .send_batch(&[admin_request_consent_policy.to_hec_event().unwrap()])
         .await?;
+
+    splunk.log("Getting SecurityScores").await?;
+
+    match ms_graph.get_security_secure_scores().await {
+        Ok(mut security_scores) => {
+            let security_score = security_scores
+                .value
+                .first_mut()
+                .context("Unable to get first SecrurityScore")?;
+            security_score.odata_context = Some(security_scores.odata_context.to_owned());
+            splunk.send_batch(&[security_score.to_hec_event()?]).await?;
+        }
+        Err(error) => {
+            splunk
+                .log(&format!("Failed to get SecurityScores: {}", error))
+                .await?;
+        }
+    }
 
     splunk.log("M365 Collection Complete").await?;
 

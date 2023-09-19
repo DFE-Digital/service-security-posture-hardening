@@ -3,12 +3,11 @@ use reqwest::header::HeaderMap;
 use reqwest::header::HeaderValue;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
-use std::error::Error;
 use std::sync::RwLock;
 use std::time::{SystemTime, UNIX_EPOCH};
 use uuid::Uuid;
 //use futures::lock::Mutex;
-use anyhow::{anyhow, Context, Result};
+use anyhow::{anyhow, Result};
 
 // TODO Should not be shared between calls to the web endpoint!
 static SSPHP_RUN: RwLock<f64> = RwLock::new(0_f64);
