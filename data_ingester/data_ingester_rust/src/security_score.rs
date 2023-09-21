@@ -78,10 +78,10 @@ pub struct ControlScore {
     pub control_name: String,
     pub description: String,
     pub score: f64,
-    pub source: String,
+    pub source: Option<String>,
     #[serde(rename = "IsApplicable")]
-    pub is_applicable: String,
-    pub score_in_percentage: f64,
+    pub is_applicable: Option<String>,
+    pub score_in_percentage: Option<f64>,
     pub on: Option<String>,
     pub last_synced: String,
     pub implementation_status: String,
