@@ -38,7 +38,31 @@ pub struct SecurityScore {
     pub max_score: f64,
     pub vendor_information: VendorInformation,
     pub average_comparative_scores: Vec<AverageComparativeScore>,
-    pub control_scores: Vec<ControlScore>,
+    #[serde(skip_serializing)]
+    pub control_scores: Vec<ControlScoreValue>,
+}
+
+impl ToHecEvent for SecurityScore {
+    fn source() -> &'static str {
+        "msgraph"
+    }
+
+    fn sourcetype() -> &'static str {
+        "m365"
+    }
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ControlScoreValue(serde_json::Value);
+
+impl ToHecEvent for ControlScoreValue {
+    fn source() -> &'static str {
+        "msgraph"
+    }
+
+    fn sourcetype() -> &'static str {
+        "m365:control_score"
+    }
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -87,14 +111,4 @@ pub struct ControlScore {
     pub implementation_status: String,
     pub count: Option<String>,
     pub total: Option<String>,
-}
-
-impl ToHecEvent for SecurityScore {
-    fn source() -> &'static str {
-        "msgraph"
-    }
-
-    fn sourcetype() -> &'static str {
-        "m365"
-    }
 }
