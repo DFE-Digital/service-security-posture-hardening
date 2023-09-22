@@ -5,7 +5,9 @@ use crate::directory_roles::DirectoryRoles;
 use crate::groups::Groups;
 use crate::keyvault::get_keyvault_secrets;
 use crate::roles::RoleDefinitions;
+use crate::security_score::ControlScoreValue;
 use crate::security_score::SecurityScores;
+use crate::splunk::HecEvent;
 use crate::splunk::ToHecEvent;
 use crate::splunk::ToHecEvents;
 use crate::splunk::{set_ssphp_run, Splunk};
@@ -307,7 +309,7 @@ mod test {
     use super::{login, MsGraph};
     use crate::{
         keyvault::get_keyvault_secrets,
-        splunk::{set_ssphp_run, Splunk, ToHecEvent},
+        splunk::{set_ssphp_run, HecEvent, Splunk, ToHecEvent},
     };
     use anyhow::{Context, Result};
 
@@ -344,6 +346,12 @@ mod test {
             .first_mut()
             .context("Unable to get first SecrurityScore")?;
         security_score.odata_context = Some(security_scores.odata_context.to_owned());
+        let batch = security_score
+            .control_scores
+            .iter()
+            .map(|cs| cs.to_hec_event().unwrap())
+            .collect::<Vec<HecEvent>>();
+        splunk.send_batch(&batch[..]).await?;
         splunk.send_batch(&[security_score.to_hec_event()?]).await?;
         Ok(())
     }
@@ -484,8 +492,14 @@ pub async fn m365() -> Result<()> {
             let security_score = security_scores
                 .value
                 .first_mut()
-                .context("Unable to get first SecrurityScore")?;
+                .context("Unable to get first SecurityScore")?;
             security_score.odata_context = Some(security_scores.odata_context.to_owned());
+            let batch = security_score
+                .control_scores
+                .iter()
+                .map(|cs| cs.to_hec_event().unwrap())
+                .collect::<Vec<HecEvent>>();
+            splunk.send_batch(&batch[..]).await?;
             splunk.send_batch(&[security_score.to_hec_event()?]).await?;
         }
         Err(error) => {
