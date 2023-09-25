@@ -4,8 +4,14 @@ use crate::directory_roles::DirectoryRoleTemplates;
 use crate::directory_roles::DirectoryRoles;
 use crate::groups::Groups;
 use crate::keyvault::get_keyvault_secrets;
+use crate::powershell::run_powershell_get_admin_audit_log_config;
+use crate::powershell::run_powershell_get_anti_phish_policy;
+use crate::powershell::run_powershell_get_hosted_outbound_spam_filter_policy;
+use crate::powershell::run_powershell_get_malware_filter_policy;
+use crate::powershell::run_powershell_get_organization_config;
+use crate::powershell::run_powershell_get_owa_mailbox_policy;
+use crate::powershell::run_powershell_get_safe_links_policy;
 use crate::roles::RoleDefinitions;
-use crate::security_score::ControlScoreValue;
 use crate::security_score::SecurityScores;
 use crate::splunk::HecEvent;
 use crate::splunk::ToHecEvent;
@@ -13,12 +19,17 @@ use crate::splunk::ToHecEvents;
 use crate::splunk::{set_ssphp_run, Splunk};
 use crate::users::Users;
 use anyhow::{Context, Result};
+use futures::Future;
 use futures::StreamExt;
 use graph_rs_sdk::oauth::AccessToken;
 use graph_rs_sdk::oauth::OAuth;
 use graph_rs_sdk::Graph;
 use graph_rs_sdk::ODataQuery;
+use serde::Deserialize;
+use serde::Serialize;
 use std::env;
+use std::future;
+use std::process::Output;
 use tokio::sync::mpsc::UnboundedSender;
 
 pub async fn login(client_id: &str, client_secret: &str, tenant_id: &str) -> Result<MsGraph> {
@@ -259,7 +270,7 @@ impl MsGraph {
         let mut batch = 1;
         while let Some(result) = stream.next().await {
             let response = result?;
-            // println!("{:#?}", response.json());
+            //println!("{:#?}", response.json());
 
             let users = response.into_body()?;
             // println!("{:#?}", body);
@@ -300,6 +311,104 @@ impl MsGraph {
         let body: SecurityScores = response.json().await?;
         Ok(body)
     }
+
+    pub async fn get_domains(&self) -> Result<Domains> {
+        let response = self.client.domains().list_domain().send().await?;
+        let body = response.json().await?;
+        Ok(body)
+    }
+
+    pub async fn get_authorization_policy(&self) -> Result<AuthorizationPolicy> {
+        let response = self
+            .beta_client
+            .policies()
+            .get_authorization_policy()
+            .send()
+            .await?;
+        let body = response.json().await?;
+        Ok(body)
+    }
+
+    pub async fn get_permission_grant_policy(&self) -> Result<PermissionGrantPolicy> {
+        let response = self
+            .client
+            .policies()
+            .list_permission_grant_policies()
+            .send()
+            .await?;
+        let body = response.json().await?;
+        Ok(body)
+    }
+
+    pub async fn get_identity_security_defaults_enforcement_policy(
+        &self,
+    ) -> Result<IdentitySecurityDefaultsEnforcementPolicy> {
+        let response = self
+            .client
+            .policies()
+            .get_identity_security_defaults_enforcement_policy()
+            .send()
+            .await?;
+        let body = response.json().await?;
+        Ok(body)
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, Default)]
+pub struct AuthorizationPolicy {
+    #[serde(rename = "@odata.context")]
+    pub odata_context: String,
+    #[serde(flatten)]
+    value: serde_json::Value,
+}
+
+impl ToHecEvent for AuthorizationPolicy {
+    fn source() -> &'static str {
+        "msgraph"
+    }
+
+    fn sourcetype() -> &'static str {
+        "m365:authorization_policy"
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, Default)]
+pub struct Domains(serde_json::Value);
+
+impl ToHecEvent for Domains {
+    fn source() -> &'static str {
+        "msgraph"
+    }
+
+    fn sourcetype() -> &'static str {
+        "m365:domains"
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, Default)]
+pub struct PermissionGrantPolicy(serde_json::Value);
+
+impl ToHecEvent for PermissionGrantPolicy {
+    fn source() -> &'static str {
+        "msgraph"
+    }
+
+    fn sourcetype() -> &'static str {
+        "m365:permission_grant_policy"
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, Default)]
+pub struct IdentitySecurityDefaultsEnforcementPolicy(serde_json::Value);
+
+impl ToHecEvent for IdentitySecurityDefaultsEnforcementPolicy {
+    fn source() -> &'static str {
+        "msgraph"
+    }
+
+    fn sourcetype() -> &'static str {
+        "m365:identitySecurityDefaultsEnforcementPolicy"
+    }
 }
 
 #[cfg(test)]
@@ -338,6 +447,42 @@ mod test {
     }
 
     #[tokio::test]
+    async fn get_authorization_policy() -> Result<()> {
+        let (splunk, ms_graph) = setup().await?;
+        let get_authorization_policy = ms_graph.get_authorization_policy().await?;
+        splunk
+            .send_batch(&[get_authorization_policy.to_hec_event()?])
+            .await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn get_domains() -> Result<()> {
+        let (splunk, ms_graph) = setup().await?;
+        let domains = ms_graph.get_domains().await?;
+        splunk.send_batch(&[domains.to_hec_event()?]).await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn get_permission_grant_policy() -> Result<()> {
+        let (splunk, ms_graph) = setup().await?;
+        let domains = ms_graph.get_permission_grant_policy().await?;
+        splunk.send_batch(&[domains.to_hec_event()?]).await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn get_identity_security_defaults_enforcement_policy() -> Result<()> {
+        let (splunk, ms_graph) = setup().await?;
+        let domains = ms_graph
+            .get_identity_security_defaults_enforcement_policy()
+            .await?;
+        splunk.send_batch(&[domains.to_hec_event()?]).await?;
+        Ok(())
+    }
+
+    #[tokio::test]
     async fn get_security_secure_scores() -> Result<()> {
         let (splunk, ms_graph) = setup().await?;
         let mut security_scores = ms_graph.get_security_secure_scores().await?;
@@ -356,6 +501,7 @@ mod test {
         Ok(())
     }
 }
+
 pub async fn azure() -> Result<()> {
     let secrets = get_keyvault_secrets(&env::var("KEY_VAULT_NAME")?).await?;
 
@@ -376,47 +522,10 @@ pub async fn azure() -> Result<()> {
 
     splunk.log("Azure logged in").await?;
 
-    //    let mut hec_events = vec![];
-
-    // let directory_role_templates = ms_graph.list_directory_role_templates().await;
-    // hec_events.extend(directory_role_templates.to_hec_event().into_iter());
-
-    // splunk.log("Getting roles definitions").await;
-    // let role_definitions = ms_graph.list_role_definitions().await?;
-    // dbg!(&role_definitions);
-    // hec_events.extend(role_definitions.to_hec_event().into_iter());
-
-    // let groups = ms_graph.list_groups().await;
-    // hec_events.extend(groups.to_hec_event().into_iter());
-
-    // let roles = ms_graph.list_directory_roles().await;
-    // hec_events.extend(roles.to_hec_event().into_iter());
-
-    // splunk.log("Getting Conditional access policies").await;
-    // let caps = ms_graph.list_conditional_access_policies().await;
-    // dbg!(&caps);
-    // hec_events.extend(caps.to_hec_event().into_iter());
-
-    // splunk.log("Getting users").await;
-    // let mut users = ms_graph.list_users(&splunk).await?;
-    // //    dbg!(&users);
-
-    // splunk.log("Processing CAPs").await;
-    // users.process_caps(&caps);
-
-    // splunk.log("Processing user is privileged").await;
-    // users.set_is_privileged(&role_definitions);
-    // hec_events.extend(users.to_hec_eventss()?.into_iter());
-    // //    dbg!(&hec_events);
-    // splunk.log("sending users").await;
-    // splunk.send_batch(&hec_events[..]).await;
-    // splunk.log("Users sent / Azure Complete").await;
-
     let (sender, mut reciever) = tokio::sync::mpsc::unbounded_channel::<Users>();
 
     splunk.log("Getting users").await?;
-    // let mut users = ms_graph.list_users_channel(&splunk, sender).await?;
-    // dbg!(&users);
+
     let splunk_clone = splunk.clone();
     let ms_graph_clone = ms_graph.clone();
     let list_users = tokio::spawn(async move {
@@ -478,15 +587,8 @@ pub async fn m365() -> Result<()> {
 
     splunk.log("MS Graph logged in").await?;
 
-    splunk.log("Getting AdminRequestConsentPolicy").await?;
-
-    let admin_request_consent_policy = ms_graph.get_admin_request_consent_policy().await.unwrap();
-    splunk
-        .send_batch(&[admin_request_consent_policy.to_hec_event().unwrap()])
-        .await?;
-
+    // TODO move this into another function
     splunk.log("Getting SecurityScores").await?;
-
     match ms_graph.get_security_secure_scores().await {
         Ok(mut security_scores) => {
             let security_score = security_scores
@@ -509,7 +611,98 @@ pub async fn m365() -> Result<()> {
         }
     }
 
+    try_collect(
+        "MS Graph Authorization Policy",
+        ms_graph.get_authorization_policy(),
+        &splunk,
+    )
+    .await?;
+    try_collect(
+        "MS Graph Admin RequestConsent Policy",
+        ms_graph.get_admin_request_consent_policy(),
+        &splunk,
+    )
+    .await?;
+    try_collect("MS Graph Domains", ms_graph.get_domains(), &splunk).await?;
+    try_collect(
+        "MS Graph Permission Grant Policy",
+        ms_graph.get_permission_grant_policy(),
+        &splunk,
+    )
+    .await?;
+    try_collect(
+        "Exchange Get Security Default Policy",
+        ms_graph.get_identity_security_defaults_enforcement_policy(),
+        &splunk,
+    )
+    .await?;
+    try_collect(
+        "Exchange Orgainization Config",
+        run_powershell_get_organization_config(&secrets),
+        &splunk,
+    )
+    .await?;
+    try_collect(
+        "Exchange Sharing Policy",
+        run_powershell_get_organization_config(&secrets),
+        &splunk,
+    )
+    .await?;
+    try_collect(
+        "Exchange Safe Links Policy",
+        run_powershell_get_safe_links_policy(&secrets),
+        &splunk,
+    )
+    .await?;
+    try_collect(
+        "Exchange Malware Filter Policy",
+        run_powershell_get_malware_filter_policy(&secrets),
+        &splunk,
+    )
+    .await?;
+    try_collect(
+        "Exchange Hosted Outbound Spam Filter Policy",
+        run_powershell_get_hosted_outbound_spam_filter_policy(&secrets),
+        &splunk,
+    )
+    .await?;
+    try_collect(
+        "Exchange Anti Phish Policy",
+        run_powershell_get_anti_phish_policy(&secrets),
+        &splunk,
+    )
+    .await?;
+    try_collect(
+        "Exchange Admin Audit Log Config",
+        run_powershell_get_admin_audit_log_config(&secrets),
+        &splunk,
+    )
+    .await?;
+    try_collect(
+        "Exchange OWA Mailbox Policy",
+        run_powershell_get_owa_mailbox_policy(&secrets),
+        &splunk,
+    )
+    .await?;
+
     splunk.log("M365 Collection Complete").await?;
 
+    Ok(())
+}
+
+async fn try_collect<T: ToHecEvent>(
+    name: &str,
+    future: impl Future<Output = Result<T, anyhow::Error>>,
+    splunk: &Splunk,
+) -> Result<()> {
+    splunk.log(&format!("Getting {}", &name)).await?;
+    match future.await {
+        Ok(result) => splunk.send_batch(&[result.to_hec_event()?]).await?,
+        Err(err) => {
+            splunk
+                .log(&format!("Failed to get {}: {}", &name, err))
+                .await?
+        }
+    };
     Ok(())
 }
