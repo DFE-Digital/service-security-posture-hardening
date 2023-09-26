@@ -7,6 +7,7 @@ use warp::{http::Response, Filter};
 
 use crate::ms_graph::azure;
 use crate::ms_graph::m365;
+use crate::powershell::install_powershell;
 
 // Request headers
 // {
@@ -100,13 +101,14 @@ pub(crate) async fn start_server() {
     });
 
     let m365_in_progress = std::sync::Arc::new(std::sync::Mutex::new(false));
+    let m365_powershell_installed = std::sync::Arc::new(std::sync::Mutex::new(false));
     let m365 = warp::post()
         .and(warp::path("m365"))
         .and(warp::body::bytes())
         .then({
-            let in_progress = m365_in_progress.clone();
             move |bytes: bytes::Bytes| {
-                let in_progress = in_progress.clone();
+                let in_progress = m365_in_progress.clone();
+                let powershell_installed = m365_powershell_installed.clone();
                 async move {
                     let mut response = AzureInvokeResponse {
                         outputs: None,
@@ -119,8 +121,14 @@ pub(crate) async fn start_server() {
                         );
                         return response;
                     } else {
-                        *in_progress.lock().unwrap() = true;
+                        //*in_progress.lock().unwrap() = true;
                         response.logs.push("Aquired lock, starting".to_owned());
+                    }
+                    if !*powershell_installed.lock().unwrap() {
+                        // splunk.log("Installing Powershell").await.unwrap();
+                        install_powershell().await.unwrap();
+                        // splunk.log("Installing Powershell: Complete!").await.unwrap();
+                        *powershell_installed.lock().unwrap() = true;
                     }
                     let result = match m365().await {
                         Ok(_) => "Success".to_owned(),

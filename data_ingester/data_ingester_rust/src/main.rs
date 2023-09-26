@@ -5,6 +5,7 @@ mod directory_roles;
 mod groups;
 mod keyvault;
 mod ms_graph;
+mod powershell;
 mod roles;
 mod security_score;
 mod splunk;
