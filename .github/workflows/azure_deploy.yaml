@@ -78,4 +78,4 @@ jobs:
           ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
           ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
           ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
-        run: cd data_ingester/terraform/state_terraform; terraform init; terraform apply -auto-approve
+        run: cd data_ingester/terraform/red; terraform init; terraform plan # apply -auto-approve
