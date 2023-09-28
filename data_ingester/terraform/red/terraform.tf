@@ -28,6 +28,10 @@ locals {
   key_vault_object_ids = ["393279ef-dc89-4bff-8186-4d283ee7b280"]
 }
 
+provider "azurerm" {
+  features {}
+}
+
 module "data_ingester" {
   source               = "../data_ingester"
   resource_group       = local.resource_group
