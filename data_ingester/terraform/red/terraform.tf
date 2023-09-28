@@ -24,7 +24,7 @@ locals {
   }
   sku_name_python      = "Y1"
   sku_name_rust        = "EP1"
-  key_vault_name       = "SSPHP-Metrics-i4tm3"
+  key_vault_name       = "SSPHP-Metrics"
   key_vault_object_ids = ["393279ef-dc89-4bff-8186-4d283ee7b280"]
 }
 
