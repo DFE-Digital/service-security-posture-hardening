@@ -4,6 +4,7 @@ use crate::directory_roles::DirectoryRoleTemplates;
 use crate::directory_roles::DirectoryRoles;
 use crate::groups::Groups;
 use crate::keyvault::get_keyvault_secrets;
+use crate::keyvault::Secrets;
 use crate::powershell::run_powershell_get_admin_audit_log_config;
 use crate::powershell::run_powershell_get_anti_phish_policy;
 use crate::powershell::run_powershell_get_hosted_outbound_spam_filter_policy;
@@ -28,8 +29,7 @@ use graph_rs_sdk::ODataQuery;
 use serde::Deserialize;
 use serde::Serialize;
 use std::env;
-use std::future;
-use std::process::Output;
+use std::sync::Arc;
 use tokio::sync::mpsc::UnboundedSender;
 
 pub async fn login(client_id: &str, client_secret: &str, tenant_id: &str) -> Result<MsGraph> {
@@ -502,12 +502,12 @@ mod test {
     }
 }
 
-pub async fn azure() -> Result<()> {
-    let secrets = get_keyvault_secrets(&env::var("KEY_VAULT_NAME")?).await?;
+pub async fn azure(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
+    //    let secrets = get_keyvault_secrets(&env::var("KEY_VAULT_NAME")?).await?;
 
     set_ssphp_run()?;
 
-    let splunk = Splunk::new(&secrets.splunk_host, &secrets.splunk_token)?;
+    //  let splunk = Splunk::new(&secrets.splunk_host, &secrets.splunk_token)?;
     splunk.log("Starting Azure collection").await?;
     splunk
         .log(&format!("GIT_HASH: {}", env!("GIT_HASH")))
@@ -567,12 +567,12 @@ pub async fn azure() -> Result<()> {
     Ok(())
 }
 
-pub async fn m365() -> Result<()> {
-    let secrets = get_keyvault_secrets(&env::var("KEY_VAULT_NAME")?).await?;
+pub async fn m365(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
+    //    let secrets = get_keyvault_secrets(&env::var("KEY_VAULT_NAME")?).await?;
 
     set_ssphp_run()?;
 
-    let splunk = Splunk::new(&secrets.splunk_host, &secrets.splunk_token)?;
+    //    let splunk = Splunk::new(&secrets.splunk_host, &secrets.splunk_token)?;
     splunk.log("Starting M365 collection").await?;
     splunk
         .log(&format!("GIT_HASH: {}", env!("GIT_HASH")))

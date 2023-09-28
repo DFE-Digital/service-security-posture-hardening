@@ -135,6 +135,7 @@ resource "azurerm_linux_function_app" "SSPHP_rust" {
   service_plan_id            = azurerm_service_plan.SSPHP_rust.id
   enabled                    = true
   builtin_logging_enabled    = true
+  # functions_extension_version = "~3"
 
   identity {
     type = "SystemAssigned"

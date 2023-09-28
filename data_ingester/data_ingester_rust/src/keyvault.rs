@@ -17,8 +17,11 @@ pub(crate) struct Secrets {
 pub async fn get_keyvault_secrets(keyvault_name: &str) -> Result<Secrets> {
     let keyvault_url = format!("https://{keyvault_name}.vault.azure.net");
     let credential = Arc::new(DefaultAzureCredential::default());
+    eprintln!("KeyVault Secret Client created");
     let secret_client = KeyvaultClient::new(&keyvault_url, credential.clone())?.secret_client();
-    let certificate_client = KeyvaultClient::new(&keyvault_url, credential)?.certificate_client();
+
+    // eprintln!("KeyVault Certificate Client created");
+    // let certificate_client = KeyvaultClient::new(&keyvault_url, credential)?.certificate_client();
 
     Ok(Secrets {
         splunk_host: secret_client.get("splunk-host").await?.value,

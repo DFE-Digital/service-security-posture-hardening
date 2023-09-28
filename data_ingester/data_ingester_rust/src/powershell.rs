@@ -6,6 +6,7 @@ use std::process::Command;
 use crate::{keyvault::Secrets, splunk::ToHecEvent};
 
 pub async fn install_powershell() -> Result<()> {
+    eprintln!("Downloading Powershell .deb");
     let output = Command::new("curl")
         .args(
             [
@@ -17,22 +18,57 @@ pub async fn install_powershell() -> Result<()> {
         )
         .output()?;
     dbg!(output);
+
+    eprintln!("Installing Powershelll .deb");
     let output = Command::new("dpkg")
         .args(["-i", "/tmp/powershell_7.3.7-1.deb_amd64.deb"])
         .output()?;
     dbg!(output);
+
+    eprintln!("Installing Powershelll ExchangeOnlineManagement");
     let output = Command::new("pwsh")
         .args([
             "-Command",
             r#"
 Install-Module -Confirm:$False -Force -Name ExchangeOnlineManagement;
-Install-Module -Confirm:$False -Force -Name PSWSMan;
-Install-Module -Confirm:$False -Force -AllowClobber -Name Microsoft.Graph;
-Install-Module -Confirm:$False -Force -AllowClobber -Name Microsoft.Graph.Beta;
 "#,
         ])
         .output()?;
     dbg!(output);
+
+    //     eprintln!("Installing Powershelll PSWSMan");
+    //     let output = Command::new("pwsh")
+    //         .args([
+    //             "-Command",
+    //             r#"
+    // Install-Module -Confirm:$False -Force -Name PSWSMan;
+    // "#,
+    //         ])
+    //         .output()?;
+    //     dbg!(output);
+
+    //     eprintln!("Installing Powershelll Microsoft.Graph");
+    //     let output = Command::new("pwsh")
+    //         .args([
+    //             "-Command",
+    //             r#"
+    // Install-Module -Confirm:$False -Force -AllowClobber -Name Microsoft.Graph;
+    // "#,
+    //         ])
+    //         .output()?;
+    //     dbg!(output);
+
+    //     eprintln!("Installing Powershelll Microsoft.Graph.Beta");
+    //     let output = Command::new("pwsh")
+    //         .args([
+    //             "-Command",
+    //             r#"
+    // Install-Module -Confirm:$False -Force -AllowClobber -Name Microsoft.Graph.Beta;
+    // "#,
+    //         ])
+    //         .output()?;
+    //     dbg!(output);
+
     Ok(())
 }
 
@@ -187,7 +223,6 @@ impl ToHecEvent for AdminAuditLogConfig {
 pub async fn run_powershell_get_owa_mailbox_policy(secrets: &Secrets) -> Result<OwaMailboxPolicy> {
     let command = "Get-OwaMailboxPolicy";
     let result = run_exchange_online_powershell(secrets, command).await?;
-    dbg!(&result);
     Ok(result)
 }
 
@@ -224,7 +259,7 @@ Connect-ExchangeOnline -ShowBanner:$false -Certificate $pfx -AppID "{}" -Organiz
                      command,
             )
         ]).output()?;
-    dbg!(&output);
+    // dbg!(&output);
     let out = serde_json::from_slice::<T>(&output.stdout[..])?;
     Ok(out)
 }
