@@ -41,3 +41,56 @@ module "data_ingester" {
   key_vault_object_ids = local.key_vault_object_ids
   tags                 = local.tags
 }
+
+moved {
+  from = azurerm_resource_group.tfstate
+  to   = module.data_ingester.azurerm_resource_group.tfstate 
+}
+
+moved {
+  from = azurerm_key_vault.SSPHP
+  to   = module.data_ingester.azurerm_key_vault.SSPHP
+}
+
+moved {
+  from = azurerm_service_plan.SSPHP
+  to   = module.data_ingester.azurerm_service_plan.SSPHP
+}
+
+moved {
+  from = azurerm_service_plan.SSPHP
+  to   = module.data_ingester.azurerm_service_plan.SSPHP
+}
+
+moved {
+  from = azurerm_storage_account.tfstate
+  to   = module.data_ingester.azurerm_storage_account.tfstate
+}
+
+moved {
+  from = azurerm_storage_container.tfstate
+  to   = module.data_ingester.azurerm_storage_container.tfstate
+}
+
+moved {
+  from = random_string.resource_code
+  to   = module.data_ingester.random_string.resource_code
+}
+
+
+moved {
+  from = azurerm_service_plan.SSPHP_rust
+  to   = module.data_ingester.azurerm_service_plan.SSPHP_rust
+}
+
+
+# moved {
+#   from = 
+#   to   = 
+# }
+
+# moved {
+#   from = 
+#   to   = 
+# }
+
