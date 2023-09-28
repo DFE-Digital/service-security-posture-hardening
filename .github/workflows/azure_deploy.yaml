@@ -70,6 +70,9 @@ jobs:
         run: cp data_ingester/data_ingester_rust/target/x86_64-unknown-linux-musl/release/msgraph_rust data_ingester/data_ingester_rust/function_zip
 
 
+      - name: Terraform version
+        run: terraform -version
+
         # Terraform
       - name: Run terraform
         env:
