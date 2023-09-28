@@ -26,11 +26,6 @@ jobs:
       - name: Install python deps
         run: cd data_ingester/data_ingester; mkdir -p .python_packages/lib/site-packages/; pip install -r requirements.txt --target .python_packages/lib/site-packages/
 
-      - name: Deploy terraform
-        uses: hashicorp/setup-terraform@v2
-        with:
-          terraform_version: 1.5.5
-
         # Rust
       - uses: actions-rs/toolchain@v1
         with:
@@ -68,6 +63,11 @@ jobs:
 
       - name: cp bin
         run: cp data_ingester/data_ingester_rust/target/x86_64-unknown-linux-musl/release/msgraph_rust data_ingester/data_ingester_rust/function_zip
+
+      - name: Deploy terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.5.7
 
 
       - name: Terraform version
