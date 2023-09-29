@@ -6,19 +6,19 @@ terraform {
     }
   }
 
-  backend "azurerm" {
-    resource_group_name  = "s194d00-SSPHP-Metrics"
-    storage_account_name = "tfstatep3sha"
-    container_name       = "tfstate"
-    key                  = "terraform.tfstate"
-  }
+  # backend "azurerm" {
+  #   resource_group_name  = "s194d00-SSPHP-Metrics"
+  #   storage_account_name = "tfstatep3sha"
+  #   container_name       = "tfstate"
+  #   key                  = "terraform.tfstate"
+  # }
 }
 
 locals {
   resource_group = "s194d00-SSPHP-Metrics"
   tags = {
     "Product"          = "Protective Monitoring - Splunk SaaS"
-    "Environment"      = "Development"
+    "Environment"      = "Dev"
     "Service Offering" = "Protective Monitoring - Splunk SaaS"
 
   }
@@ -44,7 +44,7 @@ module "data_ingester" {
 
 moved {
   from = azurerm_resource_group.tfstate
-  to   = module.data_ingester.azurerm_resource_group.tfstate 
+  to   = module.data_ingester.azurerm_resource_group.tfstate
 }
 
 moved {
@@ -84,13 +84,29 @@ moved {
 }
 
 
+moved {
+  from = azurerm_application_insights.SSPHP
+  to   = module.data_ingester.azurerm_application_insights.SSPHP
+}
+
+moved {
+  from = azurerm_linux_function_app.SSPHP
+  to   = module.data_ingester.azurerm_linux_function_app.SSPHP
+}
+
+moved {
+  from = azurerm_linux_function_app.SSPHP_rust
+  to   = module.data_ingester.azurerm_linux_function_app.SSPHP_rust
+}
 # moved {
 #   from = 
 #   to   = 
 # }
-
 # moved {
 #   from = 
 #   to   = 
 # }
-
+# moved {
+#   from = 
+#   to   = 
+# }

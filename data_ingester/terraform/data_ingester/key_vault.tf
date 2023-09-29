@@ -3,12 +3,13 @@ data "azurerm_client_config" "current" {}
 # locals {
 #   key_vault_name = "${var.key_vault_name}-${random_string.resource_code.result}"
 # }
-  
+
 
 resource "azurerm_key_vault" "SSPHP" {
   name                            = var.key_vault_name
   location                        = azurerm_resource_group.tfstate.location
   resource_group_name             = azurerm_resource_group.tfstate.name
+  tags                            = var.tags
   tenant_id                       = data.azurerm_client_config.current.tenant_id
   soft_delete_retention_days      = 7
   purge_protection_enabled        = true
@@ -38,7 +39,7 @@ resource "azurerm_key_vault" "SSPHP" {
         "List",
         "Set",
       ]
-      
+
       certificate_permissions = [
         "Get",
         "List",
@@ -89,14 +90,14 @@ resource "azurerm_key_vault" "SSPHP" {
     ]
 
     certificate_permissions = [
-        "Get",
-        "List",
+      "Get",
+      "List",
     ]
   }
 }
 
 resource "azurerm_key_vault_certificate" "example" {
-  
+
   name         = "ad-client-certificate"
   key_vault_id = azurerm_key_vault.SSPHP.id
 

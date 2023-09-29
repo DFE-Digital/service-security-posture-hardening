@@ -4,6 +4,7 @@ resource "azurerm_service_plan" "SSPHP_rust" {
   location            = azurerm_resource_group.tfstate.location
   os_type             = "Linux"
   sku_name            = var.sku_name_rust
+  tags                = var.tags
 }
 
 data "archive_file" "data_ingester_rust" {
@@ -13,10 +14,10 @@ data "archive_file" "data_ingester_rust" {
 }
 
 resource "azurerm_linux_function_app" "SSPHP_rust" {
-  name                = "SSPHP-Metrics-rust-${random_string.resource_code.result}"
-  resource_group_name = azurerm_resource_group.tfstate.name
-  location            = azurerm_resource_group.tfstate.location
-
+  name                       = "SSPHP-Metrics-rust-${random_string.resource_code.result}"
+  resource_group_name        = azurerm_resource_group.tfstate.name
+  location                   = azurerm_resource_group.tfstate.location
+  tags                       = var.tags
   storage_account_name       = azurerm_storage_account.tfstate.name
   storage_account_access_key = azurerm_storage_account.tfstate.primary_access_key
   service_plan_id            = azurerm_service_plan.SSPHP_rust.id

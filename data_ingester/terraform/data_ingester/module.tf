@@ -12,11 +12,12 @@ resource "random_string" "resource_code" {
 resource "azurerm_resource_group" "tfstate" {
   name     = var.resource_group
   location = "West Europe"
-  tags = {
-    "Product"          = "Protective Monitoring - Splunk SaaS"
-    "Environment"      = "Development"
-    "Service Offering" = "Protective Monitoring - Splunk SaaS"
-  }
+  tags     = var.tags
+  # {
+  #   "Product"          = "Protective Monitoring - Splunk SaaS"
+  #   "Environment"      = "Development"
+  #   "Service Offering" = "Protective Monitoring - Splunk SaaS"
+  # }
 }
 
 resource "azurerm_storage_account" "tfstate" {
@@ -26,6 +27,7 @@ resource "azurerm_storage_account" "tfstate" {
   account_tier                    = "Standard"
   account_replication_type        = "LRS"
   allow_nested_items_to_be_public = false
+  tags                            = var.tags
 }
 
 resource "azurerm_storage_container" "tfstate" {
@@ -39,4 +41,5 @@ resource "azurerm_application_insights" "SSPHP" {
   location            = azurerm_resource_group.tfstate.location
   resource_group_name = azurerm_resource_group.tfstate.name
   application_type    = "other"
+  tags                = var.tags
 }
