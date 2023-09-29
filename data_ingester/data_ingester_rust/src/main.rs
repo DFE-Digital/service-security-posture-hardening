@@ -19,8 +19,9 @@ use tokio::sync::oneshot;
 async fn main() -> Result<()> {
     eprintln!("Starting Data Ingester...");
     let (tx, rx) = oneshot::channel::<()>();
-    start_server(tx).await?;
+    let server = tokio::spawn(start_server(tx));
     let _ = rx.await;
     eprintln!("Warp server started...");
+    let _ = server.await?;
     Ok(())
 }
