@@ -42,71 +42,72 @@ module "data_ingester" {
   tags                 = local.tags
 }
 
-moved {
-  from = azurerm_resource_group.tfstate
-  to   = module.data_ingester.azurerm_resource_group.tfstate
-}
 
-moved {
-  from = azurerm_key_vault.SSPHP
-  to   = module.data_ingester.azurerm_key_vault.SSPHP
-}
-
-moved {
-  from = azurerm_service_plan.SSPHP
-  to   = module.data_ingester.azurerm_service_plan.SSPHP
-}
-
-moved {
-  from = azurerm_service_plan.SSPHP
-  to   = module.data_ingester.azurerm_service_plan.SSPHP
-}
-
-moved {
-  from = azurerm_storage_account.tfstate
-  to   = module.data_ingester.azurerm_storage_account.tfstate
-}
-
-moved {
-  from = azurerm_storage_container.tfstate
-  to   = module.data_ingester.azurerm_storage_container.tfstate
-}
-
-moved {
-  from = random_string.resource_code
-  to   = module.data_ingester.random_string.resource_code
-}
-
-
-moved {
-  from = azurerm_service_plan.SSPHP_rust
-  to   = module.data_ingester.azurerm_service_plan.SSPHP_rust
-}
-
-
-moved {
-  from = azurerm_application_insights.SSPHP
-  to   = module.data_ingester.azurerm_application_insights.SSPHP
-}
-
-moved {
-  from = azurerm_linux_function_app.SSPHP
-  to   = module.data_ingester.azurerm_linux_function_app.SSPHP
-}
-
-moved {
-  from = azurerm_linux_function_app.SSPHP_rust
-  to   = module.data_ingester.azurerm_linux_function_app.SSPHP_rust
-}
 # moved {
-#   from = 
-#   to   = 
+#   from = azurerm_resource_group.tfstate
+#   to   = module.data_ingester.azurerm_resource_group.tfstate
 # }
+
 # moved {
-#   from = 
-#   to   = 
+#   from = azurerm_key_vault.SSPHP
+#   to   = module.data_ingester.azurerm_key_vault.SSPHP
 # }
+
 # moved {
-#   from = 
-#   to   = 
+#   from = azurerm_service_plan.SSPHP
+#   to   = module.data_ingester.azurerm_service_plan.SSPHP
 # }
+
+# moved {
+#   from = azurerm_service_plan.SSPHP
+#   to   = module.data_ingester.azurerm_service_plan.SSPHP
+# }
+
+# moved {
+#   from = azurerm_storage_account.tfstate
+#   to   = module.data_ingester.azurerm_storage_account.tfstate
+# }
+
+# moved {
+#   from = azurerm_storage_container.tfstate
+#   to   = module.data_ingester.azurerm_storage_container.tfstate
+# }
+
+# moved {
+#   from = random_string.resource_code
+#   to   = module.data_ingester.random_string.resource_code
+# }
+
+
+# moved {
+#   from = azurerm_service_plan.SSPHP_rust
+#   to   = module.data_ingester.azurerm_service_plan.SSPHP_rust
+# }
+
+
+# moved {
+#   from = azurerm_application_insights.SSPHP
+#   to   = module.data_ingester.azurerm_application_insights.SSPHP
+# }
+
+# moved {
+#   from = azurerm_linux_function_app.SSPHP
+#   to   = module.data_ingester.azurerm_linux_function_app.SSPHP
+# }
+
+# moved {
+#   from = azurerm_linux_function_app.SSPHP_rust
+#   to   = module.data_ingester.azurerm_linux_function_app.SSPHP_rust
+# }
+# # moved {
+# #   from = 
+# #   to   = 
+# # }
+# # moved {
+# #   from = 
+# #   to   = 
+# # }
+# # moved {
+# #   from = 
+# #   to   = 
+# # }
