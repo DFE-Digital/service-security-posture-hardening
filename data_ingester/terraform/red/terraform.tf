@@ -6,12 +6,12 @@ terraform {
     }
   }
 
-  # backend "azurerm" {
-  #   resource_group_name  = "s194d00-SSPHP-Metrics"
-  #   storage_account_name = "tfstatep3sha"
-  #   container_name       = "tfstate"
-  #   key                  = "terraform.tfstate"
-  # }
+  backend "azurerm" {
+    resource_group_name  = "s194d00-SSPHP-Metrics"
+    storage_account_name = "tfstatep3sha"
+    container_name       = "tfstate"
+    key                  = "terraform.tfstate"
+  }
 }
 
 locals {
