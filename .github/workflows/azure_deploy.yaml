@@ -16,53 +16,53 @@ jobs:
       - name: checkout
         uses: actions/checkout@v3
         # Python
-      - name: Set up Python 3.x
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.10'
-          architecture: 'x64'
-          cache: 'pip'
-
-      - name: Install python deps
-        run: cd data_ingester/data_ingester; mkdir -p .python_packages/lib/site-packages/; pip install -r requirements.txt --target .python_packages/lib/site-packages/
-
-        # Rust
-      - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: nightly
-          target: x86_64-unknown-linux-musl
-          default: true
-          components: rust-src, clippy
-
-      - name: Cache build artifacts
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            data_ingester/data_ingester_rust/target
-          key: cache-rust-target-${{ hashFiles('data_ingester/data_ingester_rust/Cargo.lock') }}
-
-      - uses: awalsh128/cache-apt-pkgs-action@v1
-        with:
-          packages: musl-tools
-          version: 1.0
-
-      - name: cargo audit
-        run: cargo install cargo-audit; cd data_ingester/data_ingester_rust; cargo audit
-
-      # - uses: actions-rs/cargo@v1
+      # - name: Set up Python 3.x
+      #   uses: actions/setup-python@v4
       #   with:
-      #     command: test
-      #     args: --manifest-path data_ingester/data_ingester_rust/Cargo.toml
+      #     python-version: '3.10'
+      #     architecture: 'x64'
+      #     cache: 'pip'
 
-      - name: cargo build
-        run: cd data_ingester/data_ingester_rust; cargo build --release --target=x86_64-unknown-linux-musl
+      # - name: Install python deps
+      #   run: cd data_ingester/data_ingester; mkdir -p .python_packages/lib/site-packages/; pip install -r requirements.txt --target .python_packages/lib/site-packages/
 
-      - name: cp bin
-        run: cp data_ingester/data_ingester_rust/target/x86_64-unknown-linux-musl/release/msgraph_rust data_ingester/data_ingester_rust/function_zip
+      #   # Rust
+      # - uses: actions-rs/toolchain@v1
+      #   with:
+      #     toolchain: nightly
+      #     target: x86_64-unknown-linux-musl
+      #     default: true
+      #     components: rust-src, clippy
+
+      # - name: Cache build artifacts
+      #   uses: actions/cache@v3
+      #   with:
+      #     path: |
+      #       ~/.cargo/bin/
+      #       ~/.cargo/registry/index/
+      #       ~/.cargo/registry/cache/
+      #       ~/.cargo/git/db/
+      #       data_ingester/data_ingester_rust/target
+      #     key: cache-rust-target-${{ hashFiles('data_ingester/data_ingester_rust/Cargo.lock') }}
+
+      # - uses: awalsh128/cache-apt-pkgs-action@v1
+      #   with:
+      #     packages: musl-tools
+      #     version: 1.0
+
+      # - name: cargo audit
+      #   run: cargo install cargo-audit; cd data_ingester/data_ingester_rust; cargo audit
+
+      # # - uses: actions-rs/cargo@v1
+      # #   with:
+      # #     command: test
+      # #     args: --manifest-path data_ingester/data_ingester_rust/Cargo.toml
+
+      # - name: cargo build
+      #   run: cd data_ingester/data_ingester_rust; cargo build --release --target=x86_64-unknown-linux-musl
+
+      # - name: cp bin
+      #   run: cp data_ingester/data_ingester_rust/target/x86_64-unknown-linux-musl/release/msgraph_rust data_ingester/data_ingester_rust/function_zip
 
       - name: Deploy terraform
         uses: hashicorp/setup-terraform@v2
