@@ -8,7 +8,7 @@ require([
 
     var CustomRangeRenderer = TableView.BaseCellRenderer.extend({
         canRender: function (cell) {
-            return _(['BizTalk', 'WebShop']).contains(cell.field);
+            return _(['Score','field2']).contains(cell.field);
         },
         render: function ($td, cell) {
             var label = cell.value.split("|")[0];
@@ -17,13 +17,13 @@ require([
             if (val == "green") {
                 $td.addClass("range-cell").addClass("css_for_green")
             }
-            else if (val == "yellow") {
-                $td.addClass("range-cell").addClass("css_for_yellow")
+            else if (val == "orange") {
+                $td.addClass("range-cell").addClass("css_for_orange")
             }
             else if (val == "red") {
                 $td.addClass("range-cell").addClass("css_for_red")
             } else {
-                $td.addClass("range-cell").addClass("css_for_grey")
+                $td.addClass("range-cell").addClass("css_for_blue")
             }
             $td.text(label).addClass("string");
         }

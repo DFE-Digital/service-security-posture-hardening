@@ -192,23 +192,24 @@
     <html>
       <style>
          .css_for_green{ 
-         background-color:#65A637 !important;
+         background-color:#00FF00 !important;
          }
-         .css_for_yellow{ 
-         background-color:#FFFF00 !important;
+         .css_for_orange{ 
+         background-color:#d94e17 !important;
          }
          .css_for_red{
          background-color:#FF0000 !important;
          }
-         .css_for_grey{
-         background-color:#EEE000 !important;
+         .css_for_blue{
+         background-color:#0000FF !important;
          }
       </style>
     </html>
-    
+  </row>
+  <row>  
     <panel>
       <title>$tkn_selected_system_name$ Control Details &amp; Scores</title>
-      <table>
+      <table id="tableWithColorBasedOnAnotherField">
         <search>
           <query>
 index="ssphp_metrics_summary" ssphp.use_case.id="$tkn_selected_system$*"
@@ -216,23 +217,18 @@ index="ssphp_metrics_summary" ssphp.use_case.id="$tkn_selected_system$*"
 | sort 0 ssphp.use_case.id
 | search ssphp.use_case.id!="*_000" AND ssphp.use_case.id!="*rollup*" AND ssphp.use_case.id!="m365_001" AND ssphp.use_case.id!="m365_002" AND ssphp.use_case.id!="*6_1" AND ssphp.use_case.id!="*6_2"
 
-| eval ```ssphp.color="green",```ssphp.color_x=case('ssphp.color'="red",$c_red$,'ssphp.color'="green",$c_green$,'ssphp.color'="orange",$c_orange$,1==1,$c_blue$)
+```| eval ssphp.color_x=case('ssphp.color'="red",$c_red$,'ssphp.color'="green",$c_green$,'ssphp.color'="orange",$c_orange$,1==1,$c_blue$)```
+| eval Score='ssphp.score.score'."|".'ssphp.color'
 
-| table ```ssphp.use_case.id, ```ssphp.use_case.display.title, ssphp.use_case.display.short_description, ssphp.cis_benchmark.control.title, ssphp.use_case.description, ssphp.score.score, ssphp.color, ssphp.color_x
+| table ```ssphp.use_case.id, ```ssphp.use_case.display.title, Score, ssphp.use_case.display.short_description, ssphp.cis_benchmark.control.title, ssphp.use_case.description
 | rename ssphp.use_case.id as "Use Case ID",
          ssphp.use_case.display.title as "Title",
          ssphp.use_case.display.short_description as "Name",
          ssphp.use_case.description as "Description",
-         ssphp.cis_benchmark.control.title as "Control Title",
-         ssphp.score.score as "Score",
-         ssphp.color as "Color",
-         ssphp.color_x as cx
+         ssphp.cis_benchmark.control.title as "Control Title"
           </query>
           <earliest>0</earliest>
           <sampleRatio>1</sampleRatio>
-        <done>
-          <set token="tkn_cell_color">$row.cx$</set>
-        </done>
         </search>
         <option name="count">100</option>
         <option name="dataOverlayMode">none</option>
@@ -241,10 +237,6 @@ index="ssphp_metrics_summary" ssphp.use_case.id="$tkn_selected_system$*"
         <option name="rowNumbers">false</option>
         <option name="totalsRow">false</option>
         <option name="wrap">true</option>
-        <format type="color" field="Score">
-          <colorPalette type="list">[$tkn_cell_color$,$tkn_cell_color$]</colorPalette>
-          <scale type="threshold">100</scale>
-        </format>
       </table>
     </panel>
   </row>
