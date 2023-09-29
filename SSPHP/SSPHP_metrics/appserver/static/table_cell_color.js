@@ -8,7 +8,7 @@ require([
 
     var CustomRangeRenderer = TableView.BaseCellRenderer.extend({
         canRender: function (cell) {
-            return _(['Score','M365 001','M365 002','M365 003']).contains(cell.field);
+            return _(['Score','M365 001 : Account & Authentication','M365 002 : Application Permissions','M365 003 : Data Management','M365 004 : EMail Security / Exchange Online','M365 005 : Auditing','M365 006 : Storage']).contains(cell.field);
         },
         render: function ($td, cell) {
             var label = cell.value.split("|")[0];

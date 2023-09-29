@@ -1,6 +1,6 @@
 <dashboard version="1.1" theme="dark" script="table_cell_color.js">
   <label>Foundational Systems Security Posture</label>
-  <description>v1.6</description>
+  <description>v1.9</description>
   
   <init>
     <set token="tkn_selected_system">*</set>
@@ -166,7 +166,13 @@
       | return $search_text]
       
 | rex field=ssphp.use_case.id "m365_(?&lt;uc&gt;[^_]*)_000"
-| eval ssphp.use_case.id="M365 ".uc
+| eval uc_desc=case(uc="001","Account &amp; Authentication",
+                    uc="002","Application Permissions",
+                    uc="003","Data Management",
+                    uc="004","EMail Security / Exchange Online",
+                    uc="005","Auditing",
+                    uc="006","Storage"),
+       ssphp.use_case.id="M365 ".uc." : ".uc_desc
 
 | stats values(ssphp.score.score) as score, values(ssphp.color) as color by ssphp.use_case.id
 | eval score=score."|".color
