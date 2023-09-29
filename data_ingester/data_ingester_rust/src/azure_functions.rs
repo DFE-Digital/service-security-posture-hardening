@@ -194,8 +194,9 @@ pub(crate) async fn start_server(tx: Sender<()>) -> Result<()> {
         Ok(val) => val.parse().expect("Custom Handler port is not a number!"),
         Err(_) => 3000,
     };
-    tokio::spawn(warp::serve(routes).run((Ipv4Addr::LOCALHOST, port)));
+    let server = tokio::spawn(warp::serve(routes).run((Ipv4Addr::LOCALHOST, port)));
     tx.send(()).unwrap();
+    let _ = server.await?;
     Ok(())
 }
 
