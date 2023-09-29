@@ -1,15 +1,11 @@
-<dashboard version="1.1" theme="dark" script="table_color_by_another_field.js">
+<dashboard version="1.1" theme="dark" script="table_cell_color.js">
   <label>Foundational Systems Security Posture</label>
-  <description>v1.1</description>
+  <description>v1.6</description>
   
   <init>
     <set token="tkn_selected_system">*</set>
     <set token="tkn_selected_system_name">Overall</set>
     <unset token="tkn_selected_system_m365"></unset>
-    <set token="c_red">"0xFF0000"</set>
-    <set token="c_green">"0x00FF00"</set>
-    <set token="c_orange">"0xd94e17"</set>
-    <set token="c_blue">"0x0000FF"</set>
   </init>
 
 
@@ -158,23 +154,27 @@
 
   <row depends="$tkn_selected_system_m365$">
     <panel>
-      <table>
+      <table id="table1">
         <search>
           <query>
-`ssphp_metrics_index` ssphp.use_case.id="m365_*_000" earliest=-2d@d latest=now
+  `ssphp_metrics_index` ssphp.use_case.id="m365_*_000" earliest=-2d@d latest=now
     [| search `ssphp_metrics_index` ssphp.use_case.id="m365_*_000" earliest=-2d@d latest=now
-     | stats max(SSPHP_RUN) as SSPHP_RUN by ssphp.use_case.id
-     | eval search_text="(\"ssphp.use_case.id\"=\"".'ssphp.use_case.id'."\" AND SSPHP_RUN=\"".SSPHP_RUN."\")"
-     | stats values(search_text) as search_text
-     | eval search_text="(".mvjoin(search_text," OR ").")"
-     | return $search_text]
+      | stats max(SSPHP_RUN) as SSPHP_RUN by ssphp.use_case.id
+      | eval search_text="(\"ssphp.use_case.id\"=\"".'ssphp.use_case.id'."\" AND SSPHP_RUN=\"".SSPHP_RUN."\")"
+      | stats values(search_text) as search_text
+      | eval search_text="(".mvjoin(search_text," OR ").")"
+      | return $search_text]
+      
+| rex field=ssphp.use_case.id "m365_(?&lt;uc&gt;[^_]*)_000"
+| eval ssphp.use_case.id="M365 ".uc
 
-| fields ssphp.use_case.id, ssphp.score.score, ssphp.color
 | stats values(ssphp.score.score) as score, values(ssphp.color) as color by ssphp.use_case.id
+| eval score=score."|".color
+| fields ssphp.use_case.id, score
 
-| eval {ssphp.use_case.id}.score=score, {ssphp.use_case.id}.color=color
+| eval {ssphp.use_case.id}=score
 | stats values(*) as *
-| fields - color, score, ssphp.use_case.id
+| fields - score, ssphp.use_case.id
           </query>
           <earliest>0</earliest>
           <latest>now</latest>
@@ -188,17 +188,23 @@
 
 <!-- ################### Main Data Table ################### --> 
 
-  <row>
+  <row depends="$never_show$">
     <html>
       <style>
          .css_for_green{ 
          background-color:#00FF00 !important;
+         color:#000000 !important;
+         font-size: 150% !important;
          }
          .css_for_orange{ 
          background-color:#d94e17 !important;
+         color:#000000 !important;
+         font-size: 150% !important;
          }
          .css_for_red{
          background-color:#FF0000 !important;
+         color:#000000 !important;
+         font-size: 150% !important;
          }
          .css_for_blue{
          background-color:#0000FF !important;
@@ -206,10 +212,11 @@
       </style>
     </html>
   </row>
+
   <row>  
     <panel>
       <title>$tkn_selected_system_name$ Control Details &amp; Scores</title>
-      <table id="tableWithColorBasedOnAnotherField">
+      <table id="table2">
         <search>
           <query>
 index="ssphp_metrics_summary" ssphp.use_case.id="$tkn_selected_system$*"
@@ -217,7 +224,6 @@ index="ssphp_metrics_summary" ssphp.use_case.id="$tkn_selected_system$*"
 | sort 0 ssphp.use_case.id
 | search ssphp.use_case.id!="*_000" AND ssphp.use_case.id!="*rollup*" AND ssphp.use_case.id!="m365_001" AND ssphp.use_case.id!="m365_002" AND ssphp.use_case.id!="*6_1" AND ssphp.use_case.id!="*6_2"
 
-```| eval ssphp.color_x=case('ssphp.color'="red",$c_red$,'ssphp.color'="green",$c_green$,'ssphp.color'="orange",$c_orange$,1==1,$c_blue$)```
 | eval Score='ssphp.score.score'."|".'ssphp.color'
 
 | table ```ssphp.use_case.id, ```ssphp.use_case.display.title, Score, ssphp.use_case.display.short_description, ssphp.cis_benchmark.control.title, ssphp.use_case.description
