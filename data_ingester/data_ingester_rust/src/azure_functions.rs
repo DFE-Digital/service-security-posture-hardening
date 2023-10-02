@@ -196,7 +196,7 @@ pub(crate) async fn start_server(tx: Sender<()>) -> Result<()> {
     };
     let server = tokio::spawn(warp::serve(routes).run((Ipv4Addr::LOCALHOST, port)));
     tx.send(()).unwrap();
-    let _ = server.await?;
+    server.await?;
     Ok(())
 }
 
