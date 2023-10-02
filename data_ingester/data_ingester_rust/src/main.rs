@@ -22,6 +22,6 @@ async fn main() -> Result<()> {
     let server = tokio::spawn(start_server(tx));
     let _ = rx.await;
     eprintln!("Warp server started...");
-    let _ = server.await?;
+    server.await??;
     Ok(())
 }

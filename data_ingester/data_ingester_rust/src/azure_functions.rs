@@ -1,7 +1,7 @@
 use std::env;
 use std::net::Ipv4Addr;
 use std::sync::Arc;
-use std::sync::Mutex;
+use tokio::sync::Mutex;
 
 use bytes::Bytes;
 use serde::Deserialize;
@@ -88,7 +88,7 @@ pub(crate) async fn start_server(tx: Sender<()>) -> Result<()> {
         .await?;
     set_ssphp_run()?;
 
-    let azure_in_progress = Arc::new(Mutex::new(false));
+    let azure_in_progress = Arc::new(Mutex::new(()));
 
     let azure = warp::post()
         .and(warp::path("azure"))
@@ -108,27 +108,31 @@ pub(crate) async fn start_server(tx: Sender<()>) -> Result<()> {
                         logs: vec![format!("GIT_HASH: {}", env!("GIT_HASH"))],
                         return_value: None,
                     };
-                    if *in_progress.lock().unwrap() {
-                        response.logs.push(
-                            "Azure collection is already in progress. NOT starting.".to_owned(),
-                        );
-                        return response;
-                    } else {
-                        *in_progress.lock().unwrap() = true;
-                        response.logs.push("Aquired lock, starting".to_owned());
-                    }
+
+                    let lock = match in_progress.try_lock() {
+                        Ok(lock) => {
+                            response.logs.push("Aquired lock, starting".to_owned());
+                            lock
+                        }
+                        Err(_) => {
+                            response.logs.push(
+                                "Azure collection is already in progress. NOT starting.".to_owned(),
+                            );
+                            return response;
+                        }
+                    };
+
                     let result = match azure(azure_secrets, azure_splunk).await {
                         Ok(_) => "Success".to_owned(),
                         Err(e) => format!("{:?}", e),
                     };
                     response.logs.push(result);
-                    *in_progress.lock().unwrap() = false;
                     response
                 }
             }
         });
 
-    let m365_in_progress = Arc::new(Mutex::new(false));
+    let m365_in_progress = Arc::new(Mutex::new(()));
     let m365_powershell_installed = Arc::new(Mutex::new(false));
     let m365 = warp::post()
         .and(warp::path("m365"))
@@ -151,21 +155,28 @@ pub(crate) async fn start_server(tx: Sender<()>) -> Result<()> {
                         logs: vec![format!("GIT_HASH: {}", env!("GIT_HASH"))],
                         return_value: None,
                     };
-                    if *in_progress.lock().unwrap() {
-                        response.logs.push(
-                            "Azure collection is already in progress. NOT starting.".to_owned(),
-                        );
-                        return response;
-                    } else {
-                        *in_progress.lock().unwrap() = true;
-                        response.logs.push("Aquired lock, starting".to_owned());
-                    }
+                    let lock = match in_progress.try_lock() {
+                        Ok(lock) => {
+                            m365_splunk.log("Aquired lock, starting").await.unwrap();
+                            lock
+                        }
+                        Err(_) => {
+                            m365_splunk
+                                .log("M365 collection is already in progress. NOT starting.")
+                                .await
+                                .unwrap();
+                            response.logs.push(
+                                "M365 collection is already in progress. NOT starting.".to_owned(),
+                            );
+                            return response;
+                        }
+                    };
 
-                    if !*powershell_installed.lock().unwrap() {
+                    if !*powershell_installed.lock().await {
                         m365_splunk.log("Powershell: Installing").await.unwrap();
 
                         install_powershell().await.unwrap();
-                        *powershell_installed.lock().unwrap() = true;
+                        *powershell_installed.lock().await = true;
 
                         m365_splunk
                             .log("Powershell: Install Complete")
@@ -182,7 +193,6 @@ pub(crate) async fn start_server(tx: Sender<()>) -> Result<()> {
                         Err(e) => format!("{:?}", e),
                     };
                     response.logs.push(result);
-                    *in_progress.lock().unwrap() = false;
                     response
                 }
             }
@@ -196,7 +206,7 @@ pub(crate) async fn start_server(tx: Sender<()>) -> Result<()> {
     };
     let server = tokio::spawn(warp::serve(routes).run((Ipv4Addr::LOCALHOST, port)));
     tx.send(()).unwrap();
-    let _ = server.await?;
+    server.await?;
     Ok(())
 }
 
