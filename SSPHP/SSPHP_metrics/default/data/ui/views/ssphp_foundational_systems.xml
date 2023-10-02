@@ -1,6 +1,6 @@
 <dashboard version="1.1" theme="dark" script="table_cell_color.js">
   <label>Foundational Systems Security Posture</label>
-  <description>v1.9</description>
+  <description>v1.10</description>
   
   <init>
     <set token="tkn_selected_system">*</set>
@@ -18,28 +18,31 @@
         <title>Overall</title>
         <search>
           <query>
-`ssphp_metrics_index` ssphp.use_case.id="*_000" earliest=-2d@d latest=now
-    [| search `ssphp_metrics_index` ssphp.use_case.id="*_000" earliest=-2d@d latest=now
-     | stats max(SSPHP_RUN) as SSPHP_RUN by ssphp.use_case.id
-     | eval search_text="(\"ssphp.use_case.id\"=\"".'ssphp.use_case.id'."\" AND SSPHP_RUN=\"".SSPHP_RUN."\")"
-     | stats values(search_text) as search_text
-     | eval search_text="(".mvjoin(search_text," OR ").")"
-     | return $search_text]
-| regex ssphp.use_case.id="^[^_]*_[^_]*$"
-| fields ssphp.use_case.id, ssphp.score.score, ssphp.color
-| sort 0 ssphp.use_case.id
-| eval aad_score=if('ssphp.use_case.id'="aad_000",'ssphp.score.score',""), aad_color=if('ssphp.use_case.id'="aad_000",'ssphp.color',""),
-       dns_score=if('ssphp.use_case.id'="dns_000",'ssphp.score.score',""), dns_color=if('ssphp.use_case.id'="dns_000",'ssphp.color',""),
-       m365_score=if('ssphp.use_case.id'="m365_000",'ssphp.score.score',""), m365_color=if('ssphp.use_case.id'="m365_000",'ssphp.color',"")
-| stats values(aad_score) as aad_score,
-        values(dns_score) as dns_score,
-        values(m365_score) as m365_score,
-        values(aad_color) as aad_color,
-        values(dns_color) as dns_color,
-        values(m365_color) as m365_color
-| eval overall_score=floor(avg(aad_score, dns_score, m365_score)),
-       overall_color=if(overall_score&gt;99,"green","red")
-| table overall_score, overall_color, aad_score, aad_color, dns_score, dns_color, m365_score, m365_color
+            `ssphp_metrics_index` ssphp.use_case.id="*_000" earliest=-2d@d latest=now
+            [| search `ssphp_metrics_index` ssphp.use_case.id="*_000" earliest=-2d@d latest=now
+             | stats max(SSPHP_RUN) as SSPHP_RUN by ssphp.use_case.id
+             | eval search_text="(\"ssphp.use_case.id\"=\"".'ssphp.use_case.id'."\" AND SSPHP_RUN=\"".SSPHP_RUN."\")"
+             | stats values(search_text) as search_text
+             | eval search_text="(".mvjoin(search_text," OR ").")"
+             | return $search_text]
+        | regex ssphp.use_case.id="^[^_]*_[^_]*$"
+        | fields ssphp.use_case.id, ssphp.score.score, ssphp.color
+        | sort 0 ssphp.use_case.id
+        | eval aad_score=if('ssphp.use_case.id'="aad_000",'ssphp.score.score',""), aad_color=if('ssphp.use_case.id'="aad_000",'ssphp.color',""),
+               azure_score=if('ssphp.use_case.id'="azure_000",'ssphp.score.score',""), azure_color=if('ssphp.use_case.id'="azure_000",'ssphp.color',""),
+               dns_score=if('ssphp.use_case.id'="dns_000",'ssphp.score.score',""), dns_color=if('ssphp.use_case.id'="dns_000",'ssphp.color',""),
+               m365_score=if('ssphp.use_case.id'="m365_000",'ssphp.score.score',""), m365_color=if('ssphp.use_case.id'="m365_000",'ssphp.color',"")
+        | stats values(aad_score) as aad_score,
+                values(azure_score) as azure_score,
+                values(dns_score) as dns_score,
+                values(m365_score) as m365_score,
+                values(aad_color) as aad_color,
+                values(azure_color) as azure_color,
+                values(dns_color) as dns_color,
+                values(m365_color) as m365_color
+        | eval overall_score=floor(avg(aad_score, azure_score, dns_score, m365_score)),
+               overall_color=if(overall_score&gt;99,"green","red")
+        | table overall_score, overall_color, aad_score, aad_color, azure_score, azure_color, dns_score, dns_color, m365_score, m365_color
           </query>
         </search>
         <drilldown>
@@ -63,6 +66,34 @@
 <!-- ################### Rolled Up Panels for each Foundational System ################### --> 
 
   <row>
+    <panel>
+      <single>
+        <title>Azure</title>
+        <search>
+          <query>
+  `ssphp_metrics_index` ssphp.use_case.id="azure_000" earliest=-2d@d latest=now
+      [| search `ssphp_metrics_index` ssphp.use_case.id="azure_000" earliest=-2d@d latest=now
+       | stats max(SSPHP_RUN) as SSPHP_RUN
+       | return SSPHP_RUN]
+  | fields _time, ssphp.use_case.id, ssphp.use_case.display.title, ssphp.score.score, ssphp.color
+  | rename ssphp.use_case.display.title as Title, ssphp.score.score as Score, ssphp.color as Colour
+  | table Score, Colour
+          </query>
+        </search>
+        <drilldown>
+          <set token="tkn_selected_system">azure</set>
+          <set token="tkn_selected_system_name">AZURE</set>
+          <unset token="tkn_selected_system_m365"></unset>
+        </drilldown>
+        <option name="drilldown">all</option>
+        <option name="colorMode">block</option>
+        <option name="height">$data_panel_height$</option>
+        <option name="rangeColors">[$tkn_dns_rollup_colour$,$tkn_dns_rollup_colour$]</option>
+        <option name="rangeValues">[0]</option>
+        <option name="useColors">1</option>
+      </single>
+    </panel>
+
     <panel>
       <single>
         <title>Azure Active Directory</title>
@@ -93,34 +124,6 @@
     
     <panel>
       <single>
-        <title>M365</title>
-        <search>
-          <query>
-  `ssphp_metrics_index` ssphp.use_case.id="m365_000" earliest=-2d@d latest=now
-      [| search `ssphp_metrics_index` ssphp.use_case.id="aad_000" earliest=-2d@d latest=now
-       | stats max(SSPHP_RUN) as SSPHP_RUN
-       | return SSPHP_RUN]
-  | fields _time, ssphp.use_case.id, ssphp.use_case.display.title, ssphp.score.score, ssphp.color
-  | rename ssphp.use_case.display.title as Title, ssphp.score.score as Score, ssphp.color as Colour
-  | table Score, Colour
-          </query>
-        </search>
-        <drilldown>
-          <set token="tkn_selected_system">m365</set>
-          <set token="tkn_selected_system_name">M365</set>
-          <set token="tkn_selected_system_m365">m365</set>
-        </drilldown>
-        <option name="drilldown">all</option>
-        <option name="colorMode">block</option>
-        <option name="height">$data_panel_height$</option>
-        <option name="rangeColors">[$tkn_dns_rollup_colour$,$tkn_dns_rollup_colour$]</option>
-        <option name="rangeValues">[0]</option>
-        <option name="useColors">1</option>
-      </single>
-    </panel>
-    
-    <panel>
-      <single>
         <title>DNS</title>
         <search>
           <query>
@@ -137,6 +140,34 @@
           <set token="tkn_selected_system">dns</set>
           <set token="tkn_selected_system_name">DNS</set>
           <unset token="tkn_selected_system_m365"></unset>
+        </drilldown>
+        <option name="drilldown">all</option>
+        <option name="colorMode">block</option>
+        <option name="height">$data_panel_height$</option>
+        <option name="rangeColors">[$tkn_dns_rollup_colour$,$tkn_dns_rollup_colour$]</option>
+        <option name="rangeValues">[0]</option>
+        <option name="useColors">1</option>
+      </single>
+    </panel>
+    
+    <panel>
+      <single>
+        <title>M365</title>
+        <search>
+          <query>
+  `ssphp_metrics_index` ssphp.use_case.id="m365_000" earliest=-2d@d latest=now
+      [| search `ssphp_metrics_index` ssphp.use_case.id="aad_000" earliest=-2d@d latest=now
+       | stats max(SSPHP_RUN) as SSPHP_RUN
+       | return SSPHP_RUN]
+  | fields _time, ssphp.use_case.id, ssphp.use_case.display.title, ssphp.score.score, ssphp.color
+  | rename ssphp.use_case.display.title as Title, ssphp.score.score as Score, ssphp.color as Colour
+  | table Score, Colour
+          </query>
+        </search>
+        <drilldown>
+          <set token="tkn_selected_system">m365</set>
+          <set token="tkn_selected_system_name">M365</set>
+          <set token="tkn_selected_system_m365">m365</set>
         </drilldown>
         <option name="drilldown">all</option>
         <option name="colorMode">block</option>
