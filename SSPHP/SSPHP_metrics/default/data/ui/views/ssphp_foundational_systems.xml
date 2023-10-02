@@ -227,7 +227,6 @@
           <query>
 index="ssphp_metrics_summary" ssphp.use_case.id="$tkn_selected_system$*"
 | dedup ssphp.use_case.id
-| sort 0 ssphp.use_case.id
 | search ssphp.use_case.id!="*_000" AND ssphp.use_case.id!="*rollup*" AND ssphp.use_case.id!="m365_001" AND ssphp.use_case.id!="m365_002" AND ssphp.use_case.id!="*6_1" AND ssphp.use_case.id!="*6_2"
 
 | eval Score='ssphp.score.score'."|".'ssphp.color'
@@ -238,6 +237,8 @@ index="ssphp_metrics_summary" ssphp.use_case.id="$tkn_selected_system$*"
          ssphp.use_case.display.short_description as "Name",
          ssphp.use_case.description as "Description",
          ssphp.cis_benchmark.control.title as "Control Title"
+
+| sort 0 Title
           </query>
           <earliest>0</earliest>
           <sampleRatio>1</sampleRatio>
