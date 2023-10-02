@@ -1,6 +1,6 @@
 <dashboard version="1.1" theme="dark" script="table_cell_color.js">
   <label>Foundational Systems Security Posture</label>
-  <description>v1.10</description>
+  <description>v1.14</description>
   
   <init>
     <set token="tkn_selected_system">*</set>
@@ -250,7 +250,22 @@
     </html>
   </row>
 
-  <row>  
+  <row>
+    <panel depends="$never_show$">
+      <table>
+        <search>
+          <query>
+  | makeresults
+  | eval app=$env:app|s$
+  | table app
+          </query>
+          <done>
+            <set token="tkn_current_app">$result.app$</set>
+          </done>
+        </search>
+      </table>
+    </panel>
+
     <panel>
       <title>$tkn_selected_system_name$ Control Details &amp; Scores</title>
       <table id="table2">
@@ -262,12 +277,12 @@ index="ssphp_metrics_summary" ssphp.use_case.id="$tkn_selected_system$*"
 
 | eval Score='ssphp.score.score'."|".'ssphp.color'
 
-| table ```ssphp.use_case.id, ```ssphp.use_case.display.title, Score, ssphp.use_case.display.short_description, ssphp.cis_benchmark.control.title, ssphp.use_case.description
-| rename ssphp.use_case.id as "Use Case ID",
-         ssphp.use_case.display.title as "Title",
+| rename ssphp.use_case.display.title as "Title",
          ssphp.use_case.display.short_description as "Name",
          ssphp.use_case.description as "Description",
          ssphp.cis_benchmark.control.title as "Control Title"
+
+| table "Title", Score, "Name", "Description", "Control Title", ssphp.use_case.id
 
 | sort 0 Title
           </query>
@@ -281,6 +296,11 @@ index="ssphp_metrics_summary" ssphp.use_case.id="$tkn_selected_system$*"
         <option name="rowNumbers">false</option>
         <option name="totalsRow">false</option>
         <option name="wrap">true</option>
+        <fields>"Title", Score, "Name", "Description", "Control Title", ssphp.use_case.id</fields>
+        <option name="drilldown">row</option>
+        <drilldown>
+          <link target="_blank">/app/$tkn_current_app$/ssphp_foundational_systems_drilldown?tkn_use_case_id=$row.ssphp.use_case.id$</link>
+        </drilldown>
       </table>
     </panel>
   </row>
