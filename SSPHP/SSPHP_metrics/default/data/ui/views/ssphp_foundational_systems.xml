@@ -1,6 +1,6 @@
 <dashboard version="1.1" theme="dark" script="table_cell_color.js">
   <label>Foundational Systems Security Posture</label>
-  <description>v1.14</description>
+  <description>v1.20</description>
   
   <init>
     <set token="tkn_selected_system">*</set>
@@ -15,7 +15,7 @@
   <row>
     <panel>
       <single>
-        <title>Overall</title>
+        <title>Overall Score</title>
         <search>
           <query>
             `ssphp_metrics_index` ssphp.use_case.id="*_000" earliest=-2d@d latest=now
@@ -248,6 +248,16 @@
          }
       </style>
     </html>
+    <html>
+      <style>
+        #table2 th:nth-child(1) {
+          width: 200px;
+        }
+        #table2 th:nth-child(3) {
+          width: 350px;
+        }
+      </style>
+    </html>
   </row>
 
   <row>
@@ -275,14 +285,13 @@ index="ssphp_metrics_summary" ssphp.use_case.id="$tkn_selected_system$*"
 | dedup ssphp.use_case.id
 | search ssphp.use_case.id!="*_000" AND ssphp.use_case.id!="*rollup*" AND ssphp.use_case.id!="m365_001" AND ssphp.use_case.id!="m365_002" AND ssphp.use_case.id!="*6_1" AND ssphp.use_case.id!="*6_2"
 
-| eval Score='ssphp.score.score'."|".'ssphp.color'
+| eval Score='ssphp.score.score'."|".'ssphp.color',
+       Description=mvappend('ssphp.use_case.description','ssphp.cis_benchmark.control.title')
 
 | rename ssphp.use_case.display.title as "Title",
-         ssphp.use_case.display.short_description as "Name",
-         ssphp.use_case.description as "Description",
-         ssphp.cis_benchmark.control.title as "Control Title"
+         ssphp.use_case.display.short_description as "Name"
 
-| table "Title", Score, "Name", "Description", "Control Title", ssphp.use_case.id
+| table "Title", Score, "Name", "Description", ssphp.use_case.id, ssphp.use_case.description,ssphp.cis_benchmark.control.title
 
 | sort 0 Title
           </query>
@@ -296,7 +305,7 @@ index="ssphp_metrics_summary" ssphp.use_case.id="$tkn_selected_system$*"
         <option name="rowNumbers">false</option>
         <option name="totalsRow">false</option>
         <option name="wrap">true</option>
-        <fields>"Title", Score, "Name", "Description", "Control Title"</fields>
+        <fields>"Title", Score, "Name", "Description"</fields>
         <option name="drilldown">row</option>
         <drilldown>
           <link target="_blank">/app/$tkn_current_app$/ssphp_foundational_systems_drilldown?tkn_use_case_id=$row.ssphp.use_case.id$</link>
