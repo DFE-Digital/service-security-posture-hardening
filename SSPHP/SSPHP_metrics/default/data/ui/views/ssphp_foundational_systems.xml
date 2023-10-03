@@ -296,7 +296,7 @@ index="ssphp_metrics_summary" ssphp.use_case.id="$tkn_selected_system$*"
         <option name="rowNumbers">false</option>
         <option name="totalsRow">false</option>
         <option name="wrap">true</option>
-        <fields>"Title", Score, "Name", "Description", "Control Title", ssphp.use_case.id</fields>
+        <fields>"Title", Score, "Name", "Description", "Control Title"</fields>
         <option name="drilldown">row</option>
         <drilldown>
           <link target="_blank">/app/$tkn_current_app$/ssphp_foundational_systems_drilldown?tkn_use_case_id=$row.ssphp.use_case.id$</link>

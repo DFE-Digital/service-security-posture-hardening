@@ -1,6 +1,6 @@
 <dashboard theme="dark" version="1.1" script="js/addtags.js">
   <label>Foundational Systems Security Posture Drilldown</label>
-  <description>v1.13</description>
+  <description>v1.20</description>
   
   <init>
     <set token="c_red">"0xFF0000"</set>
@@ -71,12 +71,26 @@
     [| search index="ssphp_metrics_summary" ssphp.use_case.id=$tkn_use_case_id$
       | stats max(SSPHP_RUN) as SSPHP_RUN
       | return SSPHP_RUN]
-  | table ssphp*
+  | rex field=ssphp.use_case.display.title "(?&lt;fs&gt;[^\s]*)\s*(?&lt;notfs&gt;.*)$"
+  | fillnull value="-" ssphp.microsoft.desciption, 
+                      ssphp.microsoft.implementation_status, 
+                      ssphp.cis_benchmark.control.title, 
+                      ssphp.cis_benchmark.control.description, 
+                      ssphp.cis_benchmark.control.rationale, 
+                      ssphp.cis_benchmark.control.impact,
+                      ssphp.cis_benchmark.document.name,
+                      ssphp.cis_benchmark.document.version,
+                      ssphp.cis_benchmark.version,
+                      ssphp.cis_benchmark.controls.v8,
+                      ssphp.cis_benchmark.control.profile_applicability
+  | table ssphp*, fs, notfs
           </query>
           <earliest>-2d@d</earliest>
           <latest>now</latest>
           <sampleRatio>1</sampleRatio>
           <done>
+            <set token="tkn_fs">$result.fs$</set>
+            <set token="tkn_notfs">$result.notfs$</set>
             <set token="tkn_score">$result.ssphp.score.score$</set>
             <set token="tkn_color">$result.ssphp.color$</set>
             <set token="tkn_display_title">$result.ssphp.use_case.display.title$</set>
@@ -110,9 +124,10 @@
   <row>
     <panel>
       <html>
-        <span class="header_r1" style="color:	darkcyan">$tkn_display_title$</span>
+        <span class="header_r1" style="color:	yellow">$tkn_fs$</span><span class="header_r1" style="color: darkcyan">  $tkn_notfs$</span>
         <span class="header_r2">$tkn_display_short_description$</span>
         <br></br>
+        <span class="header_r1" style="color:	darkcyan">CIS Title</span>
         <span class="header_r2">$tkn_cis_title$</span>
       </html>
     </panel>
@@ -203,4 +218,54 @@
     </panel>
   </row>
 
+
+    <!-- ## Panel to find the name of the macro that the savedsearch uses to get it's data. Some savedsearches re-use a different macro ## -->
+  <row>
+    <panel depends="$never_show$">
+      <table>
+        <title>test</title>
+        <search>
+          <query>
+  | makeresults
+  | eval uc_id=$tkn_use_case_id|s$, uc_id="ssphp_use_case_".uc_id
+  | fields uc_id
+
+  | join type=outer uc_id
+    [| rest /servicesNS/-/-/saved/searches splunk_server=local
+      | rename title as uc_id
+      | search eai:acl.app="SSPHP_metrics" AND uc_id="ssphp_use_case_*"
+      | rex field=search "[^`]*`(?&lt;macro&gt;[^`]*)`"
+      | table uc_id, macro, search]
+  | table uc_id, macro
+          </query>
+          <done>
+            <set token="tkn_use_case_macro">$result.macro$</set>
+          </done>
+        </search>
+      </table>
+    </panel>
+
+    <panel>
+      <title>Underlying Data</title>
+      <table>
+        <search>
+          <query>
+| `$tkn_use_case_macro$`
+| fields - _raw, host, index, eventtype, linecount, max_time, punct, splunk_server, splunk_server_group, tag, "tag::eventtype", "tag::sourcetype", sourcetype, source
+| table *
+          </query>
+          <earliest>0</earliest>
+          <latest>now</latest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="count">100</option>
+        <option name="dataOverlayMode">none</option>
+        <option name="drilldown">none</option>
+        <option name="percentagesRow">false</option>
+        <option name="rowNumbers">false</option>
+        <option name="totalsRow">false</option>
+        <option name="wrap">true</option>
+      </table>
+    </panel>
+  </row>
 </dashboard>
