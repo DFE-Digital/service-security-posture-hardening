@@ -6,7 +6,6 @@ use tokio::sync::Mutex;
 use bytes::Bytes;
 use serde::Deserialize;
 use serde::Serialize;
-use tokio::sync::oneshot;
 use tokio::sync::oneshot::Sender;
 use warp::{http::Response, Filter};
 
@@ -17,6 +16,7 @@ use crate::powershell::install_powershell;
 use crate::splunk::set_ssphp_run;
 use crate::splunk::Splunk;
 use anyhow::Result;
+use memory_stats::memory_stats;
 
 // Request headers
 // {
@@ -127,6 +127,18 @@ pub(crate) async fn start_server(tx: Sender<()>) -> Result<()> {
                         Err(e) => format!("{:?}", e),
                     };
                     response.logs.push(result);
+                    if let Some(usage) = memory_stats() {
+                        println!(
+                            "Current physical memory usage: {}",
+                            usage.physical_mem / 1_000_000
+                        );
+                        println!(
+                            "Current virtual memory usage: {}",
+                            usage.virtual_mem / 1_000_000
+                        );
+                    } else {
+                        println!("Couldn't get the current memory usage :(");
+                    }
                     response
                 }
             }
@@ -193,6 +205,18 @@ pub(crate) async fn start_server(tx: Sender<()>) -> Result<()> {
                         Err(e) => format!("{:?}", e),
                     };
                     response.logs.push(result);
+                    if let Some(usage) = memory_stats() {
+                        println!(
+                            "Current physical memory usage: {}",
+                            usage.physical_mem / 1_000_000
+                        );
+                        println!(
+                            "Current virtual memory usage: {}",
+                            usage.virtual_mem / 1_000_000
+                        );
+                    } else {
+                        println!("Couldn't get the current memory usage :(");
+                    }
                     response
                 }
             }

@@ -70,6 +70,25 @@ impl HecEvent {
 
 // fn logger() {}
 
+pub fn to_hec_events<T: Serialize>(
+    collection: &[T],
+    source: &str,
+    sourcetype: &str,
+) -> Result<Vec<HecEvent>> {
+    let (ok, err): (Vec<_>, Vec<_>) = collection
+        .iter()
+        .map(|u| HecEvent::new(u, source, sourcetype))
+        .partition_result();
+    if !err.is_empty() {
+        return Err(anyhow!(err
+            .iter()
+            .map(|err| format!("{:?}", err))
+            .collect::<Vec<String>>()
+            .join("\n")));
+    }
+    Ok(ok)
+}
+
 pub trait ToHecEvents<'a> {
     type Item: Serialize;
     fn to_hec_eventss(&'a self) -> Result<Vec<HecEvent>> {
