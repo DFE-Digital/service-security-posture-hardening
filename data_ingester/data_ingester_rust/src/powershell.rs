@@ -86,7 +86,7 @@ pub struct ExchangeOrganizationConfig(serde_json::Value);
 
 impl ToHecEvent for ExchangeOrganizationConfig {
     fn source() -> &'static str {
-        "msgraph"
+        "powershell:ExchangeOnline:Get-OrganizationConfig"
     }
 
     fn sourcetype() -> &'static str {
@@ -106,7 +106,7 @@ pub struct SafeLinksPolicy(serde_json::Value);
 
 impl ToHecEvent for SafeLinksPolicy {
     fn source() -> &'static str {
-        "msgraph"
+        "powershell:ExchangeOnline:Get-SafeLinksPolicy"
     }
 
     fn sourcetype() -> &'static str {
@@ -126,7 +126,7 @@ pub struct SharingPolicy(serde_json::Value);
 
 impl ToHecEvent for SharingPolicy {
     fn source() -> &'static str {
-        "msgraph"
+        "powershell:ExchangeOnline:Get-SharingPolicy"
     }
 
     fn sourcetype() -> &'static str {
@@ -148,7 +148,7 @@ pub struct MalwareFilterPolicy(serde_json::Value);
 
 impl ToHecEvent for MalwareFilterPolicy {
     fn source() -> &'static str {
-        "msgraph"
+        "powershell:ExchangeOnline:Get-MalwareFilterPolicy"
     }
 
     fn sourcetype() -> &'static str {
@@ -170,7 +170,7 @@ pub struct HostedOutboundSpamFilterPolicy(serde_json::Value);
 
 impl ToHecEvent for HostedOutboundSpamFilterPolicy {
     fn source() -> &'static str {
-        "msgraph"
+        "powershell:ExchangeOnline:Get-HostedOutboundSpamFilterPolicy"
     }
 
     fn sourcetype() -> &'static str {
@@ -190,7 +190,7 @@ pub struct AntiPhishPolicy(serde_json::Value);
 
 impl ToHecEvent for AntiPhishPolicy {
     fn source() -> &'static str {
-        "msgraph"
+        "powershell:ExchangeOnline:Get-AntiPhishPolicy"
     }
 
     fn sourcetype() -> &'static str {
@@ -212,7 +212,7 @@ pub struct AdminAuditLogConfig(serde_json::Value);
 
 impl ToHecEvent for AdminAuditLogConfig {
     fn source() -> &'static str {
-        "msgraph"
+        "powershell:ExchangeOnline:Get-AdminAuditLogConfig"
     }
 
     fn sourcetype() -> &'static str {
@@ -232,7 +232,7 @@ pub struct OwaMailboxPolicy(serde_json::Value);
 
 impl ToHecEvent for OwaMailboxPolicy {
     fn source() -> &'static str {
-        "msgraph"
+        "powershell:ExchangeOnline:Get-OwaMailboxPolicy"
     }
 
     fn sourcetype() -> &'static str {
