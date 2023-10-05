@@ -93,7 +93,7 @@ impl AzureRest {
 
         for entry in results.iter() {
             match entry {
-                ReturnType::Collection { value, next_link } => {
+                ReturnType::Collection { value, next_link: _ } => {
                     for server in value.iter() {
                         let url = format!(
                             "https://management.azure.com{}/encryptionProtector?api-version=2022-05-01-preview",
