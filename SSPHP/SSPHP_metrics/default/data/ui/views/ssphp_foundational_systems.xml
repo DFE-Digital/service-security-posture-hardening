@@ -1,6 +1,6 @@
 <dashboard version="1.1" theme="dark" script="table_cell_color.js">
   <label>Foundational Systems Security Posture</label>
-  <description>v1.20</description>
+  <description>v2.01</description>
   
   <init>
     <set token="tkn_selected_system">*</set>
@@ -26,12 +26,12 @@
              | eval search_text="(".mvjoin(search_text," OR ").")"
              | return $search_text]
         | regex ssphp.use_case.id="^[^_]*_[^_]*$"
-        | fields ssphp.use_case.id, ssphp.score.score, ssphp.color
+        | fields ssphp.use_case.id, ssphp.score.score, ssphp.score.color
         | sort 0 ssphp.use_case.id
-        | eval aad_score=if('ssphp.use_case.id'="aad_000",'ssphp.score.score',""), aad_color=if('ssphp.use_case.id'="aad_000",'ssphp.color',""),
-               azure_score=if('ssphp.use_case.id'="azure_000",'ssphp.score.score',""), azure_color=if('ssphp.use_case.id'="azure_000",'ssphp.color',""),
-               dns_score=if('ssphp.use_case.id'="dns_000",'ssphp.score.score',""), dns_color=if('ssphp.use_case.id'="dns_000",'ssphp.color',""),
-               m365_score=if('ssphp.use_case.id'="m365_000",'ssphp.score.score',""), m365_color=if('ssphp.use_case.id'="m365_000",'ssphp.color',"")
+        | eval aad_score=if('ssphp.use_case.id'="aad_000",'ssphp.score.score',""), aad_color=if('ssphp.use_case.id'="aad_000",'ssphp.score.color',""),
+               azure_score=if('ssphp.use_case.id'="azure_000",'ssphp.score.score',""), azure_color=if('ssphp.use_case.id'="azure_000",'ssphp.score.color',""),
+               dns_score=if('ssphp.use_case.id'="dns_000",'ssphp.score.score',""), dns_color=if('ssphp.use_case.id'="dns_000",'ssphp.score.color',""),
+               m365_score=if('ssphp.use_case.id'="m365_000",'ssphp.score.score',""), m365_color=if('ssphp.use_case.id'="m365_000",'ssphp.score.color',"")
         | stats values(aad_score) as aad_score,
                 values(azure_score) as azure_score,
                 values(dns_score) as dns_score,
@@ -75,8 +75,8 @@
       [| search `ssphp_metrics_index` ssphp.use_case.id="azure_000" earliest=-2d@d latest=now
        | stats max(SSPHP_RUN) as SSPHP_RUN
        | return SSPHP_RUN]
-  | fields _time, ssphp.use_case.id, ssphp.use_case.display.title, ssphp.score.score, ssphp.color
-  | rename ssphp.use_case.display.title as Title, ssphp.score.score as Score, ssphp.color as Colour
+  | fields _time, ssphp.use_case.id, ssphp.use_case.title, ssphp.score.score, ssphp.score.color
+  | rename ssphp.use_case.title as Title, ssphp.score.score as Score, ssphp.score.color as Colour
   | table Score, Colour
           </query>
         </search>
@@ -103,8 +103,8 @@
       [| search `ssphp_metrics_index` ssphp.use_case.id="aad_000" earliest=-2d@d latest=now
        | stats max(SSPHP_RUN) as SSPHP_RUN
        | return SSPHP_RUN]
-  | fields _time, ssphp.use_case.id, ssphp.use_case.display.title, ssphp.score.score, ssphp.color
-  | rename ssphp.use_case.display.title as Title, ssphp.score.score as Score, ssphp.color as Colour
+  | fields _time, ssphp.use_case.id, ssphp.use_case.title, ssphp.score.score, ssphp.score.color
+  | rename ssphp.use_case.title as Title, ssphp.score.score as Score, ssphp.score.color as Colour
   | table Score, Colour
           </query>
         </search>
@@ -131,8 +131,8 @@
       [| search `ssphp_metrics_index` ssphp.use_case.id="aad_000" earliest=-2d@d latest=now
        | stats max(SSPHP_RUN) as SSPHP_RUN
        | return SSPHP_RUN]
-  | fields _time, ssphp.use_case.id, ssphp.use_case.display.title, ssphp.score.score, ssphp.color
-  | rename ssphp.use_case.display.title as Title, ssphp.score.score as Score, ssphp.color as Colour
+  | fields _time, ssphp.use_case.id, ssphp.use_case.title, ssphp.score.score, ssphp.score.color
+  | rename ssphp.use_case.title as Title, ssphp.score.score as Score, ssphp.score.color as Colour
   | table Score, Colour
           </query>
         </search>
@@ -159,8 +159,8 @@
       [| search `ssphp_metrics_index` ssphp.use_case.id="aad_000" earliest=-2d@d latest=now
        | stats max(SSPHP_RUN) as SSPHP_RUN
        | return SSPHP_RUN]
-  | fields _time, ssphp.use_case.id, ssphp.use_case.display.title, ssphp.score.score, ssphp.color
-  | rename ssphp.use_case.display.title as Title, ssphp.score.score as Score, ssphp.color as Colour
+  | fields _time, ssphp.use_case.id, ssphp.use_case.title, ssphp.score.score, ssphp.score.color
+  | rename ssphp.use_case.title as Title, ssphp.score.score as Score, ssphp.score.color as Colour
   | table Score, Colour
           </query>
         </search>
@@ -205,7 +205,7 @@
                     uc="006","Storage"),
        ssphp.use_case.id="M365 ".uc." : ".uc_desc
 
-| stats values(ssphp.score.score) as score, values(ssphp.color) as color by ssphp.use_case.id
+| stats values(ssphp.score.score) as score, values(ssphp.score.color) as color by ssphp.use_case.id
 | eval score=score."|".color
 | fields ssphp.use_case.id, score
 
@@ -285,17 +285,17 @@ index="ssphp_metrics_summary" ssphp.use_case.id="$tkn_selected_system$*"
 | dedup ssphp.use_case.id
 | search ssphp.use_case.id!="*_000" AND ssphp.use_case.id!="*rollup*" AND ssphp.use_case.id!="m365_001" AND ssphp.use_case.id!="m365_002" AND ssphp.use_case.id!="*6_1" AND ssphp.use_case.id!="*6_2"
 
-| eval Score='ssphp.score.score'."|".'ssphp.color',
+| eval Score='ssphp.score.score'."|".'ssphp.score.color',
        Description=mvappend('ssphp.use_case.description','ssphp.cis_benchmark.control.title')
 
-| rename ssphp.use_case.display.title as "Title",
-         ssphp.use_case.display.short_description as "Name"
+| rename ssphp.use_case.title as "Title",
+         ssphp.use_case.short_description as "Name"
 
-| table "Title", Score, "Name", "Description", ssphp.use_case.id, ssphp.use_case.description,ssphp.cis_benchmark.control.title
+| table "Title", Score, "Name", "Description", ssphp.use_case.id, ssphp.use_case.description, ssphp.cis_benchmark.control.title
 
 | sort 0 Title
           </query>
-          <earliest>0</earliest>
+          <earliest>-1d@d</earliest>
           <sampleRatio>1</sampleRatio>
         </search>
         <option name="count">100</option>
