@@ -139,21 +139,13 @@ pub struct UserConditionalAccessPolicy<'a> {
     state: Option<&'a str>,
 }
 
+impl<'a> UserConditionalAccessPolicy<'a> {}
+
 impl ConditionalAccessPolicies {
     pub fn new() -> Self {
         Self { value: Vec::new() }
     }
 }
-
-// impl ToHecEvents<'_> for ConditionalAccessPolicies {
-//     fn source() -> &'static str {
-//         "msgraph"
-//     }
-
-//     fn sourcetype() -> &'static str {
-//         "msgraph:conditional_access_policy"
-//     }
-// }
 
 impl IntoIterator for ConditionalAccessPolicies {
     type Item = ConditionalAccessPolicy;

@@ -9,6 +9,8 @@ use crate::splunk::ToHecEvents;
 use serde::Deserialize;
 use serde::Serialize;
 use serde_with::skip_serializing_none;
+use std::collections::HashMap;
+use std::ops::Deref;
 
 // https://learn.microsoft.com/en-us/graph/api/resources/user?view=graph-rest-1.0
 #[skip_serializing_none]
@@ -16,6 +18,7 @@ use serde_with::skip_serializing_none;
 #[serde(rename_all = "camelCase")]
 pub struct User<'a> {
     pub(crate) id: String,
+    // #[serde(skip_serializing_if = "Vec::is_empty")]
     assigned_plans: Option<Vec<AssignedPlan>>,
     // business_phones: Option<Vec<String>>,
     pub(crate) display_name: Option<String>,
@@ -35,8 +38,26 @@ pub struct User<'a> {
     conditional_access_policies: Option<Vec<UserConditionalAccessPolicy<'a>>>,
     // TODO!
     is_privileged: Option<bool>,
+    // TODO! This might expand the json too much?
+    pub azure_roles: Option<UserAzureRoles>,
     // TODO!
     // assigned_plans: Option<???>,
+}
+
+/// Used to represent an AAD users roles in Azure (Cloud) subscriptions
+#[derive(Debug, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct UserAzureRoles {
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub privileged_roles: Vec<UserAzureRole>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub roles: Vec<UserAzureRole>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Default)]
+pub struct UserAzureRole {
+    pub id: String,
+    pub role_name: String,
 }
 
 #[skip_serializing_none]
@@ -79,6 +100,7 @@ impl<'a> User<'a> {
             transitive_member_of: None,
             conditional_access_policies: None,
             is_privileged: None,
+            azure_roles: None,
         }
     }
 
@@ -127,6 +149,23 @@ pub struct Users<'a> {
     pub value: Vec<User<'a>>,
 }
 
+#[derive(Debug, Serialize, Deserialize, Default)]
+pub struct UsersMap<'a>(pub HashMap<String, User<'a>>);
+
+impl<'a> ToHecEvents<'a> for UsersMap<'a> {
+    type Item = User<'a>;
+    fn source() -> &'static str {
+        "msgraph"
+    }
+
+    fn sourcetype() -> &'static str {
+        "SSPHP.AAD.user"
+    }
+    fn collection(&'a self) -> Box<dyn Iterator<Item = &Self::Item> + 'a> {
+        Box::new(self.0.values())
+    }
+}
+
 impl<'a> Users<'a> {
     pub fn new() -> Self {
         Self { value: Vec::new() }
@@ -160,12 +199,11 @@ impl<'a> ToHecEvents<'a> for Users<'a> {
     fn sourcetype() -> &'static str {
         "SSPHP.AAD.user"
     }
-    fn collection(&'a self) -> &'a [User<'a>] {
-        &self.value[..]
+    fn collection(&'a self) -> Box<dyn Iterator<Item = &Self::Item> + 'a> {
+        Box::new(self.value.iter())
     }
 }
 
-use std::ops::Deref;
 impl<'a> Deref for Users<'a> {
     type Target = [User<'a>];
 
