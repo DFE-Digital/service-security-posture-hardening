@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use anyhow::Result;
+
 use azure_identity::DefaultAzureCredential;
 use azure_security_keyvault::KeyvaultClient;
 
@@ -19,9 +20,6 @@ pub async fn get_keyvault_secrets(keyvault_name: &str) -> Result<Secrets> {
     let credential = Arc::new(DefaultAzureCredential::default());
     eprintln!("KeyVault Secret Client created");
     let secret_client = KeyvaultClient::new(&keyvault_url, credential.clone())?.secret_client();
-
-    // eprintln!("KeyVault Certificate Client created");
-    // let certificate_client = KeyvaultClient::new(&keyvault_url, credential)?.certificate_client();
 
     Ok(Secrets {
         splunk_host: secret_client.get("splunk-host").await?.value,

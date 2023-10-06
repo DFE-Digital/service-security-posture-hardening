@@ -7,6 +7,8 @@ edition = "2021"
 
 [dependencies]
 graph-rs-sdk = { git = "https://github.com/akinnane/graph-rs-sdk.git", features = ["rustls-tls"] }
+# graph-rs-sdk = { path = "/home/a/repos/graph-rs-sdk", features = ["rustls-tls"] }
+# graph-http = { path = "/home/a/repos/graph-rs-sdk/graph-http", features = ["rustls-tls"] }
 tokio = { version = "1.25.0", features = ["full"] }
 serde_json = "*"
 reqwest = {version = "*", features = ["rustls-tls"]}
@@ -15,14 +17,19 @@ futures = "*"
 serde_with = "*"
 itertools = "*"
 azure_security_keyvault = { version = "*", default-features = false,  features = ["enable_reqwest_rustls"]}
-azure_identity = { version = "*", default-features = false, features = ["enable_reqwest_rustls"]}
+azure_identity = { version = "*", default-features = false, features = ["enable_reqwest_rustls", "client_certificate"]}
 azure_core = { version = "*", default-features = false, features = ["enable_reqwest_rustls"]}
+# azure_mgmt_security = { version = "*", default-features = false, features = ["enable_reqwest_rustls", "package-composite-v2", "package-dotnet-sdk"]}
+azure_mgmt_subscription = { version = "*", default-features = false, features = ["enable_reqwest_rustls", "package-2021-10"]}
 warp = "*"
 openssl-sys = {version = "*", features=["vendored"]}
 bytes = "*"
 hyper = "*"
 hostname = "*"
 anyhow = { version = "*", features=["backtrace"]}
+url = "*"
+dyn-fmt = "*"
+memory-stats = "1.0.0"
 
 [dependencies.uuid]
 version = "1.4.1"

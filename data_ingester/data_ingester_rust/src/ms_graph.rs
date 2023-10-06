@@ -3,7 +3,6 @@ use crate::conditional_access_policies::ConditionalAccessPolicies;
 use crate::directory_roles::DirectoryRoleTemplates;
 use crate::directory_roles::DirectoryRoles;
 use crate::groups::Groups;
-use crate::keyvault::get_keyvault_secrets;
 use crate::keyvault::Secrets;
 use crate::powershell::run_powershell_get_admin_audit_log_config;
 use crate::powershell::run_powershell_get_anti_phish_policy;
