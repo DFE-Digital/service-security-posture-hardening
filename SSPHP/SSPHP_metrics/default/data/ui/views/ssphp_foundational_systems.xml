@@ -1,6 +1,6 @@
-<dashboard version="1.1" theme="dark" script="table_cell_color.js">
+<dashboard version="1.1" theme="dark" script="js/table_cell_color.js">
   <label>Foundational Systems Security Posture</label>
-  <description>v2.01</description>
+  <description>v2.03</description>
   
   <init>
     <set token="tkn_selected_system">*</set>
@@ -224,6 +224,26 @@
 
 
 <!-- ################### Main Data Table ################### --> 
+  
+  
+  <row>
+    <panel>
+      <input type="checkbox" token="tkn_sd" searchWhenChanged="true">
+        <label>Show</label>
+        <choice value="Y">Only Doomsday Controls</choice>
+        <initialValue>Y</initialValue>
+        <change>
+          <condition value="Y">
+            <set token="tkn_show_doomsday">ssphp.use_case.doomsday="1"</set>
+          </condition>
+          <condition>
+            <set token="tkn_show_doomsday">ssphp.use_case.doomsday="*"</set>
+          </condition>
+        </change>
+      </input>
+    </panel>
+  </row>
+
 
   <row depends="$never_show$">
     <html>
@@ -281,7 +301,7 @@
       <table id="table2">
         <search>
           <query>
-index="ssphp_metrics_summary" ssphp.use_case.id="$tkn_selected_system$*"
+index="ssphp_metrics_summary" ssphp.use_case.id="$tkn_selected_system$*" $tkn_show_doomsday$
 | dedup ssphp.use_case.id
 | search ssphp.use_case.id!="*_000" AND ssphp.use_case.id!="*rollup*" AND ssphp.use_case.id!="m365_001" AND ssphp.use_case.id!="m365_002" AND ssphp.use_case.id!="*6_1" AND ssphp.use_case.id!="*6_2"
 
@@ -290,8 +310,11 @@ index="ssphp_metrics_summary" ssphp.use_case.id="$tkn_selected_system$*"
 
 | rename ssphp.use_case.title as "Title",
          ssphp.use_case.short_description as "Name"
+         ssphp.use_case.doomsday as "Doomsday Control"
 
-| table "Title", Score, "Name", "Description", ssphp.use_case.id, ssphp.use_case.description, ssphp.cis_benchmark.control.title
+| search Score=*
+
+| table "Title", Score, "Name", "Description", "Doomsday Control", ssphp.use_case.id, ssphp.use_case.description, ssphp.cis_benchmark.control.title
 
 | sort 0 Title
           </query>
@@ -305,7 +328,7 @@ index="ssphp_metrics_summary" ssphp.use_case.id="$tkn_selected_system$*"
         <option name="rowNumbers">false</option>
         <option name="totalsRow">false</option>
         <option name="wrap">true</option>
-        <fields>"Title", Score, "Name", "Description"</fields>
+        <fields>"Title", Score, "Name", "Description", "Doomsday Control"</fields>
         <option name="drilldown">row</option>
         <drilldown>
           <link target="_blank">/app/$tkn_current_app$/ssphp_foundational_systems_drilldown?tkn_use_case_id=$row.ssphp.use_case.id$</link>
