@@ -1,26 +1,39 @@
+use azure_mgmt_authorization::{
+    models::{RoleAssignment, RoleDefinition},
+    package_2022_04_01::Client as ClientAuthorization,
+};
 use azure_mgmt_subscription::{
     models::Subscription, package_2021_10::Client as ClientSubscription,
 };
 
 use anyhow::{Context, Result};
 use azure_core::auth::TokenCredential;
-use azure_identity::DefaultAzureCredential;
+use azure_identity::ClientSecretCredential;
+use azure_identity::TokenCredentialOptions;
 use dyn_fmt::AsStrFormatExt;
 use futures::stream::StreamExt;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 use url::Url;
 
 use crate::splunk::HecEvent;
 
-struct AzureRest {
-    credential: Arc<DefaultAzureCredential>,
+pub struct AzureRest {
+    credential: Arc<ClientSecretCredential>,
     subscriptions: Vec<Subscription>,
 }
 
 impl AzureRest {
-    pub async fn new() -> Result<Self> {
-        let credential = Arc::new(DefaultAzureCredential::default());
+    pub async fn new(client_id: &str, client_secret: &str, tenant_id: &str) -> Result<Self> {
+        //let credential = Arc::new(DefaultAzureCredential::default());
+        let http_client = azure_core::new_http_client();
+        let credential = Arc::new(ClientSecretCredential::new(
+            http_client,
+            tenant_id.to_owned(),
+            client_id.to_owned(),
+            client_secret.to_owned(),
+            TokenCredentialOptions::default(),
+        ));
         let mut s = Self {
             credential,
             subscriptions: vec![],
@@ -53,16 +66,57 @@ impl AzureRest {
         Ok(results)
     }
 
-    pub async fn get_users(&self) -> Result<Vec<HecEvent>> {
-        let url_template = "https://graph.microsoft.com/v1.0/users";
-        let results = self.rest_request_subscription_iter(url_template).await?;
-        Ok(results)
-    }
-
     pub async fn get_microsoft_authorization_role_definitions(&self) -> Result<Vec<HecEvent>> {
         let url_template = "https://management.azure.com/subscriptions/{}/providers/Microsoft.Authorization/roleDefinitions?api-version=2017-05-01";
         let results = self.rest_request_subscription_iter(url_template).await?;
         Ok(results)
+    }
+
+    pub async fn azure_role_definitions(&self) -> Result<HashMap<String, RoleDefinition>> {
+        let client = ClientAuthorization::builder(self.credential.clone()).build();
+        let mut collection = HashMap::new();
+        for sub in self.subscriptions.iter() {
+            let sub_id = sub.subscription_id.as_ref().context("no sub id")?;
+            let scope = format!("/subscriptions/{}", sub_id);
+            let mut stream = client.role_definitions_client().list(scope).into_stream();
+            while let Some(results) = stream.next().await {
+                for item in results?.value {
+                    collection.insert(
+                        item.id
+                            .as_ref()
+                            .context("No ID on role definition")?
+                            .to_owned(),
+                        item,
+                    );
+                }
+            }
+        }
+        Ok(collection)
+    }
+
+    pub async fn azure_role_assignments(&self) -> Result<HashMap<String, RoleAssignment>> {
+        let client = ClientAuthorization::builder(self.credential.clone()).build();
+        let mut collection = HashMap::new();
+        for sub in self.subscriptions.iter() {
+            let sub_id = sub.subscription_id.as_ref().context("no sub id")?;
+            let scope = format!("/subscriptions/{}", sub_id);
+            let mut stream = client
+                .role_assignments_client()
+                .list_for_scope(scope)
+                .into_stream();
+            while let Some(results) = stream.next().await {
+                for item in results?.value {
+                    collection.insert(
+                        item.id
+                            .as_ref()
+                            .context("No ID on role assignment")?
+                            .to_owned(),
+                        item,
+                    );
+                }
+            }
+        }
+        Ok(collection)
     }
 
     pub async fn get_microsoft_authorization_role_assignments(&self) -> Result<Vec<HecEvent>> {
@@ -93,7 +147,10 @@ impl AzureRest {
 
         for entry in results.iter() {
             match entry {
-                ReturnType::Collection { value, next_link: _ } => {
+                ReturnType::Collection {
+                    value,
+                    next_link: _,
+                } => {
                     for server in value.iter() {
                         let url = format!(
                             "https://management.azure.com{}/encryptionProtector?api-version=2022-05-01-preview",
@@ -288,7 +345,12 @@ mod test {
             .unwrap();
         let splunk = Splunk::new(&secrets.splunk_host, &secrets.splunk_token)?;
         set_ssphp_run()?;
-        let azure_rest = AzureRest::new().await?;
+        let azure_rest = AzureRest::new(
+            &secrets.azure_client_id,
+            &secrets.azure_client_secret,
+            &secrets.azure_tenant_id,
+        )
+        .await?;
 
         Ok((azure_rest, splunk))
     }
@@ -316,16 +378,6 @@ mod test {
         let collection = azure_rest.get_security_center_built_in().await?;
         assert!(collection.len() > 0);
         splunk.send_batch(&collection[..]).await?;
-        Ok(())
-    }
-
-    #[ignore]
-    #[tokio::test]
-    async fn test_azureclient_get_users() -> Result<()> {
-        let (azure_rest, splunk) = setup().await?;
-        let collection = azure_rest.get_users().await?;
-        splunk.send_batch(&collection[..]).await?;
-        assert!(collection.len() > 0);
         Ok(())
     }
 

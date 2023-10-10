@@ -21,6 +21,7 @@ azure_identity = { version = "*", default-features = false, features = ["enable_
 azure_core = { version = "*", default-features = false, features = ["enable_reqwest_rustls"]}
 # azure_mgmt_security = { version = "*", default-features = false, features = ["enable_reqwest_rustls", "package-composite-v2", "package-dotnet-sdk"]}
 azure_mgmt_subscription = { version = "*", default-features = false, features = ["enable_reqwest_rustls", "package-2021-10"]}
+azure_mgmt_authorization = { version = "*", default-features = false, features = ["enable_reqwest_rustls", "package-2022-04-01"]}
 warp = "*"
 openssl-sys = {version = "*", features=["vendored"]}
 bytes = "*"
@@ -30,7 +31,7 @@ anyhow = { version = "*", features=["backtrace"]}
 url = "*"
 dyn-fmt = "*"
 memory-stats = "1.0.0"
-
+regex = "*"
 [dependencies.uuid]
 version = "1.4.1"
 features = [

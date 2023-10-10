@@ -412,14 +412,18 @@ impl ToHecEvent for IdentitySecurityDefaultsEnforcementPolicy {
 
 #[cfg(test)]
 mod test {
-    use std::env;
+    use std::{collections::HashMap, env};
 
     use super::{login, MsGraph};
     use crate::{
-        keyvault::get_keyvault_secrets,
-        splunk::{set_ssphp_run, HecEvent, Splunk, ToHecEvent},
+        azure_rest::AzureRest,
+        keyvault::{get_keyvault_secrets, Secrets},
+        splunk::{set_ssphp_run, HecEvent, Splunk, ToHecEvent, ToHecEvents},
+        users::{UserAzureRole, UserAzureRoles, Users, UsersMap},
     };
     use anyhow::{Context, Result};
+    use azure_mgmt_authorization::models::role_assignment_properties::{self, PrincipalType};
+    use regex::Regex;
 
     async fn setup() -> Result<(Splunk, MsGraph)> {
         let secrets = get_keyvault_secrets(&env::var("KEY_VAULT_NAME")?).await?;
@@ -433,6 +437,121 @@ mod test {
         .await?;
         let splunk = Splunk::new(&secrets.splunk_host, &secrets.splunk_token)?;
         Ok((splunk, ms_graph))
+    }
+
+    #[tokio::test]
+    async fn get_users_channel() -> Result<()> {
+        let (splunk, ms_graph) = setup().await?;
+
+        splunk.log("Azure logged in").await?;
+
+        let (sender, mut reciever) = tokio::sync::mpsc::unbounded_channel::<Users>();
+
+        splunk.log("Getting users").await?;
+
+        let splunk_clone = splunk.clone();
+        let ms_graph_clone = ms_graph.clone();
+        let list_users = tokio::spawn(async move {
+            ms_graph_clone
+                .list_users_channel(&splunk_clone, sender)
+                .await?;
+            anyhow::Ok::<()>(())
+        });
+
+        let mut users_map = UsersMap::default();
+        while let Some(users) = reciever.recv().await {
+            for user in users.value.into_iter() {
+                users_map.0.insert(user.id.to_owned(), user);
+            }
+        }
+
+        let _ = list_users.await?;
+        let secrets = get_keyvault_secrets(&env::var("KEY_VAULT_NAME")?).await?;
+        let azure_rest = AzureRest::new(
+            &secrets.azure_client_id,
+            &secrets.azure_client_secret,
+            &secrets.azure_tenant_id,
+        )
+        .await?;
+
+        let role_definitions = azure_rest.azure_role_definitions().await?;
+
+        let role_assignments = azure_rest.azure_role_assignments().await?;
+
+        let admin_roles_regex = Regex::new(r"(?i)(Owner|contributor|admin)").unwrap();
+
+        for (_, role_assignment) in role_assignments {
+            match &role_assignment
+                .properties
+                .as_ref()
+                .context("no properties")?
+                .principal_type
+                .as_ref()
+                .context("no principal type")?
+            {
+                PrincipalType::User => {}
+                _ => continue,
+            }
+
+            let role_assignment_role_definition_id = &role_assignment
+                .properties
+                .as_ref()
+                .context("no properties")?
+                .role_definition_id;
+
+            let Some(role_definition) = role_definitions.get(role_assignment_role_definition_id)
+            else {
+                continue;
+            };
+
+            let principal_id = &role_assignment
+                .properties
+                .as_ref()
+                .context("no properties")?
+                .principal_id;
+
+            let Some(ref mut user) = users_map.0.get_mut(principal_id) else {
+                continue;
+            };
+
+            if user.azure_roles.is_none() {
+                user.azure_roles = Some(UserAzureRoles::default());
+            }
+
+            let id = role_definition
+                .id
+                .as_ref()
+                .context("no role id")?
+                .to_string();
+
+            let role_name = role_definition
+                .properties
+                .as_ref()
+                .context("no properties")?
+                .role_name
+                .as_ref()
+                .context("no role name")?
+                .to_string();
+
+            let priviliged = admin_roles_regex.find(&role_name).is_some();
+
+            let azure_role = UserAzureRole { id, role_name };
+
+            if priviliged {
+                user.azure_roles
+                    .as_mut()
+                    .unwrap()
+                    .privileged_roles
+                    .push(azure_role);
+            } else {
+                user.azure_roles.as_mut().unwrap().roles.push(azure_role);
+            }
+        }
+
+        splunk.send_batch(&users_map.to_hec_events()?[..]).await?;
+
+        assert!(false);
+        Ok(())
     }
 
     #[tokio::test]
@@ -547,7 +666,7 @@ pub async fn azure(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
             users.set_is_privileged(&role_definitions);
             users.process_caps(&caps);
 
-            splunk.send_batch(&users.to_hec_eventss()?[..]).await?;
+            splunk.send_batch(&users.to_hec_events()?[..]).await?;
         }
         splunk.log("Users sent / Azure Complete").await?;
         anyhow::Ok::<()>(())

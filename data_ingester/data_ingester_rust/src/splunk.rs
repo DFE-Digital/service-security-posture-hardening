@@ -91,11 +91,10 @@ pub fn to_hec_events<T: Serialize>(
 
 pub trait ToHecEvents<'a> {
     type Item: Serialize;
-    fn to_hec_eventss(&'a self) -> Result<Vec<HecEvent>> {
+    fn to_hec_events(&'a self) -> Result<Vec<HecEvent>> {
         let (ok, err): (Vec<_>, Vec<_>) = self
             .collection()
-            .iter()
-            .map(|u| HecEvent::new(u, Self::source(), Self::sourcetype()))
+            .map(|u| HecEvent::new(&u, Self::source(), Self::sourcetype()))
             .partition_result();
         if !err.is_empty() {
             return Err(anyhow!(err
@@ -108,7 +107,7 @@ pub trait ToHecEvents<'a> {
     }
     fn source() -> &'static str;
     fn sourcetype() -> &'static str;
-    fn collection(&'a self) -> &'a [Self::Item];
+    fn collection(&'a self) -> Box<dyn Iterator<Item = &Self::Item> + 'a>;
 }
 
 pub trait ToHecEvent: Serialize + Sized {
