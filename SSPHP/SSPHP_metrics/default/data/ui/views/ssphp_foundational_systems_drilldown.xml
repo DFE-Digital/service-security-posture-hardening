@@ -71,7 +71,7 @@
     [| search index="ssphp_metrics_summary" ssphp.use_case.id=$tkn_use_case_id$
       | stats max(SSPHP_RUN) as SSPHP_RUN
       | return SSPHP_RUN]
-  | rex field=ssphp.use_case.display.title "(?&lt;fs&gt;[^\s]*)\s*(?&lt;notfs&gt;.*)$"
+  | rex field=ssphp.use_case.title "(?&lt;fs&gt;[^\s]*)\s*(?&lt;notfs&gt;.*)$"
   | fillnull value="-" ssphp.microsoft.desciption, 
                       ssphp.microsoft.implementation_status, 
                       ssphp.cis_benchmark.control.title, 
@@ -92,16 +92,16 @@
             <set token="tkn_fs">$result.fs$</set>
             <set token="tkn_notfs">$result.notfs$</set>
             <set token="tkn_score">$result.ssphp.score.score$</set>
-            <set token="tkn_color">$result.ssphp.color$</set>
-            <set token="tkn_display_title">$result.ssphp.use_case.display.title$</set>
-            <set token="tkn_display_short_description">$result.ssphp.use_case.display.short_description$</set>
+            <set token="tkn_color">$result.ssphp.score.color$</set>
+            <set token="tkn_display_title">$result.ssphp.use_case.title$</set>
+            <set token="tkn_display_short_description">$result.ssphp.use_case.short_description$</set>
             <set token="tkn_display_description">$result.ssphp.use_case.description$</set>
             <set token="tkn_numerator">$result.ssphp.score.numerator$</set>
             <set token="tkn_denominator">$result.ssphp.score.denominator$</set>
-            <set token="tkn_scoring_narrative">$result.ssphp.use_case.scoring_narrative$</set>
-            <set token="tkn_red">$result.ssphp.use_case.treshhold.red$</set>
-            <set token="tkn_orange">$result.ssphp.use_case.treshhold.orange$</set>
-            <set token="tkn_green">$result.ssphp.use_case.treshhold.green$</set>
+            <set token="tkn_scoring_narrative">$result.ssphp.score.scoring_narrative$</set>
+            <set token="tkn_red">$result.ssphp.score.threshold.red$</set>
+            <set token="tkn_orange">$result.ssphp.score.threshold.orange$</set>
+            <set token="tkn_green">$result.ssphp.score.threshold.green$</set>
             <set token="tkn_ms_description">$result.ssphp.microsoft.desciption$</set>
             <set token="tkn_ms_implementation_status">$result.ssphp.microsoft.implementation_status$</set>
 
