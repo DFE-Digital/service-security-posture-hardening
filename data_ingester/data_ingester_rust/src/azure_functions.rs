@@ -1,17 +1,14 @@
+use serde::Deserialize;
+use serde::Serialize;
 use std::env;
 use std::net::Ipv4Addr;
 use std::sync::Arc;
-use tokio::sync::Mutex;
-
-use bytes::Bytes;
-use serde::Deserialize;
-use serde::Serialize;
-use tokio::sync::oneshot;
 use tokio::sync::oneshot::Sender;
+use tokio::sync::Mutex;
 use warp::{http::Response, Filter};
 
 use crate::keyvault::get_keyvault_secrets;
-use crate::ms_graph::azure;
+use crate::ms_graph::azure_users;
 use crate::ms_graph::m365;
 use crate::powershell::install_powershell;
 use crate::splunk::set_ssphp_run;
@@ -91,72 +88,70 @@ pub(crate) async fn start_server(tx: Sender<()>) -> Result<()> {
 
     let azure_in_progress = Arc::new(Mutex::new(()));
 
-    let azure = warp::post()
-        .and(warp::path("azure"))
-        .and(warp::body::bytes())
-        .then({
-            let azure_in_progress = azure_in_progress.clone();
-            let azure_splunk = splunk.clone();
-            let azure_secrets = secrets.clone();
-            move |bytes: Bytes| {
-                let in_progress = azure_in_progress.clone();
-                let azure_splunk = azure_splunk.clone();
-                let azure_secrets = azure_secrets.clone();
+    let azure = warp::post().and(warp::path("azure")).then({
+        let azure_in_progress = azure_in_progress.clone();
+        let azure_splunk = splunk.clone();
+        let azure_secrets = secrets.clone();
+        move || {
+            let in_progress = azure_in_progress.clone();
+            let azure_splunk = azure_splunk.clone();
+            let azure_secrets = azure_secrets.clone();
 
-                async move {
-                    let mut response = AzureInvokeResponse {
-                        outputs: None,
-                        logs: vec![format!("GIT_HASH: {}", env!("GIT_HASH"))],
-                        return_value: None,
-                    };
+            async move {
+                let mut response = AzureInvokeResponse {
+                    outputs: None,
+                    logs: vec![format!("GIT_HASH: {}", env!("GIT_HASH"))],
+                    return_value: None,
+                };
 
-                    let lock = match in_progress.try_lock() {
-                        Ok(lock) => {
-                            response.logs.push("Aquired lock, starting".to_owned());
-                            lock
-                        }
-                        Err(_) => {
-                            response.logs.push(
-                                "Azure collection is already in progress. NOT starting.".to_owned(),
-                            );
-                            return response;
-                        }
-                    };
-
-                    let result = match azure(azure_secrets, azure_splunk).await {
-                        Ok(_) => "Success".to_owned(),
-                        Err(e) => format!("{:?}", e),
-                    };
-                    response.logs.push(result);
-                    if let Some(usage) = memory_stats() {
-                        println!(
-                            "Current physical memory usage: {}",
-                            usage.physical_mem / 1_000_000
-                        );
-                        println!(
-                            "Current virtual memory usage: {}",
-                            usage.virtual_mem / 1_000_000
-                        );
-                    } else {
-                        println!("Couldn't get the current memory usage :(");
+                let lock = match in_progress.try_lock() {
+                    Ok(lock) => {
+                        response.logs.push("Aquired lock, starting".to_owned());
+                        lock
                     }
-                    response
+                    Err(_) => {
+                        response.logs.push(
+                            "Azure collection is already in progress. NOT starting.".to_owned(),
+                        );
+                        return response;
+                    }
+                };
+
+                let result = match azure_users(azure_secrets, azure_splunk).await {
+                    Ok(_) => "Success".to_owned(),
+                    Err(e) => format!("{:?}", e),
+                };
+                response.logs.push(result);
+                if let Some(usage) = memory_stats() {
+                    println!(
+                        "Current physical memory usage: {}",
+                        usage.physical_mem / 1_000_000
+                    );
+                    println!(
+                        "Current virtual memory usage: {}",
+                        usage.virtual_mem / 1_000_000
+                    );
+                } else {
+                    println!("Couldn't get the current memory usage :(");
                 }
+                drop(lock);
+                response
             }
-        });
+        }
+    });
 
     let m365_in_progress = Arc::new(Mutex::new(()));
     let m365_powershell_installed = Arc::new(Mutex::new(false));
     let m365 = warp::post()
         .and(warp::path("m365"))
-        .and(warp::body::bytes())
+        //        .and(warp::body::bytes())
         .then({
             let m365_in_progress = m365_in_progress.clone();
-            let powershell_installed = m365_powershell_installed.clone();
+            let m365_powershell_installed = m365_powershell_installed.clone();
             let m365_splunk = splunk.clone();
             let m365_secrets = secrets.clone();
 
-            move |bytes: Bytes| {
+            move || {
                 let in_progress = m365_in_progress.clone();
                 let powershell_installed = m365_powershell_installed.clone();
                 let m365_splunk = m365_splunk.clone();
@@ -218,10 +213,12 @@ pub(crate) async fn start_server(tx: Sender<()>) -> Result<()> {
                     } else {
                         println!("Couldn't get the current memory usage :(");
                     }
+                    drop(lock);
                     response
                 }
             }
         });
+
     let routes = warp::post().and(azure).or(m365);
 
     let port_key = "FUNCTIONS_CUSTOMHANDLER_PORT";
@@ -235,19 +232,26 @@ pub(crate) async fn start_server(tx: Sender<()>) -> Result<()> {
     Ok(())
 }
 
-#[ignore]
-#[tokio::test]
-async fn test_azure_route() -> Result<()> {
-    let (tx, mut rx) = oneshot::channel::<()>();
-    tokio::spawn(start_server(tx));
-    let _ = rx.await;
-    let client = reqwest::Client::new();
-    let response = client
-        .post("http://localhost:3000/azure")
-        .body("Hello, Azure")
-        .send()
-        .await
-        .unwrap();
-    assert_eq!(response.status(), 200);
-    Ok(())
+#[cfg(test)]
+mod test {
+    use anyhow::Result;
+    use tokio::sync::oneshot::channel;
+
+    use crate::azure_functions::start_server;
+    #[ignore]
+    #[tokio::test]
+    async fn test_azure_route() -> Result<()> {
+        let (tx, rx) = channel::<()>();
+        tokio::spawn(start_server(tx));
+        let _ = rx.await;
+        let client = reqwest::Client::new();
+        let response = client
+            .post("http://localhost:3000/azure")
+            .body("Hello, Azure")
+            .send()
+            .await
+            .unwrap();
+        assert_eq!(response.status(), 200);
+        Ok(())
+    }
 }

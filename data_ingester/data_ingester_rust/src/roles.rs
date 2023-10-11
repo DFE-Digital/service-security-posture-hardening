@@ -12,7 +12,7 @@ use serde_with::skip_serializing_none;
 pub struct RoleDefinition {
     pub(crate) id: String,
     description: Option<String>,
-    display_name: Option<String>,
+    pub(crate) display_name: Option<String>,
     // "inheritsPermissionsFrom": Option<Vec,
     // "inheritsPermissionsFrom@odata.context": Option<String>,
     is_built_in: Option<bool>,

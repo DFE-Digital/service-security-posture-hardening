@@ -1,8 +1,6 @@
 use crate::admin_request_consent_policy::AdminRequestConsentPolicy;
+use crate::azure_rest::AzureRest;
 use crate::conditional_access_policies::ConditionalAccessPolicies;
-use crate::directory_roles::DirectoryRoleTemplates;
-use crate::directory_roles::DirectoryRoles;
-use crate::groups::Groups;
 use crate::keyvault::Secrets;
 use crate::powershell::run_powershell_get_admin_audit_log_config;
 use crate::powershell::run_powershell_get_anti_phish_policy;
@@ -11,6 +9,7 @@ use crate::powershell::run_powershell_get_malware_filter_policy;
 use crate::powershell::run_powershell_get_organization_config;
 use crate::powershell::run_powershell_get_owa_mailbox_policy;
 use crate::powershell::run_powershell_get_safe_links_policy;
+use crate::powershell::run_powershell_get_sharing_policy;
 use crate::roles::RoleDefinitions;
 use crate::security_score::SecurityScores;
 use crate::splunk::HecEvent;
@@ -18,6 +17,7 @@ use crate::splunk::ToHecEvent;
 use crate::splunk::ToHecEvents;
 use crate::splunk::{set_ssphp_run, Splunk};
 use crate::users::Users;
+use crate::users::UsersMap;
 use anyhow::{Context, Result};
 use futures::Future;
 use futures::StreamExt;
@@ -43,7 +43,7 @@ pub async fn login(client_id: &str, client_secret: &str, tenant_id: &str) -> Res
 
     if response.status().is_success() {
         let access_token: AccessToken = response.json().await?;
-        //println!("{access_token:#?}");
+
         oauth.access_token(access_token);
     } else {
         // See if Microsoft Graph returned an error in the Response body
@@ -91,84 +91,75 @@ impl MsGraph {
         let mut caps = ConditionalAccessPolicies::new();
         while let Some(result) = stream.next().await {
             let response = result.unwrap();
-            // println!("{:#?}", response.json());
-            // println!("{:#?}", response);
 
             let body = response.into_body();
-            // println!("{:#?}", body);
 
             caps.value.extend(body.unwrap().value)
         }
         Ok(caps)
     }
 
-    pub async fn list_directory_roles(&self) -> DirectoryRoles {
-        let mut stream = self
-            .client
-            .directory_roles()
-            .list_directory_role()
-            .expand(&["members"])
-            .paging()
-            .stream::<DirectoryRoles>()
-            .unwrap();
+    // pub async fn list_directory_roles(&self) -> DirectoryRoles {
+    //     let mut stream = self
+    //         .client
+    //         .directory_roles()
+    //         .list_directory_role()
+    //         .expand(&["members"])
+    //         .paging()
+    //         .stream::<DirectoryRoles>()
+    //         .unwrap();
 
-        let mut directory_roles = DirectoryRoles::new();
-        while let Some(result) = stream.next().await {
-            let response = result.unwrap();
-            // println!("{:#?}", response);
+    //     let mut directory_roles = DirectoryRoles::new();
+    //     while let Some(result) = stream.next().await {
+    //         let response = result.unwrap();
 
-            let body = response.into_body();
-            // println!("{:#?}", body);
+    //         let body = response.into_body();
 
-            directory_roles.value.extend(body.unwrap().value)
-        }
-        directory_roles
-    }
+    //         directory_roles.value.extend(body.unwrap().value)
+    //     }
+    //     directory_roles
+    // }
 
-    pub async fn list_directory_role_templates(&self) -> DirectoryRoleTemplates {
-        let mut stream = self
-            .client
-            .directory_role_templates()
-            .list_directory_role_template()
-            .paging()
-            .stream::<DirectoryRoleTemplates>()
-            .unwrap();
+    // pub async fn list_directory_role_templates(&self) -> DirectoryRoleTemplates {
+    //     let mut stream = self
+    //         .client
+    //         .directory_role_templates()
+    //         .list_directory_role_template()
+    //         .paging()
+    //         .stream::<DirectoryRoleTemplates>()
+    //         .unwrap();
 
-        let mut directory_role_templates = DirectoryRoleTemplates::new();
-        while let Some(result) = stream.next().await {
-            let response = result.unwrap();
-            // println!("{:#?}", response);
+    //     let mut directory_role_templates = DirectoryRoleTemplates::new();
+    //     while let Some(result) = stream.next().await {
+    //         let response = result.unwrap();
 
-            let body = response.into_body();
-            // println!("{:#?}", body);
+    //         let body = response.into_body();
 
-            directory_role_templates.value.extend(body.unwrap().value)
-        }
-        directory_role_templates
-    }
+    //         directory_role_templates.value.extend(body.unwrap().value)
+    //     }
+    //     directory_role_templates
+    // }
 
-    pub async fn list_groups(&self) -> Groups {
-        let mut stream = self
-            .client
-            .groups()
-            .list_group()
-            .top("1")
-            .paging()
-            .stream::<Groups>()
-            .unwrap();
+    // pub async fn list_groups(&self) -> Groups {
+    //     let mut stream = self
+    //         .client
+    //         .groups()
+    //         .list_group()
+    //         .top("1")
+    //         .paging()
+    //         .stream::<Groups>()
+    //         .unwrap();
 
-        let mut groups = Groups::new();
-        while let Some(result) = stream.next().await {
-            let response = result.unwrap();
-            // println!("{:#?}", response);
+    //     let mut groups = Groups::new();
+    //     while let Some(result) = stream.next().await {
+    //         let response = result.unwrap();
 
-            let body = response.into_body();
-            // println!("{:#?}", body);
+    //         let body = response.into_body();
 
-            groups.value.extend(body.unwrap().value)
-        }
-        groups
-    }
+    //         groups.value.extend(body.unwrap().value)
+    //     }
+    //     groups
+    // }
 
     pub async fn list_role_definitions(&self) -> Result<RoleDefinitions> {
         let mut stream = self
@@ -183,73 +174,67 @@ impl MsGraph {
         let mut roles = RoleDefinitions::new();
         while let Some(result) = stream.next().await {
             let response = result.unwrap();
-            // println!("{:#?}", response);
 
             let body = response.into_body().unwrap();
-            // println!("{:#?}", body);
 
             roles.value.extend(body.value)
         }
         Ok(roles)
     }
 
-    pub async fn list_users(&self, splunk: &Splunk) -> Result<Users> {
-        let mut stream = self
-            .beta_client
-            .users()
-            .list_user()
-            // .filter(&[&format!("startswith(userPrincipalName, '{}')", "")])
-            // .order_by(&["userPrincipalName"])
-            .select(&[
-                "id",
-                "displayName",
-                "givenName",
-                "surname",
-                "userPrincipalName",
-                "transitiveMemberOf",
-                "assignedPlans",
-            ])
-            .expand(&["transitiveMemberOf"])
-            .top("999")
-            //            .skip("3")
-            .paging()
-            .stream::<Users>()?;
+    // pub async fn list_users(&self, splunk: &Splunk) -> Result<Users> {
+    //     let mut stream = self
+    //         .beta_client
+    //         .users()
+    //         .list_user()
+    //         // .filter(&[&format!("startswith(userPrincipalName, '{}')", "")])
+    //         // .order_by(&["userPrincipalName"])
+    //         .select(&[
+    //             "id",
+    //             "displayName",
+    //             "givenName",
+    //             "surname",
+    //             "userPrincipalName",
+    //             "transitiveMemberOf",
+    //             "assignedPlans",
+    //             "onPremisesSyncEnabled",
+    //         ])
+    //         .expand(&["transitiveMemberOf"])
+    //         .top("999")
+    //         //            .skip("3")
+    //         .paging()
+    //         .stream::<Users>()?;
 
-        let mut users = Users::new();
-        let mut batch = 1;
-        while let Some(result) = stream.next().await {
-            let response = result?;
-            // println!("{:#?}", response.json());
-            // println!("{:#?}", response);
+    //     let mut users = Users::default();
+    //     let mut batch = 1;
+    //     while let Some(result) = stream.next().await {
+    //         let response = result?;
 
-            let body = response.into_body();
-            // println!("{:#?}", body);
+    //         let body = response.into_body()?;
 
-            users.value.extend(body?.value);
-            splunk
-                .log(&format!(
-                    "Getting users batch {}, total users: {}",
-                    batch,
-                    users.value.len()
-                ))
-                .await
-                .expect("Unable to log");
-            batch += 1;
-        }
-        Ok(users)
-    }
+    //         users.value.extend(body.value);
+    //         splunk
+    //             .log(&format!(
+    //                 "Getting users batch {}, total users: {}",
+    //                 batch,
+    //                 users.value.len()
+    //             ))
+    //             .await
+    //             .expect("Unable to log");
+    //         batch += 1;
+    //     }
+    //     Ok(users)
+    // }
 
     pub async fn list_users_channel(
         &self,
         splunk: &Splunk,
-        sender: UnboundedSender<Users<'_>>,
+        sender: UnboundedSender<UsersMap<'_>>,
     ) -> Result<()> {
         let mut stream = self
             .beta_client
             .users()
             .list_user()
-            // .filter(&[&format!("startswith(userPrincipalName, '{}')", "")])
-            // .order_by(&["userPrincipalName"])
             .select(&[
                 "id",
                 "displayName",
@@ -258,10 +243,10 @@ impl MsGraph {
                 "userPrincipalName",
                 "transitiveMemberOf",
                 "assignedPlans",
+                "onPremisesSyncEnabled",
             ])
             .expand(&["transitiveMemberOf"])
             .top("999")
-            //            .skip("3")
             .paging()
             .stream::<Users>()?;
 
@@ -269,11 +254,11 @@ impl MsGraph {
         let mut batch = 1;
         while let Some(result) = stream.next().await {
             let response = result?;
-            //println!("{:#?}", response.json());
 
-            let users = response.into_body()?;
-            // println!("{:#?}", body);
+            let mut users = response.into_body()?;
+
             total_users += users.value.len();
+
             splunk
                 .log(&format!(
                     "Getting users batch {}, total users: {}",
@@ -283,7 +268,16 @@ impl MsGraph {
                 .expect("Unable to log");
             batch += 1;
 
-            sender.send(users).expect("Unable to send Users to channel");
+            users.value.iter_mut().for_each(|u| {
+                u.assigned_plans_remove_deleted();
+            });
+
+            let mut users_map = UsersMap::default();
+            users_map.extend_from_users(users)?;
+
+            sender
+                .send(users_map)
+                .expect("Unable to send Users to channel");
         }
         Ok(())
     }
@@ -412,17 +406,17 @@ impl ToHecEvent for IdentitySecurityDefaultsEnforcementPolicy {
 
 #[cfg(test)]
 mod test {
-    use std::{collections::HashMap, env};
+    use std::env;
 
     use super::{login, MsGraph};
     use crate::{
         azure_rest::AzureRest,
-        keyvault::{get_keyvault_secrets, Secrets},
+        keyvault::get_keyvault_secrets,
         splunk::{set_ssphp_run, HecEvent, Splunk, ToHecEvent, ToHecEvents},
-        users::{UserAzureRole, UserAzureRoles, Users, UsersMap},
+        users::{UserAzureRole, UserAzureRoles, UsersMap},
     };
     use anyhow::{Context, Result};
-    use azure_mgmt_authorization::models::role_assignment_properties::{self, PrincipalType};
+    use azure_mgmt_authorization::models::role_assignment_properties::PrincipalType;
     use regex::Regex;
 
     async fn setup() -> Result<(Splunk, MsGraph)> {
@@ -439,15 +433,46 @@ mod test {
         Ok((splunk, ms_graph))
     }
 
+    // #[tokio::test]
+    // async fn compare_role_definitions() -> Result<()> {
+    //     let (splunk, ms_graph) = setup().await?;
+    //     let secrets = get_keyvault_secrets(&env::var("KEY_VAULT_NAME")?).await?;
+    //     let azure_rest = AzureRest::new(
+    //         &secrets.azure_client_id,
+    //         &secrets.azure_client_secret,
+    //         &secrets.azure_tenant_id,
+    //     ).await?;
+    //     let role_definitions_rest = azure_rest.azure_role_definitions().await?;
+    //     let role_definitions_graph = ms_graph.list_role_definitions().await?;
+    //     dbg!(&role_definitions_graph.value.keys());
+    //     dbg!(&role_definitions_graph.value.len());
+    //     dbg!(&role_definitions_rest.keys());
+    //     dbg!(&role_definitions_rest.len());
+    //     let rest_keys = role_definitions_rest.keys()
+    //         .map(|key| (key.split("/").last().unwrap().to_string(),()))
+    //         .collect::<HashMap<String, ()>>();
+    //     let mut keys = rest_keys.keys().cloned().collect::<Vec<String>>();
+    //     keys.sort();
+    //     dbg!(&keys);
+    //     for key in role_definitions_graph.value.keys() {
+    //         println!("{}:{}", rest_keys.contains_key(key), key);
+    //     }
+    //     for value in role_definitions_graph.value.values() {
+    //         dbg!(&value.display_name);
+    //     }
+    //     for value in role_definitions_rest.values() {
+    //         dbg!(&value.properties.as_ref().unwrap().role_name);
+    //     }
+    //     assert_eq!(&role_definitions_rest.len(), &role_definitions_graph.value.len());
+    //     assert!(false);
+    //     Ok(())
+    // }
+
     #[tokio::test]
     async fn get_users_channel() -> Result<()> {
         let (splunk, ms_graph) = setup().await?;
 
-        splunk.log("Azure logged in").await?;
-
-        let (sender, mut reciever) = tokio::sync::mpsc::unbounded_channel::<Users>();
-
-        splunk.log("Getting users").await?;
+        let (sender, mut reciever) = tokio::sync::mpsc::unbounded_channel::<UsersMap>();
 
         let splunk_clone = splunk.clone();
         let ms_graph_clone = ms_graph.clone();
@@ -460,12 +485,34 @@ mod test {
 
         let mut users_map = UsersMap::default();
         while let Some(users) = reciever.recv().await {
-            for user in users.value.into_iter() {
-                users_map.0.insert(user.id.to_owned(), user);
-            }
+            users_map.extend(users);
+        }
+        let _ = list_users.await?;
+
+        assert!(!users_map.inner.is_empty());
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn get_users_channel_subscription_roles() -> Result<()> {
+        let (splunk, ms_graph) = setup().await?;
+
+        let (sender, mut reciever) = tokio::sync::mpsc::unbounded_channel::<UsersMap>();
+
+        let splunk_clone = splunk.clone();
+        let ms_graph_clone = ms_graph.clone();
+        let list_users = tokio::spawn(async move {
+            ms_graph_clone
+                .list_users_channel(&splunk_clone, sender)
+                .await?;
+            anyhow::Ok::<()>(())
+        });
+
+        let mut users_map = UsersMap::default();
+        while let Some(users) = reciever.recv().await {
+            users_map.inner.extend(users.inner);
         }
 
-        let _ = list_users.await?;
         let secrets = get_keyvault_secrets(&env::var("KEY_VAULT_NAME")?).await?;
         let azure_rest = AzureRest::new(
             &secrets.azure_client_id,
@@ -478,64 +525,49 @@ mod test {
 
         let role_assignments = azure_rest.azure_role_assignments().await?;
 
+        let _ = list_users.await?;
+
         let admin_roles_regex = Regex::new(r"(?i)(Owner|contributor|admin)").unwrap();
 
         for (_, role_assignment) in role_assignments {
             match &role_assignment
-                .properties
-                .as_ref()
-                .context("no properties")?
-                .principal_type
-                .as_ref()
-                .context("no principal type")?
+                .principal_type()
+                .context("Principal Type not User")?
             {
                 PrincipalType::User => {}
                 _ => continue,
             }
 
             let role_assignment_role_definition_id = &role_assignment
-                .properties
-                .as_ref()
-                .context("no properties")?
-                .role_definition_id;
+                .role_definition_id()
+                .context("No Role definition")?;
 
-            let Some(role_definition) = role_definitions.get(role_assignment_role_definition_id)
+            let Some(role_definition) = role_definitions.get(*role_assignment_role_definition_id)
             else {
                 continue;
             };
 
-            let principal_id = &role_assignment
-                .properties
-                .as_ref()
-                .context("no properties")?
-                .principal_id;
+            let principal_id = &role_assignment.principal_id().context("No Principal ID")?;
 
-            let Some(ref mut user) = users_map.0.get_mut(principal_id) else {
+            let Some(ref mut user) = users_map.inner.get_mut(*principal_id) else {
                 continue;
             };
+
+            let id = role_definition.id().context("no role id")?.to_string();
+
+            let role_name = role_definition
+                .role_name()
+                .context("no role name")?
+                .to_string();
+
+            // TODO Should this be part of UserAzureRole?
+            let priviliged = admin_roles_regex.find(&role_name).is_some();
+
+            let azure_role = UserAzureRole { id, role_name };
 
             if user.azure_roles.is_none() {
                 user.azure_roles = Some(UserAzureRoles::default());
             }
-
-            let id = role_definition
-                .id
-                .as_ref()
-                .context("no role id")?
-                .to_string();
-
-            let role_name = role_definition
-                .properties
-                .as_ref()
-                .context("no properties")?
-                .role_name
-                .as_ref()
-                .context("no role name")?
-                .to_string();
-
-            let priviliged = admin_roles_regex.find(&role_name).is_some();
-
-            let azure_role = UserAzureRole { id, role_name };
 
             if priviliged {
                 user.azure_roles
@@ -550,7 +582,6 @@ mod test {
 
         splunk.send_batch(&users_map.to_hec_events()?[..]).await?;
 
-        assert!(false);
         Ok(())
     }
 
@@ -604,7 +635,7 @@ mod test {
     async fn get_security_secure_scores() -> Result<()> {
         let (splunk, ms_graph) = setup().await?;
         let mut security_scores = ms_graph.get_security_secure_scores().await?;
-        let mut security_score = security_scores
+        let security_score = security_scores
             .value
             .first_mut()
             .context("Unable to get first SecrurityScore")?;
@@ -620,13 +651,11 @@ mod test {
     }
 }
 
-pub async fn azure(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
-    //    let secrets = get_keyvault_secrets(&env::var("KEY_VAULT_NAME")?).await?;
-
+/// AAD + Azure
+pub async fn azure_users(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
     set_ssphp_run()?;
 
-    //  let splunk = Splunk::new(&secrets.splunk_host, &secrets.splunk_token)?;
-    splunk.log("Starting Azure collection").await?;
+    splunk.log("Starting Azure Users collection").await?;
     splunk
         .log(&format!("GIT_HASH: {}", env!("GIT_HASH")))
         .await?;
@@ -638,11 +667,18 @@ pub async fn azure(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
     )
     .await?;
 
+    let azure_rest = AzureRest::new(
+        &secrets.azure_client_id,
+        &secrets.azure_client_secret,
+        &secrets.azure_tenant_id,
+    )
+    .await?;
+
     splunk.log("Azure logged in").await?;
 
-    let (sender, mut reciever) = tokio::sync::mpsc::unbounded_channel::<Users>();
+    let (sender, mut reciever) = tokio::sync::mpsc::unbounded_channel::<UsersMap>();
 
-    splunk.log("Getting users").await?;
+    splunk.log("Getting Azure users").await?;
 
     let splunk_clone = splunk.clone();
     let ms_graph_clone = ms_graph.clone();
@@ -655,20 +691,31 @@ pub async fn azure(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
 
     let ms_graph_clone = ms_graph.clone();
     let splunk_clone = splunk.clone();
+
+    let subscription_role_definitions = azure_rest.azure_role_definitions().await?;
+
+    let subscription_role_assignments = azure_rest.azure_role_assignments().await?;
+
+    splunk
+        .log("Getting AAD Conditional access policies")
+        .await?;
+    let caps = ms_graph.list_conditional_access_policies().await?;
+
+    splunk.log("Getting AAD roles definitions").await?;
+    let aad_role_definitions = ms_graph.list_role_definitions().await?;
+
     let process_to_splunk = tokio::spawn(async move {
-        splunk.log("Getting roles definitions").await?;
-        let role_definitions = ms_graph.list_role_definitions().await?;
-
-        splunk.log("Getting Conditional access policies").await?;
-        let caps = ms_graph.list_conditional_access_policies().await?;
-
         while let Some(mut users) = reciever.recv().await {
-            users.set_is_privileged(&role_definitions);
+            users.set_is_privileged(&aad_role_definitions);
             users.process_caps(&caps);
-
+            users
+                .add_azure_roles(
+                    &subscription_role_assignments,
+                    &subscription_role_definitions,
+                )
+                .context("Failed to add azure roles")?;
             splunk.send_batch(&users.to_hec_events()?[..]).await?;
         }
-        splunk.log("Users sent / Azure Complete").await?;
         anyhow::Ok::<()>(())
     });
 
@@ -685,6 +732,70 @@ pub async fn azure(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
     Ok(())
 }
 
+/// AAD + Azure
+// pub async fn azure_users_old(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
+//     set_ssphp_run()?;
+
+//     splunk.log("Starting Azure Users collection").await?;
+//     splunk
+//         .log(&format!("GIT_HASH: {}", env!("GIT_HASH")))
+//         .await?;
+
+//     let ms_graph = login(
+//         &secrets.azure_client_id,
+//         &secrets.azure_client_secret,
+//         &secrets.azure_tenant_id,
+//     )
+//     .await?;
+
+//     splunk.log("Azure logged in").await?;
+
+//     let (sender, mut reciever) = tokio::sync::mpsc::unbounded_channel::<UsersMap>();
+
+//     splunk.log("Getting Azure users").await?;
+
+//     let splunk_clone = splunk.clone();
+//     let ms_graph_clone = ms_graph.clone();
+//     let list_users = tokio::spawn(async move {
+//         ms_graph_clone
+//             .list_users_channel(&splunk_clone, sender)
+//             .await?;
+//         anyhow::Ok::<()>(())
+//     });
+
+//     let ms_graph_clone = ms_graph.clone();
+//     let splunk_clone = splunk.clone();
+//     let process_to_splunk = tokio::spawn(async move {
+//         splunk.log("Getting roles definitions").await?;
+//         let role_definitions = ms_graph.list_role_definitions().await?;
+
+//         splunk.log("Getting Conditional access policies").await?;
+//         let caps = ms_graph.list_conditional_access_policies().await?;
+
+//         while let Some(mut users) = reciever.recv().await {
+//             dbg!(&users);
+//             users.set_is_privileged(&role_definitions);
+//             users.process_caps(&caps);
+
+//             splunk.send_batch(&users.to_hec_events()?[..]).await?;
+//         }
+//         splunk.log("Users sent / Azure Complete").await?;
+//         anyhow::Ok::<()>(())
+//     });
+
+//     let admin_request_consent_policy = ms_graph_clone
+//         .get_admin_request_consent_policy()
+//         .await
+//         .unwrap();
+//     splunk_clone
+//         .send_batch(&[admin_request_consent_policy.to_hec_event().unwrap()])
+//         .await?;
+//     let _ = list_users.await?;
+//     let _ = process_to_splunk.await?;
+
+//     Ok(())
+// }
+
 pub async fn m365(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
     //    let secrets = get_keyvault_secrets(&env::var("KEY_VAULT_NAME")?).await?;
 
@@ -697,6 +808,13 @@ pub async fn m365(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
         .await?;
 
     let ms_graph = login(
+        &secrets.azure_client_id,
+        &secrets.azure_client_secret,
+        &secrets.azure_tenant_id,
+    )
+    .await?;
+
+    let azure_rest = AzureRest::new(
         &secrets.azure_client_id,
         &secrets.azure_client_secret,
         &secrets.azure_tenant_id,
@@ -729,76 +847,111 @@ pub async fn m365(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
         }
     }
 
-    try_collect(
+    try_collect_convert_send(
         "MS Graph Authorization Policy",
         ms_graph.get_authorization_policy(),
         &splunk,
     )
     .await?;
-    try_collect(
+    try_collect_convert_send(
         "MS Graph Admin RequestConsent Policy",
         ms_graph.get_admin_request_consent_policy(),
         &splunk,
     )
     .await?;
-    try_collect("MS Graph Domains", ms_graph.get_domains(), &splunk).await?;
-    try_collect(
+    try_collect_convert_send("MS Graph Domains", ms_graph.get_domains(), &splunk).await?;
+    try_collect_convert_send(
         "MS Graph Permission Grant Policy",
         ms_graph.get_permission_grant_policy(),
         &splunk,
     )
     .await?;
-    try_collect(
+    try_collect_convert_send(
         "Exchange Get Security Default Policy",
         ms_graph.get_identity_security_defaults_enforcement_policy(),
         &splunk,
     )
     .await?;
-    try_collect(
+    try_collect_convert_send(
         "Exchange Orgainization Config",
         run_powershell_get_organization_config(&secrets),
         &splunk,
     )
     .await?;
-    try_collect(
+    try_collect_convert_send(
         "Exchange Sharing Policy",
-        run_powershell_get_organization_config(&secrets),
+        run_powershell_get_sharing_policy(&secrets),
         &splunk,
     )
     .await?;
-    try_collect(
+    try_collect_convert_send(
         "Exchange Safe Links Policy",
         run_powershell_get_safe_links_policy(&secrets),
         &splunk,
     )
     .await?;
-    try_collect(
+    try_collect_convert_send(
         "Exchange Malware Filter Policy",
         run_powershell_get_malware_filter_policy(&secrets),
         &splunk,
     )
     .await?;
-    try_collect(
+    try_collect_convert_send(
         "Exchange Hosted Outbound Spam Filter Policy",
         run_powershell_get_hosted_outbound_spam_filter_policy(&secrets),
         &splunk,
     )
     .await?;
-    try_collect(
+    try_collect_convert_send(
         "Exchange Anti Phish Policy",
         run_powershell_get_anti_phish_policy(&secrets),
         &splunk,
     )
     .await?;
-    try_collect(
+    try_collect_convert_send(
         "Exchange Admin Audit Log Config",
         run_powershell_get_admin_audit_log_config(&secrets),
         &splunk,
     )
     .await?;
-    try_collect(
+    try_collect_convert_send(
         "Exchange OWA Mailbox Policy",
         run_powershell_get_owa_mailbox_policy(&secrets),
+        &splunk,
+    )
+    .await?;
+
+    try_collect_send(
+        "Azure Security Contacts",
+        azure_rest.get_security_contacts(),
+        &splunk,
+    )
+    .await?;
+
+    try_collect_send(
+        "Azure Security Center built in",
+        azure_rest.get_security_center_built_in(),
+        &splunk,
+    )
+    .await?;
+
+    try_collect_send(
+        "Azure Security Auto Provisioning Settings",
+        azure_rest.get_microsoft_security_auto_provisioning_settings(),
+        &splunk,
+    )
+    .await?;
+
+    try_collect_send(
+        "Azure Security Settings",
+        azure_rest.get_microsoft_security_settings(),
+        &splunk,
+    )
+    .await?;
+
+    try_collect_send(
+        "Azure Security SQL Encryption protection",
+        azure_rest.get_microsoft_sql_encryption_protection(),
         &splunk,
     )
     .await?;
@@ -808,7 +961,7 @@ pub async fn m365(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
     Ok(())
 }
 
-async fn try_collect<T: ToHecEvent>(
+async fn try_collect_convert_send<T: ToHecEvent>(
     name: &str,
     future: impl Future<Output = Result<T, anyhow::Error>>,
     splunk: &Splunk,
@@ -816,6 +969,23 @@ async fn try_collect<T: ToHecEvent>(
     splunk.log(&format!("Getting {}", &name)).await?;
     match future.await {
         Ok(result) => splunk.send_batch(&[result.to_hec_event()?]).await?,
+        Err(err) => {
+            splunk
+                .log(&format!("Failed to get {}: {}", &name, err))
+                .await?
+        }
+    };
+    Ok(())
+}
+
+async fn try_collect_send(
+    name: &str,
+    future: impl Future<Output = Result<Vec<HecEvent>, anyhow::Error>>,
+    splunk: &Splunk,
+) -> Result<()> {
+    splunk.log(&format!("Getting {}", &name)).await?;
+    match future.await {
+        Ok(result) => splunk.send_batch(&result).await?,
         Err(err) => {
             splunk
                 .log(&format!("Failed to get {}: {}", &name, err))
