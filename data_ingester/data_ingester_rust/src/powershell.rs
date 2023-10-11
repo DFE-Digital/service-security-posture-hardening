@@ -278,7 +278,7 @@ mod test {
         },
         splunk::{set_ssphp_run, Splunk, ToHecEvent},
     };
-    use anyhow::{Context, Result};
+    use anyhow::Result;
     use std::env;
 
     async fn setup() -> Result<(Splunk, Secrets)> {

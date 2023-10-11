@@ -70,24 +70,24 @@ impl HecEvent {
 
 // fn logger() {}
 
-pub fn to_hec_events<T: Serialize>(
-    collection: &[T],
-    source: &str,
-    sourcetype: &str,
-) -> Result<Vec<HecEvent>> {
-    let (ok, err): (Vec<_>, Vec<_>) = collection
-        .iter()
-        .map(|u| HecEvent::new(u, source, sourcetype))
-        .partition_result();
-    if !err.is_empty() {
-        return Err(anyhow!(err
-            .iter()
-            .map(|err| format!("{:?}", err))
-            .collect::<Vec<String>>()
-            .join("\n")));
-    }
-    Ok(ok)
-}
+// pub fn to_hec_events<T: Serialize>(
+//     collection: &[T],
+//     source: &str,
+//     sourcetype: &str,
+// ) -> Result<Vec<HecEvent>> {
+//     let (ok, err): (Vec<_>, Vec<_>) = collection
+//         .iter()
+//         .map(|u| HecEvent::new(u, source, sourcetype))
+//         .partition_result();
+//     if !err.is_empty() {
+//         return Err(anyhow!(err
+//             .iter()
+//             .map(|err| format!("{:?}", err))
+//             .collect::<Vec<String>>()
+//             .join("\n")));
+//     }
+//     Ok(ok)
+// }
 
 pub trait ToHecEvents<'a> {
     type Item: Serialize;
@@ -152,6 +152,7 @@ impl Splunk {
         Ok(headers)
     }
 
+    #[cfg(test)]
     pub async fn send(&self, event: &HecEvent) {
         let request = self.client.post(&self.url).json(event).build().unwrap();
         let _response = self.client.execute(request).await.unwrap();

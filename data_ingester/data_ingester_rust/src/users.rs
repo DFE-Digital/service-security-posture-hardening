@@ -1,3 +1,5 @@
+use crate::azure_rest::RoleAssignment;
+use crate::azure_rest::RoleDefinition;
 use crate::conditional_access_policies::ConditionalAccessPolicies;
 use crate::conditional_access_policies::UserConditionalAccessPolicy;
 use crate::directory_roles::DirectoryRole;
@@ -6,6 +8,10 @@ use crate::groups::Group;
 use crate::groups::Groups;
 use crate::roles::RoleDefinitions;
 use crate::splunk::ToHecEvents;
+use anyhow::Context;
+use anyhow::Result;
+use azure_mgmt_authorization::models::role_assignment_properties::PrincipalType;
+use regex::Regex;
 use serde::Deserialize;
 use serde::Serialize;
 use serde_with::skip_serializing_none;
@@ -18,8 +24,8 @@ use std::ops::Deref;
 #[serde(rename_all = "camelCase")]
 pub struct User<'a> {
     pub(crate) id: String,
-    // #[serde(skip_serializing_if = "Vec::is_empty")]
-    assigned_plans: Option<Vec<AssignedPlan>>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    assigned_plans: Vec<AssignedPlan>,
     // business_phones: Option<Vec<String>>,
     pub(crate) display_name: Option<String>,
     given_name: Option<String>,
@@ -40,9 +46,16 @@ pub struct User<'a> {
     is_privileged: Option<bool>,
     // TODO! This might expand the json too much?
     pub azure_roles: Option<UserAzureRoles>,
+    pub(crate) on_premises_sync_enabled: Option<bool>,
     // TODO!
     // assigned_plans: Option<???>,
 }
+
+// impl From for User {
+//     fn from(span: Span) -> Self {
+//         <Option as From>::from(span)
+//     }
+// }
 
 /// Used to represent an AAD users roles in Azure (Cloud) subscriptions
 #[derive(Debug, Serialize, Deserialize, Default)]
@@ -61,14 +74,32 @@ pub struct UserAzureRole {
 }
 
 #[skip_serializing_none]
-#[derive(Debug, Serialize, Deserialize, Default)]
+#[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct AssignedPlan {
     assigned_date_time: String,
-    capability_status: String,
+    // TODO! ignroe Deleted & other...
+    capability_status: String, //AssignedPlanCapabilityStatus,
     service: String,
     service_plan_id: String,
 }
+
+impl AssignedPlan {
+    fn is_enabled(&self) -> bool {
+        self.capability_status == "Enabled"
+        // match self.capability_status {
+        //     AssignedPlanCapabilityStatus::Enabled => true,
+        //     AssignedPlanCapabilityStatus::Deleted => false,
+        // }
+    }
+}
+
+// #[derive(Debug, Serialize, Deserialize)]
+// #[serde(rename_all = "camelCase")]
+// enum AssignedPlanCapabilityStatus {
+//     Enabled,
+//     Deleted,
+// }
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(tag = "@odata.type")]
@@ -84,7 +115,7 @@ impl<'a> User<'a> {
     pub fn new(id: String, display_name: String) -> Self {
         Self {
             id,
-            assigned_plans: None,
+            assigned_plans: vec![],
             //business_phones: None,
             display_name: Some(display_name),
             given_name: None,
@@ -101,6 +132,7 @@ impl<'a> User<'a> {
             conditional_access_policies: None,
             is_privileged: None,
             azure_roles: None,
+            on_premises_sync_enabled: None,
         }
     }
 
@@ -142,37 +174,20 @@ impl<'a> User<'a> {
         }
         self.is_privileged = Some(false)
     }
+
+    pub fn assigned_plans_remove_deleted(&mut self) {
+        self.assigned_plans.retain(|plan| plan.is_enabled());
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, Default)]
-pub struct Users<'a> {
-    pub value: Vec<User<'a>>,
+pub struct UsersMap<'a> {
+    pub(crate) inner: HashMap<String, User<'a>>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Default)]
-pub struct UsersMap<'a>(pub HashMap<String, User<'a>>);
-
-impl<'a> ToHecEvents<'a> for UsersMap<'a> {
-    type Item = User<'a>;
-    fn source() -> &'static str {
-        "msgraph"
-    }
-
-    fn sourcetype() -> &'static str {
-        "SSPHP.AAD.user"
-    }
-    fn collection(&'a self) -> Box<dyn Iterator<Item = &Self::Item> + 'a> {
-        Box::new(self.0.values())
-    }
-}
-
-impl<'a> Users<'a> {
-    pub fn new() -> Self {
-        Self { value: Vec::new() }
-    }
-
+impl<'a> UsersMap<'a> {
     pub fn process_caps(&mut self, caps: &'a ConditionalAccessPolicies) {
-        for user in self.value.iter_mut() {
+        for (_, user) in self.inner.iter_mut() {
             let mut affected_caps = vec![];
             for cap in caps.value.iter() {
                 if cap.affects_user(user) {
@@ -184,10 +199,103 @@ impl<'a> Users<'a> {
     }
 
     pub fn set_is_privileged(&mut self, role_definitions: &RoleDefinitions) {
-        for user in self.value.iter_mut() {
+        for (_, user) in self.inner.iter_mut() {
             user.set_is_privileged(role_definitions);
         }
     }
+
+    pub fn extend_from_users(&mut self, users: Users<'a>) -> Result<()> {
+        for user in users.value.into_iter() {
+            self.inner
+                .insert(user.id.to_string(), user)
+                .context("Unable to insert User into UserMap")?;
+        }
+        Ok(())
+    }
+
+    #[cfg(test)]
+    pub fn extend(&mut self, users: UsersMap<'a>) {
+        self.inner.extend(users.inner);
+    }
+
+    pub fn add_azure_roles(
+        &mut self,
+        role_assignments: &HashMap<String, RoleAssignment>,
+        role_definitions: &HashMap<String, RoleDefinition>,
+    ) -> Result<()> {
+        let admin_roles_regex = Regex::new(r"(?i)(Owner|contributor|admin)").unwrap();
+
+        for (_, role_assignment) in role_assignments.iter() {
+            match &role_assignment
+                .principal_type()
+                .context("Principal Type not User")?
+            {
+                PrincipalType::User => {}
+                _ => continue,
+            }
+
+            let role_assignment_role_definition_id = &role_assignment
+                .role_definition_id()
+                .context("No Role definition")?;
+
+            let Some(role_definition) = role_definitions.get(*role_assignment_role_definition_id)
+            else {
+                continue;
+            };
+
+            let principal_id = &role_assignment.principal_id().context("No Principal ID")?;
+
+            let Some(ref mut user) = self.inner.get_mut(*principal_id) else {
+                continue;
+            };
+
+            let id = role_definition.id().context("no role id")?.to_string();
+
+            let role_name = role_definition
+                .role_name()
+                .context("no role name")?
+                .to_string();
+
+            // TODO Should this be part of UserAzureRole?
+            let priviliged = admin_roles_regex.find(&role_name).is_some();
+
+            let azure_role = UserAzureRole { id, role_name };
+
+            if user.azure_roles.is_none() {
+                user.azure_roles = Some(UserAzureRoles::default());
+            }
+
+            if priviliged {
+                user.azure_roles
+                    .as_mut()
+                    .unwrap()
+                    .privileged_roles
+                    .push(azure_role);
+            } else {
+                user.azure_roles.as_mut().unwrap().roles.push(azure_role);
+            }
+        }
+        Ok(())
+    }
+}
+
+impl<'a> ToHecEvents<'a> for UsersMap<'a> {
+    type Item = User<'a>;
+    fn source() -> &'static str {
+        "msgraph"
+    }
+
+    fn sourcetype() -> &'static str {
+        "SSPHP.AAD.user"
+    }
+    fn collection(&'a self) -> Box<dyn Iterator<Item = &Self::Item> + 'a> {
+        Box::new(self.inner.values())
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, Default)]
+pub struct Users<'a> {
+    pub value: Vec<User<'a>>,
 }
 
 impl<'a> ToHecEvents<'a> for Users<'a> {

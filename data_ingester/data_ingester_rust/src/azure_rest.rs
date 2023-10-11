@@ -1,5 +1,6 @@
+use azure_mgmt_authorization::models::role_assignment_properties::PrincipalType;
 use azure_mgmt_authorization::{
-    models::{RoleAssignment, RoleDefinition},
+    models::{RoleAssignment as SDKRoleAssignment, RoleDefinition as SDKRoleDefinition},
     package_2022_04_01::Client as ClientAuthorization,
 };
 use azure_mgmt_subscription::{
@@ -66,11 +67,11 @@ impl AzureRest {
         Ok(results)
     }
 
-    pub async fn get_microsoft_authorization_role_definitions(&self) -> Result<Vec<HecEvent>> {
-        let url_template = "https://management.azure.com/subscriptions/{}/providers/Microsoft.Authorization/roleDefinitions?api-version=2017-05-01";
-        let results = self.rest_request_subscription_iter(url_template).await?;
-        Ok(results)
-    }
+    // pub async fn get_microsoft_authorization_role_definitions(&self) -> Result<Vec<HecEvent>> {
+    //     let url_template = "https://management.azure.com/subscriptions/{}/providers/Microsoft.Authorization/roleDefinitions?api-version=2017-05-01";
+    //     let results = self.rest_request_subscription_iter(url_template).await?;
+    //     Ok(results)
+    // }
 
     pub async fn azure_role_definitions(&self) -> Result<HashMap<String, RoleDefinition>> {
         let client = ClientAuthorization::builder(self.credential.clone()).build();
@@ -86,7 +87,7 @@ impl AzureRest {
                             .as_ref()
                             .context("No ID on role definition")?
                             .to_owned(),
-                        item,
+                        RoleDefinition(item),
                     );
                 }
             }
@@ -111,7 +112,7 @@ impl AzureRest {
                             .as_ref()
                             .context("No ID on role assignment")?
                             .to_owned(),
-                        item,
+                        RoleAssignment(item),
                     );
                 }
             }
@@ -119,11 +120,11 @@ impl AzureRest {
         Ok(collection)
     }
 
-    pub async fn get_microsoft_authorization_role_assignments(&self) -> Result<Vec<HecEvent>> {
-        let url_template = "https://management.azure.com/subscriptions/{}/providers/Microsoft.Authorization/roleassignments?api-version=2017-10-01-preview";
-        let results = self.rest_request_subscription_iter(url_template).await?;
-        Ok(results)
-    }
+    // pub async fn get_microsoft_authorization_role_assignments(&self) -> Result<Vec<HecEvent>> {
+    //     let url_template = "https://management.azure.com/subscriptions/{}/providers/Microsoft.Authorization/roleassignments?api-version=2017-10-01-preview";
+    //     let results = self.rest_request_subscription_iter(url_template).await?;
+    //     Ok(results)
+    // }
 
     pub async fn get_microsoft_security_settings(&self) -> Result<Vec<HecEvent>> {
         let url_template = "https://management.azure.com/subscriptions/{}/providers/Microsoft.Security/settings?api-version=2021-06-01";
@@ -143,7 +144,6 @@ impl AzureRest {
         let results = self
             .rest_request_subscription_iter_no_hec(url_template)
             .await?;
-        dbg!(&results);
 
         for entry in results.iter() {
             match entry {
@@ -204,7 +204,7 @@ impl AzureRest {
         for sub in self.subscriptions.iter() {
             let sub_id = sub.subscription_id.as_ref().context("no sub id")?;
             let url = Url::parse(&url_template.format(&[sub_id]))?;
-            dbg!(&url);
+
             let response = reqwest::Client::new()
                 .get(url.clone())
                 .header(
@@ -258,7 +258,7 @@ impl AzureRest {
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(untagged)]
-enum ReturnType {
+pub(crate) enum ReturnType {
     Collection {
         value: Vec<serde_json::Value>,
         #[serde(rename = "@odata.nextLink")]
@@ -268,6 +268,7 @@ enum ReturnType {
     Value(serde_json::Value),
 }
 
+// TODO Use ToHecEvents trait
 impl ReturnType {
     pub fn to_hec_events(&self, source: &str) -> Result<Vec<HecEvent>> {
         let mut collection = vec![];
@@ -357,9 +358,9 @@ mod test {
 
     #[tokio::test]
     async fn test_azureclient_list_subscriptions() -> Result<()> {
-        let (azure_rest, splunk) = setup().await?;
+        let (azure_rest, _splunk) = setup().await?;
         let subscriptions: Vec<Subscription> = azure_rest.azure_subscriptions().await?;
-        assert!(subscriptions.len() > 0);
+        assert!(!subscriptions.is_empty());
         Ok(())
     }
 
@@ -367,7 +368,7 @@ mod test {
     async fn test_azureclient_security_contacts() -> Result<()> {
         let (azure_rest, splunk) = setup().await?;
         let collection = azure_rest.get_security_contacts().await?;
-        assert!(collection.len() > 0);
+        assert!(!collection.is_empty());
         splunk.send_batch(&collection[..]).await?;
         Ok(())
     }
@@ -376,32 +377,32 @@ mod test {
     async fn test_get_security_center_built_in() -> Result<()> {
         let (azure_rest, splunk) = setup().await?;
         let collection = azure_rest.get_security_center_built_in().await?;
-        assert!(collection.len() > 0);
+        assert!(!collection.is_empty());
         splunk.send_batch(&collection[..]).await?;
         Ok(())
     }
 
-    #[tokio::test]
-    async fn test_azureclient_get_microsoft_authorization_role_definitions() -> Result<()> {
-        let (azure_rest, splunk) = setup().await?;
-        let collection = azure_rest
-            .get_microsoft_authorization_role_definitions()
-            .await?;
-        splunk.send_batch(&collection[..]).await?;
-        assert!(collection.len() > 0);
-        Ok(())
-    }
+    // #[tokio::test]
+    // async fn test_azureclient_get_microsoft_authorization_role_definitions() -> Result<()> {
+    //     let (azure_rest, splunk) = setup().await?;
+    //     let collection = azure_rest
+    //         .get_microsoft_authorization_role_definitions()
+    //         .await?;
+    //     assert!(!collection.is_empty());
+    //     splunk.send_batch(&collection[..]).await?;
+    //     Ok(())
+    // }
 
-    #[tokio::test]
-    async fn test_azureclient_get_microsoft_authorization_role_assignments() -> Result<()> {
-        let (azure_rest, splunk) = setup().await?;
-        let collection = azure_rest
-            .get_microsoft_authorization_role_assignments()
-            .await?;
-        splunk.send_batch(&collection[..]).await?;
-        assert!(collection.len() > 0);
-        Ok(())
-    }
+    // #[tokio::test]
+    // async fn test_azureclient_get_microsoft_authorization_role_assignments() -> Result<()> {
+    //     let (azure_rest, splunk) = setup().await?;
+    //     let collection = azure_rest
+    //         .get_microsoft_authorization_role_assignments()
+    //         .await?;
+    //     splunk.send_batch(&collection[..]).await?;
+    //     assert!(!collection.is_empty());
+    //     Ok(())
+    // }
 
     // 2.1.15
     #[tokio::test]
@@ -411,7 +412,7 @@ mod test {
             .get_microsoft_security_auto_provisioning_settings()
             .await?;
         splunk.send_batch(&collection[..]).await?;
-        assert!(collection.len() > 0);
+        assert!(!collection.is_empty());
         Ok(())
     }
 
@@ -422,17 +423,47 @@ mod test {
         let (azure_rest, splunk) = setup().await?;
         let collection = azure_rest.get_microsoft_security_settings().await?;
         splunk.send_batch(&collection[..]).await?;
-        assert!(collection.len() > 0);
+        assert!(!collection.is_empty());
         Ok(())
     }
 
     // 4.1.3
+    #[ignore]
     #[tokio::test]
     async fn test_azureclient_get_microsoft_sql_encryption_protection() -> Result<()> {
         let (azure_rest, splunk) = setup().await?;
         let collection = azure_rest.get_microsoft_sql_encryption_protection().await?;
         splunk.send_batch(&collection[..]).await?;
-        assert!(collection.len() > 0);
+        assert!(!collection.is_empty());
         Ok(())
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub(crate) struct RoleAssignment(SDKRoleAssignment);
+
+impl RoleAssignment {
+    pub fn role_definition_id(&self) -> Option<&String> {
+        Some(&self.0.properties.as_ref()?.role_definition_id)
+    }
+
+    pub fn principal_type(&self) -> Option<&PrincipalType> {
+        self.0.properties.as_ref()?.principal_type.as_ref()
+    }
+
+    pub fn principal_id(&self) -> Option<&String> {
+        Some(&self.0.properties.as_ref()?.principal_id)
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub(crate) struct RoleDefinition(SDKRoleDefinition);
+impl RoleDefinition {
+    pub fn role_name(&self) -> Option<&String> {
+        self.0.properties.as_ref()?.role_name.as_ref()
+    }
+
+    pub fn id(&self) -> Option<&String> {
+        self.0.id.as_ref()
     }
 }

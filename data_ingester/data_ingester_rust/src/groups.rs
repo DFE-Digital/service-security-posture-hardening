@@ -50,10 +50,6 @@ pub struct Groups<'a> {
 }
 
 impl Groups<'_> {
-    pub fn new() -> Self {
-        Self { value: Vec::new() }
-    }
-
     pub fn ids(&self) -> Vec<&'_ String> {
         self.value.iter().map(|group| &group.id).collect()
     }

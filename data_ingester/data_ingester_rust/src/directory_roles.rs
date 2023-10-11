@@ -36,9 +36,9 @@ pub struct DirectoryRoles<'a> {
 // }
 
 impl DirectoryRoles<'_> {
-    pub fn new() -> Self {
-        Self { value: Vec::new() }
-    }
+    // pub fn new() -> Self {
+    //     Self { value: Vec::new() }
+    // }
 
     pub fn ids(&self) -> Vec<&'_ str> {
         self.value.iter().map(|role| role.id.as_str()).collect()
@@ -100,12 +100,12 @@ pub struct DirectoryRoleTemplates {
     pub value: Vec<serde_json::Value>,
 }
 
-pub struct DirectoryRoleTemplate {}
-impl DirectoryRoleTemplates {
-    pub fn new() -> Self {
-        Self { value: Vec::new() }
-    }
-}
+//pub struct DirectoryRoleTemplate {}
+// impl DirectoryRoleTemplates {
+//     pub fn new() -> Self {
+//         Self { value: Vec::new() }
+//     }
+// }
 
 // impl ToHecEvents for DirectoryRoleTemplates {
 //     fn source() -> &'static str {
