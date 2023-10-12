@@ -17,11 +17,11 @@ use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::{collections::HashMap, sync::Arc};
 use url::Url;
 
-use crate::splunk::HecEvent;
+use crate::splunk::{HecEvent, ToHecEvents};
 
 pub struct AzureRest {
     credential: Arc<ClientSecretCredential>,
-    subscriptions: Vec<Subscription>,
+    subscriptions: Subscriptions,
 }
 
 impl AzureRest {
@@ -37,13 +37,13 @@ impl AzureRest {
         ));
         let mut s = Self {
             credential,
-            subscriptions: vec![],
+            subscriptions: Subscriptions { inner: vec![] },
         };
         s.subscriptions = s.azure_subscriptions().await?;
         Ok(s)
     }
 
-    pub async fn azure_subscriptions(&self) -> Result<Vec<Subscription>> {
+    pub async fn azure_subscriptions(&self) -> Result<Subscriptions> {
         let client = ClientSubscription::builder(self.credential.clone()).build();
         let mut stream = client.subscriptions_client().list().into_stream();
         let mut subscriptions = vec![];
@@ -52,7 +52,9 @@ impl AzureRest {
                 subscriptions.push(sub);
             }
         }
-        Ok(subscriptions)
+        Ok(Subscriptions {
+            inner: subscriptions,
+        })
     }
 
     pub async fn get_security_contacts(&self) -> Result<Vec<HecEvent>> {
@@ -76,7 +78,7 @@ impl AzureRest {
     pub async fn azure_role_definitions(&self) -> Result<HashMap<String, RoleDefinition>> {
         let client = ClientAuthorization::builder(self.credential.clone()).build();
         let mut collection = HashMap::new();
-        for sub in self.subscriptions.iter() {
+        for sub in self.subscriptions.inner.iter() {
             let sub_id = sub.subscription_id.as_ref().context("no sub id")?;
             let scope = format!("/subscriptions/{}", sub_id);
             let mut stream = client.role_definitions_client().list(scope).into_stream();
@@ -98,7 +100,7 @@ impl AzureRest {
     pub async fn azure_role_assignments(&self) -> Result<HashMap<String, RoleAssignment>> {
         let client = ClientAuthorization::builder(self.credential.clone()).build();
         let mut collection = HashMap::new();
-        for sub in self.subscriptions.iter() {
+        for sub in self.subscriptions.inner.iter() {
             let sub_id = sub.subscription_id.as_ref().context("no sub id")?;
             let scope = format!("/subscriptions/{}", sub_id);
             let mut stream = client
@@ -201,7 +203,7 @@ impl AzureRest {
             .await?;
 
         let mut collection = vec![];
-        for sub in self.subscriptions.iter() {
+        for sub in self.subscriptions.inner.iter() {
             let sub_id = sub.subscription_id.as_ref().context("no sub id")?;
             let url = Url::parse(&url_template.format(&[sub_id]))?;
 
@@ -232,7 +234,7 @@ impl AzureRest {
             .await?;
 
         let mut collection = vec![];
-        for sub in self.subscriptions.iter() {
+        for sub in self.subscriptions.inner.iter() {
             let sub_id = sub.subscription_id.as_ref().context("no sub id")?;
             let url = Url::parse(&url_template.format(&[sub_id]))?;
             dbg!(&url);
@@ -332,11 +334,11 @@ mod test {
     use std::env;
 
     use crate::{
+        azure_rest::Subscriptions,
         keyvault::get_keyvault_secrets,
         splunk::{set_ssphp_run, Splunk},
     };
     use anyhow::Result;
-    use azure_mgmt_subscription::models::Subscription;
 
     use super::AzureRest;
 
@@ -359,8 +361,8 @@ mod test {
     #[tokio::test]
     async fn test_azureclient_list_subscriptions() -> Result<()> {
         let (azure_rest, _splunk) = setup().await?;
-        let subscriptions: Vec<Subscription> = azure_rest.azure_subscriptions().await?;
-        assert!(!subscriptions.is_empty());
+        let subscriptions: Subscriptions = azure_rest.azure_subscriptions().await?;
+        assert!(!subscriptions.inner.is_empty());
         Ok(())
     }
 
@@ -456,6 +458,20 @@ impl RoleAssignment {
     }
 }
 
+impl<'a> ToHecEvents<'a> for HashMap<String, RoleAssignment> {
+    type Item = RoleAssignment;
+    fn source() -> &'static str {
+        "azure_rest"
+    }
+
+    fn sourcetype() -> &'static str {
+        "SSPHP.azure.role_assignment"
+    }
+    fn collection(&'a self) -> Box<dyn Iterator<Item = &Self::Item> + 'a> {
+        Box::new(self.values())
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug)]
 pub(crate) struct RoleDefinition(SDKRoleDefinition);
 impl RoleDefinition {
@@ -465,5 +481,38 @@ impl RoleDefinition {
 
     pub fn id(&self) -> Option<&String> {
         self.0.id.as_ref()
+    }
+}
+
+impl<'a> ToHecEvents<'a> for HashMap<String, RoleDefinition> {
+    type Item = RoleDefinition;
+    fn source() -> &'static str {
+        "azure_rest"
+    }
+
+    fn sourcetype() -> &'static str {
+        "SSPHP.azure.role_definitions"
+    }
+    fn collection(&'a self) -> Box<dyn Iterator<Item = &Self::Item> + 'a> {
+        Box::new(self.values())
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub(crate) struct Subscriptions {
+    inner: Vec<Subscription>,
+}
+
+impl<'a> ToHecEvents<'a> for Subscriptions {
+    type Item = Subscription;
+    fn source() -> &'static str {
+        "azure_rest"
+    }
+
+    fn sourcetype() -> &'static str {
+        "SSPHP.azure.subscriptions"
+    }
+    fn collection(&'a self) -> Box<dyn Iterator<Item = &Self::Item> + 'a> {
+        Box::new(self.inner.iter())
     }
 }
