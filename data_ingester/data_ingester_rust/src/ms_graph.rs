@@ -418,14 +418,11 @@ mod test {
 
     use super::{login, MsGraph};
     use crate::{
-        azure_rest::AzureRest,
         keyvault::get_keyvault_secrets,
         splunk::{set_ssphp_run, HecEvent, Splunk, ToHecEvent, ToHecEvents},
-        users::{UserAzureRole, UserAzureRoles, UsersMap},
+        users::UsersMap,
     };
     use anyhow::{Context, Result};
-    use azure_mgmt_authorization::models::role_assignment_properties::PrincipalType;
-    use regex::Regex;
 
     async fn setup() -> Result<(Splunk, MsGraph)> {
         let secrets = get_keyvault_secrets(&env::var("KEY_VAULT_NAME")?).await?;
@@ -498,6 +495,9 @@ mod test {
         let _ = list_users.await?;
 
         assert!(!users_map.inner.is_empty());
+        splunk
+            .send_batch(&users_map.to_hec_events()?)
+            .await?;
         Ok(())
     }
 
