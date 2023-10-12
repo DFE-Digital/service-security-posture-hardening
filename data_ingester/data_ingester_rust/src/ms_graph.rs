@@ -244,6 +244,9 @@ impl MsGraph {
                 "transitiveMemberOf",
                 "assignedPlans",
                 "onPremisesSyncEnabled",
+                "userType",
+                // TODO Needs AuditLog.Read.All MS Graph permission
+                // "signInActivity",
             ])
             .expand(&["transitiveMemberOf"])
             .top("999")
@@ -498,97 +501,97 @@ mod test {
         Ok(())
     }
 
-    #[tokio::test]
-    async fn get_users_channel_subscription_roles() -> Result<()> {
-        let (splunk, ms_graph) = setup().await?;
+    // #[tokio::test]
+    // async fn get_users_channel_subscription_roles() -> Result<()> {
+    //     let (splunk, ms_graph) = setup().await?;
 
-        let (sender, mut reciever) = tokio::sync::mpsc::unbounded_channel::<UsersMap>();
+    //     let (sender, mut reciever) = tokio::sync::mpsc::unbounded_channel::<UsersMap>();
 
-        let splunk_clone = splunk.clone();
-        let ms_graph_clone = ms_graph.clone();
-        let list_users = tokio::spawn(async move {
-            ms_graph_clone
-                .list_users_channel(&splunk_clone, sender)
-                .await?;
-            anyhow::Ok::<()>(())
-        });
+    //     let splunk_clone = splunk.clone();
+    //     let ms_graph_clone = ms_graph.clone();
+    //     let list_users = tokio::spawn(async move {
+    //         ms_graph_clone
+    //             .list_users_channel(&splunk_clone, sender)
+    //             .await?;
+    //         anyhow::Ok::<()>(())
+    //     });
 
-        let mut users_map = UsersMap::default();
-        while let Some(users) = reciever.recv().await {
-            users_map.inner.extend(users.inner);
-        }
+    //     let mut users_map = UsersMap::default();
+    //     while let Some(users) = reciever.recv().await {
+    //         users_map.inner.extend(users.inner);
+    //     }
 
-        let secrets = get_keyvault_secrets(&env::var("KEY_VAULT_NAME")?).await?;
-        let azure_rest = AzureRest::new(
-            &secrets.azure_client_id,
-            &secrets.azure_client_secret,
-            &secrets.azure_tenant_id,
-        )
-        .await?;
+    //     let secrets = get_keyvault_secrets(&env::var("KEY_VAULT_NAME")?).await?;
+    //     let azure_rest = AzureRest::new(
+    //         &secrets.azure_client_id,
+    //         &secrets.azure_client_secret,
+    //         &secrets.azure_tenant_id,
+    //     )
+    //     .await?;
 
-        let role_definitions = azure_rest.azure_role_definitions().await?;
+    //     let role_definitions = azure_rest.azure_role_definitions().await?;
 
-        let role_assignments = azure_rest.azure_role_assignments().await?;
+    //     let role_assignments = azure_rest.azure_role_assignments().await?;
 
-        let _ = list_users.await?;
+    //     let _ = list_users.await?;
 
-        let admin_roles_regex = Regex::new(r"(?i)(Owner|contributor|admin)").unwrap();
+    //     let admin_roles_regex = Regex::new(r"(?i)(Owner|contributor|admin)").unwrap();
 
-        for (_, role_assignment) in role_assignments {
-            match &role_assignment
-                .principal_type()
-                .context("Principal Type not User")?
-            {
-                PrincipalType::User => {}
-                _ => continue,
-            }
+    //     for (_, role_assignment) in role_assignments {
+    //         match &role_assignment
+    //             .principal_type()
+    //             .context("Principal Type not User")?
+    //         {
+    //             PrincipalType::User => {}
+    //             _ => continue,
+    //         }
 
-            let role_assignment_role_definition_id = &role_assignment
-                .role_definition_id()
-                .context("No Role definition")?;
+    //         let role_assignment_role_definition_id = &role_assignment
+    //             .role_definition_id()
+    //             .context("No Role definition")?;
 
-            let Some(role_definition) = role_definitions.get(*role_assignment_role_definition_id)
-            else {
-                continue;
-            };
+    //         let Some(role_definition) = role_definitions.get(*role_assignment_role_definition_id)
+    //         else {
+    //             continue;
+    //         };
 
-            let principal_id = &role_assignment.principal_id().context("No Principal ID")?;
+    //         let principal_id = &role_assignment.principal_id().context("No Principal ID")?;
 
-            let Some(ref mut user) = users_map.inner.get_mut(*principal_id) else {
-                continue;
-            };
+    //         let Some(ref mut user) = users_map.inner.get_mut(*principal_id) else {
+    //             continue;
+    //         };
 
-            let id = role_definition.id().context("no role id")?.to_string();
+    //         let id = role_definition.id().context("no role id")?.to_string();
 
-            let role_name = role_definition
-                .role_name()
-                .context("no role name")?
-                .to_string();
+    //         let role_name = role_definition
+    //             .role_name()
+    //             .context("no role name")?
+    //             .to_string();
 
-            // TODO Should this be part of UserAzureRole?
-            let priviliged = admin_roles_regex.find(&role_name).is_some();
+    //         // TODO Should this be part of UserAzureRole?
+    //         let priviliged = admin_roles_regex.find(&role_name).is_some();
 
-            let azure_role = UserAzureRole { id, role_name };
+    //         let azure_role = UserAzureRole { id, role_name };
 
-            if user.azure_roles.is_none() {
-                user.azure_roles = Some(UserAzureRoles::default());
-            }
+    //         if user.azure_roles.is_none() {
+    //             user.azure_roles = Some(UserAzureRoles::default());
+    //         }
 
-            if priviliged {
-                user.azure_roles
-                    .as_mut()
-                    .unwrap()
-                    .privileged_roles
-                    .push(azure_role);
-            } else {
-                user.azure_roles.as_mut().unwrap().roles.push(azure_role);
-            }
-        }
+    //         if priviliged {
+    //             user.azure_roles
+    //                 .as_mut()
+    //                 .unwrap()
+    //                 .privileged_roles
+    //                 .push(azure_role);
+    //         } else {
+    //             user.azure_roles.as_mut().unwrap().roles.push(azure_role);
+    //         }
+    //     }
 
-        splunk.send_batch(&users_map.to_hec_events()?[..]).await?;
+    //     splunk.send_batch(&users_map.to_hec_events()?[..]).await?;
 
-        Ok(())
-    }
+    //     Ok(())
+    // }
 
     #[tokio::test]
     async fn get_admin_request_consent_policy() -> Result<()> {

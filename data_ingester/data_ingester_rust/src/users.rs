@@ -14,6 +14,7 @@ use azure_mgmt_authorization::models::role_assignment_properties::PrincipalType;
 use regex::Regex;
 use serde::Deserialize;
 use serde::Serialize;
+use serde_json::Value;
 use serde_with::skip_serializing_none;
 use std::collections::HashMap;
 use std::ops::Deref;
@@ -37,7 +38,7 @@ pub struct User<'a> {
     surname: Option<String>,
     user_principal_name: Option<String>,
     // Requires scope: AuditLog.Read.All
-    sign_in_activity: Option<String>,
+    sign_in_activity: Option<Value>,
     account_enabled: Option<bool>,
     pub(crate) transitive_member_of: Option<Vec<GroupOrRole>>,
     #[serde(skip_deserializing)]
@@ -47,15 +48,8 @@ pub struct User<'a> {
     // TODO! This might expand the json too much?
     pub azure_roles: Option<UserAzureRoles>,
     pub(crate) on_premises_sync_enabled: Option<bool>,
-    // TODO!
-    // assigned_plans: Option<???>,
+    user_type: Option<String>,
 }
-
-// impl From for User {
-//     fn from(span: Span) -> Self {
-//         <Option as From>::from(span)
-//     }
-// }
 
 /// Used to represent an AAD users roles in Azure (Cloud) subscriptions
 #[derive(Debug, Serialize, Deserialize, Default)]
@@ -133,6 +127,7 @@ impl<'a> User<'a> {
             is_privileged: None,
             azure_roles: None,
             on_premises_sync_enabled: None,
+            user_type: None,
         }
     }
 
@@ -160,11 +155,24 @@ impl<'a> User<'a> {
             .collect::<DirectoryRoles>()
     }
 
+    pub fn roles_mut(&mut self) -> Vec<&mut DirectoryRole> {
+        self.transitive_member_of
+            .as_mut()
+            .unwrap()
+            .iter_mut()
+            .filter_map(|dir_object| match dir_object {
+                GroupOrRole::Group(_) => None,
+                GroupOrRole::Role(role) => Some(role),
+            })
+            .collect::<Vec<&mut DirectoryRole>>()
+    }
+
     pub fn set_is_privileged(&mut self, role_definitions: &RoleDefinitions) {
-        for role in self.roles().value.iter() {
+        for role in self.roles_mut().iter_mut() {
             match role_definitions.value.get(&role.role_template_id) {
                 Some(role_definition) => {
                     if *role_definition.is_privileged.as_ref().unwrap_or(&false) {
+                        role.is_privileged = Some(true);
                         self.is_privileged = Some(true);
                         return;
                     }

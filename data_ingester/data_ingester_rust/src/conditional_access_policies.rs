@@ -189,6 +189,7 @@ mod conditional_access_policy {
                 display_name: Some("role_1_name".to_owned()),
                 role_template_id: "role1id".to_owned(),
                 members: None,
+                is_privileged: None,
             }),
         ]);
         let cap = ConditionalAccessPolicy::default();
