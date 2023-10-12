@@ -252,6 +252,7 @@ impl MsGraph {
 
         let mut total_users = 0;
         let mut batch = 1;
+
         while let Some(result) = stream.next().await {
             let response = result?;
 
@@ -273,12 +274,16 @@ impl MsGraph {
             });
 
             let mut users_map = UsersMap::default();
-            users_map.extend_from_users(users)?;
+
+            users_map
+                .extend_from_users(users)
+                .context("unable to extend users")?;
 
             sender
                 .send(users_map)
                 .expect("Unable to send Users to channel");
         }
+
         Ok(())
     }
 
@@ -692,9 +697,25 @@ pub async fn azure_users(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<(
     let ms_graph_clone = ms_graph.clone();
     let splunk_clone = splunk.clone();
 
+    try_collect_send(
+        "Azure Subscriptions",
+        azure_rest.get_microsoft_sql_encryption_protection(),
+        &splunk,
+    )
+    .await?;
+
+    let subscriptions = azure_rest.azure_subscriptions().await?;
+    splunk.send_batch(&subscriptions.to_hec_events()?).await?;
+
     let subscription_role_definitions = azure_rest.azure_role_definitions().await?;
+    splunk
+        .send_batch(&subscription_role_definitions.to_hec_events()?)
+        .await?;
 
     let subscription_role_assignments = azure_rest.azure_role_assignments().await?;
+    splunk
+        .send_batch(&subscription_role_assignments.to_hec_events()?)
+        .await?;
 
     splunk
         .log("Getting AAD Conditional access policies")
@@ -707,13 +728,16 @@ pub async fn azure_users(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<(
     let process_to_splunk = tokio::spawn(async move {
         while let Some(mut users) = reciever.recv().await {
             users.set_is_privileged(&aad_role_definitions);
+
             users.process_caps(&caps);
+
             users
                 .add_azure_roles(
                     &subscription_role_assignments,
                     &subscription_role_definitions,
                 )
                 .context("Failed to add azure roles")?;
+
             splunk.send_batch(&users.to_hec_events()?[..]).await?;
         }
         anyhow::Ok::<()>(())
@@ -723,10 +747,13 @@ pub async fn azure_users(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<(
         .get_admin_request_consent_policy()
         .await
         .unwrap();
+
     splunk_clone
         .send_batch(&[admin_request_consent_policy.to_hec_event().unwrap()])
         .await?;
+
     let _ = list_users.await?;
+
     let _ = process_to_splunk.await?;
 
     Ok(())
