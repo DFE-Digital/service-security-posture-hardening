@@ -216,6 +216,7 @@ impl<'a> UsersMap<'a> {
         self.inner.extend(users.inner);
     }
 
+    // TODO Get and Follow Groups and join table for users.
     pub fn add_azure_roles(
         &mut self,
         role_assignments: &HashMap<String, RoleAssignment>,

@@ -189,7 +189,6 @@ impl AzureRest {
             .await?;
 
         let rt: T = serde_json::from_str(&response)?;
-        dbg!(&rt);
         Ok(rt)
     }
 

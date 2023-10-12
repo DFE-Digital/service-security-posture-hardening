@@ -697,21 +697,23 @@ pub async fn azure_users(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<(
     let ms_graph_clone = ms_graph.clone();
     let splunk_clone = splunk.clone();
 
-    try_collect_send(
-        "Azure Subscriptions",
-        azure_rest.get_microsoft_sql_encryption_protection(),
-        &splunk,
-    )
-    .await?;
-
+    splunk
+        .log("Getting Azure Subscriptions")
+        .await?;
     let subscriptions = azure_rest.azure_subscriptions().await?;
     splunk.send_batch(&subscriptions.to_hec_events()?).await?;
 
+    splunk
+        .log("Getting Azure Subscription RoleDefinitions")
+        .await?;
     let subscription_role_definitions = azure_rest.azure_role_definitions().await?;
     splunk
         .send_batch(&subscription_role_definitions.to_hec_events()?)
         .await?;
 
+    splunk
+        .log("Getting Azure Subscription RoleAssignments")
+        .await?;
     let subscription_role_assignments = azure_rest.azure_role_assignments().await?;
     splunk
         .send_batch(&subscription_role_assignments.to_hec_events()?)
@@ -721,6 +723,9 @@ pub async fn azure_users(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<(
         .log("Getting AAD Conditional access policies")
         .await?;
     let caps = ms_graph.list_conditional_access_policies().await?;
+    splunk
+        .send_batch(&caps.to_hec_events()?)
+        .await?;
 
     splunk.log("Getting AAD roles definitions").await?;
     let aad_role_definitions = ms_graph.list_role_definitions().await?;
