@@ -611,6 +611,14 @@ mod test {
     }
 
     #[tokio::test]
+    async fn list_conditional_access_policies() -> Result<()> {
+        let (splunk, ms_graph) = setup().await?;
+        let caps = ms_graph.list_conditional_access_policies().await?;
+        splunk.send_batch(&caps.to_hec_events()?).await?;
+        Ok(())
+    }
+
+    #[tokio::test]
     async fn get_domains() -> Result<()> {
         let (splunk, ms_graph) = setup().await?;
         let domains = ms_graph.get_domains().await?;
@@ -697,9 +705,7 @@ pub async fn azure_users(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<(
     let ms_graph_clone = ms_graph.clone();
     let splunk_clone = splunk.clone();
 
-    splunk
-        .log("Getting Azure Subscriptions")
-        .await?;
+    splunk.log("Getting Azure Subscriptions").await?;
     let subscriptions = azure_rest.azure_subscriptions().await?;
     splunk.send_batch(&subscriptions.to_hec_events()?).await?;
 
@@ -723,9 +729,7 @@ pub async fn azure_users(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<(
         .log("Getting AAD Conditional access policies")
         .await?;
     let caps = ms_graph.list_conditional_access_policies().await?;
-    splunk
-        .send_batch(&caps.to_hec_events()?)
-        .await?;
+    splunk.send_batch(&caps.to_hec_events()?).await?;
 
     splunk.log("Getting AAD roles definitions").await?;
     let aad_role_definitions = ms_graph.list_role_definitions().await?;
