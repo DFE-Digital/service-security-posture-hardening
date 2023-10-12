@@ -206,9 +206,7 @@ impl<'a> UsersMap<'a> {
 
     pub fn extend_from_users(&mut self, users: Users<'a>) -> Result<()> {
         for user in users.value.into_iter() {
-            self.inner
-                .insert(user.id.to_string(), user)
-                .context("Unable to insert User into UserMap")?;
+            self.inner.insert(user.id.to_string(), user);
         }
         Ok(())
     }
