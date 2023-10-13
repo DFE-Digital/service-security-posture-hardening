@@ -2,7 +2,7 @@
 use serde::Deserialize;
 use serde::Serialize;
 use serde_with::skip_serializing_none;
-use std::borrow::Cow;
+
 #[skip_serializing_none]
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
@@ -23,12 +23,18 @@ pub struct DirectoryRole {
     pub(crate) display_name: Option<String>,
     pub(crate) role_template_id: String,
     pub(crate) members: Option<Vec<DirectoryRoleMember>>,
+    pub(crate) is_privileged: Option<bool>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Default)]
+#[derive(Debug, Serialize, Default)]
 pub struct DirectoryRoles<'a> {
-    pub value: Vec<Cow<'a, DirectoryRole>>,
+    pub value: Vec<&'a DirectoryRole>,
 }
+
+// #[derive(Debug, Serialize, Deserialize, Default)]
+// pub struct DirectoryRoles<'a> {
+//     pub value: Vec<Cow<'a, DirectoryRole>>,
+// }
 
 // #[derive(Debug, Serialize, Deserialize)]
 // pub struct DirectoryRoles {
@@ -71,12 +77,14 @@ fn directory_role_ids() {
         display_name: None,
         role_template_id: "role1id".to_owned(),
         members: None,
+        is_privileged: None,
     };
     let role2 = DirectoryRole {
         id: "id_2".to_owned(),
         display_name: None,
         role_template_id: "role2id".to_owned(),
         members: None,
+        is_privileged: None,
     };
     let roles = vec![role1, role2];
     let roles = roles.iter().collect::<DirectoryRoles>();
@@ -87,7 +95,7 @@ impl<'a> FromIterator<&'a DirectoryRole> for DirectoryRoles<'a> {
     fn from_iter<I: IntoIterator<Item = &'a DirectoryRole>>(iter: I) -> Self {
         let mut value = vec![];
         for i in iter {
-            value.push(Cow::Borrowed(i));
+            value.push(i);
         }
         Self { value }
     }

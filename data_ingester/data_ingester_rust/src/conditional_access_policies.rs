@@ -1,5 +1,6 @@
 use std::collections::HashSet;
 
+use crate::splunk::ToHecEvents;
 //use crate::splunk::ToHecEvents;
 use crate::users::User;
 use serde::Deserialize;
@@ -13,6 +14,7 @@ pub struct ConditionalAccessPolicy {
     display_name: Option<String>,
     state: Option<String>,
     conditions: ConditionalAccessPolicyConditions,
+    grant_controls: serde_json::Value,
 }
 
 impl ConditionalAccessPolicy {
@@ -130,6 +132,20 @@ pub struct ConditionalAccessPolicies {
     pub value: Vec<ConditionalAccessPolicy>,
 }
 
+impl<'a> ToHecEvents<'a> for ConditionalAccessPolicies {
+    type Item = ConditionalAccessPolicy;
+    fn source() -> &'static str {
+        "msgraph"
+    }
+
+    fn sourcetype() -> &'static str {
+        "SSPHP.AAD.conditional_access_policy"
+    }
+    fn collection(&'a self) -> Box<dyn Iterator<Item = &Self::Item> + 'a> {
+        Box::new(self.value.iter())
+    }
+}
+
 #[skip_serializing_none]
 #[derive(Debug, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
@@ -173,6 +189,7 @@ mod conditional_access_policy {
                 display_name: Some("role_1_name".to_owned()),
                 role_template_id: "role1id".to_owned(),
                 members: None,
+                is_privileged: None,
             }),
         ]);
         let cap = ConditionalAccessPolicy::default();
