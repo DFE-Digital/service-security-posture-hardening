@@ -1,10 +1,10 @@
 <dashboard version="1.1" theme="dark" script="js/table_cell_color.js">
-  <label>Foundational Systems Security Posture</label>
-  <description>v3.09</description>
+  <label>Foundational Systems Security Posture : CIS IG1 Benchmark</label>
+  <description>v3.16</description>
   
   <init>
-    <set token="tkn_selected_system">*</set>
-    <set token="tkn_selected_system_name">Overall</set>
+    <set token="tkn_selected_system">m365</set>
+    <set token="tkn_selected_system_name">M365</set>
     <unset token="tkn_selected_system_m365"></unset>
 
     <set token="c_red">"0xFF0000"</set>
@@ -21,7 +21,7 @@
   <row>
     <panel>
       <single>
-        <title>OVERALL SCORE</title>
+        <title>OVERALL IG1 SCORE</title>
         <search>
           <query>
 index="ssphp_metrics_summary" ssphp.use_case.id="all_000" earliest=-2d@d latest=now
@@ -226,14 +226,14 @@ index="ssphp_metrics_summary" ssphp.use_case.id="m365_000" earliest=-2d@d latest
     <panel>
       <input type="checkbox" token="tkn_sd" searchWhenChanged="true">
         <label>Show</label>
-        <choice value="Y">Only Doomsday Controls</choice>
+        <choice value="Y">IG1 Controls Only</choice>
         <initialValue>Y</initialValue>
         <change>
           <condition value="Y">
-            <set token="tkn_show_doomsday">ssphp.use_case.doomsday="1"</set>
+            <set token="tkn_show_ig1">ssphp.cis_benchmark.controls.ig1="TRUE" OR ssphp.use_case.id="dns*" OR ssphp.use_case.id="aad*"</set>
           </condition>
           <condition>
-            <set token="tkn_show_doomsday">ssphp.use_case.doomsday="*"</set>
+            <set token="tkn_show_ig1">*</set>
           </condition>
         </change>
       </input>
@@ -297,20 +297,25 @@ index="ssphp_metrics_summary" ssphp.use_case.id="m365_000" earliest=-2d@d latest
       <table id="table2">
         <search>
           <query>
-index="ssphp_metrics_summary" ssphp.use_case.id="$tkn_selected_system$*" $tkn_show_doomsday$
+index="ssphp_metrics_summary" ssphp.use_case.id="$tkn_selected_system$*" $tkn_show_ig1$
 | dedup ssphp.use_case.id
-| search ssphp.use_case.id!="*_000" AND ssphp.use_case.id!="*rollup*" AND ssphp.use_case.id!="m365_001" AND ssphp.use_case.id!="m365_002" AND ssphp.use_case.id!="*6_1" AND ssphp.use_case.id!="*6_2"
+| search ssphp.use_case.title!="" AND ssphp.use_case.id!="*_000" ```AND ssphp.use_case.id!="*rollup*" AND ssphp.use_case.id!="m365_001" AND ssphp.use_case.id!="m365_002" AND ssphp.use_case.id!="*6_1" AND ssphp.use_case.id!="*6_2"```
 
 | eval Score='ssphp.score.score'."|".'ssphp.score.color',
-       Description=mvappend('ssphp.use_case.description','ssphp.cis_benchmark.control.title')
+       Description=mvappend('ssphp.use_case.description','ssphp.cis_benchmark.control.title'),
+       ssphp.cis_benchmark.controls.v8=split('ssphp.cis_benchmark.controls.v8',"
+")
 
 | rename ssphp.use_case.title as "Title",
          ssphp.use_case.short_description as "Name"
-         ssphp.use_case.doomsday as "Doomsday Control"
 
 | search Score=*
 
-| table "Title", Score, "Name", "Description", "Doomsday Control", ssphp.use_case.id, ssphp.use_case.description, ssphp.cis_benchmark.control.title
+| table "Title", Score, "Name", "Description", ssphp.use_case.id, ssphp.use_case.description, ssphp.cis_benchmark.control.title, ssphp.cis_benchmark.controls.v8
+| rename  ssphp.use_case.description as "Use Case Description",
+          ssphp.cis_benchmark.controls.v8 as "Controls", 
+          ssphp.cis_benchmark.control.title as "Control Title",
+          ssphp.use_case.id as "Use Case ID"
 
 | sort 0 Title
           </query>
@@ -324,7 +329,7 @@ index="ssphp_metrics_summary" ssphp.use_case.id="$tkn_selected_system$*" $tkn_sh
         <option name="rowNumbers">false</option>
         <option name="totalsRow">false</option>
         <option name="wrap">true</option>
-        <fields>"Title", Score, "Name", "Description", "Doomsday Control"</fields>
+        <fields>"Title", Score, "Name", "Description", "Controls"</fields>
         <option name="drilldown">row</option>
         <drilldown>
           <link target="_blank">/app/$tkn_current_app$/ssphp_foundational_systems_drilldown?tkn_use_case_id=$row.ssphp.use_case.id$</link>
