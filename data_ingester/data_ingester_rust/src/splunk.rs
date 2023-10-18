@@ -34,7 +34,7 @@ impl HecEvent {
             source: source.to_string(),
             sourcetype: sourcetype.to_string(),
             host: hostname,
-            event: serde_json::to_string(&ssphp_event).unwrap(),
+            event: serde_json::to_string(&ssphp_event)?,
         })
     }
 }
