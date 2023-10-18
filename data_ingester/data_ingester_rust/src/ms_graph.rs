@@ -460,275 +460,6 @@ pub struct Group {
     // pub service_provisioning_errors: Vec<Value>,
 }
 
-#[cfg(test)]
-pub(crate) mod test {
-    use std::env;
-
-    use super::{login, MsGraph};
-    use crate::{
-        keyvault::get_keyvault_secrets,
-        splunk::{set_ssphp_run, Splunk, ToHecEvents},
-        users::UsersMap,
-    };
-    use anyhow::{Context, Result};
-
-    pub async fn setup() -> Result<(Splunk, MsGraph)> {
-        let secrets = get_keyvault_secrets(&env::var("KEY_VAULT_NAME")?).await?;
-
-        set_ssphp_run()?;
-        let ms_graph = login(
-            &secrets.azure_client_id,
-            &secrets.azure_client_secret,
-            &secrets.azure_tenant_id,
-        )
-        .await?;
-        let splunk = Splunk::new(&secrets.splunk_host, &secrets.splunk_token)?;
-        Ok((splunk, ms_graph))
-    }
-
-    // #[tokio::test]
-    // async fn compare_role_definitions() -> Result<()> {
-    //     let (splunk, ms_graph) = setup().await?;
-    //     let secrets = get_keyvault_secrets(&env::var("KEY_VAULT_NAME")?).await?;
-    //     let azure_rest = AzureRest::new(
-    //         &secrets.azure_client_id,
-    //         &secrets.azure_client_secret,
-    //         &secrets.azure_tenant_id,
-    //     ).await?;
-    //     let role_definitions_rest = azure_rest.azure_role_definitions().await?;
-    //     let role_definitions_graph = ms_graph.list_role_definitions().await?;
-    //     dbg!(&role_definitions_graph.value.keys());
-    //     dbg!(&role_definitions_graph.value.len());
-    //     dbg!(&role_definitions_rest.keys());
-    //     dbg!(&role_definitions_rest.len());
-    //     let rest_keys = role_definitions_rest.keys()
-    //         .map(|key| (key.split("/").last().unwrap().to_string(),()))
-    //         .collect::<HashMap<String, ()>>();
-    //     let mut keys = rest_keys.keys().cloned().collect::<Vec<String>>();
-    //     keys.sort();
-    //     dbg!(&keys);
-    //     for key in role_definitions_graph.value.keys() {
-    //         println!("{}:{}", rest_keys.contains_key(key), key);
-    //     }
-    //     for value in role_definitions_graph.value.values() {
-    //         dbg!(&value.display_name);
-    //     }
-    //     for value in role_definitions_rest.values() {
-    //         dbg!(&value.properties.as_ref().unwrap().role_name);
-    //     }
-    //     assert_eq!(&role_definitions_rest.len(), &role_definitions_graph.value.len());
-    //     assert!(false);
-    //     Ok(())
-    // }
-
-    #[tokio::test]
-    async fn get_users_channel() -> Result<()> {
-        let (splunk, ms_graph) = setup().await?;
-
-        let (sender, mut reciever) = tokio::sync::mpsc::unbounded_channel::<UsersMap>();
-
-        let splunk_clone = splunk.clone();
-        let ms_graph_clone = ms_graph.clone();
-        let list_users = tokio::spawn(async move {
-            ms_graph_clone
-                .list_users_channel(&splunk_clone, sender)
-                .await?;
-            anyhow::Ok::<()>(())
-        });
-
-        let mut users_map = UsersMap::default();
-        while let Some(users) = reciever.recv().await {
-            users_map.extend(users);
-        }
-        let _ = list_users.await?;
-
-        assert!(!users_map.inner.is_empty());
-        // splunk
-        //     .send_batch(&users_map.to_hec_events()?)
-        //     .await?;
-        Ok(())
-    }
-
-    // #[tokio::test]
-    // async fn get_users_channel_subscription_roles() -> Result<()> {
-    //     let (splunk, ms_graph) = setup().await?;
-
-    //     let (sender, mut reciever) = tokio::sync::mpsc::unbounded_channel::<UsersMap>();
-
-    //     let splunk_clone = splunk.clone();
-    //     let ms_graph_clone = ms_graph.clone();
-    //     let list_users = tokio::spawn(async move {
-    //         ms_graph_clone
-    //             .list_users_channel(&splunk_clone, sender)
-    //             .await?;
-    //         anyhow::Ok::<()>(())
-    //     });
-
-    //     let mut users_map = UsersMap::default();
-    //     while let Some(users) = reciever.recv().await {
-    //         users_map.inner.extend(users.inner);
-    //     }
-
-    //     let secrets = get_keyvault_secrets(&env::var("KEY_VAULT_NAME")?).await?;
-    //     let azure_rest = AzureRest::new(
-    //         &secrets.azure_client_id,
-    //         &secrets.azure_client_secret,
-    //         &secrets.azure_tenant_id,
-    //     )
-    //     .await?;
-
-    //     let role_definitions = azure_rest.azure_role_definitions().await?;
-
-    //     let role_assignments = azure_rest.azure_role_assignments().await?;
-
-    //     let _ = list_users.await?;
-
-    //     let admin_roles_regex = Regex::new(r"(?i)(Owner|contributor|admin)").unwrap();
-
-    //     for (_, role_assignment) in role_assignments {
-    //         match &role_assignment
-    //             .principal_type()
-    //             .context("Principal Type not User")?
-    //         {
-    //             PrincipalType::User => {}
-    //             _ => continue,
-    //         }
-
-    //         let role_assignment_role_definition_id = &role_assignment
-    //             .role_definition_id()
-    //             .context("No Role definition")?;
-
-    //         let Some(role_definition) = role_definitions.get(*role_assignment_role_definition_id)
-    //         else {
-    //             continue;
-    //         };
-
-    //         let principal_id = &role_assignment.principal_id().context("No Principal ID")?;
-
-    //         let Some(ref mut user) = users_map.inner.get_mut(*principal_id) else {
-    //             continue;
-    //         };
-
-    //         let id = role_definition.id().context("no role id")?.to_string();
-
-    //         let role_name = role_definition
-    //             .role_name()
-    //             .context("no role name")?
-    //             .to_string();
-
-    //         // TODO Should this be part of UserAzureRole?
-    //         let priviliged = admin_roles_regex.find(&role_name).is_some();
-
-    //         let azure_role = UserAzureRole { id, role_name };
-
-    //         if user.azure_roles.is_none() {
-    //             user.azure_roles = Some(UserAzureRoles::default());
-    //         }
-
-    //         if priviliged {
-    //             user.azure_roles
-    //                 .as_mut()
-    //                 .unwrap()
-    //                 .privileged_roles
-    //                 .push(azure_role);
-    //         } else {
-    //             user.azure_roles.as_mut().unwrap().roles.push(azure_role);
-    //         }
-    //     }
-
-    //     splunk.send_batch(&users_map.to_hec_events()?[..]).await?;
-
-    //     Ok(())
-    // }
-
-    #[tokio::test]
-    async fn get_admin_request_consent_policy() -> Result<()> {
-        let (splunk, ms_graph) = setup().await?;
-        let admin_request_consent_policy = ms_graph.get_admin_request_consent_policy().await?;
-        splunk
-            .send_batch((&admin_request_consent_policy).to_hec_events()?)
-            .await?;
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn get_authorization_policy() -> Result<()> {
-        let (splunk, ms_graph) = setup().await?;
-        let get_authorization_policy = ms_graph.get_authorization_policy().await?;
-        splunk
-            .send_batch((&get_authorization_policy).to_hec_events()?)
-            .await?;
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn list_conditional_access_policies() -> Result<()> {
-        let (splunk, ms_graph) = setup().await?;
-        let caps = ms_graph.list_conditional_access_policies().await?;
-        splunk.send_batch((&caps).to_hec_events()?).await?;
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn get_domains() -> Result<()> {
-        let (splunk, ms_graph) = setup().await?;
-        let domains = ms_graph.get_domains().await?;
-        splunk.send_batch((&domains).to_hec_events()?).await?;
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn list_groups() -> Result<()> {
-        let (splunk, ms_graph) = setup().await?;
-        let groups = ms_graph.list_groups().await?;
-        splunk.send_batch((&groups).to_hec_events()?).await?;
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn get_permission_grant_policy() -> Result<()> {
-        let (splunk, ms_graph) = setup().await?;
-        let permission_grant_policy = ms_graph.get_permission_grant_policy().await?;
-        splunk
-            .send_batch((&permission_grant_policy).to_hec_events()?)
-            .await?;
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn get_identity_security_defaults_enforcement_policy() -> Result<()> {
-        let (splunk, ms_graph) = setup().await?;
-        let security_defaults = ms_graph
-            .get_identity_security_defaults_enforcement_policy()
-            .await?;
-        splunk
-            .send_batch((&security_defaults).to_hec_events()?)
-            .await?;
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn get_security_secure_scores() -> Result<()> {
-        let (splunk, ms_graph) = setup().await?;
-        let mut security_scores = ms_graph.get_security_secure_scores().await?;
-        let security_score = security_scores
-            .inner
-            .first_mut()
-            .context("Unable to get first SecrurityScore")?;
-        security_score.odata_context = Some(security_scores.odata_context.to_owned());
-        // let batch = security_score
-        //     .control_scores
-        //     .iter()
-        //     .map(|cs| cs.to_hec_event().unwrap())
-        //     .collect::<Vec<HecEvent>>();
-        // splunk.send_batch(&batch[..]).await?;
-        //assert!(false);
-        let batch = &*security_score;
-        splunk.send_batch(batch.to_hec_events()?).await?;
-        Ok(())
-    }
-}
-
 /// AAD + Azure
 pub async fn azure_users(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
     set_ssphp_run()?;
@@ -1134,19 +865,144 @@ where
     Ok(())
 }
 
-// async fn try_collect_send(
-//     name: &str,
-//     future: impl Future<Output = Result<Vec<HecEvent>, anyhow::Error>>,
-//     splunk: &Splunk,
-// ) -> Result<()> {
-//     splunk.log(&format!("Getting {}", &name)).await?;
-//     match future.await {
-//         Ok(result) => splunk.send_batch(&result).await?,
-//         Err(err) => {
-//             splunk
-//                 .log(&format!("Failed to get {}: {}", &name, err))
-//                 .await?
-//         }
-//     };
-//     Ok(())
-// }
+#[cfg(test)]
+pub(crate) mod test {
+    use std::env;
+
+    use super::{login, MsGraph};
+    use crate::{
+        keyvault::get_keyvault_secrets,
+        splunk::{set_ssphp_run, Splunk, ToHecEvents},
+        users::UsersMap,
+    };
+    use anyhow::{Context, Result};
+
+    pub async fn setup() -> Result<(Splunk, MsGraph)> {
+        let secrets = get_keyvault_secrets(&env::var("KEY_VAULT_NAME")?).await?;
+
+        set_ssphp_run()?;
+        let ms_graph = login(
+            &secrets.azure_client_id,
+            &secrets.azure_client_secret,
+            &secrets.azure_tenant_id,
+        )
+        .await?;
+        let splunk = Splunk::new(&secrets.splunk_host, &secrets.splunk_token)?;
+        Ok((splunk, ms_graph))
+    }
+
+    #[tokio::test]
+    async fn get_users_channel() -> Result<()> {
+        let (splunk, ms_graph) = setup().await?;
+
+        let (sender, mut reciever) = tokio::sync::mpsc::unbounded_channel::<UsersMap>();
+
+        let splunk_clone = splunk.clone();
+        let ms_graph_clone = ms_graph.clone();
+        let list_users = tokio::spawn(async move {
+            ms_graph_clone
+                .list_users_channel(&splunk_clone, sender)
+                .await?;
+            anyhow::Ok::<()>(())
+        });
+
+        let mut users_map = UsersMap::default();
+        while let Some(users) = reciever.recv().await {
+            users_map.extend(users);
+        }
+        let _ = list_users.await?;
+
+        assert!(!users_map.inner.is_empty());
+        // splunk
+        //     .send_batch(&users_map.to_hec_events()?)
+        //     .await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn get_admin_request_consent_policy() -> Result<()> {
+        let (splunk, ms_graph) = setup().await?;
+        let admin_request_consent_policy = ms_graph.get_admin_request_consent_policy().await?;
+        splunk
+            .send_batch((&admin_request_consent_policy).to_hec_events()?)
+            .await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn get_authorization_policy() -> Result<()> {
+        let (splunk, ms_graph) = setup().await?;
+        let get_authorization_policy = ms_graph.get_authorization_policy().await?;
+        splunk
+            .send_batch((&get_authorization_policy).to_hec_events()?)
+            .await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn list_conditional_access_policies() -> Result<()> {
+        let (splunk, ms_graph) = setup().await?;
+        let caps = ms_graph.list_conditional_access_policies().await?;
+        splunk.send_batch((&caps).to_hec_events()?).await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn get_domains() -> Result<()> {
+        let (splunk, ms_graph) = setup().await?;
+        let domains = ms_graph.get_domains().await?;
+        splunk.send_batch((&domains).to_hec_events()?).await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn list_groups() -> Result<()> {
+        let (splunk, ms_graph) = setup().await?;
+        let groups = ms_graph.list_groups().await?;
+        splunk.send_batch((&groups).to_hec_events()?).await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn get_permission_grant_policy() -> Result<()> {
+        let (splunk, ms_graph) = setup().await?;
+        let permission_grant_policy = ms_graph.get_permission_grant_policy().await?;
+        splunk
+            .send_batch((&permission_grant_policy).to_hec_events()?)
+            .await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn get_identity_security_defaults_enforcement_policy() -> Result<()> {
+        let (splunk, ms_graph) = setup().await?;
+        let security_defaults = ms_graph
+            .get_identity_security_defaults_enforcement_policy()
+            .await?;
+        splunk
+            .send_batch((&security_defaults).to_hec_events()?)
+            .await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn get_security_secure_scores() -> Result<()> {
+        let (splunk, ms_graph) = setup().await?;
+        let mut security_scores = ms_graph.get_security_secure_scores().await?;
+        let security_score = security_scores
+            .inner
+            .first_mut()
+            .context("Unable to get first SecrurityScore")?;
+        security_score.odata_context = Some(security_scores.odata_context.to_owned());
+        // let batch = security_score
+        //     .control_scores
+        //     .iter()
+        //     .map(|cs| cs.to_hec_event().unwrap())
+        //     .collect::<Vec<HecEvent>>();
+        // splunk.send_batch(&batch[..]).await?;
+        //assert!(false);
+        let batch = &*security_score;
+        splunk.send_batch(batch.to_hec_events()?).await?;
+        Ok(())
+    }
+}

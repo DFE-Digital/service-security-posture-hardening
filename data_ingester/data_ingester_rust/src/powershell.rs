@@ -1,6 +1,6 @@
 use anyhow::Result;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
-//use tokio::process::Command;
+use std::iter;
 use std::process::Command;
 
 use crate::{
@@ -112,12 +112,16 @@ pub async fn run_powershell_get_sharing_policy(secrets: &Secrets) -> Result<Shar
     Ok(result)
 }
 
-#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct SharingPolicy(serde_json::Value);
+#[serde(untagged)]
+pub enum SharingPolicy {
+    Collection(Vec<serde_json::Value>),
+    Single(serde_json::Value),
+}
 
 impl ToHecEvents for &SharingPolicy {
-    type Item = Self;
+    type Item = serde_json::Value;
     fn source(&self) -> &'static str {
         "powershell:ExchangeOnline:Get-SharingPolicy"
     }
@@ -125,16 +129,12 @@ impl ToHecEvents for &SharingPolicy {
     fn sourcetype(&self) -> &'static str {
         "m365:sharing_policy"
     }
-    fn to_hec_events(&self) -> anyhow::Result<Vec<crate::splunk::HecEvent>> {
-        Ok(vec![HecEvent::new(
-            &self,
-            self.source(),
-            self.sourcetype(),
-        )?])
-    }
 
     fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
-        unimplemented!()
+        match self {
+            SharingPolicy::Collection(collection) => Box::new(collection.iter()),
+            SharingPolicy::Single(single) => Box::new(iter::once(single)),
+        }
     }
 }
 
