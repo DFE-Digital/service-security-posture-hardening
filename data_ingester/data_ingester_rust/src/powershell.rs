@@ -82,10 +82,10 @@ pub async fn run_powershell_get_safe_links_policy(secrets: &Secrets) -> Result<S
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct SafeLinksPolicy(serde_json::Value);
+pub struct SafeLinksPolicy(Vec<serde_json::Value>);
 
 impl ToHecEvents for &SafeLinksPolicy {
-    type Item = Self;
+    type Item = serde_json::Value;
     fn source(&self) -> &'static str {
         "powershell:ExchangeOnline:Get-SafeLinksPolicy"
     }
@@ -93,16 +93,9 @@ impl ToHecEvents for &SafeLinksPolicy {
     fn sourcetype(&self) -> &'static str {
         "m365:safe_links_policy"
     }
-    fn to_hec_events(&self) -> anyhow::Result<Vec<crate::splunk::HecEvent>> {
-        Ok(vec![HecEvent::new(
-            &self,
-            self.source(),
-            self.sourcetype(),
-        )?])
-    }
 
     fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
-        unimplemented!()
+        Box::new(self.0.iter())
     }
 }
 

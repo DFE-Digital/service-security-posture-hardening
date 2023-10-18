@@ -564,70 +564,6 @@ pub async fn azure_users(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<(
     Ok(())
 }
 
-/// AAD + Azure
-// pub async fn azure_users_old(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
-//     set_ssphp_run()?;
-
-//     splunk.log("Starting Azure Users collection").await?;
-//     splunk
-//         .log(&format!("GIT_HASH: {}", env!("GIT_HASH")))
-//         .await?;
-
-//     let ms_graph = login(
-//         &secrets.azure_client_id,
-//         &secrets.azure_client_secret,
-//         &secrets.azure_tenant_id,
-//     )
-//     .await?;
-
-//     splunk.log("Azure logged in").await?;
-
-//     let (sender, mut reciever) = tokio::sync::mpsc::unbounded_channel::<UsersMap>();
-
-//     splunk.log("Getting Azure users").await?;
-
-//     let splunk_clone = splunk.clone();
-//     let ms_graph_clone = ms_graph.clone();
-//     let list_users = tokio::spawn(async move {
-//         ms_graph_clone
-//             .list_users_channel(&splunk_clone, sender)
-//             .await?;
-//         anyhow::Ok::<()>(())
-//     });
-
-//     let ms_graph_clone = ms_graph.clone();
-//     let splunk_clone = splunk.clone();
-//     let process_to_splunk = tokio::spawn(async move {
-//         splunk.log("Getting roles definitions").await?;
-//         let role_definitions = ms_graph.list_role_definitions().await?;
-
-//         splunk.log("Getting Conditional access policies").await?;
-//         let caps = ms_graph.list_conditional_access_policies().await?;
-
-//         while let Some(mut users) = reciever.recv().await {
-//             dbg!(&users);
-//             users.set_is_privileged(&role_definitions);
-//             users.process_caps(&caps);
-
-//             splunk.send_batch(&users.to_hec_events()?[..]).await?;
-//         }
-//         splunk.log("Users sent / Azure Complete").await?;
-//         anyhow::Ok::<()>(())
-//     });
-
-//     let admin_request_consent_policy = ms_graph_clone
-//         .get_admin_request_consent_policy()
-//         .await
-//         .unwrap();
-//     splunk_clone
-//         .send_batch(&[admin_request_consent_policy.to_hec_event().unwrap()])
-//         .await?;
-//     let _ = list_users.await?;
-//     let _ = process_to_splunk.await?;
-
-//     Ok(())
-// }
-
 pub async fn m365(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
     //    let secrets = get_keyvault_secrets(&env::var("KEY_VAULT_NAME")?).await?;
 
@@ -804,25 +740,6 @@ pub async fn m365(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
     Ok(())
 }
 
-// impl ToHecEvents for Vec<HecEvent> {
-//     type Item = ();
-
-//     fn source() -> &'static str {
-//         todo!()
-//     }
-
-//     fn sourcetype() -> &'static str {
-//         todo!()
-//     }
-
-//     fn collection(&self) -> Box<dyn Iterator<Item = &Self::Item>> {
-//         todo!()
-//     }
-
-//     fn to_hec_events(&self) -> Result<Vec<HecEvent>> {
-//         Ok(*self)
-//     }
-// }
 use std::fmt::Debug;
 async fn try_collect_send<T>(
     name: &str,

@@ -351,14 +351,14 @@ impl ToHecEvents for &ReturnTypeWrapper {
     type Item = ();
 
     fn source(&self) -> &str {
-        todo!()
+        unimplemented!()
     }
 
     fn sourcetype(&self) -> &str {
-        todo!()
+        unimplemented!()
     }
     fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
-        todo!()
+        unimplemented!()
     }
 }
 
@@ -387,15 +387,15 @@ impl ToHecEvents for &ReturnTypes {
     type Item = ();
 
     fn source(&self) -> &str {
-        todo!()
+        unimplemented!()
     }
 
     fn sourcetype(&self) -> &str {
-        todo!()
+        unimplemented!()
     }
 
     fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
-        todo!()
+        unimplemented!()
     }
 }
 
