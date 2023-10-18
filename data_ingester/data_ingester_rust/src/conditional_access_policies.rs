@@ -129,20 +129,21 @@ pub struct ConditionalAccessPolicyConditionsUsers {
 #[derive(Debug, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct ConditionalAccessPolicies {
-    pub value: Vec<ConditionalAccessPolicy>,
+    #[serde(rename = "value")]
+    pub inner: Vec<ConditionalAccessPolicy>,
 }
 
-impl<'a> ToHecEvents<'a> for ConditionalAccessPolicies {
+impl ToHecEvents for &ConditionalAccessPolicies {
     type Item = ConditionalAccessPolicy;
-    fn source() -> &'static str {
+    fn source(&self) -> &str {
         "msgraph"
     }
 
-    fn sourcetype() -> &'static str {
+    fn sourcetype(&self) -> &str {
         "SSPHP.AAD.conditional_access_policy"
     }
-    fn collection(&'a self) -> Box<dyn Iterator<Item = &Self::Item> + 'a> {
-        Box::new(self.value.iter())
+    fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
+        Box::new(self.inner.iter())
     }
 }
 
@@ -159,7 +160,7 @@ impl<'a> UserConditionalAccessPolicy<'a> {}
 
 impl ConditionalAccessPolicies {
     pub fn new() -> Self {
-        Self { value: Vec::new() }
+        Self { inner: Vec::new() }
     }
 }
 
@@ -168,7 +169,7 @@ impl IntoIterator for ConditionalAccessPolicies {
     type IntoIter = std::vec::IntoIter<Self::Item>;
 
     fn into_iter(self) -> Self::IntoIter {
-        self.value.into_iter()
+        self.inner.into_iter()
     }
 }
 
@@ -183,6 +184,7 @@ mod conditional_access_policy {
             GroupOrRole::Group(Group {
                 id: "group1".to_owned(),
                 display_name: Some("group_1_name".to_owned()),
+                visibility: None,
             }),
             GroupOrRole::Role(DirectoryRole {
                 id: "role1".to_owned(),

@@ -3,11 +3,14 @@ use serde::{de::DeserializeOwned, Deserialize, Serialize};
 //use tokio::process::Command;
 use std::process::Command;
 
-use crate::{keyvault::Secrets, splunk::ToHecEvent};
+use crate::{
+    keyvault::Secrets,
+    splunk::{HecEvent, ToHecEvents},
+};
 
 pub async fn install_powershell() -> Result<()> {
     eprintln!("Downloading Powershell .deb");
-    let output = Command::new("curl")
+    let _output = Command::new("curl")
         .args(
             [
                 "-L",
@@ -17,16 +20,14 @@ pub async fn install_powershell() -> Result<()> {
             ]
         )
         .output()?;
-    dbg!(output);
 
     eprintln!("Installing Powershelll .deb");
-    let output = Command::new("dpkg")
+    let _output = Command::new("dpkg")
         .args(["-i", "/tmp/powershell_7.3.7-1.deb_amd64.deb"])
         .output()?;
-    dbg!(output);
 
     eprintln!("Installing Powershelll ExchangeOnlineManagement");
-    let output = Command::new("pwsh")
+    let _output = Command::new("pwsh")
         .args([
             "-Command",
             r#"
@@ -34,40 +35,6 @@ Install-Module -Confirm:$False -Force -Name ExchangeOnlineManagement;
 "#,
         ])
         .output()?;
-    dbg!(output);
-
-    //     eprintln!("Installing Powershelll PSWSMan");
-    //     let output = Command::new("pwsh")
-    //         .args([
-    //             "-Command",
-    //             r#"
-    // Install-Module -Confirm:$False -Force -Name PSWSMan;
-    // "#,
-    //         ])
-    //         .output()?;
-    //     dbg!(output);
-
-    //     eprintln!("Installing Powershelll Microsoft.Graph");
-    //     let output = Command::new("pwsh")
-    //         .args([
-    //             "-Command",
-    //             r#"
-    // Install-Module -Confirm:$False -Force -AllowClobber -Name Microsoft.Graph;
-    // "#,
-    //         ])
-    //         .output()?;
-    //     dbg!(output);
-
-    //     eprintln!("Installing Powershelll Microsoft.Graph.Beta");
-    //     let output = Command::new("pwsh")
-    //         .args([
-    //             "-Command",
-    //             r#"
-    // Install-Module -Confirm:$False -Force -AllowClobber -Name Microsoft.Graph.Beta;
-    // "#,
-    //         ])
-    //         .output()?;
-    //     dbg!(output);
 
     Ok(())
 }
@@ -84,13 +51,26 @@ pub async fn run_powershell_get_organization_config(
 #[serde(rename_all = "camelCase")]
 pub struct ExchangeOrganizationConfig(serde_json::Value);
 
-impl ToHecEvent for ExchangeOrganizationConfig {
-    fn source() -> &'static str {
+impl ToHecEvents for &ExchangeOrganizationConfig {
+    type Item = Self;
+    fn source(&self) -> &str {
         "powershell:ExchangeOnline:Get-OrganizationConfig"
     }
 
-    fn sourcetype() -> &'static str {
+    fn sourcetype(&self) -> &str {
         "m365:organization_config"
+    }
+
+    fn to_hec_events(&self) -> anyhow::Result<Vec<crate::splunk::HecEvent>> {
+        Ok(vec![HecEvent::new(
+            &self,
+            self.source(),
+            self.sourcetype(),
+        )?])
+    }
+
+    fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
+        unimplemented!()
     }
 }
 
@@ -104,13 +84,25 @@ pub async fn run_powershell_get_safe_links_policy(secrets: &Secrets) -> Result<S
 #[serde(rename_all = "camelCase")]
 pub struct SafeLinksPolicy(serde_json::Value);
 
-impl ToHecEvent for SafeLinksPolicy {
-    fn source() -> &'static str {
+impl ToHecEvents for &SafeLinksPolicy {
+    type Item = Self;
+    fn source(&self) -> &'static str {
         "powershell:ExchangeOnline:Get-SafeLinksPolicy"
     }
 
-    fn sourcetype() -> &'static str {
+    fn sourcetype(&self) -> &'static str {
         "m365:safe_links_policy"
+    }
+    fn to_hec_events(&self) -> anyhow::Result<Vec<crate::splunk::HecEvent>> {
+        Ok(vec![HecEvent::new(
+            &self,
+            self.source(),
+            self.sourcetype(),
+        )?])
+    }
+
+    fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
+        unimplemented!()
     }
 }
 
@@ -124,13 +116,25 @@ pub async fn run_powershell_get_sharing_policy(secrets: &Secrets) -> Result<Shar
 #[serde(rename_all = "camelCase")]
 pub struct SharingPolicy(serde_json::Value);
 
-impl ToHecEvent for SharingPolicy {
-    fn source() -> &'static str {
+impl ToHecEvents for &SharingPolicy {
+    type Item = Self;
+    fn source(&self) -> &'static str {
         "powershell:ExchangeOnline:Get-SharingPolicy"
     }
 
-    fn sourcetype() -> &'static str {
+    fn sourcetype(&self) -> &'static str {
         "m365:sharing_policy"
+    }
+    fn to_hec_events(&self) -> anyhow::Result<Vec<crate::splunk::HecEvent>> {
+        Ok(vec![HecEvent::new(
+            &self,
+            self.source(),
+            self.sourcetype(),
+        )?])
+    }
+
+    fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
+        unimplemented!()
     }
 }
 
@@ -146,13 +150,26 @@ pub async fn run_powershell_get_malware_filter_policy(
 #[serde(rename_all = "camelCase")]
 pub struct MalwareFilterPolicy(serde_json::Value);
 
-impl ToHecEvent for MalwareFilterPolicy {
-    fn source() -> &'static str {
+impl ToHecEvents for &MalwareFilterPolicy {
+    type Item = Self;
+    fn source(&self) -> &'static str {
         "powershell:ExchangeOnline:Get-MalwareFilterPolicy"
     }
 
-    fn sourcetype() -> &'static str {
+    fn sourcetype(&self) -> &'static str {
         "m365:malware_filter_policy"
+    }
+
+    fn to_hec_events(&self) -> anyhow::Result<Vec<crate::splunk::HecEvent>> {
+        Ok(vec![HecEvent::new(
+            &self,
+            self.source(),
+            self.sourcetype(),
+        )?])
+    }
+
+    fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
+        unimplemented!()
     }
 }
 
@@ -168,13 +185,26 @@ pub async fn run_powershell_get_hosted_outbound_spam_filter_policy(
 #[serde(rename_all = "camelCase")]
 pub struct HostedOutboundSpamFilterPolicy(serde_json::Value);
 
-impl ToHecEvent for HostedOutboundSpamFilterPolicy {
-    fn source() -> &'static str {
+impl ToHecEvents for &HostedOutboundSpamFilterPolicy {
+    type Item = Self;
+    fn source(&self) -> &str {
         "powershell:ExchangeOnline:Get-HostedOutboundSpamFilterPolicy"
     }
 
-    fn sourcetype() -> &'static str {
+    fn sourcetype(&self) -> &str {
         "m365:hosted_outbound_spam_filter_policy"
+    }
+
+    fn to_hec_events(&self) -> anyhow::Result<Vec<crate::splunk::HecEvent>> {
+        Ok(vec![HecEvent::new(
+            &self,
+            self.source(),
+            self.sourcetype(),
+        )?])
+    }
+
+    fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
+        unimplemented!()
     }
 }
 
@@ -188,13 +218,26 @@ pub async fn run_powershell_get_anti_phish_policy(secrets: &Secrets) -> Result<A
 #[serde(rename_all = "camelCase")]
 pub struct AntiPhishPolicy(serde_json::Value);
 
-impl ToHecEvent for AntiPhishPolicy {
-    fn source() -> &'static str {
+impl ToHecEvents for &AntiPhishPolicy {
+    type Item = Self;
+    fn source(&self) -> &str {
         "powershell:ExchangeOnline:Get-AntiPhishPolicy"
     }
 
-    fn sourcetype() -> &'static str {
+    fn sourcetype(&self) -> &str {
         "m365:anti_phish_policy"
+    }
+
+    fn to_hec_events(&self) -> anyhow::Result<Vec<crate::splunk::HecEvent>> {
+        Ok(vec![HecEvent::new(
+            &self,
+            self.source(),
+            self.sourcetype(),
+        )?])
+    }
+
+    fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
+        unimplemented!()
     }
 }
 
@@ -210,13 +253,26 @@ pub async fn run_powershell_get_admin_audit_log_config(
 #[serde(rename_all = "camelCase")]
 pub struct AdminAuditLogConfig(serde_json::Value);
 
-impl ToHecEvent for AdminAuditLogConfig {
-    fn source() -> &'static str {
+impl ToHecEvents for &AdminAuditLogConfig {
+    type Item = Self;
+    fn source(&self) -> &str {
         "powershell:ExchangeOnline:Get-AdminAuditLogConfig"
     }
 
-    fn sourcetype() -> &'static str {
+    fn sourcetype(&self) -> &str {
         "m365:admin_audit_log_config"
+    }
+
+    fn to_hec_events(&self) -> anyhow::Result<Vec<crate::splunk::HecEvent>> {
+        Ok(vec![HecEvent::new(
+            &self,
+            self.source(),
+            self.sourcetype(),
+        )?])
+    }
+
+    fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
+        unimplemented!()
     }
 }
 
@@ -230,13 +286,26 @@ pub async fn run_powershell_get_owa_mailbox_policy(secrets: &Secrets) -> Result<
 #[serde(rename_all = "camelCase")]
 pub struct OwaMailboxPolicy(serde_json::Value);
 
-impl ToHecEvent for OwaMailboxPolicy {
-    fn source() -> &'static str {
+impl ToHecEvents for &OwaMailboxPolicy {
+    type Item = Self;
+    fn source(&self) -> &'static str {
         "powershell:ExchangeOnline:Get-OwaMailboxPolicy"
     }
 
-    fn sourcetype() -> &'static str {
+    fn sourcetype(&self) -> &'static str {
         "m365:owa_mailbox_policy"
+    }
+
+    fn to_hec_events(&self) -> anyhow::Result<Vec<crate::splunk::HecEvent>> {
+        Ok(vec![HecEvent::new(
+            &self,
+            self.source(),
+            self.sourcetype(),
+        )?])
+    }
+
+    fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
+        unimplemented!()
     }
 }
 
@@ -259,7 +328,7 @@ Connect-ExchangeOnline -ShowBanner:$false -Certificate $pfx -AppID "{}" -Organiz
                      command,
             )
         ]).output()?;
-    // dbg!(&output);
+
     let out = serde_json::from_slice::<T>(&output.stdout[..])?;
     Ok(out)
 }
@@ -276,7 +345,7 @@ mod test {
             run_powershell_get_owa_mailbox_policy, run_powershell_get_safe_links_policy,
             run_powershell_get_sharing_policy,
         },
-        splunk::{set_ssphp_run, Splunk, ToHecEvent},
+        splunk::{set_ssphp_run, Splunk, ToHecEvents},
     };
     use anyhow::Result;
     use std::env;
@@ -302,7 +371,7 @@ mod test {
         let (splunk, secrets) = setup().await?;
         let exchange_org_config = run_powershell_get_organization_config(&secrets).await?;
         splunk
-            .send_batch(&[exchange_org_config.to_hec_event()?])
+            .send_batch((&exchange_org_config).to_hec_events()?)
             .await?;
         Ok(())
     }
@@ -311,7 +380,9 @@ mod test {
     async fn test_run_powershell_get_sharing_policy() -> Result<()> {
         let (splunk, secrets) = setup().await?;
         let sharing_policy = run_powershell_get_sharing_policy(&secrets).await?;
-        splunk.send_batch(&[sharing_policy.to_hec_event()?]).await?;
+        splunk
+            .send_batch((&sharing_policy).to_hec_events()?)
+            .await?;
         Ok(())
     }
 
@@ -319,7 +390,7 @@ mod test {
     async fn test_run_powershell_get_safe_links_policy() -> Result<()> {
         let (splunk, secrets) = setup().await?;
         let result = run_powershell_get_safe_links_policy(&secrets).await?;
-        splunk.send_batch(&[result.to_hec_event()?]).await?;
+        splunk.send_batch((&result).to_hec_events()?).await?;
         Ok(())
     }
 
@@ -327,7 +398,7 @@ mod test {
     async fn test_run_powershell_get_malware_filter_policy() -> Result<()> {
         let (splunk, secrets) = setup().await?;
         let result = run_powershell_get_malware_filter_policy(&secrets).await?;
-        splunk.send_batch(&[result.to_hec_event()?]).await?;
+        splunk.send_batch((&result).to_hec_events()?).await?;
         Ok(())
     }
 
@@ -335,7 +406,7 @@ mod test {
     async fn test_run_powershell_get_hosted_outbound_spam_filter_policy() -> Result<()> {
         let (splunk, secrets) = setup().await?;
         let result = run_powershell_get_hosted_outbound_spam_filter_policy(&secrets).await?;
-        splunk.send_batch(&[result.to_hec_event()?]).await?;
+        splunk.send_batch((&result).to_hec_events()?).await?;
         Ok(())
     }
 
@@ -343,7 +414,7 @@ mod test {
     async fn test_run_powershell_get_anti_phish_policy() -> Result<()> {
         let (splunk, secrets) = setup().await?;
         let result = run_powershell_get_anti_phish_policy(&secrets).await?;
-        splunk.send_batch(&[result.to_hec_event()?]).await?;
+        splunk.send_batch((&result).to_hec_events()?).await?;
         Ok(())
     }
 
@@ -351,7 +422,7 @@ mod test {
     async fn test_run_powershell_get_admin_audit_log_config() -> Result<()> {
         let (splunk, secrets) = setup().await?;
         let result = run_powershell_get_admin_audit_log_config(&secrets).await?;
-        splunk.send_batch(&[result.to_hec_event()?]).await?;
+        splunk.send_batch((&result).to_hec_events()?).await?;
         Ok(())
     }
 
@@ -359,7 +430,7 @@ mod test {
     async fn test_run_powershell_get_owa_mailbox_policy() -> Result<()> {
         let (splunk, secrets) = setup().await?;
         let result = run_powershell_get_owa_mailbox_policy(&secrets).await?;
-        splunk.send_batch(&[result.to_hec_event()?]).await?;
+        splunk.send_batch((&result).to_hec_events()?).await?;
         Ok(())
     }
 }

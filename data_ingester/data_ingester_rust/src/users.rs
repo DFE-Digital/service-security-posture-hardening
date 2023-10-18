@@ -197,7 +197,7 @@ impl<'a> UsersMap<'a> {
     pub fn process_caps(&mut self, caps: &'a ConditionalAccessPolicies) {
         for (_, user) in self.inner.iter_mut() {
             let mut affected_caps = vec![];
-            for cap in caps.value.iter() {
+            for cap in caps.inner.iter() {
                 if cap.affects_user(user) {
                     affected_caps.push(cap.to_user_conditional_access_policy())
                 }
@@ -286,16 +286,16 @@ impl<'a> UsersMap<'a> {
     }
 }
 
-impl<'a> ToHecEvents<'a> for UsersMap<'a> {
-    type Item = User<'a>;
-    fn source() -> &'static str {
+impl<'u> ToHecEvents for &UsersMap<'u> {
+    type Item = User<'u>;
+    fn source(&self) -> &str {
         "msgraph"
     }
 
-    fn sourcetype() -> &'static str {
+    fn sourcetype(&self) -> &str {
         "SSPHP.AAD.user"
     }
-    fn collection(&'a self) -> Box<dyn Iterator<Item = &Self::Item> + 'a> {
+    fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
         Box::new(self.inner.values())
     }
 }
@@ -305,19 +305,19 @@ pub struct Users<'a> {
     pub value: Vec<User<'a>>,
 }
 
-impl<'a> ToHecEvents<'a> for Users<'a> {
-    type Item = User<'a>;
-    fn source() -> &'static str {
-        "msgraph"
-    }
+// impl<'a> ToHecEvents for Users<'a> {
+//     type Item = User<'a>;
+//     fn source() -> &'static str {
+//         "msgraph"
+//     }
 
-    fn sourcetype() -> &'static str {
-        "SSPHP.AAD.user"
-    }
-    fn collection(&'a self) -> Box<dyn Iterator<Item = &Self::Item> + 'a> {
-        Box::new(self.value.iter())
-    }
-}
+//     fn sourcetype() -> &'static str {
+//         "SSPHP.AAD.user"
+//     }
+//     fn collection(&self) -> Box<dyn Iterator<Item = &Self::Item> + 'a> {
+//         Box::new(self.value.iter())
+//     }
+// }
 
 impl<'a> Deref for Users<'a> {
     type Target = [User<'a>];

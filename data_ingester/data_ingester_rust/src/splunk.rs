@@ -3,6 +3,7 @@ use reqwest::header::HeaderMap;
 use reqwest::header::HeaderValue;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
+use std::borrow::Borrow;
 use std::sync::RwLock;
 use std::time::{SystemTime, UNIX_EPOCH};
 use uuid::Uuid;
@@ -18,22 +19,6 @@ pub struct HecEvent {
     sourcetype: String,
     host: String,
     event: String,
-}
-
-#[derive(Serialize, Deserialize)]
-struct SsphpEvent<T> {
-    #[serde(rename = "SSPHP_RUN")]
-    ssphp_run: f64,
-    #[serde(flatten)]
-    event: T,
-}
-
-pub fn set_ssphp_run() -> Result<()> {
-    let start = SystemTime::now();
-    let since_the_epoch = start.duration_since(UNIX_EPOCH)?;
-
-    *SSPHP_RUN.write().unwrap() = since_the_epoch.as_secs_f64();
-    Ok(())
 }
 
 impl HecEvent {
@@ -52,6 +37,22 @@ impl HecEvent {
             event: serde_json::to_string(&ssphp_event).unwrap(),
         })
     }
+}
+
+#[derive(Serialize, Deserialize)]
+struct SsphpEvent<T> {
+    #[serde(rename = "SSPHP_RUN")]
+    ssphp_run: f64,
+    #[serde(flatten)]
+    event: T,
+}
+
+pub fn set_ssphp_run() -> Result<()> {
+    let start = SystemTime::now();
+    let since_the_epoch = start.duration_since(UNIX_EPOCH)?;
+
+    *SSPHP_RUN.write().unwrap() = since_the_epoch.as_secs_f64();
+    Ok(())
 }
 
 // #[derive(Debug, Serialize, Deserialize, Default)]
@@ -89,12 +90,12 @@ impl HecEvent {
 //     Ok(ok)
 // }
 
-pub trait ToHecEvents<'a> {
+pub trait ToHecEvents {
     type Item: Serialize;
-    fn to_hec_events(&'a self) -> Result<Vec<HecEvent>> {
+    fn to_hec_events(&self) -> Result<Vec<HecEvent>> {
         let (ok, err): (Vec<_>, Vec<_>) = self
             .collection()
-            .map(|u| HecEvent::new(&u, Self::source(), Self::sourcetype()))
+            .map(|u| HecEvent::new(&u, self.source(), self.sourcetype()))
             .partition_result();
         if !err.is_empty() {
             return Err(anyhow!(err
@@ -105,18 +106,18 @@ pub trait ToHecEvents<'a> {
         }
         Ok(ok)
     }
-    fn source() -> &'static str;
-    fn sourcetype() -> &'static str;
-    fn collection(&'a self) -> Box<dyn Iterator<Item = &Self::Item> + 'a>;
+    fn source(&self) -> &str;
+    fn sourcetype(&self) -> &str;
+    fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i>;
 }
 
-pub trait ToHecEvent: Serialize + Sized {
-    fn to_hec_event(&self) -> Result<HecEvent> {
-        HecEvent::new(self, Self::source(), Self::sourcetype())
-    }
-    fn source() -> &'static str;
-    fn sourcetype() -> &'static str;
-}
+// pub trait ToHecEvent: Serialize + Sized {
+//     fn to_hec_event(&self) -> Result<HecEvent> {
+//         HecEvent::new(self, Self::source(), Self::sourcetype())
+//     }
+//     fn source() -> &'static str;
+//     fn sourcetype() -> &'static str;
+// }
 
 #[derive(Debug, Clone)]
 pub struct Splunk {
@@ -159,8 +160,11 @@ impl Splunk {
     }
 
     // TODO enable token acknowledgement
-    pub async fn send_batch(&self, events: &[HecEvent]) -> Result<()> {
-        for batch in events.iter().batching(batch_lines) {
+    pub async fn send_batch(
+        &self,
+        events: impl IntoIterator<Item = impl Borrow<HecEvent> + Serialize>,
+    ) -> Result<()> {
+        for batch in events.into_iter().batching(batch_lines) {
             let request = self.client.post(&self.url).body(batch).build().unwrap();
             let _response = self.client.execute(request).await.unwrap();
         }
@@ -211,7 +215,7 @@ async fn send_batch_to_splunk() {
 fn batch_lines<I, T: Serialize>(it: &mut I) -> Option<String>
 where
     I: Iterator<Item = T>,
-    I: std::fmt::Debug,
+    //    I: std::fmt::Debug,
 {
     let max = 1024 * 950;
     let mut lines = String::with_capacity(max);
