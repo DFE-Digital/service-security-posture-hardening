@@ -5,7 +5,7 @@ use std::process::Command;
 
 use crate::{
     keyvault::Secrets,
-    splunk::{HecEvent, ToHecEvents},
+    splunk::{ToHecEvents},
 };
 
 pub async fn install_powershell() -> Result<()> {
@@ -61,16 +61,8 @@ impl ToHecEvents for &ExchangeOrganizationConfig {
         "m365:organization_config"
     }
 
-    fn to_hec_events(&self) -> anyhow::Result<Vec<crate::splunk::HecEvent>> {
-        Ok(vec![HecEvent::new(
-            &self,
-            self.source(),
-            self.sourcetype(),
-        )?])
-    }
-
     fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
-        unimplemented!()
+        Box::new(iter::once(self))
     }
 }
 
@@ -153,16 +145,8 @@ impl ToHecEvents for &MalwareFilterPolicy {
         "m365:malware_filter_policy"
     }
 
-    fn to_hec_events(&self) -> anyhow::Result<Vec<crate::splunk::HecEvent>> {
-        Ok(vec![HecEvent::new(
-            &self,
-            self.source(),
-            self.sourcetype(),
-        )?])
-    }
-
     fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
-        unimplemented!()
+        Box::new(iter::once(self))
     }
 }
 
@@ -188,16 +172,8 @@ impl ToHecEvents for &HostedOutboundSpamFilterPolicy {
         "m365:hosted_outbound_spam_filter_policy"
     }
 
-    fn to_hec_events(&self) -> anyhow::Result<Vec<crate::splunk::HecEvent>> {
-        Ok(vec![HecEvent::new(
-            &self,
-            self.source(),
-            self.sourcetype(),
-        )?])
-    }
-
     fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
-        unimplemented!()
+        Box::new(iter::once(self))
     }
 }
 
@@ -207,12 +183,16 @@ pub async fn run_powershell_get_anti_phish_policy(secrets: &Secrets) -> Result<A
     Ok(result)
 }
 
-#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct AntiPhishPolicy(serde_json::Value);
+#[serde(untagged)]
+pub enum AntiPhishPolicy {
+    Collection(Vec<serde_json::Value>),
+    Single(serde_json::Value),
+}
 
 impl ToHecEvents for &AntiPhishPolicy {
-    type Item = Self;
+    type Item = serde_json::Value;
     fn source(&self) -> &str {
         "powershell:ExchangeOnline:Get-AntiPhishPolicy"
     }
@@ -221,16 +201,11 @@ impl ToHecEvents for &AntiPhishPolicy {
         "m365:anti_phish_policy"
     }
 
-    fn to_hec_events(&self) -> anyhow::Result<Vec<crate::splunk::HecEvent>> {
-        Ok(vec![HecEvent::new(
-            &self,
-            self.source(),
-            self.sourcetype(),
-        )?])
-    }
-
     fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
-        unimplemented!()
+        match self {
+            AntiPhishPolicy::Collection(collection) => Box::new(collection.iter()),
+            AntiPhishPolicy::Single(single) => Box::new(iter::once(single)),
+        }
     }
 }
 
@@ -256,16 +231,8 @@ impl ToHecEvents for &AdminAuditLogConfig {
         "m365:admin_audit_log_config"
     }
 
-    fn to_hec_events(&self) -> anyhow::Result<Vec<crate::splunk::HecEvent>> {
-        Ok(vec![HecEvent::new(
-            &self,
-            self.source(),
-            self.sourcetype(),
-        )?])
-    }
-
     fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
-        unimplemented!()
+        Box::new(iter::once(self))
     }
 }
 
@@ -289,16 +256,8 @@ impl ToHecEvents for &OwaMailboxPolicy {
         "m365:owa_mailbox_policy"
     }
 
-    fn to_hec_events(&self) -> anyhow::Result<Vec<crate::splunk::HecEvent>> {
-        Ok(vec![HecEvent::new(
-            &self,
-            self.source(),
-            self.sourcetype(),
-        )?])
-    }
-
     fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
-        unimplemented!()
+        Box::new(iter::once(self))
     }
 }
 
