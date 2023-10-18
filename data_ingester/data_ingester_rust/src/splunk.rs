@@ -129,8 +129,8 @@ unsafe impl Send for Splunk {}
 unsafe impl Sync for Splunk {}
 
 #[derive(Debug, Serialize, Deserialize, Default)]
-struct Message {
-    event: String,
+pub struct Message {
+    pub event: String,
 }
 
 impl Splunk {

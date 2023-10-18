@@ -14,6 +14,7 @@ use crate::powershell::run_powershell_get_sharing_policy;
 use crate::roles::RoleDefinitions;
 use crate::security_score::SecurityScores;
 use crate::splunk::HecEvent;
+use crate::splunk::Message;
 use crate::splunk::ToHecEvents;
 use crate::splunk::{set_ssphp_run, Splunk};
 use crate::users::Users;
@@ -28,6 +29,7 @@ use graph_rs_sdk::ODataQuery;
 use serde::Deserialize;
 use serde::Serialize;
 use std::env;
+use std::fmt::Debug;
 use std::sync::Arc;
 use tokio::sync::mpsc::UnboundedSender;
 
@@ -740,7 +742,6 @@ pub async fn m365(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
     Ok(())
 }
 
-use std::fmt::Debug;
 async fn try_collect_send<T>(
     name: &str,
     future: impl Future<Output = Result<T>>,
@@ -758,7 +759,9 @@ where
                     eprintln!("Failed converting to HecEvents: {}", e);
                     dbg!(&result);
                     vec![HecEvent::new(
-                        &format!("Failed converting to HecEvents: {}", e),
+                        &Message {
+                            event: format!("Failed converting to HecEvents: {}", e),
+                        },
                         "data_ingester_rust",
                         "data_ingester_rust_logs",
                     )?]
