@@ -57,13 +57,13 @@ impl AzureRest {
         })
     }
 
-    pub async fn get_security_contacts(&self) -> Result<Vec<HecEvent>> {
+    pub async fn get_security_contacts(&self) -> Result<ReturnTypes> {
         let url_template = "https://management.azure.com/subscriptions/{}/providers/Microsoft.Security/securityContacts?api-version=2020-01-01-preview";
         let results = self.rest_request_subscription_iter(url_template).await?;
         Ok(results)
     }
 
-    pub async fn get_security_center_built_in(&self) -> Result<Vec<HecEvent>> {
+    pub async fn get_security_center_built_in(&self) -> Result<ReturnTypes> {
         let url_template = "https://management.azure.com/subscriptions/{}/providers/Microsoft.Authorization/policyAssignments/SecurityCenterBuiltIn?api-version=2021-06-01";
         let results = self.rest_request_subscription_iter(url_template).await?;
         Ok(results)
@@ -128,20 +128,20 @@ impl AzureRest {
     //     Ok(results)
     // }
 
-    pub async fn get_microsoft_security_settings(&self) -> Result<Vec<HecEvent>> {
+    pub async fn get_microsoft_security_settings(&self) -> Result<ReturnTypes> {
         let url_template = "https://management.azure.com/subscriptions/{}/providers/Microsoft.Security/settings?api-version=2021-06-01";
         let results = self.rest_request_subscription_iter(url_template).await?;
         Ok(results)
     }
 
-    pub async fn get_microsoft_security_auto_provisioning_settings(&self) -> Result<Vec<HecEvent>> {
+    pub async fn get_microsoft_security_auto_provisioning_settings(&self) -> Result<ReturnTypes> {
         let url_template = "https://management.azure.com/subscriptions/{}/providers/Microsoft.Security/autoProvisioningSettings?api-version=2017-08-01-preview";
         let results = self.rest_request_subscription_iter(url_template).await?;
         Ok(results)
     }
 
-    pub async fn get_microsoft_sql_encryption_protection(&self) -> Result<Vec<HecEvent>> {
-        let mut collection: Vec<HecEvent> = vec![];
+    pub async fn get_microsoft_sql_encryption_protection(&self) -> Result<ReturnTypes> {
+        let mut collection = ReturnTypes::default();
         let url_template = "https://management.azure.com/subscriptions/{}/providers/Microsoft.Sql/servers?api-version=2022-05-01-preview";
         let results = self
             .rest_request_subscription_iter_no_hec(url_template)
@@ -158,7 +158,9 @@ impl AzureRest {
                             "https://management.azure.com{}/encryptionProtector?api-version=2022-05-01-preview",
                             server.as_object().unwrap().get("id").unwrap().as_str().unwrap());
                         let result = self.rest_request::<ReturnType>(&url).await?;
-                        collection.extend(result.to_hec_events(&url)?);
+                        collection
+                            .collection
+                            .push(result.into_return_type_wrapper(url.as_str().to_string()));
                     }
                 }
                 _ => unreachable!(),
@@ -223,20 +225,16 @@ impl AzureRest {
         Ok(collection)
     }
 
-    pub async fn rest_request_subscription_iter(
-        &self,
-        url_template: &str,
-    ) -> Result<Vec<HecEvent>> {
+    pub async fn rest_request_subscription_iter(&self, url_template: &str) -> Result<ReturnTypes> {
         let response = self
             .credential
             .get_token("https://management.azure.com")
             .await?;
 
-        let mut collection = vec![];
+        let mut collection = ReturnTypes::default();
         for sub in self.subscriptions.inner.iter() {
             let sub_id = sub.subscription_id.as_ref().context("no sub id")?;
             let url = Url::parse(&url_template.format(&[sub_id]))?;
-            dbg!(&url);
             let response = reqwest::Client::new()
                 .get(url.clone())
                 .header(
@@ -249,9 +247,11 @@ impl AzureRest {
                 .await?;
 
             let rt: ReturnType = serde_json::from_str(&response)?;
-            dbg!(&rt);
 
-            collection.extend(rt.to_hec_events(url.as_str())?);
+            collection
+                .collection
+                .push(rt.into_return_type_wrapper(url.as_str().to_string()));
+            //collection.extend(rt.to_hec_events(url.as_str())?);
         }
         Ok(collection)
     }
@@ -284,6 +284,7 @@ impl ReturnType {
                     collection.push(HecEvent::new(
                         &v,
                         //&url.as_str(),
+                        // TODO
                         source,
                         v.as_object()
                             .context("value is not an object")?
@@ -298,6 +299,7 @@ impl ReturnType {
                 for v in vec.iter() {
                     collection.push(HecEvent::new(
                         &v,
+                        // TODO
                         source,
                         //&url.as_str(),
                         v.as_object()
@@ -312,6 +314,7 @@ impl ReturnType {
             ReturnType::Value(value) => {
                 collection.push(HecEvent::new(
                     &value,
+                    // TODO
                     source,
                     //&url.as_str(),
                     value
@@ -326,6 +329,74 @@ impl ReturnType {
         };
         Ok(collection)
     }
+    fn into_return_type_wrapper(self, source: String) -> ReturnTypeWrapper {
+        ReturnTypeWrapper {
+            collection: self,
+            source,
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub(crate) struct ReturnTypeWrapper {
+    collection: ReturnType,
+    source: String,
+}
+
+impl ToHecEvents for &ReturnTypeWrapper {
+    fn to_hec_events(&self) -> Result<Vec<HecEvent>> {
+        self.collection.to_hec_events(&self.source)
+    }
+
+    type Item = ();
+
+    fn source(&self) -> &str {
+        unimplemented!()
+    }
+
+    fn sourcetype(&self) -> &str {
+        unimplemented!()
+    }
+    fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
+        unimplemented!()
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Default)]
+pub(crate) struct ReturnTypes {
+    collection: Vec<ReturnTypeWrapper>,
+}
+
+impl ReturnTypes {
+    #[cfg(test)]
+    fn is_empty(&self) -> bool {
+        self.collection.is_empty()
+    }
+}
+
+impl ToHecEvents for &ReturnTypes {
+    fn to_hec_events(&self) -> Result<Vec<HecEvent>> {
+        Ok(self
+            .collection
+            .iter()
+            .flat_map(|c| c.to_hec_events())
+            .flatten()
+            .collect())
+    }
+
+    type Item = ();
+
+    fn source(&self) -> &str {
+        unimplemented!()
+    }
+
+    fn sourcetype(&self) -> &str {
+        unimplemented!()
+    }
+
+    fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
+        unimplemented!()
+    }
 }
 
 #[cfg(test)]
@@ -335,7 +406,7 @@ mod test {
     use crate::{
         azure_rest::Subscriptions,
         keyvault::get_keyvault_secrets,
-        splunk::{set_ssphp_run, Splunk},
+        splunk::{set_ssphp_run, Splunk, ToHecEvents},
     };
     use anyhow::Result;
 
@@ -370,7 +441,7 @@ mod test {
         let (azure_rest, splunk) = setup().await?;
         let collection = azure_rest.get_security_contacts().await?;
         assert!(!collection.is_empty());
-        splunk.send_batch(&collection[..]).await?;
+        splunk.send_batch((&collection).to_hec_events()?).await?;
         Ok(())
     }
 
@@ -379,7 +450,7 @@ mod test {
         let (azure_rest, splunk) = setup().await?;
         let collection = azure_rest.get_security_center_built_in().await?;
         assert!(!collection.is_empty());
-        splunk.send_batch(&collection[..]).await?;
+        splunk.send_batch((&collection).to_hec_events()?).await?;
         Ok(())
     }
 
@@ -412,7 +483,7 @@ mod test {
         let collection = azure_rest
             .get_microsoft_security_auto_provisioning_settings()
             .await?;
-        splunk.send_batch(&collection[..]).await?;
+        splunk.send_batch((&collection).to_hec_events()?).await?;
         assert!(!collection.is_empty());
         Ok(())
     }
@@ -423,7 +494,7 @@ mod test {
     async fn test_azureclient_get_microsoft_security_settings() -> Result<()> {
         let (azure_rest, splunk) = setup().await?;
         let collection = azure_rest.get_microsoft_security_settings().await?;
-        splunk.send_batch(&collection[..]).await?;
+        splunk.send_batch((&collection).to_hec_events()?).await?;
         assert!(!collection.is_empty());
         Ok(())
     }
@@ -434,7 +505,7 @@ mod test {
     async fn test_azureclient_get_microsoft_sql_encryption_protection() -> Result<()> {
         let (azure_rest, splunk) = setup().await?;
         let collection = azure_rest.get_microsoft_sql_encryption_protection().await?;
-        splunk.send_batch(&collection[..]).await?;
+        splunk.send_batch((&collection).to_hec_events()?).await?;
         assert!(!collection.is_empty());
         Ok(())
     }
@@ -457,16 +528,16 @@ impl RoleAssignment {
     }
 }
 
-impl<'a> ToHecEvents<'a> for HashMap<String, RoleAssignment> {
+impl ToHecEvents for &HashMap<String, RoleAssignment> {
     type Item = RoleAssignment;
-    fn source() -> &'static str {
+    fn source(&self) -> &str {
         "azure_rest"
     }
 
-    fn sourcetype() -> &'static str {
+    fn sourcetype(&self) -> &str {
         "SSPHP.azure.role_assignment"
     }
-    fn collection(&'a self) -> Box<dyn Iterator<Item = &Self::Item> + 'a> {
+    fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
         Box::new(self.values())
     }
 }
@@ -483,16 +554,17 @@ impl RoleDefinition {
     }
 }
 
-impl<'a> ToHecEvents<'a> for HashMap<String, RoleDefinition> {
+impl ToHecEvents for &HashMap<String, RoleDefinition> {
     type Item = RoleDefinition;
-    fn source() -> &'static str {
+    fn source(&self) -> &str {
         "azure_rest"
     }
 
-    fn sourcetype() -> &'static str {
+    fn sourcetype(&self) -> &str {
         "SSPHP.azure.role_definitions"
     }
-    fn collection(&'a self) -> Box<dyn Iterator<Item = &Self::Item> + 'a> {
+
+    fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
         Box::new(self.values())
     }
 }
@@ -502,16 +574,17 @@ pub(crate) struct Subscriptions {
     inner: Vec<Subscription>,
 }
 
-impl<'a> ToHecEvents<'a> for Subscriptions {
+impl ToHecEvents for &Subscriptions {
     type Item = Subscription;
-    fn source() -> &'static str {
+    fn source(&self) -> &str {
         "azure_rest"
     }
 
-    fn sourcetype() -> &'static str {
+    fn sourcetype(&self) -> &str {
         "SSPHP.azure.subscriptions"
     }
-    fn collection(&'a self) -> Box<dyn Iterator<Item = &Self::Item> + 'a> {
+
+    fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
         Box::new(self.inner.iter())
     }
 }

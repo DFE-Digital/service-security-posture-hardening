@@ -4,6 +4,9 @@ use serde::Serialize;
 use serde_with::skip_serializing_none;
 use std::borrow::Cow;
 
+use crate::splunk::HecEvent;
+use crate::splunk::ToHecEvents;
+
 // https://learn.microsoft.com/en-us/graph/api/resources/group?view=graph-rest-1.0
 #[skip_serializing_none]
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -41,62 +44,55 @@ pub struct Group {
     // "securityIdentifier": String("S-1-12-1-4284624009-1147235088-2041966773-2552019788"),
     // "serviceProvisioningErrors": Array [],
     // "theme": Null,
-    // "visibility": Null,
+    pub(crate) visibility: Option<String>,
+}
+
+impl<'a> ToHecEvents for &Groups<'a> {
+    type Item = ();
+    fn source(&self) -> &str {
+        "msgraph"
+    }
+
+    fn sourcetype(&self) -> &str {
+        "SSPHP.AAD.group"
+    }
+
+    fn to_hec_events(&self) -> anyhow::Result<Vec<crate::splunk::HecEvent>> {
+        Ok(self
+            .inner
+            .iter()
+            .map(|i| HecEvent::new(&i, self.source(), self.sourcetype()).unwrap())
+            .collect())
+    }
+
+    fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
+        unimplemented!()
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, Default, Clone)]
 pub struct Groups<'a> {
-    pub value: Vec<Cow<'a, Group>>,
+    #[serde(rename = "value")]
+    pub inner: Vec<Cow<'a, Group>>,
 }
 
-impl Groups<'_> {
+impl<'a> Groups<'a> {
     pub fn ids(&self) -> Vec<&'_ String> {
-        self.value.iter().map(|group| &group.id).collect()
+        self.inner.iter().map(|group| &group.id).collect()
     }
 }
-
-// impl ToHecEvents for Groups<'_> {
-//     fn source() -> &'static str {
-//         "msgraph"
-//     }
-
-//     fn sourcetype() -> &'static str {
-//         "msgraph:group"
-//     }
-// }
-
-// use std::ops::Deref;
-// impl<'a> Deref for Groups<'a> {
-//   type Target = [Group];
-
-//   fn deref(&self) -> &[Cow<'_, Group] {
-//     &self.value[..]
-//   }
-// }
-
-// impl<'a> IntoIterator for Groups<'a> {
-//     type Item = Group;
-//     type IntoIter = std::vec::IntoIter<Self::Item>;
-
-//     fn into_iter(self) -> Self::IntoIter {
-//         self.value.into_iter()
-//     }
-// }
-
-// impl<'a> Iterator for Group<'a> {
-//     type Item = Group;
-//     fn next(&mut self)
-// }
 
 #[test]
 fn group_role_ids() {
     let group1 = Group {
         id: "id_1".to_owned(),
         display_name: None,
+        visibility: None,
     };
     let group2 = Group {
         id: "id_2".to_owned(),
         display_name: None,
+        visibility: None,
     };
     let groups = vec![group1, group2];
     let groups = groups.iter().collect::<Groups>();
@@ -105,10 +101,10 @@ fn group_role_ids() {
 
 impl<'a> FromIterator<&'a Group> for Groups<'a> {
     fn from_iter<I: IntoIterator<Item = &'a Group>>(iter: I) -> Self {
-        let mut value = vec![];
+        let mut inner = vec![];
         for i in iter {
-            value.push(Cow::Borrowed(i));
+            inner.push(Cow::Borrowed(i));
         }
-        Self { value }
+        Self { inner }
     }
 }

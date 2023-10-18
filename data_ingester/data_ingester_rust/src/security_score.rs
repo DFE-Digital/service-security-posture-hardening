@@ -1,7 +1,6 @@
+use crate::splunk::{HecEvent, ToHecEvents};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-
-use crate::splunk::ToHecEvent;
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -10,16 +9,43 @@ pub struct SecurityScores {
     pub odata_context: String,
     #[serde(rename = "@odata.nextLink")]
     pub odata_next_link: Option<String>,
-    pub value: Vec<SecurityScore>,
+    #[serde(rename = "value")]
+    pub inner: Vec<SecurityScore>,
 }
 
-impl ToHecEvent for SecurityScores {
-    fn source() -> &'static str {
+impl ToHecEvents for &SecurityScores {
+    type Item = Self;
+    fn source(&self) -> &str {
         "msgraph"
     }
 
-    fn sourcetype() -> &'static str {
+    fn sourcetype(&self) -> &str {
         "m365"
+    }
+
+    fn to_hec_events(&self) -> anyhow::Result<Vec<crate::splunk::HecEvent>> {
+        Ok(vec![HecEvent::new(
+            &self,
+            self.source(),
+            self.sourcetype(),
+        )?])
+    }
+
+    fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
+        unimplemented!()
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use crate::{ms_graph::test::setup, splunk::ToHecEvents};
+    use anyhow::Result;
+    #[tokio::test]
+    async fn test_to_hec_events_collection() -> Result<()> {
+        let (_splunk, ms_graph) = setup().await?;
+        let security_scores = ms_graph.get_security_secure_scores().await?;
+        let _hec_events = (&security_scores).to_hec_events()?;
+        Ok(())
     }
 }
 
@@ -39,29 +65,29 @@ pub struct SecurityScore {
     pub vendor_information: VendorInformation,
     pub average_comparative_scores: Vec<AverageComparativeScore>,
     #[serde(skip_serializing)]
-    pub control_scores: Vec<ControlScoreValue>,
+    pub control_scores: Vec<ControlScore>,
 }
 
-impl ToHecEvent for SecurityScore {
-    fn source() -> &'static str {
+impl ToHecEvents for &SecurityScore {
+    type Item = Self;
+    fn source(&self) -> &str {
         "msgraph"
     }
 
-    fn sourcetype() -> &'static str {
-        "m365"
-    }
-}
-
-#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct ControlScoreValue(serde_json::Value);
-
-impl ToHecEvent for ControlScoreValue {
-    fn source() -> &'static str {
-        "msgraph"
+    fn sourcetype(&self) -> &str {
+        "m365:security_score"
     }
 
-    fn sourcetype() -> &'static str {
-        "m365:control_score"
+    fn to_hec_events(&self) -> anyhow::Result<Vec<crate::splunk::HecEvent>> {
+        Ok(vec![HecEvent::new(
+            &self,
+            self.source(),
+            self.sourcetype(),
+        )?])
+    }
+
+    fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
+        unimplemented!()
     }
 }
 
