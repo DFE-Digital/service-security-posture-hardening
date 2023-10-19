@@ -5,6 +5,7 @@ use crate::groups::Groups;
 use crate::keyvault::Secrets;
 use crate::powershell::run_powershell_get_admin_audit_log_config;
 use crate::powershell::run_powershell_get_anti_phish_policy;
+use crate::powershell::run_powershell_get_atp_policy_for_o365;
 use crate::powershell::run_powershell_get_hosted_outbound_spam_filter_policy;
 use crate::powershell::run_powershell_get_malware_filter_policy;
 use crate::powershell::run_powershell_get_organization_config;
@@ -706,6 +707,13 @@ pub async fn m365(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
     try_collect_send(
         "Exchange Safe Attachment Policy",
         run_powershell_get_safe_attachment_policy(&secrets),
+        &splunk,
+    )
+    .await?;
+
+    try_collect_send(
+        "Exchange ATP Polciy for O365",
+        run_powershell_get_atp_policy_for_o365(&secrets),
         &splunk,
     )
     .await?;
