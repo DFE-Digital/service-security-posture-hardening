@@ -3,10 +3,7 @@ use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::iter;
 use std::process::Command;
 
-use crate::{
-    keyvault::Secrets,
-    splunk::{ToHecEvents},
-};
+use crate::{keyvault::Secrets, splunk::ToHecEvents};
 
 pub async fn install_powershell() -> Result<()> {
     eprintln!("Downloading Powershell .deb");
@@ -261,6 +258,33 @@ impl ToHecEvents for &OwaMailboxPolicy {
     }
 }
 
+pub async fn run_powershell_get_safe_attachment_policy(
+    secrets: &Secrets,
+) -> Result<SafeAttachmentPolicy> {
+    let command = "Get-SafeAttachmentPolicy";
+    let result = run_exchange_online_powershell(secrets, command).await?;
+    Ok(result)
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SafeAttachmentPolicy(serde_json::Value);
+
+impl ToHecEvents for &SafeAttachmentPolicy {
+    type Item = Self;
+    fn source(&self) -> &'static str {
+        "powershell:ExchangeOnline:Get-SafeAttachmentPolicy"
+    }
+
+    fn sourcetype(&self) -> &'static str {
+        "m365:safe_attachment_policy"
+    }
+
+    fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
+        Box::new(iter::once(self))
+    }
+}
+
 pub async fn run_exchange_online_powershell<T: DeserializeOwned>(
     secrets: &Secrets,
     command: &str,
@@ -294,8 +318,8 @@ mod test {
             run_powershell_get_anti_phish_policy,
             run_powershell_get_hosted_outbound_spam_filter_policy,
             run_powershell_get_malware_filter_policy, run_powershell_get_organization_config,
-            run_powershell_get_owa_mailbox_policy, run_powershell_get_safe_links_policy,
-            run_powershell_get_sharing_policy,
+            run_powershell_get_owa_mailbox_policy, run_powershell_get_safe_attachment_policy,
+            run_powershell_get_safe_links_policy, run_powershell_get_sharing_policy,
         },
         splunk::{set_ssphp_run, Splunk, ToHecEvents},
     };
@@ -382,6 +406,14 @@ mod test {
     async fn test_run_powershell_get_owa_mailbox_policy() -> Result<()> {
         let (splunk, secrets) = setup().await?;
         let result = run_powershell_get_owa_mailbox_policy(&secrets).await?;
+        splunk.send_batch((&result).to_hec_events()?).await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_run_powershell_get_safe_attachment_policy() -> Result<()> {
+        let (splunk, secrets) = setup().await?;
+        let result = run_powershell_get_safe_attachment_policy(&secrets).await?;
         splunk.send_batch((&result).to_hec_events()?).await?;
         Ok(())
     }

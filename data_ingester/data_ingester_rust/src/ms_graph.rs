@@ -9,6 +9,7 @@ use crate::powershell::run_powershell_get_hosted_outbound_spam_filter_policy;
 use crate::powershell::run_powershell_get_malware_filter_policy;
 use crate::powershell::run_powershell_get_organization_config;
 use crate::powershell::run_powershell_get_owa_mailbox_policy;
+use crate::powershell::run_powershell_get_safe_attachment_policy;
 use crate::powershell::run_powershell_get_safe_links_policy;
 use crate::powershell::run_powershell_get_sharing_policy;
 use crate::roles::RoleDefinitions;
@@ -698,6 +699,13 @@ pub async fn m365(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
     try_collect_send(
         "Exchange OWA Mailbox Policy",
         run_powershell_get_owa_mailbox_policy(&secrets),
+        &splunk,
+    )
+    .await?;
+
+    try_collect_send(
+        "Exchange Safe Attachment Policy",
+        run_powershell_get_safe_attachment_policy(&secrets),
         &splunk,
     )
     .await?;
