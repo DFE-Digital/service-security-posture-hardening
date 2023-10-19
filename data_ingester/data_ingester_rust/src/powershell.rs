@@ -268,10 +268,10 @@ pub async fn run_powershell_get_safe_attachment_policy(
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct SafeAttachmentPolicy(serde_json::Value);
+pub struct SafeAttachmentPolicy(Vec<serde_json::Value>);
 
 impl ToHecEvents for &SafeAttachmentPolicy {
-    type Item = Self;
+    type Item = serde_json::Value;
     fn source(&self) -> &'static str {
         "powershell:ExchangeOnline:Get-SafeAttachmentPolicy"
     }
@@ -281,7 +281,7 @@ impl ToHecEvents for &SafeAttachmentPolicy {
     }
 
     fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
-        Box::new(iter::once(self))
+        Box::new(self.0.iter())
     }
 }
 
