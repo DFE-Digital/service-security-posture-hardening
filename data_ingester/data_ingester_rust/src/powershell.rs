@@ -320,7 +320,7 @@ pub async fn run_powershell_get_dlp_compliance_policy(
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct DlpCompliancePolicy(serde_json::Value);
+pub struct DlpCompliancePolicy(Vec<serde_json::Value>);
 
 impl ToHecEvents for &DlpCompliancePolicy {
     type Item = Self;
@@ -345,10 +345,10 @@ pub async fn run_powershell_get_transport_rule(secrets: &Secrets) -> Result<Tran
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct TransportRule(serde_json::Value);
+pub struct TransportRule(Vec<serde_json::Value>);
 
 impl ToHecEvents for &TransportRule {
-    type Item = Self;
+    type Item = serde_json::Value;
     fn source(&self) -> &'static str {
         "powershell:ExchangeOnline:Get-TransportRule"
     }
@@ -358,7 +358,7 @@ impl ToHecEvents for &TransportRule {
     }
 
     fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
-        Box::new(iter::once(self))
+        Box::new(self.0.iter())
     }
 }
 
