@@ -14,6 +14,7 @@ use crate::powershell::run_powershell_get_owa_mailbox_policy;
 use crate::powershell::run_powershell_get_safe_attachment_policy;
 use crate::powershell::run_powershell_get_safe_links_policy;
 use crate::powershell::run_powershell_get_sharing_policy;
+use crate::powershell::run_powershell_get_transport_rule;
 use crate::roles::RoleDefinitions;
 use crate::security_score::SecurityScores;
 use crate::splunk::HecEvent;
@@ -770,6 +771,13 @@ pub async fn m365(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
     try_collect_send(
         "Exchange DLP Complaince Policy",
         run_powershell_get_dlp_compliance_policy(&secrets),
+        &splunk,
+    )
+    .await?;
+
+    try_collect_send(
+        "Exchange Transport Rule",
+        run_powershell_get_transport_rule(&secrets),
         &splunk,
     )
     .await?;

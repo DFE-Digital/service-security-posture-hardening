@@ -337,6 +337,31 @@ impl ToHecEvents for &DlpCompliancePolicy {
     }
 }
 
+pub async fn run_powershell_get_transport_rule(secrets: &Secrets) -> Result<TransportRule> {
+    let command = "Get-TransportRule";
+    let result = run_exchange_online_powershell(secrets, command).await?;
+    Ok(result)
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TransportRule(serde_json::Value);
+
+impl ToHecEvents for &TransportRule {
+    type Item = Self;
+    fn source(&self) -> &'static str {
+        "powershell:ExchangeOnline:Get-TransportRule"
+    }
+
+    fn sourcetype(&self) -> &'static str {
+        "m365:transport_rule"
+    }
+
+    fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
+        Box::new(iter::once(self))
+    }
+}
+
 pub async fn run_exchange_online_powershell<T: DeserializeOwned>(
     secrets: &Secrets,
     command: &str,
@@ -397,6 +422,7 @@ mod test {
             run_powershell_get_malware_filter_policy, run_powershell_get_organization_config,
             run_powershell_get_owa_mailbox_policy, run_powershell_get_safe_attachment_policy,
             run_powershell_get_safe_links_policy, run_powershell_get_sharing_policy,
+            run_powershell_get_transport_rule,
         },
         splunk::{set_ssphp_run, Splunk, ToHecEvents},
     };
@@ -511,6 +537,15 @@ mod test {
     async fn test_run_powershell_get_dlp_compliance_policy() -> Result<()> {
         let (splunk, secrets) = setup().await?;
         let result = run_powershell_get_dlp_compliance_policy(&secrets).await?;
+        splunk.send_batch((&result).to_hec_events()?).await?;
+        Ok(())
+    }
+
+    #[ignore]
+    #[tokio::test]
+    async fn test_run_powershell_get_transport_rule() -> Result<()> {
+        let (splunk, secrets) = setup().await?;
+        let result = run_powershell_get_transport_rule(&secrets).await?;
         splunk.send_batch((&result).to_hec_events()?).await?;
         Ok(())
     }
