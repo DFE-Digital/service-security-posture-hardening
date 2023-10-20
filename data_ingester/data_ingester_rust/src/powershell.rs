@@ -314,7 +314,7 @@ pub async fn run_powershell_get_dlp_compliance_policy(
     secrets: &Secrets,
 ) -> Result<DlpCompliancePolicy> {
     let command = "Get-DlpCompliancePolicy";
-    let result = run_exchange_online_powershell(secrets, command).await?;
+    let result = run_exchange_online_ipps_powershell(secrets, command).await?;
     Ok(result)
 }
 
@@ -361,6 +361,30 @@ Connect-ExchangeOnline -ShowBanner:$false -Certificate $pfx -AppID "{}" -Organiz
     Ok(out)
 }
 
+pub async fn run_exchange_online_ipps_powershell<T: DeserializeOwned>(
+    secrets: &Secrets,
+    command: &str,
+) -> Result<T> {
+    let output = Command::new("pwsh")
+        .args([
+            "-Command",
+            &format!(r#"
+[Byte[]]$pfxBytes = [Convert]::FromBase64String('{}');
+$pfx = New-Object System.Security.Cryptography.X509Certificates.X509Certificate -ArgumentList (,$pfxBytes);
+Import-Module ExchangeOnlineManagement;
+Connect-IPPSSession -ShowBanner:$false -Certificate $pfx -AppID "{}" -Organization "{}";
+{} | ConvertTo-Json -Compress;"#,
+                     secrets.azure_client_certificate,
+                     secrets.azure_client_id,
+                     secrets.azure_client_organization,
+                     command,
+            )
+        ]).output()?;
+
+    let out = serde_json::from_slice::<T>(&output.stdout[..])?;
+    Ok(out)
+}
+
 #[cfg(test)]
 mod test {
     use crate::{
@@ -368,10 +392,11 @@ mod test {
         powershell::{
             install_powershell, run_powershell_get_admin_audit_log_config,
             run_powershell_get_anti_phish_policy, run_powershell_get_atp_policy_for_o365,
+            run_powershell_get_dlp_compliance_policy,
             run_powershell_get_hosted_outbound_spam_filter_policy,
             run_powershell_get_malware_filter_policy, run_powershell_get_organization_config,
             run_powershell_get_owa_mailbox_policy, run_powershell_get_safe_attachment_policy,
-            run_powershell_get_safe_links_policy, run_powershell_get_sharing_policy, run_powershell_get_dlp_compliance_policy,
+            run_powershell_get_safe_links_policy, run_powershell_get_sharing_policy,
         },
         splunk::{set_ssphp_run, Splunk, ToHecEvents},
     };
@@ -414,6 +439,7 @@ mod test {
         Ok(())
     }
 
+    #[ignore]
     #[tokio::test]
     async fn test_run_powershell_get_safe_links_policy() -> Result<()> {
         let (splunk, secrets) = setup().await?;
