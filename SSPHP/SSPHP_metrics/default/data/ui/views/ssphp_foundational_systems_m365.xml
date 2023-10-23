@@ -1,6 +1,6 @@
 <dashboard version="1.1" theme="dark" script="js/table_cell_color.js">
   <label>M365 Security Posture : CIS IG1 Benchmark</label>
-  <description>v3.16</description>
+  <description>v3.17</description>
   
   <init>
     <set token="tkn_selected_system">m365</set>
@@ -61,31 +61,17 @@ index="ssphp_metrics_summary" ssphp.use_case.id="m365_000" earliest=-2d@d latest
       <table id="table1">
         <search>
           <query>
-`ssphp_metrics_index` ssphp.use_case.id="*_*_000" NOT ssphp.use_case.id="*_*.*_000" earliest=-2d@d latest=now
-    [| search `ssphp_metrics_index` ssphp.use_case.id="*_*_000" NOT ssphp.use_case.id="*_*.*_000" earliest=-2d@d latest=now
+`ssphp_metrics_index` ssphp.use_case.id="m365_*_000" ssphp.use_case.id!="m365_*.*_000" ssphp.use_case.id!="m365__000" earliest=-1d@d latest=now
+    [| search `ssphp_metrics_index` ssphp.use_case.id="m365_*_000" ssphp.use_case.id!="m365_*.*_000" ssphp.use_case.id!="m365__000" earliest=-1d@d latest=now
       | stats max(SSPHP_RUN) as SSPHP_RUN by ssphp.use_case.id
       | eval search_text="(\"ssphp.use_case.id\"=\"".'ssphp.use_case.id'."\" AND SSPHP_RUN=\"".SSPHP_RUN."\")"
       | stats values(search_text) as search_text
       | eval search_text="(".mvjoin(search_text," OR ").")"
       | return $search_text]
-
-| regex ssphp.use_case.id="^m365|dns|azure|aad_[0-9]+_000$"
-
-| rex field=ssphp.use_case.id "(?&lt;fs&gt;[^_]*)_(?&lt;uc&gt;[^_\.]*)_000"
-| eval fs=upper('fs'),
-       uc="0".uc, 
-       uc=substr(uc,len(uc)-2,2),
-       use_case_group_id=fs."-".uc,
-       score='ssphp.score.score'."|".'ssphp.score.color'
-        
-| search fs="$tkn_selected_system$"
-| lookup ssphp_write_use_case_group_description_lookup.csv use_case_group_id
-| sort 0 use_case_group_description
-| table use_case_group_description, score
-        
-| eval {use_case_group_description}=score
+| table ssphp.use_case.title, ssphp.score.score
+| eval {ssphp.use_case.title}='ssphp.score.score'
 | stats values(*) as *
-| fields - score, use_case_group_description
+| fields - ssphp.use_case.title, ssphp.score.score
           </query>
           <earliest>0</earliest>
           <latest>now</latest>
