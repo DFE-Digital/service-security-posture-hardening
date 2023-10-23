@@ -399,10 +399,10 @@ pub async fn run_powershell_get_spoof_intelligence_insight(
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct SpoofIntelligenceInsight(serde_json::Value);
+pub struct SpoofIntelligenceInsight(Vec<serde_json::Value>);
 
 impl ToHecEvents for &SpoofIntelligenceInsight {
-    type Item = Self;
+    type Item = serde_json::Value;
     fn source(&self) -> &'static str {
         "powershell:ExchangeOnline:Get-SpoofIntelligenceInsight"
     }
@@ -412,7 +412,7 @@ impl ToHecEvents for &SpoofIntelligenceInsight {
     }
 
     fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
-        Box::new(iter::once(self))
+        Box::new(self.0.iter())
     }
 }
 
