@@ -320,7 +320,7 @@ pub async fn run_powershell_get_dlp_compliance_policy(
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct DlpCompliancePolicy(Vec<serde_json::Value>);
+pub struct DlpCompliancePolicy(serde_json::Value);
 
 impl ToHecEvents for &DlpCompliancePolicy {
     type Item = Self;
@@ -355,6 +355,31 @@ impl ToHecEvents for &TransportRule {
 
     fn sourcetype(&self) -> &'static str {
         "m365:transport_rule"
+    }
+
+    fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
+        Box::new(self.0.iter())
+    }
+}
+
+pub async fn run_powershell_get_dkim_signing_config(secrets: &Secrets) -> Result<TransportRule> {
+    let command = "Get-DkimSigningConfig";
+    let result = run_exchange_online_powershell(secrets, command).await?;
+    Ok(result)
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DkimSigningConfig(Vec<serde_json::Value>);
+
+impl ToHecEvents for &DkimSigningConfig {
+    type Item = serde_json::Value;
+    fn source(&self) -> &'static str {
+        "powershell:ExchangeOnline:Get-DkimSigningConfig"
+    }
+
+    fn sourcetype(&self) -> &'static str {
+        "m365:dkim_signing_config"
     }
 
     fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
@@ -544,6 +569,15 @@ mod test {
     #[ignore]
     #[tokio::test]
     async fn test_run_powershell_get_transport_rule() -> Result<()> {
+        let (splunk, secrets) = setup().await?;
+        let result = run_powershell_get_transport_rule(&secrets).await?;
+        splunk.send_batch((&result).to_hec_events()?).await?;
+        Ok(())
+    }
+
+    #[ignore]
+    #[tokio::test]
+    async fn test_run_powershell_get_dkim_signing_config() -> Result<()> {
         let (splunk, secrets) = setup().await?;
         let result = run_powershell_get_transport_rule(&secrets).await?;
         splunk.send_batch((&result).to_hec_events()?).await?;
