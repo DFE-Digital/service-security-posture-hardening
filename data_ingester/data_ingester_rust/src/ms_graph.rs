@@ -15,6 +15,7 @@ use crate::powershell::run_powershell_get_owa_mailbox_policy;
 use crate::powershell::run_powershell_get_safe_attachment_policy;
 use crate::powershell::run_powershell_get_safe_links_policy;
 use crate::powershell::run_powershell_get_sharing_policy;
+use crate::powershell::run_powershell_get_spoof_intelligence_insight;
 use crate::powershell::run_powershell_get_transport_rule;
 use crate::roles::RoleDefinitions;
 use crate::security_score::SecurityScores;
@@ -786,6 +787,13 @@ pub async fn m365(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
     try_collect_send(
         "Exchange Dkim Signing Config",
         run_powershell_get_dkim_signing_config(&secrets),
+        &splunk,
+    )
+    .await?;
+
+    try_collect_send(
+        "Exchange Spoof Intelligence Insight",
+        run_powershell_get_spoof_intelligence_insight(&secrets),
         &splunk,
     )
     .await?;

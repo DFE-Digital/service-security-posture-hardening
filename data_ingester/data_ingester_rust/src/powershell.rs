@@ -362,7 +362,7 @@ impl ToHecEvents for &TransportRule {
     }
 }
 
-pub async fn run_powershell_get_dkim_signing_config(secrets: &Secrets) -> Result<TransportRule> {
+pub async fn run_powershell_get_dkim_signing_config(secrets: &Secrets) -> Result<DkimSigningConfig> {
     let command = "Get-DkimSigningConfig";
     let result = run_exchange_online_powershell(secrets, command).await?;
     Ok(result)
@@ -384,6 +384,33 @@ impl ToHecEvents for &DkimSigningConfig {
 
     fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
         Box::new(self.0.iter())
+    }
+}
+
+pub async fn run_powershell_get_spoof_intelligence_insight(
+    secrets: &Secrets,
+) -> Result<SpoofIntelligenceInsight> {
+    let command = "Get-SpoofIntelligenceInsight";
+    let result = run_exchange_online_powershell(secrets, command).await?;
+    Ok(result)
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SpoofIntelligenceInsight(serde_json::Value);
+
+impl ToHecEvents for &SpoofIntelligenceInsight {
+    type Item = Self;
+    fn source(&self) -> &'static str {
+        "powershell:ExchangeOnline:Get-DkimSigningConfig"
+    }
+
+    fn sourcetype(&self) -> &'static str {
+        "m365:dkim_signing_config"
+    }
+
+    fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
+        Box::new(iter::once(self))
     }
 }
 
@@ -442,12 +469,12 @@ mod test {
         powershell::{
             install_powershell, run_powershell_get_admin_audit_log_config,
             run_powershell_get_anti_phish_policy, run_powershell_get_atp_policy_for_o365,
-            run_powershell_get_dlp_compliance_policy,
+            run_powershell_get_dkim_signing_config, run_powershell_get_dlp_compliance_policy,
             run_powershell_get_hosted_outbound_spam_filter_policy,
             run_powershell_get_malware_filter_policy, run_powershell_get_organization_config,
             run_powershell_get_owa_mailbox_policy, run_powershell_get_safe_attachment_policy,
             run_powershell_get_safe_links_policy, run_powershell_get_sharing_policy,
-            run_powershell_get_transport_rule,
+            run_powershell_get_spoof_intelligence_insight, run_powershell_get_transport_rule,
         },
         splunk::{set_ssphp_run, Splunk, ToHecEvents},
     };
@@ -579,7 +606,16 @@ mod test {
     #[tokio::test]
     async fn test_run_powershell_get_dkim_signing_config() -> Result<()> {
         let (splunk, secrets) = setup().await?;
-        let result = run_powershell_get_transport_rule(&secrets).await?;
+        let result = run_powershell_get_dkim_signing_config(&secrets).await?;
+        splunk.send_batch((&result).to_hec_events()?).await?;
+        Ok(())
+    }
+
+    #[ignore]
+    #[tokio::test]
+    async fn test_run_powershell_get_spoof_intelligence_insight() -> Result<()> {
+        let (splunk, secrets) = setup().await?;
+        let result = run_powershell_get_spoof_intelligence_insight(&secrets).await?;
         splunk.send_batch((&result).to_hec_events()?).await?;
         Ok(())
     }
