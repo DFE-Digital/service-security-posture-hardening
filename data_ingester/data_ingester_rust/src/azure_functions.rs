@@ -158,6 +158,8 @@ pub(crate) async fn start_server(tx: Sender<()>) -> Result<()> {
                 let m365_secrets = m365_secrets.clone();
 
                 async move {
+                    eprintln!("GIT_HASH: {}", env!("GIT_HASH"));
+
                     let mut response = AzureInvokeResponse {
                         outputs: None,
                         logs: vec![format!("GIT_HASH: {}", env!("GIT_HASH"))],

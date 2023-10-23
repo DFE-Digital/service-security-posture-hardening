@@ -6,6 +6,8 @@ use crate::keyvault::Secrets;
 use crate::powershell::run_powershell_get_admin_audit_log_config;
 use crate::powershell::run_powershell_get_anti_phish_policy;
 use crate::powershell::run_powershell_get_atp_policy_for_o365;
+use crate::powershell::run_powershell_get_blocked_sender_address;
+use crate::powershell::run_powershell_get_dkim_signing_config;
 use crate::powershell::run_powershell_get_dlp_compliance_policy;
 use crate::powershell::run_powershell_get_hosted_outbound_spam_filter_policy;
 use crate::powershell::run_powershell_get_malware_filter_policy;
@@ -14,6 +16,7 @@ use crate::powershell::run_powershell_get_owa_mailbox_policy;
 use crate::powershell::run_powershell_get_safe_attachment_policy;
 use crate::powershell::run_powershell_get_safe_links_policy;
 use crate::powershell::run_powershell_get_sharing_policy;
+use crate::powershell::run_powershell_get_spoof_intelligence_insight;
 use crate::powershell::run_powershell_get_transport_rule;
 use crate::roles::RoleDefinitions;
 use crate::security_score::SecurityScores;
@@ -778,6 +781,27 @@ pub async fn m365(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
     try_collect_send(
         "Exchange Transport Rule",
         run_powershell_get_transport_rule(&secrets),
+        &splunk,
+    )
+    .await?;
+
+    try_collect_send(
+        "Exchange Dkim Signing Config",
+        run_powershell_get_dkim_signing_config(&secrets),
+        &splunk,
+    )
+    .await?;
+
+    try_collect_send(
+        "Exchange Spoof Intelligence Insight",
+        run_powershell_get_spoof_intelligence_insight(&secrets),
+        &splunk,
+    )
+    .await?;
+
+    try_collect_send(
+        "Exchange Blocked Sender Address",
+        run_powershell_get_blocked_sender_address(&secrets),
         &splunk,
     )
     .await?;
