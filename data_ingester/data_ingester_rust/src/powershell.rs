@@ -402,11 +402,11 @@ pub struct SpoofIntelligenceInsight(serde_json::Value);
 impl ToHecEvents for &SpoofIntelligenceInsight {
     type Item = Self;
     fn source(&self) -> &'static str {
-        "powershell:ExchangeOnline:Get-DkimSigningConfig"
+        "powershell:ExchangeOnline:Get-SpoofIntelligenceInsight"
     }
 
     fn sourcetype(&self) -> &'static str {
-        "m365:dkim_signing_config"
+        "m365:spoof_intelligence_insight"
     }
 
     fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
