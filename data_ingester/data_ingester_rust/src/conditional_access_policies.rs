@@ -14,7 +14,8 @@ pub struct ConditionalAccessPolicy {
     display_name: Option<String>,
     state: Option<String>,
     conditions: ConditionalAccessPolicyConditions,
-    grant_controls: serde_json::Value,
+    grant_controls: Option<serde_json::Value>,
+    session_controls: Option<serde_json::Value>,
 }
 
 impl ConditionalAccessPolicy {
@@ -109,6 +110,7 @@ impl ConditionalAccessPolicy {
 #[serde(rename_all = "camelCase")]
 pub struct ConditionalAccessPolicyConditions {
     users: ConditionalAccessPolicyConditionsUsers,
+    applications: serde_json::Value,
 }
 
 #[skip_serializing_none]
