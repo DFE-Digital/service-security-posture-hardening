@@ -5,12 +5,16 @@ use crate::groups::Groups;
 use crate::keyvault::Secrets;
 use crate::powershell::run_powershell_get_admin_audit_log_config;
 use crate::powershell::run_powershell_get_anti_phish_policy;
+use crate::powershell::run_powershell_get_atp_policy_for_o365;
+use crate::powershell::run_powershell_get_dlp_compliance_policy;
 use crate::powershell::run_powershell_get_hosted_outbound_spam_filter_policy;
 use crate::powershell::run_powershell_get_malware_filter_policy;
 use crate::powershell::run_powershell_get_organization_config;
 use crate::powershell::run_powershell_get_owa_mailbox_policy;
+use crate::powershell::run_powershell_get_safe_attachment_policy;
 use crate::powershell::run_powershell_get_safe_links_policy;
 use crate::powershell::run_powershell_get_sharing_policy;
+use crate::powershell::run_powershell_get_transport_rule;
 use crate::roles::RoleDefinitions;
 use crate::security_score::SecurityScores;
 use crate::splunk::HecEvent;
@@ -30,6 +34,7 @@ use serde::Deserialize;
 use serde::Serialize;
 use std::env;
 use std::fmt::Debug;
+use std::iter;
 use std::sync::Arc;
 use tokio::sync::mpsc::UnboundedSender;
 
@@ -258,6 +263,17 @@ impl MsGraph {
         Ok(body)
     }
 
+    pub async fn get_authentication_methods_policy(&self) -> Result<AuthenticationMethodsPolicy> {
+        let response = self
+            .client
+            .policies()
+            .get_authentication_methods_policy()
+            .send()
+            .await?;
+        let body = response.json().await?;
+        Ok(body)
+    }
+
     pub async fn get_security_secure_scores(&self) -> Result<SecurityScores> {
         let response = self
             .beta_client
@@ -340,6 +356,24 @@ impl ToHecEvents for &AuthorizationPolicy {
 
     fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
         unimplemented!()
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, Default)]
+pub struct AuthenticationMethodsPolicy(serde_json::Value);
+
+impl ToHecEvents for &AuthenticationMethodsPolicy {
+    type Item = Self;
+    fn source(&self) -> &str {
+        "msgraph"
+    }
+
+    fn sourcetype(&self) -> &str {
+        "m365:authentication_methods_policy"
+    }
+
+    fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
+        Box::new(iter::once(self))
     }
 }
 
@@ -626,18 +660,28 @@ pub async fn m365(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
     .await?;
 
     try_collect_send(
+        "MS Graph Authentication Methods Policy",
+        ms_graph.get_authentication_methods_policy(),
+        &splunk,
+    )
+    .await?;
+
+    try_collect_send(
         "MS Graph Authorization Policy",
         ms_graph.get_authorization_policy(),
         &splunk,
     )
     .await?;
+
     try_collect_send(
         "MS Graph Admin RequestConsent Policy",
         ms_graph.get_admin_request_consent_policy(),
         &splunk,
     )
     .await?;
+
     try_collect_send("MS Graph Domains", ms_graph.get_domains(), &splunk).await?;
+
     try_collect_send(
         "MS Graph Permission Grant Policy",
         ms_graph.get_permission_grant_policy(),
@@ -653,51 +697,87 @@ pub async fn m365(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
         &splunk,
     )
     .await?;
+
     try_collect_send(
         "Exchange Orgainization Config",
         run_powershell_get_organization_config(&secrets),
         &splunk,
     )
     .await?;
+
     try_collect_send(
         "Exchange Sharing Policy",
         run_powershell_get_sharing_policy(&secrets),
         &splunk,
     )
     .await?;
+
     try_collect_send(
         "Exchange Safe Links Policy",
         run_powershell_get_safe_links_policy(&secrets),
         &splunk,
     )
     .await?;
+
     try_collect_send(
         "Exchange Malware Filter Policy",
         run_powershell_get_malware_filter_policy(&secrets),
         &splunk,
     )
     .await?;
+
     try_collect_send(
         "Exchange Hosted Outbound Spam Filter Policy",
         run_powershell_get_hosted_outbound_spam_filter_policy(&secrets),
         &splunk,
     )
     .await?;
+
     try_collect_send(
         "Exchange Anti Phish Policy",
         run_powershell_get_anti_phish_policy(&secrets),
         &splunk,
     )
     .await?;
+
     try_collect_send(
         "Exchange Admin Audit Log Config",
         run_powershell_get_admin_audit_log_config(&secrets),
         &splunk,
     )
     .await?;
+
     try_collect_send(
         "Exchange OWA Mailbox Policy",
         run_powershell_get_owa_mailbox_policy(&secrets),
+        &splunk,
+    )
+    .await?;
+
+    try_collect_send(
+        "Exchange Safe Attachment Policy",
+        run_powershell_get_safe_attachment_policy(&secrets),
+        &splunk,
+    )
+    .await?;
+
+    try_collect_send(
+        "Exchange ATP Polciy for O365",
+        run_powershell_get_atp_policy_for_o365(&secrets),
+        &splunk,
+    )
+    .await?;
+
+    try_collect_send(
+        "Exchange DLP Complaince Policy",
+        run_powershell_get_dlp_compliance_policy(&secrets),
+        &splunk,
+    )
+    .await?;
+
+    try_collect_send(
+        "Exchange Transport Rule",
+        run_powershell_get_transport_rule(&secrets),
         &splunk,
     )
     .await?;
@@ -855,6 +935,16 @@ pub(crate) mod test {
         let get_authorization_policy = ms_graph.get_authorization_policy().await?;
         splunk
             .send_batch((&get_authorization_policy).to_hec_events()?)
+            .await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn authentication_methods_policy() -> Result<()> {
+        let (splunk, ms_graph) = setup().await?;
+        let authentication_methods_policy = ms_graph.get_authentication_methods_policy().await?;
+        splunk
+            .send_batch((&authentication_methods_policy).to_hec_events()?)
             .await?;
         Ok(())
     }

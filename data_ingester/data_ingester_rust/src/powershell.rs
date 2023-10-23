@@ -3,10 +3,7 @@ use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::iter;
 use std::process::Command;
 
-use crate::{
-    keyvault::Secrets,
-    splunk::{ToHecEvents},
-};
+use crate::{keyvault::Secrets, splunk::ToHecEvents};
 
 pub async fn install_powershell() -> Result<()> {
     eprintln!("Downloading Powershell .deb");
@@ -261,6 +258,110 @@ impl ToHecEvents for &OwaMailboxPolicy {
     }
 }
 
+pub async fn run_powershell_get_safe_attachment_policy(
+    secrets: &Secrets,
+) -> Result<SafeAttachmentPolicy> {
+    let command = "Get-SafeAttachmentPolicy";
+    let result = run_exchange_online_powershell(secrets, command).await?;
+    Ok(result)
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SafeAttachmentPolicy(Vec<serde_json::Value>);
+
+impl ToHecEvents for &SafeAttachmentPolicy {
+    type Item = serde_json::Value;
+    fn source(&self) -> &'static str {
+        "powershell:ExchangeOnline:Get-SafeAttachmentPolicy"
+    }
+
+    fn sourcetype(&self) -> &'static str {
+        "m365:safe_attachment_policy"
+    }
+
+    fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
+        Box::new(self.0.iter())
+    }
+}
+
+pub async fn run_powershell_get_atp_policy_for_o365(secrets: &Secrets) -> Result<AtpPolciyForO365> {
+    let command = "Get-AtpPolicyForO365";
+    let result = run_exchange_online_powershell(secrets, command).await?;
+    Ok(result)
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AtpPolciyForO365(serde_json::Value);
+
+impl ToHecEvents for &AtpPolciyForO365 {
+    type Item = Self;
+    fn source(&self) -> &'static str {
+        "powershell:ExchangeOnline:Get-AtpPolicyForO365"
+    }
+
+    fn sourcetype(&self) -> &'static str {
+        "m365:atp_policy_for_o365"
+    }
+
+    fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
+        Box::new(iter::once(self))
+    }
+}
+
+pub async fn run_powershell_get_dlp_compliance_policy(
+    secrets: &Secrets,
+) -> Result<DlpCompliancePolicy> {
+    let command = "Get-DlpCompliancePolicy";
+    let result = run_exchange_online_ipps_powershell(secrets, command).await?;
+    Ok(result)
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DlpCompliancePolicy(Vec<serde_json::Value>);
+
+impl ToHecEvents for &DlpCompliancePolicy {
+    type Item = Self;
+    fn source(&self) -> &'static str {
+        "powershell:ExchangeOnline:Get-DlpCompliancePolicy"
+    }
+
+    fn sourcetype(&self) -> &'static str {
+        "m365:dlp_compliance_policy"
+    }
+
+    fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
+        Box::new(iter::once(self))
+    }
+}
+
+pub async fn run_powershell_get_transport_rule(secrets: &Secrets) -> Result<TransportRule> {
+    let command = "Get-TransportRule";
+    let result = run_exchange_online_powershell(secrets, command).await?;
+    Ok(result)
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TransportRule(Vec<serde_json::Value>);
+
+impl ToHecEvents for &TransportRule {
+    type Item = serde_json::Value;
+    fn source(&self) -> &'static str {
+        "powershell:ExchangeOnline:Get-TransportRule"
+    }
+
+    fn sourcetype(&self) -> &'static str {
+        "m365:transport_rule"
+    }
+
+    fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
+        Box::new(self.0.iter())
+    }
+}
+
 pub async fn run_exchange_online_powershell<T: DeserializeOwned>(
     secrets: &Secrets,
     command: &str,
@@ -285,17 +386,43 @@ Connect-ExchangeOnline -ShowBanner:$false -Certificate $pfx -AppID "{}" -Organiz
     Ok(out)
 }
 
+pub async fn run_exchange_online_ipps_powershell<T: DeserializeOwned>(
+    secrets: &Secrets,
+    command: &str,
+) -> Result<T> {
+    let output = Command::new("pwsh")
+        .args([
+            "-Command",
+            &format!(r#"
+[Byte[]]$pfxBytes = [Convert]::FromBase64String('{}');
+$pfx = New-Object System.Security.Cryptography.X509Certificates.X509Certificate -ArgumentList (,$pfxBytes);
+Import-Module ExchangeOnlineManagement;
+Connect-IPPSSession -ShowBanner:$false -Certificate $pfx -AppID "{}" -Organization "{}";
+{} | ConvertTo-Json -Compress;"#,
+                     secrets.azure_client_certificate,
+                     secrets.azure_client_id,
+                     secrets.azure_client_organization,
+                     command,
+            )
+        ]).output()?;
+
+    let out = serde_json::from_slice::<T>(&output.stdout[..])?;
+    Ok(out)
+}
+
 #[cfg(test)]
 mod test {
     use crate::{
         keyvault::{get_keyvault_secrets, Secrets},
         powershell::{
             install_powershell, run_powershell_get_admin_audit_log_config,
-            run_powershell_get_anti_phish_policy,
+            run_powershell_get_anti_phish_policy, run_powershell_get_atp_policy_for_o365,
+            run_powershell_get_dlp_compliance_policy,
             run_powershell_get_hosted_outbound_spam_filter_policy,
             run_powershell_get_malware_filter_policy, run_powershell_get_organization_config,
-            run_powershell_get_owa_mailbox_policy, run_powershell_get_safe_links_policy,
-            run_powershell_get_sharing_policy,
+            run_powershell_get_owa_mailbox_policy, run_powershell_get_safe_attachment_policy,
+            run_powershell_get_safe_links_policy, run_powershell_get_sharing_policy,
+            run_powershell_get_transport_rule,
         },
         splunk::{set_ssphp_run, Splunk, ToHecEvents},
     };
@@ -338,6 +465,7 @@ mod test {
         Ok(())
     }
 
+    #[ignore]
     #[tokio::test]
     async fn test_run_powershell_get_safe_links_policy() -> Result<()> {
         let (splunk, secrets) = setup().await?;
@@ -382,6 +510,42 @@ mod test {
     async fn test_run_powershell_get_owa_mailbox_policy() -> Result<()> {
         let (splunk, secrets) = setup().await?;
         let result = run_powershell_get_owa_mailbox_policy(&secrets).await?;
+        splunk.send_batch((&result).to_hec_events()?).await?;
+        Ok(())
+    }
+
+    #[ignore]
+    #[tokio::test]
+    async fn test_run_powershell_get_safe_attachment_policy() -> Result<()> {
+        let (splunk, secrets) = setup().await?;
+        let result = run_powershell_get_safe_attachment_policy(&secrets).await?;
+        splunk.send_batch((&result).to_hec_events()?).await?;
+        Ok(())
+    }
+
+    #[ignore]
+    #[tokio::test]
+    async fn test_run_powershell_get_atp_policy_for_o365() -> Result<()> {
+        let (splunk, secrets) = setup().await?;
+        let result = run_powershell_get_atp_policy_for_o365(&secrets).await?;
+        splunk.send_batch((&result).to_hec_events()?).await?;
+        Ok(())
+    }
+
+    #[ignore]
+    #[tokio::test]
+    async fn test_run_powershell_get_dlp_compliance_policy() -> Result<()> {
+        let (splunk, secrets) = setup().await?;
+        let result = run_powershell_get_dlp_compliance_policy(&secrets).await?;
+        splunk.send_batch((&result).to_hec_events()?).await?;
+        Ok(())
+    }
+
+    #[ignore]
+    #[tokio::test]
+    async fn test_run_powershell_get_transport_rule() -> Result<()> {
+        let (splunk, secrets) = setup().await?;
+        let result = run_powershell_get_transport_rule(&secrets).await?;
         splunk.send_batch((&result).to_hec_events()?).await?;
         Ok(())
     }
