@@ -5,6 +5,8 @@ use serde::Deserializer;
 use serde::Serialize;
 use serde_with::skip_serializing_none;
 
+use crate::splunk::ToHecEvents;
+
 // https://learn.microsoft.com/en-us/graph/api/resources/user?view=graph-rest-1.0
 #[skip_serializing_none]
 #[derive(Debug, Serialize, Deserialize)]
@@ -67,22 +69,18 @@ impl RoleDefinitions {
     }
 }
 
-// impl ToHecEvents for RoleDefinitions {
-//     fn source() -> &'static str {
-//         "msgraph"
-//     }
+impl ToHecEvents for &RoleDefinitions {
+    fn source(&self) -> &'static str {
+        "msgraph"
+    }
 
-//     fn sourcetype() -> &'static str {
-//         "msgraph:role_definition"
-//     }
-// }
+    fn sourcetype(&self) -> &'static str {
+        "msgraph:role_definition"
+    }
 
-// impl IntoIterator for &RoleDefinitions {
-//     type Item = RoleDefinition;
-//     type IntoIter = std::collections::Hash_map::Iter<'_, std::string::String, RoleDefinition>;
+    type Item = RoleDefinition;
 
-//     fn into_iter(self) -> Self::IntoIter {
-//         self.value
-//             .iter()
-//     }
-// }
+    fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
+        Box::new(self.value.values())
+    }
+}
