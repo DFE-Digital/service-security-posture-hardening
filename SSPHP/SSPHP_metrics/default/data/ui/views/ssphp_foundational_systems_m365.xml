@@ -1,6 +1,6 @@
 <dashboard version="1.1" theme="dark" script="js/table_cell_color.js">
-  <label>M365 Security Posture : CIS IG1 Benchmark</label>
-  <description>v3.17</description>
+  <label>Security Posture : CIS M365 Benchmark</label>
+  <description>v3.22</description>
   
   <init>
     <set token="tkn_selected_system">m365</set>
@@ -90,14 +90,14 @@ index="ssphp_metrics_summary" ssphp.use_case.id="m365_000" earliest=-2d@d latest
     <panel>
       <input type="checkbox" token="tkn_sd" searchWhenChanged="true">
         <label>Show</label>
-        <choice value="Y">IG1 Controls Only</choice>
+        <choice value="Y">L1 Benchmark Controls Only</choice>
         <initialValue>Y</initialValue>
         <change>
           <condition value="Y">
-            <set token="tkn_show_ig1">ssphp.cis_benchmark.controls.ig1="TRUE" OR ssphp.use_case.id="dns*" OR ssphp.use_case.id="aad*"</set>
+            <set token="tkn_show_l1">(ssphp.cis_benchmark.control.level="L1" OR ssphp.use_case.id="dns*" OR ssphp.use_case.id="aad*")</set>
           </condition>
           <condition>
-            <set token="tkn_show_ig1">*</set>
+            <set token="tkn_show_l1">*</set>
           </condition>
         </change>
       </input>
@@ -130,12 +130,12 @@ index="ssphp_metrics_summary" ssphp.use_case.id="m365_000" earliest=-2d@d latest
     </html>
     <html>
       <style>
-        #table2 th:nth-child(1) {
+       #table2 th:nth-child(2) {
           width: 200px;
         }
-        #table2 th:nth-child(3) {
-          width: 350px;
-        }
+        #table2 th:nth-child(4) {
+           width: 200px;
+         }
       </style>
     </html>
   </row>
@@ -161,25 +161,28 @@ index="ssphp_metrics_summary" ssphp.use_case.id="m365_000" earliest=-2d@d latest
       <table id="table2">
         <search>
           <query>
-index="ssphp_metrics_summary" ssphp.use_case.id="$tkn_selected_system$*" $tkn_show_ig1$
-| dedup ssphp.use_case.id
-| search ssphp.use_case.title!="" AND ssphp.use_case.id!="*_000" ```AND ssphp.use_case.id!="*rollup*" AND ssphp.use_case.id!="m365_001" AND ssphp.use_case.id!="m365_002" AND ssphp.use_case.id!="*6_1" AND ssphp.use_case.id!="*6_2"```
+index="ssphp_metrics_summary" ssphp.use_case.id="m365*" ssphp.use_case.id!="*_000" $tkn_show_l1$
+    [| search index="ssphp_metrics_summary" ssphp.use_case.id="m365*" ssphp.use_case.id!="*_000"
+      | stats max(SSPHP_RUN) as SSPHP_RUN by ssphp.use_case.id
+      | eval search_text="(\"ssphp.use_case.id\"=\"".'ssphp.use_case.id'."\" AND SSPHP_RUN=\"".SSPHP_RUN."\")"
+      | stats values(search_text) as search_text
+      | eval search_text="(".mvjoin(search_text," OR ").")"
+      | return $search_text]
+
 
 | eval Score='ssphp.score.score'."|".'ssphp.score.color',
-       Description=mvappend('ssphp.use_case.description','ssphp.cis_benchmark.control.title'),
        ssphp.cis_benchmark.controls.v8=split('ssphp.cis_benchmark.controls.v8',"
 ")
 
-| rename ssphp.use_case.title as "Title",
-         ssphp.use_case.short_description as "Name"
-
 | search Score=*
 
-| table "Title", Score, "Name", "Description", ssphp.use_case.id, ssphp.use_case.description, ssphp.cis_benchmark.control.title, ssphp.cis_benchmark.controls.v8
-| rename  ssphp.use_case.description as "Use Case Description",
-          ssphp.cis_benchmark.controls.v8 as "Controls", 
+| table ssphp.use_case.id, ssphp.use_case.title, Score, ssphp.cis_benchmark.control.title, ssphp.use_case.short_description, ssphp.use_case.description, ssphp.cis_benchmark.control.level
+
+| rename  ssphp.use_case.title as "Title",
+          ssphp.use_case.short_description as "Name"
+          ssphp.use_case.description as "Description",
           ssphp.cis_benchmark.control.title as "Control Title",
-          ssphp.use_case.id as "Use Case ID"
+          ssphp.cis_benchmark.control.level as "Level"
 
 | sort 0 Title
           </query>
@@ -193,7 +196,7 @@ index="ssphp_metrics_summary" ssphp.use_case.id="$tkn_selected_system$*" $tkn_sh
         <option name="rowNumbers">false</option>
         <option name="totalsRow">false</option>
         <option name="wrap">true</option>
-        <fields>"Title", Score, "Name", "Description", "Controls"</fields>
+        <fields>"Name", "Title", Score, "Control Title", "Description", "Level"</fields>
         <option name="drilldown">row</option>
         <drilldown>
           <link target="_blank">/app/$tkn_current_app$/ssphp_foundational_systems_drilldown?tkn_use_case_id=$row.ssphp.use_case.id$</link>
