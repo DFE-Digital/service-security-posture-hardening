@@ -33,8 +33,10 @@ use graph_rs_sdk::oauth::AccessToken;
 use graph_rs_sdk::oauth::OAuth;
 use graph_rs_sdk::Graph;
 use graph_rs_sdk::ODataQuery;
+use serde::de::DeserializeOwned;
 use serde::Deserialize;
 use serde::Serialize;
+use serde_json::Value;
 use std::env;
 use std::fmt::Debug;
 use std::iter;
@@ -90,6 +92,42 @@ pub struct MsGraph {
 }
 
 impl MsGraph {
+    async fn batch_get<T>(&self, url: &str) -> Result<T>
+    where
+        T: DeserializeOwned + Debug + Default,
+    {
+        let json = serde_json::json!({
+            "requests": [
+                {
+                    "id": "1",
+                    "method": "GET",
+                    "url": url,
+                },
+            ]
+        });
+
+        let response = self.client.batch(&json).send().await?;
+
+        let mut batch_response: MsGraphBatch<T> = response.json().await?;
+
+        let result = std::mem::take(
+            &mut batch_response
+                .responses
+                .first_mut()
+                .context("no response")?
+                .body,
+        );
+        Ok(result)
+    }
+
+    /// 1.1.10
+    /// https://learn.microsoft.com/en-us/graph/api/resources/groupsetting?view=graph-rest-1.0
+    /// The /beta version of this resource is named directorySetting.
+    pub async fn list_group_settings(&self) -> Result<GroupSettings> {
+        let result = self.batch_get("/groupSettingTemplates").await?;
+        Ok(result)
+    }
+
     pub async fn list_conditional_access_policies(&self) -> Result<ConditionalAccessPolicies> {
         let mut stream = self
             .client
@@ -359,6 +397,37 @@ impl ToHecEvents for &AuthorizationPolicy {
 
     fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
         unimplemented!()
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, Default)]
+pub struct MsGraphBatch<T> {
+    responses: Vec<MsGraphResponse<T>>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Default)]
+pub struct MsGraphResponse<T> {
+    body: T,
+}
+
+#[derive(Debug, Serialize, Deserialize, Default)]
+pub struct GroupSettings {
+    #[serde(rename = "value")]
+    inner: Vec<serde_json::Value>,
+}
+
+impl ToHecEvents for &GroupSettings {
+    type Item = Value;
+    fn source(&self) -> &str {
+        "msgraph"
+    }
+
+    fn sourcetype(&self) -> &str {
+        "m365:group_settings"
+    }
+
+    fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
+        Box::new(self.inner.iter())
     }
 }
 
@@ -657,6 +726,13 @@ pub async fn m365(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
     //             .await?;
     //     }
     // }
+
+    try_collect_send(
+        "MS Graph Group Settings",
+        ms_graph.list_group_settings(),
+        &splunk,
+    )
+    .await?;
 
     try_collect_send(
         "MS Graph Security Secure Scores",
@@ -1031,15 +1107,16 @@ pub(crate) mod test {
             .first_mut()
             .context("Unable to get first SecrurityScore")?;
         security_score.odata_context = Some(security_scores.odata_context.to_owned());
-        // let batch = security_score
-        //     .control_scores
-        //     .iter()
-        //     .map(|cs| cs.to_hec_event().unwrap())
-        //     .collect::<Vec<HecEvent>>();
-        // splunk.send_batch(&batch[..]).await?;
-        //assert!(false);
         let batch = &*security_score;
         splunk.send_batch(batch.to_hec_events()?).await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn list_group_settings() -> Result<()> {
+        let (splunk, ms_graph) = setup().await?;
+        let result = ms_graph.list_group_settings().await?;
+        splunk.send_batch((&result).to_hec_events()?).await?;
         Ok(())
     }
 }
