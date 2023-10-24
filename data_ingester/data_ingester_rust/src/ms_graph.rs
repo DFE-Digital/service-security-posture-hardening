@@ -568,6 +568,9 @@ pub async fn azure_users(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<(
 
     splunk.log("Getting AAD roles definitions").await?;
     let aad_role_definitions = ms_graph.list_role_definitions().await?;
+    splunk
+        .send_batch((&aad_role_definitions).to_hec_events()?)
+        .await?;
 
     let process_to_splunk = tokio::spawn(async move {
         while let Some(mut users) = reciever.recv().await {
