@@ -1,6 +1,6 @@
 <dashboard version="1.1" theme="dark" script="js/table_cell_color.js">
   <label>Security Posture : CIS M365 Benchmark</label>
-  <description>v3.22</description>
+  <description>v3.26</description>
   
   <init>
     <set token="tkn_selected_system">m365</set>
@@ -61,17 +61,30 @@ index="ssphp_metrics_summary" ssphp.use_case.id="m365_000" earliest=-2d@d latest
       <table id="table1">
         <search>
           <query>
-`ssphp_metrics_index` ssphp.use_case.id="m365_*_000" ssphp.use_case.id!="m365_*.*_000" ssphp.use_case.id!="m365__000" earliest=-1d@d latest=now
-    [| search `ssphp_metrics_index` ssphp.use_case.id="m365_*_000" ssphp.use_case.id!="m365_*.*_000" ssphp.use_case.id!="m365__000" earliest=-1d@d latest=now
-      | stats max(SSPHP_RUN) as SSPHP_RUN by ssphp.use_case.id
-      | eval search_text="(\"ssphp.use_case.id\"=\"".'ssphp.use_case.id'."\" AND SSPHP_RUN=\"".SSPHP_RUN."\")"
-      | stats values(search_text) as search_text
-      | eval search_text="(".mvjoin(search_text," OR ").")"
-      | return $search_text]
+`ssphp_metrics_index` ssphp.use_case.id="m365_0*_000"  earliest=-1d@d latest=now
+[| search `ssphp_metrics_index` ssphp.use_case.id="m365_*_000" ssphp.use_case.id!="m365_*.*_000" ssphp.use_case.id!="m365__000" earliest=-1d@d latest=now
+  | stats max(SSPHP_RUN) as SSPHP_RUN by ssphp.use_case.id
+  | eval search_text="(\"ssphp.use_case.id\"=\"".'ssphp.use_case.id'."\" AND SSPHP_RUN=\"".SSPHP_RUN."\")"
+  | stats values(search_text) as search_text
+  | eval search_text="(".mvjoin(search_text," OR ").")"
+  | return $search_text]
+
+| eval ssphp.score.score='ssphp.score.score'."|".'ssphp.score.color'
+
 | table ssphp.use_case.title, ssphp.score.score
+
 | eval {ssphp.use_case.title}='ssphp.score.score'
 | stats values(*) as *
+
 | fields - ssphp.use_case.title, ssphp.score.score
+
+
+| rename "Rollup Metrics for M365_001" as "M365-01 : Account &amp; Authentication",
+         "Rollup Metrics for M365_002" as "M365-02 : Application Permissions",
+         "Rollup Metrics for M365_003" as "M365-03 : Data Management",
+         "Rollup Metrics for M365_004" as "M365-04 : EMail Security / Exchange Online",
+         "Rollup Metrics for M365_005" as "M365-05 : Auditing",
+         "Rollup Metrics for M365_006" as "M365-01 : M365-06 : Storage"
           </query>
           <earliest>0</earliest>
           <latest>now</latest>
@@ -184,7 +197,15 @@ index="ssphp_metrics_summary" ssphp.use_case.id="m365*" ssphp.use_case.id!="*_00
           ssphp.cis_benchmark.control.title as "Control Title",
           ssphp.cis_benchmark.control.level as "Level"
 
-| sort 0 Title
+``` sort the lines properly ```
+| rex field=ssphp.use_case.id "^m365_00[0-9]{1}_cis_(?&lt;n1&gt;[^-]*)-(?&lt;n2&gt;[^-]*)"
+| rex field=ssphp.use_case.id "^m365_00[0-9]{1}_cis_[^-]*-[^-]*-(?&lt;n3&gt;.*)$"
+| fillnull value=0 n3
+| eval n2="00".n2, n2=substr(n2,len(n2)-1,2),
+        n3="00".n3, n3=substr(n3,len(n3)-1,2), 
+        sort_field='n1'.'n2'.'n3'
+| sort 0 sort_field
+| fields - sort_field, n1, n2, n3
           </query>
           <earliest>-1d@d</earliest>
           <sampleRatio>1</sampleRatio>
