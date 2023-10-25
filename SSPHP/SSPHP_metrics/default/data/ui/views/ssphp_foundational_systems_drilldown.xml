@@ -1,6 +1,6 @@
 <dashboard theme="dark" version="1.1" script="js/addtags.js">
-  <label>Foundational Systems Security Posture Drilldown</label>
-  <description>v1.20</description>
+  <label>M365 Security Posture : Control Drilldown</label>
+  <description>v1.28</description>
   
   <init>
     <set token="c_red">"0xFF0000"</set>
@@ -62,8 +62,8 @@
   </row>
 
 <!-- ################### Data Row ################### --> 
-  <row depends="$never_show$">
-    <panel>
+  <row>
+    <panel depends="$never_show$">
       <table>
         <search>
           <query>
@@ -72,17 +72,17 @@
       | stats max(SSPHP_RUN) as SSPHP_RUN
       | return SSPHP_RUN]
   | rex field=ssphp.use_case.title "(?&lt;fs&gt;[^\s]*)\s*(?&lt;notfs&gt;.*)$"
-  | fillnull value="-" ssphp.microsoft.desciption, 
-                      ssphp.microsoft.implementation_status, 
-                      ssphp.cis_benchmark.control.title, 
-                      ssphp.cis_benchmark.control.description, 
-                      ssphp.cis_benchmark.control.rationale, 
-                      ssphp.cis_benchmark.control.impact,
-                      ssphp.cis_benchmark.document.name,
-                      ssphp.cis_benchmark.document.version,
-                      ssphp.cis_benchmark.version,
-                      ssphp.cis_benchmark.controls.v8,
-                      ssphp.cis_benchmark.control.profile_applicability
+  | fillnull value="-" ssphp.microsoft.description, 
+                       ssphp.microsoft.implementation_status, 
+                       ssphp.cis_benchmark.control.title, 
+                       ssphp.cis_benchmark.control.description, 
+                       ssphp.cis_benchmark.control.rationale, 
+                       ssphp.cis_benchmark.control.impact,
+                       ssphp.cis_benchmark.document.name,
+                       ssphp.cis_benchmark.document.version,
+                       ssphp.cis_benchmark.version,
+                       ssphp.cis_benchmark.controls.v8,
+                       ssphp.cis_benchmark.control.profile_applicability
   | table ssphp*, fs, notfs
           </query>
           <earliest>-2d@d</earliest>
@@ -112,6 +112,10 @@
             <set token="tkn_cis_benchmark">$result.ssphp.cis_benchmark.document.name$ : $result.ssphp.cis_benchmark.document.version$ $result.ssphp.cis_benchmark.version$</set>
             <set token="tkn_cis_controls">$result.ssphp.cis_benchmark.controls.v8$</set>
             <set token="tkn_cis_profile">$result.ssphp.cis_benchmark.control.profile_applicability$</set>
+
+            <set token="tkn_cis_ig1">$result.ssphp.use_case.framework.ig_1$</set>
+            <set token="tkn_cis_ig2">$result.ssphp.use_case.framework.ig_2$</set>
+            <set token="tkn_cis_ig3">$result.ssphp.use_case.framework.ig_3$</set>
             
           </done>
         </search>
@@ -129,12 +133,9 @@
         <br></br>
         <span class="header_r1" style="color:	darkcyan">CIS Title</span>
         <span class="header_r2">$tkn_cis_title$</span>
-      </html>
-    </panel>
-
-    <panel>
-      <html>
-        <span class="header_r2">$tkn_display_description$</span>
+        <br></br>
+        <span class="header_r1" style="color:	darkcyan">CIS Profile Applicability</span>
+        <span class="header_r2">$tkn_cis_profile$</span>
       </html>
     </panel>
 
@@ -161,6 +162,19 @@
 
     <panel>
       <html>
+        <span class="header_r1" style="color:	darkcyan">IG1 Controls</span>
+        <span class="header_r2">$tkn_cis_ig1$</span>
+        <br></br>
+        <span class="header_r1" style="color:	darkcyan">IG2 Controls</span>
+        <span class="header_r2">$tkn_cis_ig2$</span>
+        <br></br>
+        <span class="header_r1" style="color:	darkcyan">IG3 Controls</span>
+        <span class="header_r2">$tkn_cis_ig3$</span>
+      </html>
+    </panel>
+
+    <panel>
+      <html>
         <span class="header_r1" style="color:	darkcyan">Numerator</span>
         <span class="header_r2">$tkn_numerator$</span>
         <br></br>
@@ -183,18 +197,8 @@
   </row>
 
 
-<!-- ################### Microsoft & CIS Row ################### --> 
+<!-- ################### CIS Row ################### --> 
   <row>
-    <panel>
-      <html>
-        <span class="header_r1" style="color:	darkcyan">Microsoft Description</span>
-        <span class="header_r2">$tkn_ms_description$</span>
-        <br></br>
-        <span class="header_r1" style="color:	darkcyan">Microsoft Implementation Status</span>
-        <span class="header_r2">$tkn_ms_implementation_status$</span>
-      </html>
-    </panel>
-
     <panel>
       <html>
         <span class="header_r1" style="color:	darkcyan">CIS Description</span>
@@ -208,9 +212,6 @@
         <br></br>
         <span class="header_r1" style="color:	darkcyan">CIS Benchmark</span>
         <span class="header_r2">$tkn_cis_benchmark$</span>
-        <br></br>
-        <span class="header_r1" style="color:	darkcyan">CIS Profile Applicability</span>
-        <span class="header_r2">$tkn_cis_profile$</span>
         <br></br>
         <span class="header_r1" style="color:	darkcyan">CIS Controls</span>
         <span class="header_r2">$tkn_cis_controls$</span>
