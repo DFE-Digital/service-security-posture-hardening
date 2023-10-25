@@ -80,8 +80,8 @@ pub async fn forms_test(secrets: &Secrets) -> Result<()> {
         .send()
         .await?;
 
-    dbg!(&res);
-    dbg!(&res.text().await?);
+    eprintln!("{:?}", &res);
+    eprintln!("{:?}", &res.text().await?);
     Ok(())
 }
 
