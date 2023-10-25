@@ -43,52 +43,6 @@ use std::iter;
 use std::sync::Arc;
 use tokio::sync::mpsc::UnboundedSender;
 
-pub async fn forms_test(secrets: &Secrets) -> Result<()> {
-    eprintln!("Forms: Getting oauth token");
-    let mut oauth = OAuth::new();
-    oauth
-        .client_id(&secrets.azure_client_id)
-        .client_secret(&secrets.azure_client_secret)
-        // https://forms.office.com/formapi/api
-        .add_scope("https://forms.office.com/.default")
-        .tenant_id(&secrets.azure_tenant_id);
-    let mut request = oauth.build_async().client_credentials();
-    let response = request.access_token().send().await?;
-
-    if response.status().is_success() {
-        let access_token: AccessToken = response.json().await?;
-
-        oauth.access_token(access_token);
-    } else {
-        // See if Microsoft Graph returned an error in the Response body
-        let result: reqwest::Result<serde_json::Value> = response.json().await;
-        println!("{result:#?}");
-    }
-
-    let token = oauth
-        .get_access_token()
-        .context("no access token")?
-        .bearer_token()
-        .to_string();
-
-    eprintln!("Forms: Making request");
-    let client = reqwest::Client::new();
-    let res = client
-        .get(format!(
-            "https://forms.office.com/formapi/api{}/GetFormsTenantSettings",
-            ""
-        )) // &secrets.azure_tenant_id))
-        .header(reqwest::header::AUTHORIZATION, format!("Bearer {}", token))
-        .send()
-        .await?;
-
-    eprintln!("Forms: Printing result");
-    eprintln!("{:?}", &res);
-    eprintln!("{:?}", &res.text().await?);
-    eprintln!("Forms: Done");
-    Ok(())
-}
-
 pub async fn login(client_id: &str, client_secret: &str, tenant_id: &str) -> Result<MsGraph> {
     let mut oauth = OAuth::new();
     oauth
@@ -126,7 +80,7 @@ pub async fn login(client_id: &str, client_secret: &str, tenant_id: &str) -> Res
     Ok(MsGraph {
         client,
         beta_client,
-        //        oauth,
+        oauth,
     })
 }
 
@@ -134,11 +88,11 @@ pub async fn login(client_id: &str, client_secret: &str, tenant_id: &str) -> Res
 pub struct MsGraph {
     client: Graph,
     beta_client: Graph,
-    //    oauth: OAuth,
+    oauth: OAuth,
 }
 
 impl MsGraph {
-    async fn batch_get<T>(&self, url: &str) -> Result<T>
+    async fn batch_get<T>(&self, client: &Graph, url: &str) -> Result<T>
     where
         T: DeserializeOwned + Debug + Default,
     {
@@ -152,7 +106,7 @@ impl MsGraph {
             ]
         });
 
-        let response = self.client.batch(&json).send().await?;
+        let response = client.batch(&json).send().await?;
 
         let mut batch_response: MsGraphBatch<T> = response.json().await?;
 
@@ -163,7 +117,34 @@ impl MsGraph {
                 .context("no response")?
                 .body,
         );
+
         Ok(result)
+    }
+
+    /// 2.10
+    /// MSGraph Permission: OrgSettings-Forms.Read.All
+    /// https://graph.microsoft.com/beta/admin/forms
+    pub async fn get_admin_form_settings(&self) -> Result<AdminFormSettings> {
+        let client = reqwest::Client::new();
+        let (client, request) = client
+            .get("https://graph.microsoft.com/beta/admin/forms")
+            .header(
+                "Authorization",
+                &format!(
+                    "Bearer {}",
+                    self.oauth
+                        .get_access_token()
+                        .context("can't get access token")?
+                        .bearer_token()
+                ),
+            )
+            .build_split();
+
+        let response = client.execute(request?).await?;
+
+        let body = response.json().await?;
+
+        Ok(body)
     }
 
     /// 1.1.9
@@ -171,7 +152,9 @@ impl MsGraph {
     /// https://learn.microsoft.com/en-us/graph/api/resources/groupsetting?view=graph-rest-1.0
     /// The /beta version of this resource is named directorySetting.
     pub async fn list_group_settings(&self) -> Result<GroupSettings> {
-        let result = self.batch_get("/groupSettingTemplates").await?;
+        let result = self
+            .batch_get(&self.client, "/groupSettingTemplates")
+            .await?;
         Ok(result)
     }
 
@@ -417,6 +400,27 @@ impl MsGraph {
 }
 
 #[derive(Debug, Serialize, Deserialize, Default)]
+pub struct AdminFormSettings {
+    #[serde(rename = "settings")]
+    inner: serde_json::Value,
+}
+
+impl ToHecEvents for &AdminFormSettings {
+    type Item = Self;
+    fn source(&self) -> &str {
+        "msgraph"
+    }
+
+    fn sourcetype(&self) -> &str {
+        "m365:admin_form_settings"
+    }
+
+    fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
+        Box::new(iter::once(self))
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, Default)]
 pub struct AuthorizationPolicy {
     #[serde(rename = "@odata.context")]
     pub odata_context: String,
@@ -624,8 +628,6 @@ pub async fn azure_users(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<(
         .log(&format!("GIT_HASH: {}", env!("GIT_HASH")))
         .await?;
 
-    forms_test(&secrets).await?;
-
     let ms_graph = login(
         &secrets.azure_client_id,
         &secrets.azure_client_secret,
@@ -775,6 +777,15 @@ pub async fn m365(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
     //             .await?;
     //     }
     // }
+
+    // 1.1.9
+    // 1.1.10
+    try_collect_send(
+        "MS Graph Group Settings",
+        ms_graph.get_admin_form_settings(),
+        &splunk,
+    )
+    .await?;
 
     // 1.1.9
     // 1.1.10
@@ -1167,6 +1178,14 @@ pub(crate) mod test {
     async fn list_group_settings() -> Result<()> {
         let (splunk, ms_graph) = setup().await?;
         let result = ms_graph.list_group_settings().await?;
+        splunk.send_batch((&result).to_hec_events()?).await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn get_admin_forms() -> Result<()> {
+        let (splunk, ms_graph) = setup().await?;
+        let result = ms_graph.get_admin_form_settings().await?;
         splunk.send_batch((&result).to_hec_events()?).await?;
         Ok(())
     }
