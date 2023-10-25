@@ -43,6 +43,48 @@ use std::iter;
 use std::sync::Arc;
 use tokio::sync::mpsc::UnboundedSender;
 
+pub async fn forms_test(secrets: &Secrets) -> Result<()> {
+    let mut oauth = OAuth::new();
+    oauth
+        .client_id(&secrets.azure_client_id)
+        .client_secret(&secrets.azure_client_secret)
+        // https://forms.office.com/formapi/api
+        .add_scope("https://forms.office.com/.default")
+        .tenant_id(&secrets.azure_tenant_id);
+    let mut request = oauth.build_async().client_credentials();
+    let response = request.access_token().send().await?;
+
+    if response.status().is_success() {
+        let access_token: AccessToken = response.json().await?;
+
+        oauth.access_token(access_token);
+    } else {
+        // See if Microsoft Graph returned an error in the Response body
+        let result: reqwest::Result<serde_json::Value> = response.json().await;
+        println!("{result:#?}");
+    }
+
+    let token = oauth
+        .get_access_token()
+        .context("no access token")?
+        .bearer_token()
+        .to_string();
+
+    let client = reqwest::Client::new();
+    let res = client
+        .get(format!(
+            "https://forms.office.com/formapi/api{}/GetFormsTenantSettings",
+            ""
+        )) // &secrets.azure_tenant_id))
+        .header(reqwest::header::AUTHORIZATION, format!("Bearer {}", token))
+        .send()
+        .await?;
+
+    dbg!(&res);
+    dbg!(&res.text().await?);
+    Ok(())
+}
+
 pub async fn login(client_id: &str, client_secret: &str, tenant_id: &str) -> Result<MsGraph> {
     let mut oauth = OAuth::new();
     oauth
@@ -120,6 +162,7 @@ impl MsGraph {
         Ok(result)
     }
 
+    /// 1.1.9
     /// 1.1.10
     /// https://learn.microsoft.com/en-us/graph/api/resources/groupsetting?view=graph-rest-1.0
     /// The /beta version of this resource is named directorySetting.
@@ -577,6 +620,8 @@ pub async fn azure_users(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<(
         .log(&format!("GIT_HASH: {}", env!("GIT_HASH")))
         .await?;
 
+    forms_test(&secrets).await?;
+
     let ms_graph = login(
         &secrets.azure_client_id,
         &secrets.azure_client_secret,
@@ -727,6 +772,8 @@ pub async fn m365(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
     //     }
     // }
 
+    // 1.1.9
+    // 1.1.10
     try_collect_send(
         "MS Graph Group Settings",
         ms_graph.list_group_settings(),

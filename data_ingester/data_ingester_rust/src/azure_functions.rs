@@ -188,10 +188,10 @@ pub(crate) async fn start_server(tx: Sender<()>) -> Result<()> {
                         install_powershell().await.unwrap();
                         *powershell_installed.lock().await = true;
 
-                        m365_splunk
-                            .log("Powershell: Install Complete")
-                            .await
-                            .unwrap();
+                        // m365_splunk
+                        //     .log("Powershell: Install Complete")
+                        //     .await
+                        //     .unwrap();
                     } else {
                         m365_splunk
                             .log("Powershell: already installed")
