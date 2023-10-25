@@ -1,6 +1,6 @@
 <dashboard theme="dark" version="1.1" script="js/addtags.js">
   <label>M365 Security Posture : Control Drilldown</label>
-  <description>v1.28</description>
+  <description>v1.34</description>
   
   <init>
     <set token="c_red">"0xFF0000"</set>
@@ -62,28 +62,36 @@
   </row>
 
 <!-- ################### Data Row ################### --> 
-  <row>
-    <panel depends="$never_show$">
+  <row depends="$never_show$">
+    <panel>
       <table>
         <search>
           <query>
-  index="ssphp_metrics_summary" ssphp.use_case.id=$tkn_use_case_id$
+index="ssphp_metrics_summary" ssphp.use_case.id=$tkn_use_case_id$
     [| search index="ssphp_metrics_summary" ssphp.use_case.id=$tkn_use_case_id$
       | stats max(SSPHP_RUN) as SSPHP_RUN
       | return SSPHP_RUN]
-  | rex field=ssphp.use_case.title "(?&lt;fs&gt;[^\s]*)\s*(?&lt;notfs&gt;.*)$"
-  | fillnull value="-" ssphp.microsoft.description, 
-                       ssphp.microsoft.implementation_status, 
-                       ssphp.cis_benchmark.control.title, 
-                       ssphp.cis_benchmark.control.description, 
-                       ssphp.cis_benchmark.control.rationale, 
-                       ssphp.cis_benchmark.control.impact,
-                       ssphp.cis_benchmark.document.name,
-                       ssphp.cis_benchmark.document.version,
-                       ssphp.cis_benchmark.version,
-                       ssphp.cis_benchmark.controls.v8,
-                       ssphp.cis_benchmark.control.profile_applicability
-  | table ssphp*, fs, notfs
+
+| rex field=ssphp.use_case.title "(?&lt;fs&gt;[^\s]*)\s*(?&lt;notfs&gt;.*)$"
+
+| rex field=ssphp.cis_benchmark.controls.v8 "^(?&lt;safeguard&gt;[^\s]*)\s.*"
+
+| lookup ssphp_cis_critical_security_controls_v8_all.csv safeguard
+
+| fillnull value="-" ssphp.microsoft.description, 
+                    ssphp.microsoft.implementation_status, 
+                    ssphp.cis_benchmark.control.title, 
+                    ssphp.cis_benchmark.control.description, 
+                    ssphp.cis_benchmark.control.rationale, 
+                    ssphp.cis_benchmark.control.impact,
+                    ssphp.cis_benchmark.document.name,
+                    ssphp.cis_benchmark.document.version,
+                    ssphp.cis_benchmark.version,
+                    ssphp.cis_benchmark.controls.v8,
+                    ssphp.cis_benchmark.control.profile_applicability,
+                    control, safeguard, asset_type, title, description
+
+| table ssphp*, fs, notfs, control, safeguard, asset_type, title, description
           </query>
           <earliest>-2d@d</earliest>
           <latest>now</latest>
@@ -116,6 +124,12 @@
             <set token="tkn_cis_ig1">$result.ssphp.use_case.framework.ig_1$</set>
             <set token="tkn_cis_ig2">$result.ssphp.use_case.framework.ig_2$</set>
             <set token="tkn_cis_ig3">$result.ssphp.use_case.framework.ig_3$</set>
+
+            <set token="tkn_safeguard">$result.safeguard$</set>
+            <set token="tkn_control">$result.control$</set>
+            <set token="tkn_asset_type">$result.asset_type$</set>
+            <set token="tkn_title">$result.title$</set>
+            <set token="tkn_description">$result.description$</set>
             
           </done>
         </search>
@@ -128,7 +142,7 @@
   <row>
     <panel>
       <html>
-        <span class="header_r1" style="color:	yellow">$tkn_fs$</span><span class="header_r1" style="color: darkcyan">  $tkn_notfs$</span>
+        <span class="header_r1" style="color:	yellow">$tkn_fs$ $tkn_notfs$</span>
         <span class="header_r2">$tkn_display_short_description$</span>
         <br></br>
         <span class="header_r1" style="color:	darkcyan">CIS Title</span>
@@ -144,20 +158,16 @@
         <search>
           <query>
 | makeresults
-| eval score=$tkn_score$,
-       color=$tkn_color$
-| table score, color
+| eval score=$tkn_score$
+| table score
           </query>
         </search>
         <option name="colorMode">none</option>
         <option name="drilldown">none</option>
-        <option name="rangeColors">[$tkn_score_color$,$tkn_score_color$]</option>
-        <option name="rangeValues">[0]</option>        
+        <option name="rangeColors">[$c_red$,$c_green$]</option>
+        <option name="rangeValues">[99.99]</option>        
         <option name="useColors">1</option>
       </single>
-      <done>
-        <eval token="tkn_score_color">case($result.color$="red",$c_red$,$result.color$="orange",$c_orange$,$result.color$="green",$c_green$</eval>
-      </done>
     </panel>
 
     <panel>
@@ -199,8 +209,15 @@
 
 <!-- ################### CIS Row ################### --> 
   <row>
-    <panel>
+    <panel id="panel1">
       <html>
+        <style>
+          #panel1{
+            width:60% !important;
+          }
+        </style>
+        <span class="header_r1" style="color:	yellow">CIS M365 Foundations Benchmark</span>
+        <br></br>
         <span class="header_r1" style="color:	darkcyan">CIS Description</span>
         <span class="header_r2">$tkn_cis_description$</span>
         <br></br>
@@ -212,9 +229,29 @@
         <br></br>
         <span class="header_r1" style="color:	darkcyan">CIS Benchmark</span>
         <span class="header_r2">$tkn_cis_benchmark$</span>
+      </html>
+    </panel>
+
+    <panel id="panel2">
+      <html>
+        <style>
+          #panel2{
+            width:40% !important;
+          }
+        </style>
+        <span class="header_r1" style="color:	yellow">CIS Navigator Critical Security Controls</span>
         <br></br>
-        <span class="header_r1" style="color:	darkcyan">CIS Controls</span>
+        <span class="header_r1" style="color:	darkcyan">Safeguard</span>
         <span class="header_r2">$tkn_cis_controls$</span>
+        <br></br>
+        <span class="header_r1" style="color:	darkcyan">Asset Type</span>
+        <span class="header_r2">$tkn_asset_type$</span>
+        <br></br>
+        <span class="header_r1" style="color:	darkcyan">Title</span>
+        <span class="header_r2">$tkn_title$</span>
+        <br></br>
+        <span class="header_r1" style="color:	darkcyan">Description</span>
+        <span class="header_r2">$tkn_description$</span>
       </html>
     </panel>
   </row>
