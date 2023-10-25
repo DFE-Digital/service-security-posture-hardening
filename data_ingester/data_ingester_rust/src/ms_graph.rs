@@ -44,6 +44,7 @@ use std::sync::Arc;
 use tokio::sync::mpsc::UnboundedSender;
 
 pub async fn forms_test(secrets: &Secrets) -> Result<()> {
+    eprintln!("Forms: Getting oauth token");
     let mut oauth = OAuth::new();
     oauth
         .client_id(&secrets.azure_client_id)
@@ -70,6 +71,7 @@ pub async fn forms_test(secrets: &Secrets) -> Result<()> {
         .bearer_token()
         .to_string();
 
+    eprintln!("Forms: Making request");
     let client = reqwest::Client::new();
     let res = client
         .get(format!(
@@ -80,8 +82,10 @@ pub async fn forms_test(secrets: &Secrets) -> Result<()> {
         .send()
         .await?;
 
+    eprintln!("Forms: Printing result");
     eprintln!("{:?}", &res);
     eprintln!("{:?}", &res.text().await?);
+    eprintln!("Forms: Done");
     Ok(())
 }
 
