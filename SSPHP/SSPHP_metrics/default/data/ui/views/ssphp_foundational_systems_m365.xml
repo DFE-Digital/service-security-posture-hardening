@@ -1,6 +1,6 @@
 <dashboard version="1.1" theme="dark" script="js/table_cell_color.js">
   <label>Security Posture : CIS M365 Benchmark</label>
-  <description>v3.26</description>
+  <description>v3.27</description>
   
   <init>
     <set token="tkn_selected_system">m365</set>
@@ -34,11 +34,7 @@ index="ssphp_metrics_summary" ssphp.use_case.id="m365_000" earliest=-2d@d latest
             <eval token="tkn_m365_rollup_colour">case($result.ssphp.score.color$="red",$c_red$,$result.ssphp.score.color$="orange",$c_orange$,$result.ssphp.score.color$="green",$c_green$,1==1,$c_black$)</eval>
           </done>
         </search>
-        <drilldown>
-          <set token="tkn_selected_system">m365</set>
-          <set token="tkn_selected_system_name">M365</set>
-        </drilldown>
-        <option name="drilldown">all</option>
+        <option name="drilldown">none</option>
         <option name="colorMode">block</option>
         <option name="height">$data_panel_height$</option>
         <option name="rangeColors">[$tkn_m365_rollup_colour$,$tkn_m365_rollup_colour$]</option>
@@ -90,6 +86,7 @@ index="ssphp_metrics_summary" ssphp.use_case.id="m365_000" earliest=-2d@d latest
           <latest>now</latest>
           <sampleRatio>1</sampleRatio>
         </search>
+        <option name="drilldown">none</option>
       </table>
     </panel>
   </row>
@@ -107,7 +104,7 @@ index="ssphp_metrics_summary" ssphp.use_case.id="m365_000" earliest=-2d@d latest
         <initialValue>Y</initialValue>
         <change>
           <condition value="Y">
-            <set token="tkn_show_l1">(ssphp.cis_benchmark.control.level="L1" OR ssphp.use_case.id="dns*" OR ssphp.use_case.id="aad*")</set>
+            <set token="tkn_show_l1">(ssphp.cis_benchmark.control.level="L1")</set>
           </condition>
           <condition>
             <set token="tkn_show_l1">*</set>
@@ -212,7 +209,6 @@ index="ssphp_metrics_summary" ssphp.use_case.id="m365*" ssphp.use_case.id!="*_00
         </search>
         <option name="count">100</option>
         <option name="dataOverlayMode">none</option>
-        <option name="drilldown">none</option>
         <option name="percentagesRow">false</option>
         <option name="rowNumbers">false</option>
         <option name="totalsRow">false</option>
