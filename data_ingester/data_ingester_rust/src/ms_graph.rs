@@ -1,6 +1,7 @@
 use crate::admin_request_consent_policy::AdminRequestConsentPolicy;
 use crate::azure_rest::AzureRest;
 use crate::conditional_access_policies::ConditionalAccessPolicies;
+use crate::dns::resolve_txt_record;
 use crate::groups::Groups;
 use crate::keyvault::Secrets;
 use crate::powershell::run_powershell_get_admin_audit_log_config;
@@ -359,7 +360,17 @@ impl MsGraph {
 
     pub async fn get_domains(&self) -> Result<Domains> {
         let response = self.client.domains().list_domain().send().await?;
-        let body = response.json().await?;
+        let mut body: Domains = response.json().await?;
+        for domain in body.value.iter_mut() {
+            if let Ok(txt) = resolve_txt_record(&domain.id).await {
+                domain.txt_records = Some(txt);
+            }
+
+            let dmarc_domain = format!("_dmarc.{}", &domain.id);
+            if let Ok(dmarc) = resolve_txt_record(&dmarc_domain).await {
+                domain.dmarc = Some(dmarc);
+            }
+        }
         Ok(body)
     }
 
@@ -500,8 +511,35 @@ impl ToHecEvents for &AuthenticationMethodsPolicy {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, Default)]
-pub struct Domains(serde_json::Value);
+// #[derive(Debug, Serialize, Deserialize, Default)]
+// pub struct Domains(serde_json::Value);
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Domains {
+    #[serde(rename = "@odata.context")]
+    pub odata_context: String,
+    pub value: Vec<Domain>,
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Domain {
+    pub authentication_type: String,
+    pub availability_status: Option<String>,
+    pub id: String,
+    pub is_admin_managed: bool,
+    pub is_default: bool,
+    pub is_initial: bool,
+    pub is_root: bool,
+    pub is_verified: bool,
+    pub password_notification_window_in_days: Option<i32>,
+    pub password_validity_period_in_days: Option<i32>,
+    pub state: Value,
+    pub supported_services: Vec<String>,
+    pub txt_records: Option<Vec<String>>,
+    pub dmarc: Option<Vec<String>>,
+}
 
 impl ToHecEvents for &Domains {
     type Item = Self;
