@@ -1,6 +1,6 @@
 <dashboard theme="dark" version="1.1" script="js/addtags.js">
   <label>M365 Security Posture : Control Drilldown</label>
-  <description>v1.34</description>
+  <description>v1.38</description>
   
   <init>
     <set token="c_red">"0xFF0000"</set>
@@ -9,10 +9,16 @@
     <set token="c_blue">"0x0000FF"</set>
   </init>
 
-
   <row depends="$never_show$">
     <html>
       <style>
+        .header_r0{
+            height: auto; 
+            margin: 0px auto 0px auto;
+            font-size: 1.7em;
+            font-family: Arial, Helvetica, sans-serif;
+            color: #0000FF; 
+        }
         .header_r1{
             height: auto; 
             margin: 0px auto 0px auto;
@@ -91,7 +97,9 @@ index="ssphp_metrics_summary" ssphp.use_case.id=$tkn_use_case_id$
                     ssphp.cis_benchmark.control.profile_applicability,
                     control, safeguard, asset_type, title, description
 
-| table ssphp*, fs, notfs, control, safeguard, asset_type, title, description
+| eval last_run=strftime(SSPHP_RUN,"%Y-%m-%d %H:%M:%S")
+
+| table ssphp*, fs, notfs, control, safeguard, asset_type, title, description, last_run
           </query>
           <earliest>-2d@d</earliest>
           <latest>now</latest>
@@ -131,6 +139,7 @@ index="ssphp_metrics_summary" ssphp.use_case.id=$tkn_use_case_id$
             <set token="tkn_title">$result.title$</set>
             <set token="tkn_description">$result.description$</set>
             
+            <set token="tkn_last_run">$result.last_run$</set>
           </done>
         </search>
       </table>
@@ -142,7 +151,7 @@ index="ssphp_metrics_summary" ssphp.use_case.id=$tkn_use_case_id$
   <row>
     <panel>
       <html>
-        <span class="header_r1" style="color:	yellow">$tkn_fs$ $tkn_notfs$</span>
+        <span class="header_r0" style="color:	cyan">$tkn_fs$ $tkn_notfs$</span>
         <span class="header_r2">$tkn_display_short_description$</span>
         <br></br>
         <span class="header_r1" style="color:	darkcyan">CIS Title</span>
@@ -190,6 +199,9 @@ index="ssphp_metrics_summary" ssphp.use_case.id=$tkn_use_case_id$
         <br></br>
         <span class="header_r1" style="color:	darkcyan">Denominator</span>
         <span class="header_r2">$tkn_denominator$</span>
+        <br></br>
+        <span class="header_r1" style="color:	darkcyan">Last Evaluated</span>
+        <span class="header_r2">$tkn_last_run$</span>
       </html>
     </panel>
 
@@ -201,7 +213,7 @@ index="ssphp_metrics_summary" ssphp.use_case.id=$tkn_use_case_id$
         <span class="header_r2">Green : $tkn_green$</span>
         <br></br>
         <span class="header_r1" style="color:	darkcyan">Scoring Narrative</span>
-        <span class="header_r2">$tkn_scoring_narrative$</span>
+        <span class="header_r2">$tkn_scoring_narrative$</span>        
       </html>
     </panel>
   </row>
@@ -227,8 +239,7 @@ index="ssphp_metrics_summary" ssphp.use_case.id=$tkn_use_case_id$
         <span class="header_r1" style="color:	darkcyan">CIS Impact</span>
         <span class="header_r2">$tkn_cis_impact$</span>
         <br></br>
-        <span class="header_r1" style="color:	darkcyan">CIS Benchmark</span>
-        <span class="header_r2">$tkn_cis_benchmark$</span>
+        <a href="https://educationgovuk-my.sharepoint.com/:b:/g/personal/ian_pearl_education_gov_uk/ESBgkjr_vZRFuhPBQA8P0CsBVm0DB3rijn3lZn3lakWZlQ?e=1B684l" target="blank">$tkn_cis_benchmark$</a>
       </html>
     </panel>
 
