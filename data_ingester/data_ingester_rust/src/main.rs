@@ -3,6 +3,7 @@ mod azure_functions;
 mod azure_rest;
 mod conditional_access_policies;
 mod directory_roles;
+mod dns;
 mod groups;
 mod keyvault;
 mod ms_graph;

@@ -11,7 +11,7 @@ use uuid::Uuid;
 use anyhow::{anyhow, Result};
 
 // TODO Should not be shared between calls to the web endpoint!
-static SSPHP_RUN: RwLock<f64> = RwLock::new(0_f64);
+static SSPHP_RUN: RwLock<u64> = RwLock::new(0_u64);
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct HecEvent {
@@ -42,7 +42,7 @@ impl HecEvent {
 #[derive(Serialize, Deserialize)]
 struct SsphpEvent<T> {
     #[serde(rename = "SSPHP_RUN")]
-    ssphp_run: f64,
+    ssphp_run: u64,
     #[serde(flatten)]
     event: T,
 }
@@ -51,7 +51,7 @@ pub fn set_ssphp_run() -> Result<()> {
     let start = SystemTime::now();
     let since_the_epoch = start.duration_since(UNIX_EPOCH)?;
 
-    *SSPHP_RUN.write().unwrap() = since_the_epoch.as_secs_f64();
+    *SSPHP_RUN.write().unwrap() = since_the_epoch.as_secs();
     Ok(())
 }
 
