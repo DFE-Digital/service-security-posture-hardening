@@ -1,10 +1,11 @@
 use std::collections::HashSet;
 
 use crate::splunk::ToHecEvents;
-//use crate::splunk::ToHecEvents;
+
 use crate::users::User;
 use serde::Deserialize;
 use serde::Serialize;
+use serde_json::Value;
 use serde_with::skip_serializing_none;
 #[skip_serializing_none]
 #[derive(Debug, Serialize, Deserialize, Default)]
@@ -109,8 +110,16 @@ impl ConditionalAccessPolicy {
 #[derive(Debug, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct ConditionalAccessPolicyConditions {
+    applications: Value,
+    client_applications: Value,
+    client_app_types: Value,
+    devices: Value,
+    locations: Value,
+    platforms: Value,
+    service_principal_risk_levels: Value,
+    sign_in_risk_levels: Value,
+    user_risk_levels: Value,
     users: ConditionalAccessPolicyConditionsUsers,
-    applications: serde_json::Value,
 }
 
 #[skip_serializing_none]

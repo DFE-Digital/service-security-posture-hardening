@@ -10,6 +10,7 @@ use crate::powershell::run_powershell_get_atp_policy_for_o365;
 use crate::powershell::run_powershell_get_blocked_sender_address;
 use crate::powershell::run_powershell_get_dkim_signing_config;
 use crate::powershell::run_powershell_get_dlp_compliance_policy;
+use crate::powershell::run_powershell_get_email_tenant_settings;
 use crate::powershell::run_powershell_get_hosted_outbound_spam_filter_policy;
 use crate::powershell::run_powershell_get_malware_filter_policy;
 use crate::powershell::run_powershell_get_organization_config;
@@ -407,6 +408,42 @@ impl MsGraph {
             .await?;
         let body = response.json().await?;
         Ok(body)
+    }
+
+    /// 5.1.1
+    /// Permission: AccessReview.Read.All
+    pub async fn get_access_reviews(&self) -> Result<AccessReviewDefinitions> {
+        let response = self
+            .client
+            .identity_governance()
+            .access_reviews()
+            .definitions()
+            .list_definitions()
+            .send()
+            .await?;
+        let body = response.json().await?;
+        Ok(body)
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, Default)]
+pub struct AccessReviewDefinitions {
+    #[serde(rename = "value")]
+    inner: Vec<serde_json::Value>,
+}
+
+impl ToHecEvents for &AccessReviewDefinitions {
+    type Item = Value;
+    fn source(&self) -> &str {
+        "msgraph"
+    }
+
+    fn sourcetype(&self) -> &str {
+        "m365:access_review_definitions"
+    }
+
+    fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
+        Box::new(self.inner.iter())
     }
 }
 
@@ -816,6 +853,14 @@ pub async fn m365(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
     //     }
     // }
 
+    // 5.1.1
+    try_collect_send(
+        "MS Graph Group Settings",
+        ms_graph.get_access_reviews(),
+        &splunk,
+    )
+    .await?;
+
     // 1.1.9
     // 1.1.10
     try_collect_send(
@@ -872,6 +917,13 @@ pub async fn m365(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
     .await?;
 
     try_collect_send("MS Graph Groups", ms_graph.list_groups(), &splunk).await?;
+
+    try_collect_send(
+        "Exchange Get Email Tenant Settings",
+        run_powershell_get_email_tenant_settings(&secrets),
+        &splunk,
+    )
+    .await?;
 
     try_collect_send(
         "Exchange Get Security Default Policy",
@@ -1224,6 +1276,14 @@ pub(crate) mod test {
     async fn get_admin_forms() -> Result<()> {
         let (splunk, ms_graph) = setup().await?;
         let result = ms_graph.get_admin_form_settings().await?;
+        splunk.send_batch((&result).to_hec_events()?).await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn get_access_reviews() -> Result<()> {
+        let (splunk, ms_graph) = setup().await?;
+        let result = ms_graph.get_access_reviews().await?;
         splunk.send_batch((&result).to_hec_events()?).await?;
         Ok(())
     }
