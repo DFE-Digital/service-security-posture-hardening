@@ -1,6 +1,6 @@
 <dashboard version="1.1" theme="dark" script="js/table_cell_color.js">
   <label>Security Posture Continuous Assurance : CIS M365 Benchmark</label>
-  <description>v3.27</description>
+  <description>v4.01</description>
   
   <init>
     <set token="tkn_selected_system">m365</set>
@@ -14,31 +14,91 @@
     <set token="c_black">"0x000000"</set>
   </init>
 
+  <fieldset autoRun="true" submitButton="false">
+    <input type="checkbox" token="tkn_sd1" searchWhenChanged="true">
+      <label></label>
+      <choice value="Y">L1 Controls</choice>
+      <initialValue>Y</initialValue>
+      <change>
+        <condition value="Y">
+          <set token="tkn_show_l1">(ssphp.cis_benchmark.control.level="L1")</set>
+          <set token="tkn_show_l1r">L1</set>
+        </condition>
+        <condition>
+          <set token="tkn_show_l1">*</set>
+          <set token="tkn_show_l1r">*</set>
+        </condition>
+      </change>
+    </input>
+    
+    <input type="checkbox" token="tkn_sd2" searchWhenChanged="true">
+      <label></label>
+      <choice value="Y">IG1 Controls</choice>
+      <initialValue>Y</initialValue>
+      <change>
+        <condition value="Y">
+          <set token="tkn_show_ig">(ssphp.cis_benchmark.controls.ig1="TRUE")</set>
+          <set token="tkn_show_igr">TRUE</set>
+        </condition>
+        <condition>
+          <set token="tkn_show_ig">*</set>
+          <set token="tkn_show_igr">*</set>
+        </condition>
+      </change>
+    </input>
+    
+    <input type="checkbox" token="tkn_sd3" searchWhenChanged="true">
+      <label></label>
+      <choice value="Y">Include 'Excluded' Controls</choice>
+      <initialValue></initialValue>
+      <change>
+        <condition value="Y">
+          <set token="tkn_show_ex">*</set>
+        </condition>
+        <condition>
+          <set token="tkn_show_ex">include</set>
+        </condition>
+      </change>
+    </input>
+  </fieldset>
 
+  <search id="base_rollup_1">
+    <query>
+`ssphp_use_case_cis_rollup_m365("$tkn_show_l1r$","$tkn_show_ex$","$tkn_show_igr$","*","*")`   ```(level,exclude_status,ig1,ig2,ig3) ie ("L1","exclude","TRUE","*","*")```
+| fields ssphp.use_case.id, ssphp.score.score
+    </query>
+  </search>
+
+  
+  
 
 <!-- ################### M365 Rollup ################### --> 
 
   <row>
     <panel>
+      <html>
+        <div>M365</div>
+      </html>
       <single>
-        <title>M365</title>
-        <search>
+
+        <search base="base_rollup_1">
           <query>
-index="ssphp_metrics_summary" ssphp.use_case.id="m365_000" earliest=-2d@d latest=now
-    [| search index="ssphp_metrics_summary" ssphp.use_case.id="m365_000" earliest=-2d@d latest=now
-    | stats max(SSPHP_RUN) as SSPHP_RUN
-    | return SSPHP_RUN]
-| table ssphp.score.score, ssphp.score.color
+| search ssphp.use_case.id="m365_000"
+| table ssphp.score.score
+
+
+| append 
+    [| makeresults
+    | eval ssphp.score.score="-"
+    | fields - _time]
+| sort - ssphp.score.score
+| head 1
           </query>
-          <done>
-            <eval token="tkn_m365_rollup_colour">case($result.ssphp.score.color$="red",$c_red$,$result.ssphp.score.color$="orange",$c_orange$,$result.ssphp.score.color$="green",$c_green$,1==1,$c_black$)</eval>
-          </done>
         </search>
         <option name="drilldown">none</option>
         <option name="colorMode">block</option>
-        <option name="height">$data_panel_height$</option>
-        <option name="rangeColors">[$tkn_m365_rollup_colour$,$tkn_m365_rollup_colour$]</option>
-        <option name="rangeValues">[0]</option>
+        <option name="rangeColors">[$c_red$,$c_green$]</option>
+        <option name="rangeValues">[99.99]</option>        
         <option name="useColors">1</option>
       </single>
     </panel>
@@ -48,71 +108,175 @@ index="ssphp_metrics_summary" ssphp.use_case.id="m365_000" earliest=-2d@d latest
 
 <!-- ################### Sub Rollups ################### --> 
 
-  <row><html>
-    <br></br>
-  </html></row>
-  
+
   <row>
     <panel>
-      <table id="table1">
-        <search>
+      <html>
+        <div>M365-01</div><div>Account &amp; Authentication</div>
+      </html>
+      <single>
+        <search base="base_rollup_1">
           <query>
-`ssphp_metrics_index` ssphp.use_case.id="m365_0*_000"  earliest=-1d@d latest=now
-[| search `ssphp_metrics_index` ssphp.use_case.id="m365_*_000" ssphp.use_case.id!="m365_*.*_000" ssphp.use_case.id!="m365__000" earliest=-1d@d latest=now
-  | stats max(SSPHP_RUN) as SSPHP_RUN by ssphp.use_case.id
-  | eval search_text="(\"ssphp.use_case.id\"=\"".'ssphp.use_case.id'."\" AND SSPHP_RUN=\"".SSPHP_RUN."\")"
-  | stats values(search_text) as search_text
-  | eval search_text="(".mvjoin(search_text," OR ").")"
-  | return $search_text]
-
-| eval ssphp.score.score='ssphp.score.score'."|".'ssphp.score.color'
-
-| table ssphp.use_case.title, ssphp.score.score
-
-| eval {ssphp.use_case.title}='ssphp.score.score'
-| stats values(*) as *
-
-| fields - ssphp.use_case.title, ssphp.score.score
+| search ssphp.use_case.id="m365_001_000"
+| table ssphp.score.score
 
 
-| rename "Rollup Metrics for M365_001" as "M365-01 : Account &amp; Authentication",
-         "Rollup Metrics for M365_002" as "M365-02 : Application Permissions",
-         "Rollup Metrics for M365_003" as "M365-03 : Data Management",
-         "Rollup Metrics for M365_004" as "M365-04 : EMail Security / Exchange Online",
-         "Rollup Metrics for M365_005" as "M365-05 : Auditing",
-         "Rollup Metrics for M365_006" as "M365-01 : M365-06 : Storage"
+| append 
+    [| makeresults
+    | eval ssphp.score.score="-"
+    | fields - _time]
+| sort - ssphp.score.score
+| head 1
           </query>
-          <earliest>0</earliest>
-          <latest>now</latest>
-          <sampleRatio>1</sampleRatio>
         </search>
         <option name="drilldown">none</option>
-      </table>
+        <option name="colorMode">block</option>
+        <option name="rangeColors">[$c_red$,$c_green$]</option>
+        <option name="rangeValues">[99.99]</option>        
+        <option name="useColors">1</option>
+      </single>
     </panel>
+
+    <panel>
+      <html>
+        <div>M365-02</div><div>Application Permissions</div>
+      </html>
+      <single>
+        <search base="base_rollup_1">
+          <query>
+| search ssphp.use_case.id="m365_002_000"
+| table ssphp.score.score
+
+
+| append 
+    [| makeresults
+    | eval ssphp.score.score="-"
+    | fields - _time]
+| sort - ssphp.score.score
+| head 1
+          </query>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="colorMode">block</option>
+        <option name="rangeColors">[$c_red$,$c_green$]</option>
+        <option name="rangeValues">[99.99]</option>        
+        <option name="useColors">1</option>
+      </single>
+    </panel>
+
+    <panel>
+      <html>
+          <div>M365-03</div><div>Data Management</div>
+      </html>
+      <single>
+        <search base="base_rollup_1">
+          <query>
+| search ssphp.use_case.id="m365_003_000"
+| table ssphp.score.score
+
+
+| append 
+    [| makeresults
+    | eval ssphp.score.score="-"
+    | fields - _time]
+| sort - ssphp.score.score
+| head 1
+          </query>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="colorMode">block</option>
+        <option name="rangeColors">[$c_red$,$c_green$]</option>
+        <option name="rangeValues">[99.99]</option>        
+        <option name="useColors">1</option>
+      </single>
+    </panel>
+
+    <panel>
+      <html>
+          <div>M365-04</div><div>EMail Security / Exchange Online</div>
+      </html>
+      <single>
+        <search base="base_rollup_1">
+          <query>
+| search ssphp.use_case.id="m365_004_000"
+| table ssphp.score.score
+
+
+| append 
+    [| makeresults
+    | eval ssphp.score.score="-"
+    | fields - _time]
+| sort - ssphp.score.score
+| head 1
+          </query>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="colorMode">block</option>
+        <option name="rangeColors">[$c_red$,$c_green$]</option>
+        <option name="rangeValues">[99.99]</option>        
+        <option name="useColors">1</option>
+      </single>
+    </panel>
+
+    <panel>
+      <html>
+          <div>M365-05</div><div>Auditing</div>
+      </html>
+      <single>
+        <search base="base_rollup_1">
+          <query>
+| search ssphp.use_case.id="m365_005_000"
+| table ssphp.score.score
+
+
+| append 
+    [| makeresults
+    | eval ssphp.score.score="-"
+    | fields - _time]
+| sort - ssphp.score.score
+| head 1
+          </query>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="colorMode">block</option>
+        <option name="rangeColors">[$c_red$,$c_green$]</option>
+        <option name="rangeValues">[99.99]</option>        
+        <option name="useColors">1</option>
+      </single>
+    </panel>
+
+    <panel>
+      <html>
+          <div>M365-06</div><div>Storage</div>
+      </html>
+      <single>
+        <search base="base_rollup_1">
+          <query>
+| search ssphp.use_case.id="m365_006_000"
+| table ssphp.score.score
+
+
+| append 
+    [| makeresults
+    | eval ssphp.score.score="-"
+    | fields - _time]
+| sort - ssphp.score.score
+| head 1
+          </query>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="colorMode">block</option>
+        <option name="rangeColors">[$c_red$,$c_green$]</option>
+        <option name="rangeValues">[99.99]</option>        
+        <option name="useColors">1</option>
+      </single>
+    </panel>
+
   </row>
 
 
 
 <!-- ################### Main Data Table ################### --> 
-  
-  
-  <row>
-    <panel>
-      <input type="checkbox" token="tkn_sd" searchWhenChanged="true">
-        <label>Show</label>
-        <choice value="Y">L1 Benchmark Controls Only</choice>
-        <initialValue>Y</initialValue>
-        <change>
-          <condition value="Y">
-            <set token="tkn_show_l1">(ssphp.cis_benchmark.control.level="L1")</set>
-          </condition>
-          <condition>
-            <set token="tkn_show_l1">*</set>
-          </condition>
-        </change>
-      </input>
-    </panel>
-  </row>
 
 
   <row depends="$never_show$">
@@ -167,11 +331,11 @@ index="ssphp_metrics_summary" ssphp.use_case.id="m365_000" earliest=-2d@d latest
     </panel>
 
     <panel>
-      <title>$tkn_selected_system_name$ Control Details &amp; Scores</title>
+      <title>$tkn_selected_system_name$ Control Details &amp; Scores [$tkn_control_count$]</title>
       <table id="table2">
         <search>
           <query>
-index="ssphp_metrics_summary" ssphp.use_case.id="m365*" ssphp.use_case.id!="*_000" $tkn_show_l1$
+index="ssphp_metrics_summary" ssphp.use_case.id="m365*" ssphp.use_case.id!="*_000" $tkn_show_l1$ $tkn_show_ig$
     [| search index="ssphp_metrics_summary" ssphp.use_case.id="m365*" ssphp.use_case.id!="*_000"
       | stats max(SSPHP_RUN) as SSPHP_RUN by ssphp.use_case.id
       | eval search_text="(\"ssphp.use_case.id\"=\"".'ssphp.use_case.id'."\" AND SSPHP_RUN=\"".SSPHP_RUN."\")"
@@ -186,13 +350,35 @@ index="ssphp_metrics_summary" ssphp.use_case.id="m365*" ssphp.use_case.id!="*_00
 
 | search Score=*
 
-| table ssphp.use_case.id, ssphp.use_case.title, Score, ssphp.cis_benchmark.control.title, ssphp.use_case.short_description, ssphp.use_case.description, ssphp.cis_benchmark.control.level
+
+
+``` Eliminate all the Use Cases which have a current status set to "exclude" ```
+| join type=outer ssphp.use_case.id
+    [| search index="ssphp_metrics_summary" ssphp.type="exclusion" earliest=0 latest=now
+     | sort 0 - SSPHP_RUN
+     | eval ssphp.dfe_benchmark.exclusion.status=case('ssphp.dfe_benchmark.exclusion.status'="TRUE","exclude",
+                                                      'ssphp.dfe_benchmark.exclusion.status'="FALSE","include",
+                                                      1==1,'ssphp.dfe_benchmark.exclusion.status'),
+       ssphp.dfe_benchmark.exclusion.updated=strftime(SSPHP_RUN,"%Y-%m-%d %H:%M:%S")
+     | stats list(ssphp.dfe_benchmark.exclusion.*) as *, max(ssphp.dfe_benchmark.exclusion.updated) as last_updated by ssphp.use_case.id
+     | eval current_status=mvindex(status,mvfind(updated,'last_updated'))
+     | sort 0 ssphp.use_case.id
+     | fields ssphp.use_case.id, current_status]
+
+| fillnull value="include" current_status
+| search current_status="$tkn_show_ex$"
+
+
+
+| table ssphp.use_case.id, ssphp.use_case.title, Score, ssphp.cis_benchmark.control.title, ssphp.use_case.short_description, ssphp.use_case.description, ssphp.cis_benchmark.control.level, ssphp.cis_benchmark.controls.ig1, current_status
 
 | rename  ssphp.use_case.title as "Title",
           ssphp.use_case.short_description as "Name"
           ssphp.use_case.description as "Description",
           ssphp.cis_benchmark.control.title as "Control Title",
-          ssphp.cis_benchmark.control.level as "Level"
+          ssphp.cis_benchmark.control.level as "Level",
+          current_status as "Exclusion Status",
+          ssphp.cis_benchmark.controls.ig1 as "IG1 Status"
 
 ``` sort the lines properly ```
 | rex field=ssphp.use_case.id "^m365_00[0-9]{1}_cis_(?&lt;n1&gt;[^-]*)-(?&lt;n2&gt;[^-]*)"
@@ -203,9 +389,14 @@ index="ssphp_metrics_summary" ssphp.use_case.id="m365*" ssphp.use_case.id!="*_00
         sort_field='n1'.'n2'.'n3'
 | sort 0 sort_field
 | fields - sort_field, n1, n2, n3
+
+| eventstats count
           </query>
           <earliest>-1d@d</earliest>
           <sampleRatio>1</sampleRatio>
+          <done>
+            <set token="tkn_control_count">$result.count$</set>
+          </done>
         </search>
         <option name="count">100</option>
         <option name="dataOverlayMode">none</option>
@@ -213,7 +404,7 @@ index="ssphp_metrics_summary" ssphp.use_case.id="m365*" ssphp.use_case.id!="*_00
         <option name="rowNumbers">false</option>
         <option name="totalsRow">false</option>
         <option name="wrap">true</option>
-        <fields>"Name", "Title", Score, "Control Title", "Description", "Level"</fields>
+        <fields>"Name", "Title", Score, "Control Title", "Description", "Level", "IG1 Status", "Exclusion Status"</fields>
         <option name="drilldown">row</option>
         <drilldown>
           <link target="_blank">/app/$tkn_current_app$/ssphp_foundational_systems_drilldown?tkn_use_case_id=$row.ssphp.use_case.id$</link>
