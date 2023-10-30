@@ -10,6 +10,7 @@ use crate::powershell::run_powershell_get_atp_policy_for_o365;
 use crate::powershell::run_powershell_get_blocked_sender_address;
 use crate::powershell::run_powershell_get_dkim_signing_config;
 use crate::powershell::run_powershell_get_dlp_compliance_policy;
+use crate::powershell::run_powershell_get_email_tenant_settings;
 use crate::powershell::run_powershell_get_hosted_outbound_spam_filter_policy;
 use crate::powershell::run_powershell_get_malware_filter_policy;
 use crate::powershell::run_powershell_get_organization_config;
@@ -916,6 +917,13 @@ pub async fn m365(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
     .await?;
 
     try_collect_send("MS Graph Groups", ms_graph.list_groups(), &splunk).await?;
+
+    try_collect_send(
+        "Exchange Get Email Tenant Settings",
+        run_powershell_get_email_tenant_settings(&secrets),
+        &splunk,
+    )
+    .await?;
 
     try_collect_send(
         "Exchange Get Security Default Policy",

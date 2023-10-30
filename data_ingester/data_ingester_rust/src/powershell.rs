@@ -443,6 +443,33 @@ impl ToHecEvents for &BlockedSenderAddress {
     }
 }
 
+pub async fn run_powershell_get_email_tenant_settings(
+    secrets: &Secrets,
+) -> Result<EmailTenantSettings> {
+    let command = "Get-EmailTenantSettings";
+    let result = run_exchange_online_powershell(secrets, command).await?;
+    Ok(result)
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct EmailTenantSettings(serde_json::Value);
+
+impl ToHecEvents for &EmailTenantSettings {
+    type Item = Self;
+    fn source(&self) -> &'static str {
+        "powershell:ExchangeOnline:Get-EmailTenantSettings"
+    }
+
+    fn sourcetype(&self) -> &'static str {
+        "m365:email_tenant_settings"
+    }
+
+    fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
+        Box::new(iter::once(self))
+    }
+}
+
 pub async fn run_exchange_online_powershell<T: DeserializeOwned>(
     secrets: &Secrets,
     command: &str,
@@ -499,7 +526,7 @@ mod test {
             install_powershell, run_powershell_get_admin_audit_log_config,
             run_powershell_get_anti_phish_policy, run_powershell_get_atp_policy_for_o365,
             run_powershell_get_blocked_sender_address, run_powershell_get_dkim_signing_config,
-            run_powershell_get_dlp_compliance_policy,
+            run_powershell_get_dlp_compliance_policy, run_powershell_get_email_tenant_settings,
             run_powershell_get_hosted_outbound_spam_filter_policy,
             run_powershell_get_malware_filter_policy, run_powershell_get_organization_config,
             run_powershell_get_owa_mailbox_policy, run_powershell_get_safe_attachment_policy,
@@ -655,6 +682,15 @@ mod test {
     async fn test_run_powershell_get_blocked_sender_address() -> Result<()> {
         let (splunk, secrets) = setup().await?;
         let result = run_powershell_get_blocked_sender_address(&secrets).await?;
+        splunk.send_batch((&result).to_hec_events()?).await?;
+        Ok(())
+    }
+
+    #[ignore]
+    #[tokio::test]
+    async fn test_run_powershell_get_email_tenant_settings() -> Result<()> {
+        let (splunk, secrets) = setup().await?;
+        let result = run_powershell_get_email_tenant_settings(&secrets).await?;
         splunk.send_batch((&result).to_hec_events()?).await?;
         Ok(())
     }
