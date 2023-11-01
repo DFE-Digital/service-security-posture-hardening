@@ -226,15 +226,22 @@ class SplunkAppInspect:
             conf_files = glob.glob(f"{directory}/**/*.conf", recursive=True)
             #print(conf_files)
             for conf_file in conf_files:
+                if ".archive" in conf_file:
+                    continue
                 with open(conf_file) as cf:
                     data = cf.read()
                     target.write(f"# {conf_file}\n\n")
                     target.write(data)
                     target.write("\n\n")
             shutil.rmtree(directory)
-
+        
         # IP added as a work around 24/8/2023 for package building the metrics dashboard failing
-        shutil.rmtree(f"{app_directory}/default/data/ui/views/ssphp_metrics_dashboard.d")
+        directories = glob.glob(f"{app_directory}/default/**/*.d.archive/", recursive=True)
+        for directory in directories:
+            try:
+                shutil.rmtree(directory)
+            except FileNotFoundError:
+                pass
 
 @click.command()
 @click.argument(
