@@ -456,7 +456,7 @@ index="ssphp_metrics_summary"
         <fields>"Name", "Title", Score, "Control Title", "Description"</fields>
         <option name="drilldown">row</option>
         <drilldown>
-          <link target="_blank">/app/$tkn_current_app$/ssphp_foundational_systems_drilldown?tkn_use_case_id=$row.ssphp.use_case.id$</link>
+          <link target="_blank">/app/$tkn_current_app$/ssphp_foundational_systems_drilldown_m365?tkn_use_case_id=$row.ssphp.use_case.id$</link>
         </drilldown>
       </table>
     </panel>
