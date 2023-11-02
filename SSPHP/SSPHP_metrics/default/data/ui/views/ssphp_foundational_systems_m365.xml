@@ -1,5 +1,5 @@
 <dashboard version="1.1" theme="dark" script="js/table_cell_color.js">
-  <label>CIS M365 Benchmark : Security Posture Continuous Assurance</label>
+  <label>M365 CIS Benchmark : Security Posture Continuous Assurance</label>
   <description>v4.14</description>
   
   <init>
@@ -456,7 +456,7 @@ index="ssphp_metrics_summary"
         <fields>"Name", "Title", Score, "Control Title", "Description"</fields>
         <option name="drilldown">row</option>
         <drilldown>
-          <link target="_blank">/app/$tkn_current_app$/ssphp_foundational_systems_drilldown_m365?tkn_use_case_id=$row.ssphp.use_case.id$</link>
+          <link target="_blank">/app/$tkn_current_app$/ssphp_foundational_systems_drilldown_cis?tkn_use_case_id=$row.ssphp.use_case.id$</link>
         </drilldown>
       </table>
     </panel>

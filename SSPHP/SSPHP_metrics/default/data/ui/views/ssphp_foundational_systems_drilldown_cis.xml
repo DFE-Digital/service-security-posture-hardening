@@ -1,6 +1,6 @@
 <dashboard theme="dark" version="1.1" script="js/addtags.js">
-  <label>M365 Security Posture : Control Drilldown</label>
-  <description>v1.38</description>
+  <label>CIS Benchmark Security Posture : Control Drilldown</label>
+  <description>v1.39</description>
   
   <init>
     <set token="c_red">"0xFF0000"</set>
@@ -95,6 +95,8 @@ index="ssphp_metrics_summary" ssphp.use_case.id=$tkn_use_case_id$
                     ssphp.cis_benchmark.version,
                     ssphp.cis_benchmark.controls.v8,
                     ssphp.cis_benchmark.control.profile_applicability,
+                    ssphp.risk.expectancy,
+                    ssphp.risk.impact,
                     control, safeguard, asset_type, title, description
 
 | eval last_run=strftime(SSPHP_RUN,"%Y-%m-%d %H:%M:%S")
@@ -138,6 +140,9 @@ index="ssphp_metrics_summary" ssphp.use_case.id=$tkn_use_case_id$
             <set token="tkn_asset_type">$result.asset_type$</set>
             <set token="tkn_title">$result.title$</set>
             <set token="tkn_description">$result.description$</set>
+
+            <set token="tkn_risk_expectancy">$result.ssphp.risk.expectancy$</set>
+            <set token="tkn_risk_impact">$result.ssphp.risk.impact$</set>
             
             <set token="tkn_last_run">$result.last_run$</set>
           </done>
@@ -213,7 +218,11 @@ index="ssphp_metrics_summary" ssphp.use_case.id=$tkn_use_case_id$
         <span class="header_r2">Green : $tkn_green$</span>
         <br></br>
         <span class="header_r1" style="color:	darkcyan">Scoring Narrative</span>
-        <span class="header_r2">$tkn_scoring_narrative$</span>        
+        <span class="header_r2">$tkn_scoring_narrative$</span>
+        <br></br>
+        <span class="header_r1" style="color:	darkcyan">Score Weighting</span>
+        <span class="header_r2">Expectancy : $tkn_risk_expectancy$</span>
+        <span class="header_r2">Impact : $tkn_risk_impact$</span>
       </html>
     </panel>
   </row>
