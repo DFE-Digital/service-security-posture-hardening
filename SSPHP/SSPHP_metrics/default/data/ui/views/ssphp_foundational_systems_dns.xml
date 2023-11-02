@@ -168,15 +168,7 @@ index="ssphp_metrics_summary"
           current_status as "Exclusion Status",
           ssphp.cis_benchmark.controls.ig1 as "IG1 Status"
 
-``` sort the lines properly ```
-| rex field=ssphp.use_case.id "^dns_00[0-9]{1}_cis_(?&lt;n1&gt;[^-]*)-(?&lt;n2&gt;[^-]*)"
-| rex field=ssphp.use_case.id "^dns_00[0-9]{1}_cis_[^-]*-[^-]*-(?&lt;n3&gt;.*)$"
-| fillnull value=0 n3
-| eval n2="00".n2, n2=substr(n2,len(n2)-1,2),
-        n3="00".n3, n3=substr(n3,len(n3)-1,2), 
-        sort_field='n1'.'n2'.'n3'
-| sort 0 sort_field
-| fields - sort_field, n1, n2, n3
+| sort 0 ssphp.use_case.id
 
 | eventstats count
           </query>
