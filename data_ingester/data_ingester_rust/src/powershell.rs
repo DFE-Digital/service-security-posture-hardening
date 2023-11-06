@@ -1,5 +1,6 @@
 use anyhow::Result;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use serde_json::Value;
 use std::iter;
 use std::process::Command;
 
@@ -443,6 +444,7 @@ impl ToHecEvents for &BlockedSenderAddress {
     }
 }
 
+/// 4.12
 pub async fn run_powershell_get_email_tenant_settings(
     secrets: &Secrets,
 ) -> Result<EmailTenantSettings> {
@@ -467,6 +469,74 @@ impl ToHecEvents for &EmailTenantSettings {
 
     fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
         Box::new(iter::once(self))
+    }
+}
+
+pub async fn run_powershell_get_user_vip(secrets: &Secrets) -> Result<UserVip> {
+    let command = "Get-User -IsVIP";
+    let result = run_exchange_online_powershell(secrets, command).await?;
+    Ok(result)
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[serde(untagged)]
+pub(crate) enum UserVip {
+    Collection(Vec<UserVipDetails>),
+    Single(UserVipDetails),
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "PascalCase")]
+pub(crate) struct UserVipDetails {
+    id: String,
+    recipient_type: String,
+    object_category: String,
+    object_class: Vec<String>,
+}
+
+impl ToHecEvents for &UserVip {
+    type Item = UserVipDetails;
+    // type Item = Value;
+    fn source(&self) -> &'static str {
+        "powershell:ExchangeOnline:Get-User-Is-Vip"
+    }
+
+    fn sourcetype(&self) -> &'static str {
+        "m365:user_vip"
+    }
+
+    fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
+        match self {
+            UserVip::Collection(collection) => Box::new(collection.iter()),
+            UserVip::Single(single) => Box::new(iter::once(single)),
+        }
+    }
+}
+
+// 4.12
+pub async fn run_powershell_get_protection_alert(secrets: &Secrets) -> Result<ProtectionAlert> {
+    let command = "Get-ProtectionAlert";
+    let result = run_exchange_online_ipps_powershell(secrets, command).await?;
+    Ok(result)
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProtectionAlert(Vec<serde_json::Value>);
+
+impl ToHecEvents for &ProtectionAlert {
+    type Item = Value;
+    fn source(&self) -> &'static str {
+        "powershell:ExchangeOnline:Get-ProtectionAlert"
+    }
+
+    fn sourcetype(&self) -> &'static str {
+        "m365:protection_alert"
+    }
+
+    fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
+        Box::new(self.0.iter())
     }
 }
 
@@ -529,9 +599,10 @@ mod test {
             run_powershell_get_dlp_compliance_policy, run_powershell_get_email_tenant_settings,
             run_powershell_get_hosted_outbound_spam_filter_policy,
             run_powershell_get_malware_filter_policy, run_powershell_get_organization_config,
-            run_powershell_get_owa_mailbox_policy, run_powershell_get_safe_attachment_policy,
-            run_powershell_get_safe_links_policy, run_powershell_get_sharing_policy,
-            run_powershell_get_spoof_intelligence_insight, run_powershell_get_transport_rule,
+            run_powershell_get_owa_mailbox_policy, run_powershell_get_protection_alert,
+            run_powershell_get_safe_attachment_policy, run_powershell_get_safe_links_policy,
+            run_powershell_get_sharing_policy, run_powershell_get_spoof_intelligence_insight,
+            run_powershell_get_transport_rule, run_powershell_get_user_vip,
         },
         splunk::{set_ssphp_run, Splunk, ToHecEvents},
     };
@@ -691,6 +762,22 @@ mod test {
     async fn test_run_powershell_get_email_tenant_settings() -> Result<()> {
         let (splunk, secrets) = setup().await?;
         let result = run_powershell_get_email_tenant_settings(&secrets).await?;
+        splunk.send_batch((&result).to_hec_events()?).await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_run_powershell_get_user_vip() -> Result<()> {
+        let (splunk, secrets) = setup().await?;
+        let result = run_powershell_get_user_vip(&secrets).await?;
+        splunk.send_batch((&result).to_hec_events()?).await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_run_powershell_get_protection_alert() -> Result<()> {
+        let (splunk, secrets) = setup().await?;
+        let result = run_powershell_get_protection_alert(&secrets).await?;
         splunk.send_batch((&result).to_hec_events()?).await?;
         Ok(())
     }
