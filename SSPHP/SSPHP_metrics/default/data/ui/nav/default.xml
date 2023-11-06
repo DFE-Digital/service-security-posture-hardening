@@ -1,10 +1,12 @@
 <nav search_view="search">
   <view name="search" default='true' />
-  <collection label="Foundational Systems" >
-    <a href="ssphp_foundational_systems_m365">M365 Dashboard</a>
+  <collection label="Foundational Services" >
     <a href="ssphp_foundational_systems">Foundational Systems Dashboard</a>
-    <a href="ssphp_metrics_dashboard">Metrics Dashboard</a>
-    <a href="ssphp_metrics_dashboard_controls">Controls Dashboard</a>
-    <a href="ssphp_metrics_dashboard_graphs">Graph Dashboard</a>
+    <collection label="Foundational Services" >
+      <a href="ssphp_foundational_systems_m365">M365 Dashboard</a>
+      <a href="ssphp_foundational_systems_dns">DNS Dashboard</a>
+      <a href="ssphp_foundational_systems_azure">Azure Dashboard</a>
+      <a href="ssphp_foundational_systems_aad">Azure Active Directory Dashboard</a>
+    </collection>
   </collection>
 </nav>

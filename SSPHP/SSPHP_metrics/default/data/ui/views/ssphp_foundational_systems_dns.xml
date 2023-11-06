@@ -1,0 +1,196 @@
+<dashboard version="1.1" theme="dark" script="js/table_cell_color.js">
+  <label>DNS Benchmark : Security Posture Continuous Assurance</label>
+  <description>v1.0.2</description>
+  
+  <init>
+    <set token="tkn_selected_system">DNS</set>
+    <set token="tkn_selected_system_name">dns</set>
+
+    <set token="c_red">"0xFF0000"</set>
+    <set token="c_green">"0x00FF00"</set>
+    <set token="c_orange">"0xd94e17"</set>
+    <set token="c_blue">"0x0000FF"</set>
+    <set token="c_black">"0x000000"</set>
+
+    <set token="tkn_show_l1">*</set>
+    <set token="tkn_show_l1r">*</set>
+    <set token="tkn_show_ex">*</set>
+    <set token="tkn_show_ig">*</set>
+    <set token="tkn_show_igr">*</set>
+    <set token="tkn_list_target">*</set>
+    <set token="tkn_list_title">M365 : ALL</set>
+  </init>
+
+
+  <search id="base_rollup_1">
+    <query>
+`ssphp_metrics_index` ssphp.use_case.id="dns_000" earliest=-1d@d latest=now
+[| search `ssphp_metrics_index` ssphp.use_case.id="dns_000" earliest=-1d@d latest=now
+  | stats max(SSPHP_RUN) as SSPHP_RUN
+  | return SSPHP_RUN]
+        
+| fields ssphp.use_case.id, ssphp.score.score
+    </query>
+  </search>
+
+  
+
+<!-- ################### M365 Rollup ################### --> 
+
+  <row>
+    <panel>
+      <html>
+        <div>DNS</div>
+      </html>
+      <single>
+
+        <search base="base_rollup_1">
+          <query>
+| search ssphp.use_case.id="dns_000"
+| table ssphp.score.score
+
+
+| append 
+    [| makeresults
+    | eval ssphp.score.score="-"
+    | fields - _time]
+| sort - ssphp.score.score
+| head 1
+          </query>
+        </search>
+        <option name="colorMode">block</option>
+        <option name="rangeColors">[$c_red$,$c_green$]</option>
+        <option name="rangeValues">[99.99]</option>        
+        <option name="useColors">1</option>
+      </single>
+    </panel>
+  </row>
+
+
+<!-- ################### Main Data Table ################### --> 
+
+  <row depends="$never_show$">
+    <html>
+      <style>
+         .css_for_green{ 
+         background-color:#00FF00 !important;
+         color:#000000 !important;
+         font-size: 150% !important;
+         }
+         .css_for_orange{ 
+         background-color:#d94e17 !important;
+         color:#000000 !important;
+         font-size: 150% !important;
+         }
+         .css_for_red{
+         background-color:#FF0000 !important;
+         color:#000000 !important;
+         font-size: 150% !important;
+         }
+         .css_for_blue{
+         background-color:#0000FF !important;
+         }
+      </style>
+    </html>
+    <html>
+      <style>
+       #table2 th:nth-child(2) {
+          width: 200px;
+        }
+      </style>
+    </html>
+  </row>
+
+  <row>
+    <panel depends="$never_show$">
+      <table>
+        <search>
+          <query>
+  | makeresults
+  | eval app=$env:app|s$
+  | table app
+          </query>
+          <done>
+            <set token="tkn_current_app">$result.app$</set>
+          </done>
+        </search>
+      </table>
+    </panel>
+
+    <panel>
+      <title>DNS - Control Details &amp; Scores [$tkn_control_count$]</title>
+      <table id="table2">
+        <search>
+          <query>
+index="ssphp_metrics_summary" 
+      ssphp.use_case.id="dns*" 
+      ssphp.use_case.id!="*_000" 
+      $tkn_show_l1$ 
+      $tkn_show_ig$
+
+      [| search index="ssphp_metrics_summary" ssphp.use_case.id="dns*" ssphp.use_case.id!="*_000"
+        | stats max(SSPHP_RUN) as SSPHP_RUN by ssphp.use_case.id
+        | eval search_text="(\"ssphp.use_case.id\"=\"".'ssphp.use_case.id'."\" AND SSPHP_RUN=\"".SSPHP_RUN."\")"
+        | stats values(search_text) as search_text
+        | eval search_text="(".mvjoin(search_text," OR ").")"
+        | return $search_text]
+
+
+| eval Score='ssphp.score.score'."|".'ssphp.score.color',
+       ssphp.cis_benchmark.controls.v8=split('ssphp.cis_benchmark.controls.v8',"
+")
+
+| search Score=*
+
+``` Eliminate all the Use Cases which have a current status set to "exclude" ```
+| join type=outer ssphp.use_case.id
+    [| search index="ssphp_metrics_summary" ssphp.type="exclusion" earliest=0 latest=now
+     | sort 0 - SSPHP_RUN
+     | eval ssphp.dfe_benchmark.exclusion.status=case('ssphp.dfe_benchmark.exclusion.status'="TRUE","exclude",
+                                                      'ssphp.dfe_benchmark.exclusion.status'="FALSE","include",
+                                                      1==1,'ssphp.dfe_benchmark.exclusion.status'),
+       ssphp.dfe_benchmark.exclusion.updated=strftime(SSPHP_RUN,"%Y-%m-%d %H:%M:%S")
+     | stats list(ssphp.dfe_benchmark.exclusion.*) as *, max(ssphp.dfe_benchmark.exclusion.updated) as last_updated by ssphp.use_case.id
+     | eval current_status=mvindex(status,mvfind(updated,'last_updated'))
+     | sort 0 ssphp.use_case.id
+     | fields ssphp.use_case.id, current_status]
+
+| fillnull value="include" current_status
+| search current_status="$tkn_show_ex$"
+
+| table ssphp.use_case.id, ssphp.use_case.title, Score, ssphp.cis_benchmark.control.title, ssphp.use_case.short_description, ssphp.use_case.description, ssphp.cis_benchmark.control.level, ssphp.cis_benchmark.controls.ig1, current_status
+
+| rename  ssphp.use_case.title as "Title",
+          ssphp.use_case.short_description as "Name"
+          ssphp.use_case.description as "Description",
+          ssphp.cis_benchmark.control.title as "Control Title",
+          ssphp.cis_benchmark.control.level as "Level",
+          current_status as "Exclusion Status",
+          ssphp.cis_benchmark.controls.ig1 as "IG1 Status"
+
+| sort 0 ssphp.use_case.id
+
+| eventstats count
+          </query>
+          <earliest>-1d@d</earliest>
+          <sampleRatio>1</sampleRatio>
+          <done>
+            <set token="tkn_control_count">$result.count$</set>
+          </done>
+        </search>
+        <option name="count">100</option>
+        <option name="dataOverlayMode">none</option>
+        <option name="percentagesRow">false</option>
+        <option name="rowNumbers">false</option>
+        <option name="totalsRow">false</option>
+        <option name="wrap">true</option>
+        <!-- #<fields>"Name", "Title", Score, "Control Title", "Description", "Level", "IG1 Status", "Exclusion Status"</fields># --> 
+        <fields>"Name", "Title", Score, "Description"</fields>
+        <option name="drilldown">row</option>
+        <drilldown>
+          <link target="_blank">/app/$tkn_current_app$/ssphp_foundational_systems_drilldown_non_cis?tkn_use_case_id=$row.ssphp.use_case.id$</link>
+        </drilldown>
+      </table>
+    </panel>
+  </row>
+</dashboard>
