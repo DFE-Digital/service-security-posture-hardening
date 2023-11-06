@@ -15,11 +15,13 @@ use crate::powershell::run_powershell_get_hosted_outbound_spam_filter_policy;
 use crate::powershell::run_powershell_get_malware_filter_policy;
 use crate::powershell::run_powershell_get_organization_config;
 use crate::powershell::run_powershell_get_owa_mailbox_policy;
+use crate::powershell::run_powershell_get_protection_alert;
 use crate::powershell::run_powershell_get_safe_attachment_policy;
 use crate::powershell::run_powershell_get_safe_links_policy;
 use crate::powershell::run_powershell_get_sharing_policy;
 use crate::powershell::run_powershell_get_spoof_intelligence_insight;
 use crate::powershell::run_powershell_get_transport_rule;
+use crate::powershell::run_powershell_get_user_vip;
 use crate::roles::RoleDefinitions;
 use crate::security_score::SecurityScores;
 use crate::splunk::HecEvent;
@@ -864,7 +866,7 @@ pub async fn m365(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
     // 1.1.9
     // 1.1.10
     try_collect_send(
-        "MS Graph Group Settings",
+        "MS Graph Admin form settings",
         ms_graph.get_admin_form_settings(),
         &splunk,
     )
@@ -917,6 +919,20 @@ pub async fn m365(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
     .await?;
 
     try_collect_send("MS Graph Groups", ms_graph.list_groups(), &splunk).await?;
+
+    try_collect_send(
+        "Exchange Get VIP Users",
+        run_powershell_get_user_vip(&secrets),
+        &splunk,
+    )
+    .await?;
+
+    try_collect_send(
+        "Exchange Get Protection Alerts",
+        run_powershell_get_protection_alert(&secrets),
+        &splunk,
+    )
+    .await?;
 
     try_collect_send(
         "Exchange Get Email Tenant Settings",
