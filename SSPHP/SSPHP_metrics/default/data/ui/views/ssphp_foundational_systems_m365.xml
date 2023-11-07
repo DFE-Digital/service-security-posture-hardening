@@ -1,7 +1,8 @@
 <dashboard version="1.1" theme="dark" script="js/table_cell_color.js">
-  <label>M365 CIS Benchmark : Security Posture Continuous Assurance</label>
-  <description>v4.14</description>
-  
+  <label>M365 CIS [L1/IG1] Benchmark : Security Posture Continuous Assurance</label>
+  <description>v4.2.3</description>
+
+
   <init>
     <set token="tkn_selected_system">m365</set>
     <set token="tkn_selected_system_name">M365</set>
@@ -13,74 +14,12 @@
     <set token="c_blue">"0x0000FF"</set>
     <set token="c_black">"0x000000"</set>
 
-    <set token="tkn_show_l1">*</set>
-    <set token="tkn_show_l1r">*</set>
-    <set token="tkn_show_ex">*</set>
-    <set token="tkn_show_ig">*</set>
-    <set token="tkn_show_igr">*</set>
     <set token="tkn_list_target">*</set>
     <set token="tkn_list_title">M365 : ALL</set>
   </init>
 
-  <!-- #
-  <fieldset autoRun="true" submitButton="false">
-    <input type="checkbox" token="tkn_sd1" searchWhenChanged="true" depends="$never_show$">
-      <label></label>
-      <choice value="Y">L1 Controls</choice>
-      <initialValue></initialValue>
-      <change>
-        <condition value="Y">
-          <set token="tkn_show_l1">(ssphp.cis_benchmark.control.level="L1")</set>
-          <set token="tkn_show_l1r">L1</set>
-        </condition>
-        <condition>
-          <set token="tkn_show_l1">*</set>
-          <set token="tkn_show_l1r">*</set>
-        </condition>
-      </change>
-    </input>
-    
-    <input type="checkbox" token="tkn_sd2" searchWhenChanged="true" depends="$never_show$">
-      <label></label>
-      <choice value="Y">IG1 Controls</choice>
-      <initialValue></initialValue>
-      <change>
-        <condition value="Y">
-          <set token="tkn_show_ig">(ssphp.cis_benchmark.controls.ig1="TRUE")</set>
-          <set token="tkn_show_igr">TRUE</set>
-        </condition>
-        <condition>
-          <set token="tkn_show_ig">*</set>
-          <set token="tkn_show_igr">*</set>
-        </condition>
-      </change>
-    </input>
-    
-    <input type="checkbox" token="tkn_sd3" searchWhenChanged="true" depends="$never_show$">
-      <label></label>
-      <choice value="Y">Include 'Excluded' Controls</choice>
-      <initialValue></initialValue>
-      <change>
-        <condition value="Y">
-          <set token="tkn_show_ex">*</set>
-        </condition>
-        <condition>
-          <set token="tkn_show_ex">include</set>
-        </condition>
-      </change>
-    </input>
-  </fieldset>
-# --> 
 
 
-<!-- #
-  <search id="base_rollup_1">
-    <query>
-`ssphp_use_case_cis_rollup_m365("$tkn_show_l1r$","$tkn_show_ex$","$tkn_show_igr$","*","*")`   ```(level,exclude_status,ig1,ig2,ig3) ie ("L1","exclude","TRUE","*","*")```
-| fields ssphp.use_case.id, ssphp.score.score
-    </query>
-  </search>
-# --> 
   <search id="base_rollup_1">
     <query>
 `ssphp_metrics_index` (ssphp.use_case.id="m365_*_000" OR ssphp.use_case.id="m365_000") earliest=-1d@d latest=now
@@ -384,8 +323,10 @@
 index="ssphp_metrics_summary" 
       ssphp.use_case.id="m365*" 
       ssphp.use_case.id!="*_000" 
-      $tkn_show_l1$ 
-      $tkn_show_ig$
+      ssphp.cis_benchmark.controls.ig1="TRUE"
+      ssphp.cis_benchmark.controls.ig2="TRUE"
+      ssphp.cis_benchmark.controls.ig3="TRUE"
+      (ssphp.cis_benchmark.control.level="L1" ```OR ssphp.cis_benchmark.control.level="L2"```)
       $tkn_list_target$
 
       [| search index="ssphp_metrics_summary" ssphp.use_case.id="m365*" ssphp.use_case.id!="*_000"
@@ -402,8 +343,8 @@ index="ssphp_metrics_summary"
 
 | search Score=*
 
-``` Eliminate all the Use Cases which have a current status set to "exclude" ```
-| join type=outer ssphp.use_case.id
+``` Mark all the Use Cases which have a current status set to "include" ```
+```| join type=outer ssphp.use_case.id
     [| search index="ssphp_metrics_summary" ssphp.type="exclusion" earliest=0 latest=now
      | sort 0 - SSPHP_RUN
      | eval ssphp.dfe_benchmark.exclusion.status=case('ssphp.dfe_benchmark.exclusion.status'="TRUE","exclude",
@@ -415,8 +356,8 @@ index="ssphp_metrics_summary"
      | sort 0 ssphp.use_case.id
      | fields ssphp.use_case.id, current_status]
 
-| fillnull value="include" current_status
-| search current_status="$tkn_show_ex$"
+| fillnull value="exclude" current_status```
+
 
 | table ssphp.use_case.id, ssphp.use_case.title, Score, ssphp.cis_benchmark.control.title, ssphp.use_case.short_description, ssphp.use_case.description, ssphp.cis_benchmark.control.level, ssphp.cis_benchmark.controls.ig1, current_status
 
