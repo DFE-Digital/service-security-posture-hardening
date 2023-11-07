@@ -757,7 +757,6 @@ mod test {
         Ok(())
     }
 
-    #[ignore]
     #[tokio::test]
     async fn test_run_powershell_get_email_tenant_settings() -> Result<()> {
         let (splunk, secrets) = setup().await?;

@@ -75,6 +75,7 @@ impl AzureRest {
     //     Ok(results)
     // }
 
+    // Azure Foundation V2.0.0 1.23
     pub async fn azure_role_definitions(&self) -> Result<HashMap<String, RoleDefinition>> {
         let client = ClientAuthorization::builder(self.credential.clone()).build();
         let mut collection = HashMap::new();
@@ -505,6 +506,15 @@ mod test {
     async fn test_azureclient_get_microsoft_sql_encryption_protection() -> Result<()> {
         let (azure_rest, splunk) = setup().await?;
         let collection = azure_rest.get_microsoft_sql_encryption_protection().await?;
+        splunk.send_batch((&collection).to_hec_events()?).await?;
+        assert!(!collection.is_empty());
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_azureclient_azure_role_definitions() -> Result<()> {
+        let (azure_rest, splunk) = setup().await?;
+        let collection = azure_rest.azure_role_definitions().await?;
         splunk.send_batch((&collection).to_hec_events()?).await?;
         assert!(!collection.is_empty());
         Ok(())

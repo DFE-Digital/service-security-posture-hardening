@@ -181,6 +181,27 @@ impl MsGraph {
         Ok(caps)
     }
 
+    /// Azure 1.2.1
+    /// https://learn.microsoft.com/en-us/graph/api/conditionalaccessroot-list-namedlocations?view=graph-rest-1.0&tabs=http
+    pub async fn list_named_locations(&self) -> Result<NamedLocations> {
+        let mut stream = self
+            .client
+            .identity()
+            .list_named_locations()
+            .paging()
+            .stream::<NamedLocations>()?;
+
+        let mut collection = NamedLocations::default();
+        while let Some(result) = stream.next().await {
+            let response = result.unwrap();
+
+            let body = response.into_body();
+
+            collection.inner.extend(body.unwrap().inner)
+        }
+        Ok(collection)
+    }
+
     // pub async fn list_directory_roles(&self) -> DirectoryRoles {
     //     let mut stream = self
     //         .client
@@ -399,6 +420,8 @@ impl MsGraph {
         Ok(body)
     }
 
+    // M365 1.1.1
+    // Azure 1.1.1
     pub async fn get_identity_security_defaults_enforcement_policy(
         &self,
     ) -> Result<IdentitySecurityDefaultsEnforcementPolicy> {
@@ -425,6 +448,27 @@ impl MsGraph {
             .await?;
         let body = response.json().await?;
         Ok(body)
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, Default)]
+pub struct NamedLocations {
+    #[serde(rename = "value")]
+    inner: Vec<serde_json::Value>,
+}
+
+impl ToHecEvents for &NamedLocations {
+    type Item = Value;
+    fn source(&self) -> &str {
+        "msgraph"
+    }
+
+    fn sourcetype(&self) -> &str {
+        "identity/named_locations"
+    }
+
+    fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
+        Box::new(self.inner.iter())
     }
 }
 
@@ -762,6 +806,12 @@ pub async fn azure_users(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<(
         .await?;
     let caps = ms_graph.list_conditional_access_policies().await?;
     splunk.send_batch((&caps).to_hec_events()?).await?;
+
+    splunk.log("Getting AAD Named Locations").await?;
+    let named_locations = ms_graph.list_named_locations().await?;
+    splunk
+        .send_batch((&named_locations).to_hec_events()?)
+        .await?;
 
     splunk.log("Getting AAD roles definitions").await?;
     let aad_role_definitions = ms_graph.list_role_definitions().await?;
@@ -1300,6 +1350,14 @@ pub(crate) mod test {
     async fn get_access_reviews() -> Result<()> {
         let (splunk, ms_graph) = setup().await?;
         let result = ms_graph.get_access_reviews().await?;
+        splunk.send_batch((&result).to_hec_events()?).await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn list_named_locations() -> Result<()> {
+        let (splunk, ms_graph) = setup().await?;
+        let result = ms_graph.list_named_locations().await?;
         splunk.send_batch((&result).to_hec_events()?).await?;
         Ok(())
     }
