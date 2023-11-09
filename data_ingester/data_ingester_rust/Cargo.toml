@@ -1,4 +1,4 @@
-        [package]
+[package]
 name = "msgraph_rust"
 version = "0.1.0"
 edition = "2021"
@@ -46,4 +46,8 @@ features = [
 [profile.release]
 strip = true
 # lto = true
+
+
+[build]
+rustflags = ["-Z", "threads=8"]
 
