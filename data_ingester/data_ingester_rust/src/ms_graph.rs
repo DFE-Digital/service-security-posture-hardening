@@ -435,6 +435,17 @@ impl MsGraph {
         Ok(body)
     }
 
+    pub async fn list_token_lifetime_policies(&self) -> Result<Value> {
+        let response = self
+            .client
+            .policies()
+            .list_token_lifetime_policies()
+            .send()
+            .await?;
+        let body = response.json().await?;
+        Ok(body)
+    }
+
     /// 5.1.1
     /// Permission: AccessReview.Read.All
     pub async fn get_access_reviews(&self) -> Result<AccessReviewDefinitions> {
@@ -807,12 +818,6 @@ pub async fn azure_users(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<(
     let caps = ms_graph.list_conditional_access_policies().await?;
     splunk.send_batch((&caps).to_hec_events()?).await?;
 
-    splunk.log("Getting AAD Named Locations").await?;
-    let named_locations = ms_graph.list_named_locations().await?;
-    splunk
-        .send_batch((&named_locations).to_hec_events()?)
-        .await?;
-
     splunk.log("Getting AAD roles definitions").await?;
     let aad_role_definitions = ms_graph.list_role_definitions().await?;
     splunk
@@ -927,6 +932,14 @@ pub async fn m365(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
     try_collect_send(
         "MS Graph Group Settings",
         ms_graph.list_group_settings(),
+        &splunk,
+    )
+    .await?;
+
+    // 1.2.1
+    try_collect_send(
+        "MS Graph Named Locations",
+        ms_graph.list_named_locations(),
         &splunk,
     )
     .await?;
@@ -1193,6 +1206,7 @@ pub(crate) mod test {
     use super::{login, MsGraph};
     use crate::{
         keyvault::get_keyvault_secrets,
+        ms_graph::SplunkDynamic,
         splunk::{set_ssphp_run, Splunk, ToHecEvents},
         users::UsersMap,
     };
@@ -1360,5 +1374,49 @@ pub(crate) mod test {
         let result = ms_graph.list_named_locations().await?;
         splunk.send_batch((&result).to_hec_events()?).await?;
         Ok(())
+    }
+
+    #[ignore]
+    #[tokio::test]
+    async fn list_token_lifetime_policies() -> Result<()> {
+        let (splunk, ms_graph) = setup().await?;
+        let result = ms_graph.list_token_lifetime_policies().await?;
+        dbg!(&result);
+        let hec = SplunkDynamic::new(result, "msgraph:tokenlifetime", "aktest");
+        splunk.send_batch((&hec).to_hec_events()?).await?;
+        assert!(false);
+        Ok(())
+    }
+}
+
+pub struct SplunkDynamic {
+    inner: Value,
+    sourcetype: String,
+    source: String,
+}
+
+impl SplunkDynamic {
+    fn new<S: Into<String>>(value: Value, sourcetype: S, source: S) -> Self {
+        Self {
+            inner: value,
+            sourcetype: sourcetype.into(),
+            source: source.into(),
+        }
+    }
+}
+
+impl ToHecEvents for &SplunkDynamic {
+    type Item = Value;
+
+    fn source(&self) -> &str {
+        &self.source
+    }
+
+    fn sourcetype(&self) -> &str {
+        &self.sourcetype
+    }
+
+    fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
+        Box::new(iter::once(&self.inner))
     }
 }
