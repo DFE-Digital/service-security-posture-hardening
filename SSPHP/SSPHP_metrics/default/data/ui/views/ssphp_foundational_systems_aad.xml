@@ -1,6 +1,6 @@
 <dashboard version="1.1" theme="dark" script="js/table_cell_color.js">
   <label>AZURE ACTIVE DIRECTORY Benchmark : Security Posture Continuous Assurance</label>
-  <description>v1.0.0</description>
+  <description>v1.0.1</description>
   
   <init>
     <set token="tkn_selected_system">AZURE ACTIVE DIRECTORY</set>
@@ -168,7 +168,10 @@ index="ssphp_metrics_summary"
           current_status as "Exclusion Status",
           ssphp.cis_benchmark.controls.ig1 as "IG1 Status"
 
-| sort 0 ssphp.use_case.id
+``` sort the lines properly ```
+| eval sort1=if(match('Title',"^.*\s\[CIS.*"),0,1)
+| sort 0 sort1, ssphp.use_case.id
+| fields - sort1
 
 | eventstats count
           </query>
