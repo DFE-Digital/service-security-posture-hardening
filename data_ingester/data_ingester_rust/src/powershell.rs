@@ -703,7 +703,6 @@ mod test {
         Ok(())
     }
 
-    #[ignore]
     #[tokio::test]
     async fn test_run_powershell_get_atp_policy_for_o365() -> Result<()> {
         let (splunk, secrets) = setup().await?;
