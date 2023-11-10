@@ -409,7 +409,7 @@ impl MsGraph {
         Ok(body)
     }
 
-    pub async fn get_permission_grant_policy(&self) -> Result<PermissionGrantPolicy> {
+    pub async fn list_permission_grant_policy(&self) -> Result<PermissionGrantPolicy> {
         let response = self
             .client
             .policies()
@@ -435,6 +435,7 @@ impl MsGraph {
         Ok(body)
     }
 
+    #[allow(dead_code)]
     pub async fn list_token_lifetime_policies(&self) -> Result<Value> {
         let response = self
             .client
@@ -459,6 +460,32 @@ impl MsGraph {
             .await?;
         let body = response.json().await?;
         Ok(body)
+    }
+
+    /// 1.22
+    pub async fn get_device_registration_policy(&self) -> Result<DeviceRegistrationPolicy> {
+        let result = self
+            .batch_get(&self.beta_client, "policies/deviceRegistrationPolicy")
+            .await?;
+        Ok(result)
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, Default)]
+pub struct DeviceRegistrationPolicy(Value);
+
+impl ToHecEvents for &DeviceRegistrationPolicy {
+    type Item = Self;
+    fn source(&self) -> &str {
+        "msgraph"
+    }
+
+    fn sourcetype(&self) -> &str {
+        "msgraph:device_registration_policy"
+    }
+
+    fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
+        Box::new(iter::once(self))
     }
 }
 
@@ -658,10 +685,13 @@ impl ToHecEvents for &Domains {
 }
 
 #[derive(Debug, Serialize, Deserialize, Default)]
-pub struct PermissionGrantPolicy(serde_json::Value);
+pub struct PermissionGrantPolicy {
+    #[serde(rename = "value")]
+    inner: Vec<serde_json::Value>,
+}
 
 impl ToHecEvents for &PermissionGrantPolicy {
-    type Item = Self;
+    type Item = Value;
     fn source(&self) -> &'static str {
         "msgraph"
     }
@@ -670,16 +700,8 @@ impl ToHecEvents for &PermissionGrantPolicy {
         "m365:permission_grant_policy"
     }
 
-    fn to_hec_events(&self) -> anyhow::Result<Vec<crate::splunk::HecEvent>> {
-        Ok(vec![HecEvent::new(
-            &self,
-            self.source(),
-            self.sourcetype(),
-        )?])
-    }
-
     fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
-        unimplemented!()
+        Box::new(self.inner.iter())
     }
 }
 
@@ -910,9 +932,17 @@ pub async fn m365(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
     //     }
     // }
 
+    // Azure Foundations 1.22 V2
+    try_collect_send(
+        "MS Graph Device Registration Policy",
+        ms_graph.get_device_registration_policy(),
+        &splunk,
+    )
+    .await?;
+
     // 5.1.1
     try_collect_send(
-        "MS Graph Group Settings",
+        "MS Graph Access Reviews",
         ms_graph.get_access_reviews(),
         &splunk,
     )
@@ -976,7 +1006,7 @@ pub async fn m365(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
 
     try_collect_send(
         "MS Graph Permission Grant Policy",
-        ms_graph.get_permission_grant_policy(),
+        ms_graph.list_permission_grant_policy(),
         &splunk,
     )
     .await?;
@@ -1206,8 +1236,7 @@ pub(crate) mod test {
     use super::{login, MsGraph};
     use crate::{
         keyvault::get_keyvault_secrets,
-        ms_graph::SplunkDynamic,
-        splunk::{set_ssphp_run, Splunk, ToHecEvents},
+        splunk::{set_ssphp_run, HecDynamic, Splunk, ToHecEvents},
         users::UsersMap,
     };
     use anyhow::{Context, Result};
@@ -1311,7 +1340,7 @@ pub(crate) mod test {
     #[tokio::test]
     async fn get_permission_grant_policy() -> Result<()> {
         let (splunk, ms_graph) = setup().await?;
-        let permission_grant_policy = ms_graph.get_permission_grant_policy().await?;
+        let permission_grant_policy = ms_graph.list_permission_grant_policy().await?;
         splunk
             .send_batch((&permission_grant_policy).to_hec_events()?)
             .await?;
@@ -1382,41 +1411,24 @@ pub(crate) mod test {
         let (splunk, ms_graph) = setup().await?;
         let result = ms_graph.list_token_lifetime_policies().await?;
         dbg!(&result);
-        let hec = SplunkDynamic::new(result, "msgraph:tokenlifetime", "aktest");
+        let hec = HecDynamic::new(result, "msgraph:tokenlifetime", "aktest");
         splunk.send_batch((&hec).to_hec_events()?).await?;
-        assert!(false);
         Ok(())
     }
-}
 
-pub struct SplunkDynamic {
-    inner: Value,
-    sourcetype: String,
-    source: String,
-}
-
-impl SplunkDynamic {
-    fn new<S: Into<String>>(value: Value, sourcetype: S, source: S) -> Self {
-        Self {
-            inner: value,
-            sourcetype: sourcetype.into(),
-            source: source.into(),
-        }
-    }
-}
-
-impl ToHecEvents for &SplunkDynamic {
-    type Item = Value;
-
-    fn source(&self) -> &str {
-        &self.source
+    #[tokio::test]
+    async fn list_permission_grant_policies() -> Result<()> {
+        let (splunk, ms_graph) = setup().await?;
+        let result = ms_graph.list_permission_grant_policy().await?;
+        splunk.send_batch((&result).to_hec_events()?).await?;
+        Ok(())
     }
 
-    fn sourcetype(&self) -> &str {
-        &self.sourcetype
-    }
-
-    fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
-        Box::new(iter::once(&self.inner))
+    #[tokio::test]
+    async fn get_device_registration_policy() -> Result<()> {
+        let (splunk, ms_graph) = setup().await?;
+        let result = ms_graph.get_device_registration_policy().await?;
+        splunk.send_batch((&result).to_hec_events()?).await?;
+        Ok(())
     }
 }

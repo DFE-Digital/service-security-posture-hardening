@@ -3,7 +3,11 @@ use reqwest::header::HeaderMap;
 use reqwest::header::HeaderValue;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
+#[cfg(test)]
+use serde_json::Value;
 use std::borrow::Borrow;
+#[cfg(test)]
+use std::iter;
 use std::sync::RwLock;
 use std::time::{SystemTime, UNIX_EPOCH};
 use uuid::Uuid;
@@ -240,5 +244,40 @@ where
         None
     } else {
         Some(lines)
+    }
+}
+
+/// Struct to use for creating dynamic / testing ToHec events
+#[cfg(test)]
+pub struct HecDynamic {
+    inner: Value,
+    sourcetype: String,
+    source: String,
+}
+
+#[cfg(test)]
+impl HecDynamic {
+    pub fn new<S: Into<String>>(value: Value, sourcetype: S, source: S) -> Self {
+        Self {
+            inner: value,
+            sourcetype: sourcetype.into(),
+            source: source.into(),
+        }
+    }
+}
+#[cfg(test)]
+impl ToHecEvents for &HecDynamic {
+    type Item = Value;
+
+    fn source(&self) -> &str {
+        &self.source
+    }
+
+    fn sourcetype(&self) -> &str {
+        &self.sourcetype
+    }
+
+    fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
+        Box::new(iter::once(&self.inner))
     }
 }

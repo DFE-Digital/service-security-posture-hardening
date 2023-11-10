@@ -3,6 +3,6 @@ requests
 dnspython
 msgraph-beta-sdk
 microsoft-kiota-serialization-json
-microsoft-kiota-abstractions==0.7.1
+microsoft-kiota-abstractions
 azure-identity
 azure-keyvault-secrets
