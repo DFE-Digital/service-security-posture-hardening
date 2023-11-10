@@ -942,7 +942,7 @@ pub async fn m365(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
 
     // 5.1.1
     try_collect_send(
-        "MS Graph Group Settings",
+        "MS Graph Access Reviews",
         ms_graph.get_access_reviews(),
         &splunk,
     )
