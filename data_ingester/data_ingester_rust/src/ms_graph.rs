@@ -461,6 +461,32 @@ impl MsGraph {
         let body = response.json().await?;
         Ok(body)
     }
+
+    /// 1.22
+    pub async fn get_device_registration_policy(&self) -> Result<DeviceRegistrationPolicy> {
+        let result = self
+            .batch_get(&self.beta_client, "policies/deviceRegistrationPolicy")
+            .await?;
+        Ok(result)
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, Default)]
+pub struct DeviceRegistrationPolicy(Value);
+
+impl ToHecEvents for &DeviceRegistrationPolicy {
+    type Item = Self;
+    fn source(&self) -> &str {
+        "msgraph"
+    }
+
+    fn sourcetype(&self) -> &str {
+        "msgraph:device_registration_policy"
+    }
+
+    fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
+        Box::new(iter::once(self))
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, Default)]
@@ -905,6 +931,14 @@ pub async fn m365(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
     //             .await?;
     //     }
     // }
+
+    // Azure Foundations 1.22 V2
+    try_collect_send(
+        "MS Graph Device Registration Policy",
+        ms_graph.get_device_registration_policy(),
+        &splunk,
+    )
+    .await?;
 
     // 5.1.1
     try_collect_send(
@@ -1386,6 +1420,14 @@ pub(crate) mod test {
     async fn list_permission_grant_policies() -> Result<()> {
         let (splunk, ms_graph) = setup().await?;
         let result = ms_graph.list_permission_grant_policy().await?;
+        splunk.send_batch((&result).to_hec_events()?).await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn get_device_registration_policy() -> Result<()> {
+        let (splunk, ms_graph) = setup().await?;
+        let result = ms_graph.get_device_registration_policy().await?;
         splunk.send_batch((&result).to_hec_events()?).await?;
         Ok(())
     }
