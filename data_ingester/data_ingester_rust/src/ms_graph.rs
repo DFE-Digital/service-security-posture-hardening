@@ -1239,7 +1239,7 @@ pub(crate) mod test {
         splunk::{set_ssphp_run, HecDynamic, Splunk, ToHecEvents},
         users::UsersMap,
     };
-    use anyhow::{Context, Result};
+    use anyhow::{Result};
 
     pub async fn setup() -> Result<(Splunk, MsGraph)> {
         let secrets = get_keyvault_secrets(&env::var("KEY_VAULT_NAME")?).await?;
@@ -1362,8 +1362,10 @@ pub(crate) mod test {
     #[tokio::test]
     async fn get_security_secure_scores() -> Result<()> {
         let (splunk, ms_graph) = setup().await?;
-        let mut security_scores = ms_graph.get_security_secure_scores().await?;
-        splunk.send_batch((&security_scores).to_hec_events()?).await?;
+        let security_scores = ms_graph.get_security_secure_scores().await?;
+        splunk
+            .send_batch((&security_scores).to_hec_events()?)
+            .await?;
         Ok(())
     }
 
