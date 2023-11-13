@@ -1,6 +1,6 @@
 <dashboard version="1.1" theme="dark" script="js/table_cell_color.js">
-  <label>AZURE ACTIVE DIRECTORY Benchmark : Security Posture Continuous Assurance</label>
-  <description>v1.0.1</description>
+  <label>Azure Active Directory CIS [L1/IG1] Benchmark : Security Posture Continuous Assurance</label>
+  <description>v1.1.6</description>
   
   <init>
     <set token="tkn_selected_system">AZURE ACTIVE DIRECTORY</set>
@@ -21,34 +21,56 @@
     <set token="tkn_list_title">AZURE : ALL</set>
   </init>
 
+  
 
-  <search id="base_rollup_1">
-    <query>
+<!-- ################### Rollups ################### --> 
+
+  <row>
+    <panel>
+      <html>
+        <div>AZURE BENCHMARK</div>
+      </html>
+      <single>
+
+        <search>
+          <query>
 `ssphp_metrics_index` ssphp.use_case.id="aad_000" earliest=-1d@d latest=now
 [| search `ssphp_metrics_index` ssphp.use_case.id="aad_000" earliest=-1d@d latest=now
   | stats max(SSPHP_RUN) as SSPHP_RUN
   | return SSPHP_RUN]
         
-| fields ssphp.use_case.id, ssphp.score.score
-    </query>
-  </search>
+| table ssphp.score.score
 
-  
+| append 
+    [| makeresults
+    | eval ssphp.score.score="-"
+    | fields - _time]
+| sort - ssphp.score.score
+| head 1
+          </query>
+        </search>
+        <option name="colorMode">block</option>
+        <option name="rangeColors">[$c_red$,$c_green$]</option>
+        <option name="rangeValues">[99.99]</option>        
+        <option name="useColors">1</option>
+      </single>
+    </panel>
 
-<!-- ################### M365 Rollup ################### --> 
 
-  <row>
     <panel>
       <html>
-        <div>AZURE ACTIVE DIRECTORY</div>
+        <div>M365 BENCHMARK</div>
       </html>
       <single>
 
-        <search base="base_rollup_1">
+        <search>
           <query>
-| search ssphp.use_case.id="aad_000"
+`ssphp_metrics_index` ssphp.use_case.id="m365_001_000" earliest=-1d@d latest=now
+[| search `ssphp_metrics_index` ssphp.use_case.id="m365_001_000" earliest=-1d@d latest=now
+  | stats max(SSPHP_RUN) as SSPHP_RUN
+  | return SSPHP_RUN]
+        
 | table ssphp.score.score
-
 
 | append 
     [| makeresults
@@ -65,6 +87,8 @@
       </single>
     </panel>
   </row>
+
+
 
 
 <!-- ################### Main Data Table ################### --> 
@@ -94,8 +118,17 @@
     </html>
     <html>
       <style>
-       #table2 th:nth-child(2) {
+        #table1 th:nth-child(1) {
           width: 200px;
+        }
+        #table1 th:nth-child(3) {
+          width: 300px;
+        }
+        #table2 th:nth-child(1) {
+          width: 200px;
+        }
+        #table2 th:nth-child(3) {
+          width: 300px;
         }
       </style>
     </html>
@@ -118,8 +151,8 @@
     </panel>
 
     <panel>
-      <title>AZURE ACTIVE DIRECTORY - Control Details &amp; Scores [$tkn_control_count$]</title>
-      <table id="table2">
+      <title>Azure Benchmark - Control Details &amp; Scores [$tkn_control_count_azure$]</title>
+      <table id="table1">
         <search>
           <query>
 index="ssphp_metrics_summary" 
@@ -169,18 +202,26 @@ index="ssphp_metrics_summary"
           ssphp.cis_benchmark.controls.ig1 as "IG1 Status"
 
 ``` sort the lines properly ```
-| eval sort1=if(match('Title',"^.*\s\[CIS.*"),0,1)
-| sort 0 sort1, ssphp.use_case.id
-| fields - sort1
+| rex field=ssphp.use_case.id "^aad_00[0-9]{1}_cis_(?&lt;n1&gt;[^-]*)-(?&lt;n2&gt;[^-]*)"
+  | rex field=ssphp.use_case.id "^aad_00[0-9]{1}_cis_[^-]*-[^-]*-(?&lt;n3&gt;.*)$"
+  | fillnull value=0 n1, n2, n3
+  | eval n2="00".n2, n2=substr(n2,len(n2)-1,2),
+          n3="00".n3, n3=substr(n3,len(n3)-1,2),
+          sort_field='n1'.'n2'.'n3',
+          sort_field=replace(sort_field,"00000","99999")
+  | sort 0 sort_field, ssphp.use_case.id
+  | fields - sort_field, n1, n2, n3
+
+
+``` i just put this in because i misnamed the controls (missed a -) so i wanted them out of the dashboard, but it will need to come out when the score have aged out```
+| search NOT (Title="AAD 001 [CIS 1.22]" OR Title="AAD 001 [CIS 1.23]" OR Title="AAD 001 [CIS 1.24]")
 
 | eventstats count
-
-| search NOT (Title="AAD 001 [CIS 1.22]" OR Title="AAD 001 [CIS 1.23]" OR Title="AAD 001 [CIS 1.24]")
           </query>
           <earliest>-1d@d</earliest>
           <sampleRatio>1</sampleRatio>
           <done>
-            <set token="tkn_control_count">$result.count$</set>
+            <set token="tkn_control_count_azure">$result.count$</set>
           </done>
         </search>
         <option name="count">100</option>
@@ -190,10 +231,83 @@ index="ssphp_metrics_summary"
         <option name="totalsRow">false</option>
         <option name="wrap">true</option>
         <!-- #<fields>"Name", "Title", Score, "Control Title", "Description", "Level", "IG1 Status", "Exclusion Status"</fields># --> 
-        <fields>"Name", "Title", Score, "Description"</fields>
+        <fields>"Title", Score, "Control Title", "Description"</fields>
         <option name="drilldown">row</option>
         <drilldown>
           <link target="_blank">/app/$tkn_current_app$/ssphp_foundational_systems_drilldown_non_cis?tkn_use_case_id=$row.ssphp.use_case.id$</link>
+        </drilldown>
+      </table>
+    </panel>
+
+
+
+    <panel>
+      <title>M365 Benchmark - Control Details &amp; Scores [$tkn_control_count_m365$]</title>
+      <table id="table2">
+        <search>
+          <query>
+index="ssphp_metrics_summary" 
+      ssphp.use_case.id="m365_001*" 
+      ssphp.use_case.id!="*_000" 
+      ssphp.cis_benchmark.controls.ig1="TRUE"
+      ssphp.cis_benchmark.controls.ig2="TRUE"
+      ssphp.cis_benchmark.controls.ig3="TRUE"
+      (ssphp.cis_benchmark.control.level="L1" ```OR ssphp.cis_benchmark.control.level="L2"```)
+      $tkn_list_target$
+
+      [| search index="ssphp_metrics_summary" ssphp.use_case.id="m365_001*" ssphp.use_case.id!="*_000"
+        | stats max(SSPHP_RUN) as SSPHP_RUN by ssphp.use_case.id
+        | eval search_text="(\"ssphp.use_case.id\"=\"".'ssphp.use_case.id'."\" AND SSPHP_RUN=\"".SSPHP_RUN."\")"
+        | stats values(search_text) as search_text
+        | eval search_text="(".mvjoin(search_text," OR ").")"
+        | return $search_text]
+
+
+| eval Score='ssphp.score.score'."|".'ssphp.score.color',
+       ssphp.cis_benchmark.controls.v8=split('ssphp.cis_benchmark.controls.v8',"
+")
+
+| search Score=*
+
+| table ssphp.use_case.id, ssphp.use_case.title, Score, ssphp.cis_benchmark.control.title, ssphp.use_case.short_description, ssphp.use_case.description, ssphp.cis_benchmark.control.level, ssphp.cis_benchmark.controls.ig1, current_status
+
+| rename  ssphp.use_case.title as "Title",
+          ssphp.use_case.short_description as "Name"
+          ssphp.use_case.description as "Description",
+          ssphp.cis_benchmark.control.title as "Control Title",
+          ssphp.cis_benchmark.control.level as "Level",
+          current_status as "Exclusion Status",
+          ssphp.cis_benchmark.controls.ig1 as "IG1 Status"
+
+``` sort the lines properly ```
+| rex field=ssphp.use_case.id "^m365_00[0-9]{1}_cis_(?&lt;n1&gt;[^-]*)-(?&lt;n2&gt;[^-]*)"
+| rex field=ssphp.use_case.id "^m365_00[0-9]{1}_cis_[^-]*-[^-]*-(?&lt;n3&gt;.*)$"
+| fillnull value=0 n3
+| eval n2="00".n2, n2=substr(n2,len(n2)-1,2),
+        n3="00".n3, n3=substr(n3,len(n3)-1,2), 
+        sort_field='n1'.'n2'.'n3'
+| sort 0 sort_field
+| fields - sort_field, n1, n2, n3
+
+| eventstats count
+          </query>
+          <earliest>-1d@d</earliest>
+          <sampleRatio>1</sampleRatio>
+          <done>
+            <set token="tkn_control_count_m365">$result.count$</set>
+          </done>
+        </search>
+        <option name="count">100</option>
+        <option name="dataOverlayMode">none</option>
+        <option name="percentagesRow">false</option>
+        <option name="rowNumbers">false</option>
+        <option name="totalsRow">false</option>
+        <option name="wrap">true</option>
+        <!-- #<fields>"Name", "Title", Score, "Control Title", "Description", "Level", "IG1 Status", "Exclusion Status"</fields># --> 
+        <fields>"Title", Score, "Control Title", "Description"</fields>
+        <option name="drilldown">row</option>
+        <drilldown>
+          <link target="_blank">/app/$tkn_current_app$/ssphp_foundational_systems_drilldown_cis?tkn_use_case_id=$row.ssphp.use_case.id$</link>
         </drilldown>
       </table>
     </panel>
