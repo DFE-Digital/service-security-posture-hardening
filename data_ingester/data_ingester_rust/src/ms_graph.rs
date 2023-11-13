@@ -1363,13 +1363,7 @@ pub(crate) mod test {
     async fn get_security_secure_scores() -> Result<()> {
         let (splunk, ms_graph) = setup().await?;
         let mut security_scores = ms_graph.get_security_secure_scores().await?;
-        let security_score = security_scores
-            .inner
-            .first_mut()
-            .context("Unable to get first SecrurityScore")?;
-        security_score.odata_context = Some(security_scores.odata_context.to_owned());
-        let batch = &*security_score;
-        splunk.send_batch(batch.to_hec_events()?).await?;
+        splunk.send_batch((&security_scores).to_hec_events()?).await?;
         Ok(())
     }
 
