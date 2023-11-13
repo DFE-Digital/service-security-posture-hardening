@@ -859,7 +859,7 @@ pub async fn azure_users(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<(
                 )
                 .context("Failed to add azure roles")?;
 
-            //            splunk.send_batch(&users.to_hec_events()?[..]).await?;
+            splunk.send_batch((&users).to_hec_events()?).await?;
         }
         anyhow::Ok::<()>(())
     });
@@ -1239,7 +1239,7 @@ pub(crate) mod test {
         splunk::{set_ssphp_run, HecDynamic, Splunk, ToHecEvents},
         users::UsersMap,
     };
-    use anyhow::{Result};
+    use anyhow::Result;
 
     pub async fn setup() -> Result<(Splunk, MsGraph)> {
         let secrets = get_keyvault_secrets(&env::var("KEY_VAULT_NAME")?).await?;
@@ -1277,9 +1277,7 @@ pub(crate) mod test {
         let _ = list_users.await?;
 
         assert!(!users_map.inner.is_empty());
-        // splunk
-        //     .send_batch(&users_map.to_hec_events()?)
-        //     .await?;
+        splunk.send_batch((&users_map).to_hec_events()?).await?;
         Ok(())
     }
 
