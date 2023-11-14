@@ -157,7 +157,7 @@ impl MsGraph {
     /// The /beta version of this resource is named directorySetting.
     pub async fn list_group_settings(&self) -> Result<GroupSettings> {
         let result = self
-            .batch_get(&self.client, "/groupSettingTemplates")
+            .batch_get(&self.client, "/groupSettings")
             .await?;
         Ok(result)
     }
@@ -1404,7 +1404,6 @@ pub(crate) mod test {
     async fn list_token_lifetime_policies() -> Result<()> {
         let (splunk, ms_graph) = setup().await?;
         let result = ms_graph.list_token_lifetime_policies().await?;
-        dbg!(&result);
         let hec = HecDynamic::new(result, "msgraph:tokenlifetime", "aktest");
         splunk.send_batch((&hec).to_hec_events()?).await?;
         Ok(())
