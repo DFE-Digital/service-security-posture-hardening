@@ -859,7 +859,7 @@ pub async fn azure_users(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<(
                 )
                 .context("Failed to add azure roles")?;
 
-            //            splunk.send_batch(&users.to_hec_events()?[..]).await?;
+            splunk.send_batch((&users).to_hec_events()?).await?;
         }
         anyhow::Ok::<()>(())
     });
@@ -1239,7 +1239,7 @@ pub(crate) mod test {
         splunk::{set_ssphp_run, HecDynamic, Splunk, ToHecEvents},
         users::UsersMap,
     };
-    use anyhow::{Context, Result};
+    use anyhow::Result;
 
     pub async fn setup() -> Result<(Splunk, MsGraph)> {
         let secrets = get_keyvault_secrets(&env::var("KEY_VAULT_NAME")?).await?;
@@ -1277,9 +1277,7 @@ pub(crate) mod test {
         let _ = list_users.await?;
 
         assert!(!users_map.inner.is_empty());
-        // splunk
-        //     .send_batch(&users_map.to_hec_events()?)
-        //     .await?;
+        splunk.send_batch((&users_map).to_hec_events()?).await?;
         Ok(())
     }
 
@@ -1362,14 +1360,10 @@ pub(crate) mod test {
     #[tokio::test]
     async fn get_security_secure_scores() -> Result<()> {
         let (splunk, ms_graph) = setup().await?;
-        let mut security_scores = ms_graph.get_security_secure_scores().await?;
-        let security_score = security_scores
-            .inner
-            .first_mut()
-            .context("Unable to get first SecrurityScore")?;
-        security_score.odata_context = Some(security_scores.odata_context.to_owned());
-        let batch = &*security_score;
-        splunk.send_batch(batch.to_hec_events()?).await?;
+        let security_scores = ms_graph.get_security_secure_scores().await?;
+        splunk
+            .send_batch((&security_scores).to_hec_events()?)
+            .await?;
         Ok(())
     }
 

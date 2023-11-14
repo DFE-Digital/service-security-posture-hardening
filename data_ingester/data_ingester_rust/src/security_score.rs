@@ -1,4 +1,6 @@
-use crate::splunk::{HecEvent, ToHecEvents};
+use std::iter;
+
+use crate::splunk::ToHecEvents;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
@@ -14,25 +16,20 @@ pub struct SecurityScores {
 }
 
 impl ToHecEvents for &SecurityScores {
-    type Item = Self;
+    type Item = Value;
     fn source(&self) -> &str {
         "msgraph"
     }
 
     fn sourcetype(&self) -> &str {
-        "m365"
-    }
-
-    fn to_hec_events(&self) -> anyhow::Result<Vec<crate::splunk::HecEvent>> {
-        Ok(vec![HecEvent::new(
-            &self,
-            self.source(),
-            self.sourcetype(),
-        )?])
+        "m365:control_score"
     }
 
     fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
-        unimplemented!()
+        match self.inner.first() {
+            Some(first) => Box::new(first.control_scores.iter()),
+            None => Box::new(iter::empty()),
+        }
     }
 }
 
@@ -65,31 +62,31 @@ pub struct SecurityScore {
     pub vendor_information: VendorInformation,
     pub average_comparative_scores: Vec<AverageComparativeScore>,
     #[serde(skip_serializing)]
-    pub control_scores: Vec<ControlScore>,
+    pub control_scores: Vec<Value>,
 }
 
-impl ToHecEvents for &SecurityScore {
-    type Item = Self;
-    fn source(&self) -> &str {
-        "msgraph"
-    }
+//impl ToHecEvents for &SecurityScore {
+//     type Item = Self;
+//     fn source(&self) -> &str {
+//         "msgraph"
+//     }
 
-    fn sourcetype(&self) -> &str {
-        "m365:security_score"
-    }
+//     fn sourcetype(&self) -> &str {
+//         "m365:security_score"
+//     }
 
-    fn to_hec_events(&self) -> anyhow::Result<Vec<crate::splunk::HecEvent>> {
-        Ok(vec![HecEvent::new(
-            &self,
-            self.source(),
-            self.sourcetype(),
-        )?])
-    }
+//     fn to_hec_events(&self) -> anyhow::Result<Vec<crate::splunk::HecEvent>> {
+//         Ok(vec![HecEvent::new(
+//             &self,
+//             self.source(),
+//             self.sourcetype(),
+//         )?])
+//     }
 
-    fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
-        unimplemented!()
-    }
-}
+//     fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
+//         unimplemented!()
+//     }
+// }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -121,20 +118,20 @@ pub struct AverageComparativeScore {
     pub seat_size_range_upper_value: Option<String>,
 }
 
-#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ControlScore {
-    pub control_category: String,
-    pub control_name: String,
-    pub description: String,
-    pub score: f64,
-    pub source: Option<String>,
-    #[serde(rename = "IsApplicable")]
-    pub is_applicable: Option<String>,
-    pub score_in_percentage: Option<f64>,
-    pub on: Option<String>,
-    pub last_synced: String,
-    pub implementation_status: String,
-    pub count: Option<String>,
-    pub total: Option<String>,
-}
+// #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+// #[serde(rename_all = "camelCase")]
+// pub struct ControlScore {
+//     pub control_category: String,
+//     pub control_name: String,
+//     pub description: String,
+//     pub score: f64,
+//     pub source: Option<String>,
+//     #[serde(rename = "IsApplicable")]
+//     pub is_applicable: Option<String>,
+//     pub score_in_percentage: Option<f64>,
+//     pub on: Option<String>,
+//     pub last_synced: String,
+//     pub implementation_status: String,
+//     pub count: Option<String>,
+//     pub total: Option<String>,
+// }
