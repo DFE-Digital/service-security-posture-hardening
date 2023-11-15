@@ -156,9 +156,7 @@ impl MsGraph {
     /// https://learn.microsoft.com/en-us/graph/api/resources/groupsetting?view=graph-rest-1.0
     /// The /beta version of this resource is named directorySetting.
     pub async fn list_group_settings(&self) -> Result<GroupSettings> {
-        let result = self
-            .batch_get(&self.client, "/groupSettings")
-            .await?;
+        let result = self.batch_get(&self.client, "/groupSettings").await?;
         Ok(result)
     }
 

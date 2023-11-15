@@ -2,29 +2,20 @@ use serde::Deserialize;
 use serde::Serialize;
 use serde_json::Value;
 
-use crate::splunk::HecEvent;
 use crate::splunk::ToHecEvents;
 
 impl ToHecEvents for &AdminRequestConsentPolicy {
+    type Item = Self;
     fn source(&self) -> &str {
         "msgraph"
     }
 
     fn sourcetype(&self) -> &str {
-        "m365"
+        "m365:admin_consent_policy"
     }
 
-    type Item = AdminRequestConsentPolicy;
     fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
-        unimplemented!()
-    }
-
-    fn to_hec_events(&self) -> anyhow::Result<Vec<crate::splunk::HecEvent>> {
-        Ok(vec![HecEvent::new(
-            &self,
-            self.source(),
-            self.sourcetype(),
-        )?])
+        Box::new(std::iter::once(self))
     }
 }
 
