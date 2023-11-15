@@ -8,5 +8,6 @@
       <a href="ssphp_foundational_systems_azure">Azure Dashboard</a>
       <a href="ssphp_foundational_systems_aad">Azure Active Directory Dashboard</a>
     </collection>
+    <a href="ssphp_metrics_status">Metrics Status Dashboard</a>
   </collection>
 </nav>
