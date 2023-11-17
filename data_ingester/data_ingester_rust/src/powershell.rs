@@ -589,12 +589,21 @@ Connect-ExchangeOnline -ShowBanner:$false -Certificate $pfx -AppID "{}" -Organiz
                      secrets.azure_client_certificate,
                      secrets.azure_client_id,
                      secrets.azure_client_organization,
-                     command,
+                     &command,
             )
         ]).output()?;
 
-    let out = serde_json::from_slice::<T>(&output.stdout[..])?;
-    Ok(out)
+    match serde_json::from_slice::<T>(&output.stdout[..]) {
+        Ok(out) => return Ok(out),
+        Err(error) => {
+            eprintln!(
+                "Error while serializing data from: {}, {}",
+                &command, &error
+            );
+            eprintln!("output: {}", String::from_utf8(output.stdout)?);
+            return Err(error.into());
+        }
+    }
 }
 
 pub async fn run_exchange_online_ipps_powershell<T: DeserializeOwned>(
