@@ -12,6 +12,7 @@ use crate::powershell::run_powershell_get_dkim_signing_config;
 use crate::powershell::run_powershell_get_dlp_compliance_policy;
 use crate::powershell::run_powershell_get_email_tenant_settings;
 use crate::powershell::run_powershell_get_hosted_outbound_spam_filter_policy;
+use crate::powershell::run_powershell_get_mailbox;
 use crate::powershell::run_powershell_get_malware_filter_policy;
 use crate::powershell::run_powershell_get_organization_config;
 use crate::powershell::run_powershell_get_owa_mailbox_policy;
@@ -1010,6 +1011,14 @@ pub async fn m365(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
     .await?;
 
     try_collect_send("MS Graph Groups", ms_graph.list_groups(), &splunk).await?;
+
+    // Azure 365 V2.0 5.3
+    try_collect_send(
+        "Exchange Get Mailboxes ",
+        run_powershell_get_mailbox(&secrets),
+        &splunk,
+    )
+    .await?;
 
     try_collect_send(
         "Exchange Get VIP Users",
