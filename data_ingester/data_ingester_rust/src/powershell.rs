@@ -585,7 +585,7 @@ pub async fn run_exchange_online_powershell<T: DeserializeOwned>(
 $pfx = New-Object System.Security.Cryptography.X509Certificates.X509Certificate -ArgumentList (,$pfxBytes);
 Import-Module ExchangeOnlineManagement;
 Connect-ExchangeOnline -ShowBanner:$false -Certificate $pfx -AppID "{}" -Organization "{}";
-{} | ConvertTo-Json -Compress -Depth 9;"#,
+{} | ConvertTo-Json -Compress -Depth 20 -WarningAction SilentlyContinue;"#,
                      secrets.azure_client_certificate,
                      secrets.azure_client_id,
                      secrets.azure_client_organization,
