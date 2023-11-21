@@ -1,6 +1,6 @@
 <dashboard version="1.1" theme="dark" script="js/table_cell_color.js">
   <label>M365 CIS [L1/IG1] Benchmark : Security Posture Continuous Assurance</label>
-  <description>v4.2.3</description>
+  <description>v4.2.6</description>
 
 
   <init>
@@ -283,7 +283,9 @@
          font-size: 150% !important;
          }
          .css_for_blue{
-         background-color:#0000FF !important;
+         color:#000000 !important;
+         background-color:#BFD7ED !important;
+         font-size: 150% !important;
          }
       </style>
     </html>
@@ -359,7 +361,7 @@ index="ssphp_metrics_summary"
 | fillnull value="exclude" current_status```
 
 
-| table ssphp.use_case.id, ssphp.use_case.title, Score, ssphp.cis_benchmark.control.title, ssphp.use_case.short_description, ssphp.use_case.description, ssphp.cis_benchmark.control.level, ssphp.cis_benchmark.controls.ig1, current_status
+| table ssphp.use_case.id, ssphp.use_case.title, ssphp.score.ciso_priority, Score, ssphp.cis_benchmark.control.title, ssphp.use_case.short_description, ssphp.use_case.description, ssphp.cis_benchmark.control.level, ssphp.cis_benchmark.controls.ig1, current_status
 
 | rename  ssphp.use_case.title as "Title",
           ssphp.use_case.short_description as "Name"
@@ -367,7 +369,8 @@ index="ssphp_metrics_summary"
           ssphp.cis_benchmark.control.title as "Control Title",
           ssphp.cis_benchmark.control.level as "Level",
           current_status as "Exclusion Status",
-          ssphp.cis_benchmark.controls.ig1 as "IG1 Status"
+          ssphp.cis_benchmark.controls.ig1 as "IG1 Status",
+          ssphp.score.ciso_priority as "CISO Priority"
 
 ``` sort the lines properly ```
 | rex field=ssphp.use_case.id "^m365_00[0-9]{1}_cis_(?&lt;n1&gt;[^-]*)-(?&lt;n2&gt;[^-]*)"
@@ -376,7 +379,7 @@ index="ssphp_metrics_summary"
 | eval n2="00".n2, n2=substr(n2,len(n2)-1,2),
         n3="00".n3, n3=substr(n3,len(n3)-1,2), 
         sort_field='n1'.'n2'.'n3'
-| sort 0 sort_field
+| sort 0 "CISO Priority", sort_field
 | fields - sort_field, n1, n2, n3
 
 | eventstats count
@@ -394,7 +397,7 @@ index="ssphp_metrics_summary"
         <option name="totalsRow">false</option>
         <option name="wrap">true</option>
         <!-- #<fields>"Name", "Title", Score, "Control Title", "Description", "Level", "IG1 Status", "Exclusion Status"</fields># --> 
-        <fields>"Name", "Title", Score, "Control Title", "Description"</fields>
+        <fields>"Name", "Title", Score, "Control Title", "Description", "CISO Priority"</fields>
         <option name="drilldown">row</option>
         <drilldown>
           <link target="_blank">/app/$tkn_current_app$/ssphp_foundational_systems_drilldown_cis?tkn_use_case_id=$row.ssphp.use_case.id$</link>

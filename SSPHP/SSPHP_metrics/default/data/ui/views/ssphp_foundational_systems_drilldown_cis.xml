@@ -1,6 +1,6 @@
 <dashboard theme="dark" version="1.1" script="js/addtags.js">
   <label>CIS Benchmark Security Posture : Control Drilldown</label>
-  <description>v1.41</description>
+  <description>v1.4.2</description>
   
   <init>
     <set token="c_red">"0xFF0000"</set>
@@ -111,6 +111,7 @@ index="ssphp_metrics_summary" ssphp.use_case.id=$tkn_use_case_id$
             <set token="tkn_fs">$result.fs$</set>
             <set token="tkn_notfs">$result.notfs$</set>
             <set token="tkn_score">$result.ssphp.score.score$</set>
+            <set token="tkn_ciso_priority">$result.ssphp.score.ciso_priority$</set>
             <set token="tkn_color">$result.ssphp.score.color$</set>
             <set token="tkn_display_title">$result.ssphp.use_case.title$</set>
             <set token="tkn_display_short_description">$result.ssphp.use_case.short_description$</set>
@@ -166,6 +167,9 @@ index="ssphp_metrics_summary" ssphp.use_case.id=$tkn_use_case_id$
         <br></br>
         <span class="header_r1" style="color:	darkcyan">CIS Profile Applicability</span>
         <span class="header_r2">$tkn_cis_profile$</span>
+        <br></br>
+        <span class="header_r1" style="color:	darkcyan">CISO Priority Level</span>
+        <span class="header_r2">$tkn_ciso_priority$</span>
         <br></br>
         <span class="header_r1" style="color:	darkcyan">CIS M365 Benchmark Version 3 Control</span>
         <span class="header_r2">$tkn_cis_v3_control$</span>
