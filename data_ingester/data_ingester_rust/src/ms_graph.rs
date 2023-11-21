@@ -161,6 +161,11 @@ impl MsGraph {
         Ok(result)
     }
 
+    pub async fn list_role_eligiblity_schedule(&self) -> Result<RoleEligibilitySchedule> {
+        let result = self.batch_get(&self.client, "/roleManagement/directory/roleEligibilitySchedules?$expand=roleDefinition,principal,directoryScope,appScope").await?;
+        Ok(result)
+    }
+
     pub async fn list_conditional_access_policies(&self) -> Result<ConditionalAccessPolicies> {
         let mut stream = self
             .client
@@ -593,6 +598,27 @@ pub struct MsGraphResponse<T> {
 }
 
 #[derive(Debug, Serialize, Deserialize, Default)]
+pub struct RoleEligibilitySchedule {
+    #[serde(rename = "value")]
+    inner: Vec<serde_json::Value>,
+}
+
+impl ToHecEvents for &RoleEligibilitySchedule {
+    type Item = Value;
+    fn source(&self) -> &str {
+        "msgraph"
+    }
+
+    fn sourcetype(&self) -> &str {
+        "m365:role_eligibility_schedule"
+    }
+
+    fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
+        Box::new(self.inner.iter())
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, Default)]
 pub struct GroupSettings {
     #[serde(rename = "value")]
     inner: Vec<serde_json::Value>,
@@ -930,6 +956,14 @@ pub async fn m365(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
     //             .await?;
     //     }
     // }
+
+    // M365 1.1.15 V2
+    try_collect_send(
+        "MS Graph List Role Eligibility Schedules",
+        ms_graph.list_role_eligiblity_schedule(),
+        &splunk,
+    )
+    .await?;
 
     // Azure Foundations 1.22 V2
     try_collect_send(
@@ -1428,6 +1462,14 @@ pub(crate) mod test {
     async fn get_device_registration_policy() -> Result<()> {
         let (splunk, ms_graph) = setup().await?;
         let result = ms_graph.get_device_registration_policy().await?;
+        splunk.send_batch((&result).to_hec_events()?).await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn list_role_eligiblity_schedule_instances() -> Result<()> {
+        let (splunk, ms_graph) = setup().await?;
+        let result = ms_graph.list_role_eligiblity_schedule().await?;
         splunk.send_batch((&result).to_hec_events()?).await?;
         Ok(())
     }

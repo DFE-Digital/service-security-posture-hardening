@@ -594,14 +594,14 @@ Connect-ExchangeOnline -ShowBanner:$false -Certificate $pfx -AppID "{}" -Organiz
         ]).output()?;
 
     match serde_json::from_slice::<T>(&output.stdout[..]) {
-        Ok(out) => return Ok(out),
+        Ok(out) => Ok(out),
         Err(error) => {
             eprintln!(
                 "Error while serializing data from: {}, {}",
                 &command, &error
             );
             eprintln!("output: {}", String::from_utf8(output.stdout)?);
-            return Err(error.into());
+            Err(error.into())
         }
     }
 }
