@@ -352,12 +352,16 @@ pub async fn run_powershell_get_dlp_compliance_policy(
     Ok(result)
 }
 
-#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct DlpCompliancePolicy(serde_json::Value);
+#[serde(untagged)]
+pub enum DlpCompliancePolicy {
+    Collection(Vec<Value>),
+    Single(Value),
+}
 
 impl ToHecEvents for &DlpCompliancePolicy {
-    type Item = Self;
+    type Item = Value;
     fn source(&self) -> &'static str {
         "powershell:ExchangeOnline:Get-DlpCompliancePolicy"
     }
@@ -367,7 +371,10 @@ impl ToHecEvents for &DlpCompliancePolicy {
     }
 
     fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
-        Box::new(iter::once(self))
+        match self {
+            DlpCompliancePolicy::Collection(collection) => Box::new(collection.iter()),
+            DlpCompliancePolicy::Single(single) => Box::new(iter::once(single)),
+        }
     }
 }
 
@@ -618,7 +625,7 @@ pub async fn run_exchange_online_ipps_powershell<T: DeserializeOwned>(
 $pfx = New-Object System.Security.Cryptography.X509Certificates.X509Certificate -ArgumentList (,$pfxBytes);
 Import-Module ExchangeOnlineManagement;
 Connect-IPPSSession -ShowBanner:$false -Certificate $pfx -AppID "{}" -Organization "{}";
-{} | ConvertTo-Json -Compress;"#,
+{} | ConvertTo-Json -Compress -Depth 20;"#,
                      secrets.azure_client_certificate,
                      secrets.azure_client_id,
                      secrets.azure_client_organization,
@@ -753,7 +760,6 @@ mod test {
         Ok(())
     }
 
-    #[ignore]
     #[tokio::test]
     async fn test_run_powershell_get_dlp_compliance_policy() -> Result<()> {
         let (splunk, secrets) = setup().await?;
