@@ -1,6 +1,6 @@
 <dashboard version="1.1" theme="dark" script="js/table_cell_color.js">
   <label>M365 CIS [L1/IG1] Benchmark : Security Posture Continuous Assurance</label>
-  <description>v4.2.3</description>
+  <description>v4.2.4</description>
 
 
   <init>
@@ -283,7 +283,9 @@
          font-size: 150% !important;
          }
          .css_for_blue{
-         background-color:#0000FF !important;
+         color:#000000 !important;
+         background-color:#BFD7ED !important;
+         font-size: 150% !important;
          }
       </style>
     </html>
