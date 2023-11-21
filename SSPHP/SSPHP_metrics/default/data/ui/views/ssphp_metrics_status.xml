@@ -5,18 +5,19 @@
         <title>SSPHP FEED STATUS</title>
         <table>
           <search>
-            <query>| tstats count where index="ssphp_metrics_data" by sourcetype
+            <query>
+| tstats count where index="ssphp_metrics_data" by sourcetype
   
   | fields sourcetype
   | join type=outer sourcetype
-      [| search index="ssphp_metrics_data" earliest=-1d latest=now
+      [| search index="ssphp_metrics_data" earliest=-2d latest=now
        | stats count by sourcetype, SSPHP_RUN
        | eval SSPHP_RUN=strftime(SSPHP_RUN,"%Y-%m-%d %H:%M:%S"),
          run='SSPHP_RUN'." - ".'count'
        | stats values(run) as runs by sourcetype
       | eval runs=mvjoin(runs,"~~")]
   | eval runs=split(runs,"~~")</query>
-            <earliest>0</earliest>
+            <earliest>-7d</earliest>
             <sampleRatio>1</sampleRatio>
           </search>
           <option name="count">100</option>
