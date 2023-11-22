@@ -129,12 +129,16 @@ pub async fn run_powershell_get_malware_filter_policy(
     Ok(result)
 }
 
-#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct MalwareFilterPolicy(serde_json::Value);
+#[serde(untagged)]
+pub enum MalwareFilterPolicy {
+    Collection(Vec<serde_json::Value>),
+    Single(serde_json::Value),
+}
 
 impl ToHecEvents for &MalwareFilterPolicy {
-    type Item = Self;
+    type Item = Value;
     fn source(&self) -> &'static str {
         "powershell:ExchangeOnline:Get-MalwareFilterPolicy"
     }
@@ -144,7 +148,44 @@ impl ToHecEvents for &MalwareFilterPolicy {
     }
 
     fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
-        Box::new(iter::once(self))
+        match self {
+            MalwareFilterPolicy::Collection(collection) => Box::new(collection.iter()),
+            MalwareFilterPolicy::Single(single) => Box::new(iter::once(single)),
+        }
+    }
+}
+
+pub async fn run_powershell_get_eop_protection_policy_rule(
+    secrets: &Secrets,
+) -> Result<EopProtectionPolicyRule> {
+    let command = "Get-EOPProtectionPolicyRule";
+    let result = run_exchange_online_powershell(secrets, command).await?;
+    Ok(result)
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[serde(untagged)]
+pub enum EopProtectionPolicyRule {
+    Collection(Vec<serde_json::Value>),
+    Single(serde_json::Value),
+}
+
+impl ToHecEvents for &EopProtectionPolicyRule {
+    type Item = Value;
+    fn source(&self) -> &'static str {
+        "powershell:ExchangeOnline:Get-EOPProtectionPolicyRule"
+    }
+
+    fn sourcetype(&self) -> &'static str {
+        "m365:eop_protection_policy_rule"
+    }
+
+    fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
+        match self {
+            EopProtectionPolicyRule::Collection(collection) => Box::new(collection.iter()),
+            EopProtectionPolicyRule::Single(single) => Box::new(iter::once(single)),
+        }
     }
 }
 
@@ -646,6 +687,7 @@ mod test {
             run_powershell_get_anti_phish_policy, run_powershell_get_atp_policy_for_o365,
             run_powershell_get_blocked_sender_address, run_powershell_get_dkim_signing_config,
             run_powershell_get_dlp_compliance_policy, run_powershell_get_email_tenant_settings,
+            run_powershell_get_eop_protection_policy_rule,
             run_powershell_get_hosted_outbound_spam_filter_policy, run_powershell_get_mailbox,
             run_powershell_get_malware_filter_policy, run_powershell_get_organization_config,
             run_powershell_get_owa_mailbox_policy, run_powershell_get_protection_alert,
@@ -832,6 +874,14 @@ mod test {
     async fn test_run_powershell_get_mailbox() -> Result<()> {
         let (splunk, secrets) = setup().await?;
         let result = run_powershell_get_mailbox(&secrets).await?;
+        splunk.send_batch((&result).to_hec_events()?).await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_run_powershell_eop_protection_policy_rule() -> Result<()> {
+        let (splunk, secrets) = setup().await?;
+        let result = run_powershell_get_eop_protection_policy_rule(&secrets).await?;
         splunk.send_batch((&result).to_hec_events()?).await?;
         Ok(())
     }
