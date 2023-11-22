@@ -736,7 +736,6 @@ mod test {
         Ok(())
     }
 
-    #[ignore]
     #[tokio::test]
     async fn test_run_powershell_get_safe_links_policy() -> Result<()> {
         let (splunk, secrets) = setup().await?;
@@ -785,7 +784,6 @@ mod test {
         Ok(())
     }
 
-    #[ignore]
     #[tokio::test]
     async fn test_run_powershell_get_safe_attachment_policy() -> Result<()> {
         let (splunk, secrets) = setup().await?;
