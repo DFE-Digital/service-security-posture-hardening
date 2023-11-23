@@ -8,6 +8,7 @@ use crate::powershell::run_powershell_get_admin_audit_log_config;
 use crate::powershell::run_powershell_get_anti_phish_policy;
 use crate::powershell::run_powershell_get_atp_policy_for_o365;
 use crate::powershell::run_powershell_get_blocked_sender_address;
+use crate::powershell::run_powershell_get_cs_teams_client_configuration;
 use crate::powershell::run_powershell_get_dkim_signing_config;
 use crate::powershell::run_powershell_get_dlp_compliance_policy;
 use crate::powershell::run_powershell_get_email_tenant_settings;
@@ -1046,6 +1047,14 @@ pub async fn m365(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
     .await?;
 
     try_collect_send("MS Graph Groups", ms_graph.list_groups(), &splunk).await?;
+
+    // M365 V2.0 3.7
+    try_collect_send(
+        "MsTeams Get Cs Teams Client Configuration",
+        run_powershell_get_cs_teams_client_configuration(&secrets),
+        &splunk,
+    )
+    .await?;
 
     // M365 V2.0 4.13
     try_collect_send(
