@@ -1,5 +1,6 @@
 <form version="1.1" theme="dark">
   <label>M365 Control Development Status</label>
+  <description>v1.0.0</description>
   
   
   <fieldset submitButton="false">
@@ -22,8 +23,7 @@
         </condition>
       </change>
     </input>
-
-
+    
     <input type="radio" token="tkn_ig" searchWhenChanged="true">
       <label>CIS Implementation Group</label>
       <choice value="(ssphp.cis_benchmark.controls.ig1=FALSE AND ssphp.cis_benchmark.controls.ig2=FALSE AND ssphp.cis_benchmark.controls.ig3=FALSE)">No IG</choice>
@@ -51,7 +51,23 @@
         </condition>
       </change>
     </input>
+    
+    <input type="checkbox" token="tkn_fields" searchWhenChanged="true">
+      <label>Exclude Developer Notes</label>
+      <choice value="Completed*">Completed</choice>
+      <choice value="To Do*">To Do</choice>
+      <choice value="Cannot be Automated*">Cannot Be Automated</choice>
+      <choice value="Need Info*">Need Info</choice>
+      <prefix>(</prefix>
+      <suffix>)</suffix>
+      <valuePrefix>"Developer Notes"!="</valuePrefix>
+      <valueSuffix>"</valueSuffix>
+      <delimiter> AND </delimiter>
+      <initialValue></initialValue>
+      <default></default>
+    </input>
   </fieldset>
+  
   
   
   <row>
@@ -85,8 +101,9 @@
      | table ssphp.use_case.id, exists]
 | fillnull value="FALSE" exists
 
+| lookup ssphp_m365_cis_controls_development_status.csv ssphp.use_case.id OUTPUT ssphp.use_case.developer.notes as "Developer Notes"
 
-| search ssphp.use_case.id="m365*" AND $tkn_ig$ AND $tkn_l$
+| search ssphp.use_case.id="m365*" AND $tkn_ig$ AND $tkn_l$ AND $tkn_fields$
 
 
 ``` sort the lines properly ```
@@ -123,7 +140,8 @@
         "IG3",
         "Level",
         "CISO Priority",
-        "Development Completed"
+        "Development Completed",
+        "Developer Notes"
 
 | eventstats count as tkn_controls, sum(eval(if('Development Completed'="TRUE",1,0))) as tkn_done
           </query>
@@ -153,7 +171,8 @@
         "IG3",
         "Level",
         "CISO Priority",
-        "Development Completed"</fields>
+        "Development Completed",
+        "Developer Notes"</fields>
       </table>
     </panel>
   </row>
