@@ -1,0 +1,116 @@
+﻿ssphp.use_case.id,ssphp.use_case.developer.notes
+m365_001_cis_1-1-1,"Completed, Reviewed & Validated"
+m365_001_cis_1-1-2,"Completed, Reviewed & Validated"
+m365_001_cis_1-1-3,"Completed, Reviewed & Validated"
+m365_001_cis_1-1-4,"Completed, Reviewed & Validated"
+m365_001_cis_1-1-5,"Completed, Reviewed & Validated"
+m365_001_cis_1-1-6,"Completed, Reviewed & Validated"
+m365_001_cis_1-1-7,"Completed, Reviewed & Validated"
+m365_001_cis_1-1-8,"Completed, Reviewed & Validated"
+m365_001_cis_1-1-9,"Completed, Reviewed & Validated"
+m365_001_cis_1-1-10,"Completed, Reviewed & Validated"
+m365_001_cis_1-1-11,"Completed, Reviewed & Validated"
+m365_001_cis_1-1-12,"Completed, Reviewed & Validated"
+m365_001_cis_1-1-13,"Completed, Reviewed & Validated"
+m365_001_cis_1-1-14,"Completed, Reviewed & Validated"
+m365_001_cis_1-1-15,"To Do
+Sharepoint"
+m365_001_cis_1-1-16,"To Do
+Not Yet Looked At (Ian)"
+m365_001_cis_1-1-17,"To Do
+Not Yet Looked At (Alex)"
+m365_001_cis_1-1-18,"To Do
+Not Yet Looked At (Alex)"
+m365_001_cis_1-1-19,"To Do
+Not Yet Looked At (Alex)"
+m365_001_cis_1-1-20,"Cannot be Automated
+Data not available via API"
+m365_001_cis_1-1-21,"Cannot be Automated
+The app the control proposes to restrict, ‘Microsoft Azure Management’ does not exist in Azure when creating a CAP, and does not exist in this list of owned applications"
+m365_001_cis_1-1-22,"Completed, Reviewed & Validated"
+m365_001_cis_1-2,"Completed, Reviewed & Validated"
+m365_001_cis_1-3,"To Do
+Sharepoint"
+m365_001_cis_1-4,"Completed, Reviewed & Validated"
+m365_001_cis_1-5,"Completed, Reviewed & Validated"
+m365_001_cis_1-6,"Need info
+Details from Cyber IDAM team for emergency backup accounts"
+m365_001_cis_1-7,"Completed, Reviewed & Validated"
+m365_002_cis_2-1,"Completed, Reviewed & Validated"
+m365_002_cis_2-2,"Completed, Reviewed & Validated"
+m365_002_cis_2-3,"Completed, Reviewed & Validated"
+m365_002_cis_2-4,"Completed, Reviewed & Validated"
+m365_002_cis_2-5,"To Do
+Not Yet Looked At (Ian)"
+m365_002_cis_2-6,"To Do
+Sharepoint"
+m365_002_cis_2-7,"Completed, Reviewed & Validated"
+m365_002_cis_2-8,"To Do
+Not Yet Looked At (Alex)"
+m365_002_cis_2-9,"Cannot be Automated
+Data not available via public API"
+m365_002_cis_2-10,"Completed, Reviewed & Validated"
+m365_002_cis_2-11,"Cannot be Automated
+Data not available via API"
+m365_002_cis_2-12,"To Do
+Sharepoint"
+m365_003_cis_3-1,"Completed, Reviewed & Validated"
+m365_003_cis_3-2,"To Do
+Not Yet Looked At (Alex)"
+m365_003_cis_3-3,"To Do
+Not Yet Looked At (Alex)"
+m365_003_cis_3-4,"Completed, Reviewed & Validated"
+m365_003_cis_3-5,"Completed, Reviewed & Validated"
+m365_003_cis_3-6,"To Do
+Sharepoint"
+m365_003_cis_3-7,"To Do
+Not Yet Looked At (Alex)"
+m365_004_cis_4-1,"Completed, Reviewed & Validated"
+m365_004_cis_4-2,"Completed, Reviewed & Validated"
+m365_004_cis_4-3,"Completed, Reviewed & Validated"
+m365_004_cis_4-4,"Completed, Reviewed & Validated"
+m365_004_cis_4-5,"To Do
+Not Yet Looked At (Ian)"
+m365_004_cis_4-6,"Completed, Reviewed & Validated"
+m365_004_cis_4-7,"Completed, Reviewed & Validated"
+m365_004_cis_4-8,"Completed, Reviewed & Validated"
+m365_004_cis_4-9,"Completed, Reviewed & Validated"
+m365_004_cis_4-10,"Completed, Reviewed & Validated"
+m365_004_cis_4-11,"Completed, Reviewed & Validated"
+m365_004_cis_4-12,"Completed, Reviewed & Validated"
+m365_004_cis_4-13,"To Do
+Not Yet Looked At (Ian)"
+m365_005_cis_5-1-1,"Completed, Reviewed & Validated"
+m365_005_cis_5-1-2,"Completed, Reviewed & Validated"
+m365_005_cis_5-2,"Completed, Reviewed & Validated"
+m365_005_cis_5-3,"Completed, Reviewed & Validated"
+m365_005_cis_5-4,"Cannot be Automated
+Process not static control"
+m365_005_cis_5-5,"Cannot be Automated
+Process not static control"
+m365_005_cis_5-6,"Cannot be Automated
+Process not static control"
+m365_005_cis_5-7,"Cannot be Automated
+Process not static control"
+m365_005_cis_5-8,"Cannot be Automated
+Process not static control"
+m365_005_cis_5-9,"Cannot be Automated
+Process not static control"
+m365_005_cis_5-10,"Cannot be Automated
+Process not static control"
+m365_005_cis_5-11,"Cannot be Automated
+Process not static control"
+m365_005_cis_5-12,"Cannot be Automated
+Process not static control"
+m365_005_cis_5-13,"To Do
+Not Yet Looked At (Alex)"
+m365_005_cis_5-14,"Cannot be Automated
+Process not static control"
+m365_005_cis_5-15,"Cannot be Automated
+Process not static control"
+m365_006_cis_6-1,"Completed, Reviewed & Validated"
+m365_006_cis_6-2,"Completed, Reviewed & Validated"
+m365_006_cis_6-3,"To Do
+Sharepoint"
+m365_006_cis_6-4,"Completed, Reviewed & Validated"
+m365_006_cis_6-5,"Completed, Reviewed & Validated"
