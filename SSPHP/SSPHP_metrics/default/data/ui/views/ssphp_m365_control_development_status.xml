@@ -1,6 +1,6 @@
 <form version="1.1" theme="dark">
   <label>M365 Control Development Status</label>
-  <description>v1.0.0</description>
+  <description>v1.0.1</description>
   
   
   <fieldset submitButton="false">
@@ -102,9 +102,9 @@
 | fillnull value="FALSE" exists
 
 | lookup ssphp_m365_cis_controls_development_status.csv ssphp.use_case.id OUTPUT ssphp.use_case.developer.notes as "Developer Notes"
+| eval "Developer Notes"=if(exists="TRUE","Completed, Reviewed &amp; Validated",'Developer Notes')
 
 | search ssphp.use_case.id="m365*" AND $tkn_ig$ AND $tkn_l$ AND $tkn_fields$
-
 
 ``` sort the lines properly ```
 | rex field=ssphp.use_case.id "^m365_00[0-9]{1}_cis_(?&lt;n1&gt;[^-]*)-(?&lt;n2&gt;[^-]*)"
@@ -144,6 +144,7 @@
         "Developer Notes"
 
 | eventstats count as tkn_controls, sum(eval(if('Development Completed'="TRUE",1,0))) as tkn_done
+
           </query>
           <earliest>0</earliest>
           <latest>now</latest>
