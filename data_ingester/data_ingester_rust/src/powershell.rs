@@ -34,6 +34,16 @@ Install-Module -Confirm:$False -Force -Name ExchangeOnlineManagement;
         ])
         .output()?;
 
+    eprintln!("Installing Powershelll MicrosoftTeams");
+    let _output = Command::new("pwsh")
+        .args([
+            "-Command",
+            r#"
+Install-Module -Confirm:$False -Force -Name MicrosoftTeams;
+"#,
+        ])
+        .output()?;
+
     Ok(())
 }
 
@@ -621,6 +631,41 @@ impl ToHecEvents for &ProtectionAlert {
     }
 }
 
+// 3.7
+pub async fn run_powershell_get_cs_teams_client_configuration(
+    secrets: &Secrets,
+) -> Result<CsTeamsClientConfiguration> {
+    let command = "Get-CsTeamsClientConfiguration";
+    let result = run_microsoft_teams_powershell(secrets, command).await?;
+    Ok(result)
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[serde(untagged)]
+pub enum CsTeamsClientConfiguration {
+    Collection(Vec<Value>),
+    Single(Value),
+}
+
+impl ToHecEvents for &CsTeamsClientConfiguration {
+    type Item = Value;
+    fn source(&self) -> &'static str {
+        "powershell:MicrosoftTeams:Get-CsTeamsClientConfiguration"
+    }
+
+    fn sourcetype(&self) -> &'static str {
+        "m365:get_cs_teams_client_configuration"
+    }
+
+    fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
+        match self {
+            CsTeamsClientConfiguration::Collection(collection) => Box::new(collection.iter()),
+            CsTeamsClientConfiguration::Single(single) => Box::new(iter::once(single)),
+        }
+    }
+}
+
 pub async fn run_exchange_online_powershell<T: DeserializeOwned>(
     secrets: &Secrets,
     command: &str,
@@ -678,6 +723,30 @@ Connect-IPPSSession -ShowBanner:$false -Certificate $pfx -AppID "{}" -Organizati
     Ok(out)
 }
 
+pub async fn run_microsoft_teams_powershell<T: DeserializeOwned>(
+    secrets: &Secrets,
+    command: &str,
+) -> Result<T> {
+    let output = Command::new("pwsh")
+        .args([
+            "-Command",
+            &format!(r#"
+[Byte[]]$pfxBytes = [Convert]::FromBase64String('{}');
+$pfx = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2 -ArgumentList (,$pfxBytes);
+Import-Module MicrosoftTeams;
+Connect-MicrosoftTeams -Certificate $pfx -ApplicationId "{}" -TenantId "{}" | Out-Null;
+{} | ConvertTo-Json -Compress -Depth 20;"#,
+                     secrets.azure_client_certificate,
+                     secrets.azure_client_id,
+                     secrets.azure_client_organization,
+                     command,
+            )
+        ]).output()?;
+
+    let out = serde_json::from_slice::<T>(&output.stdout[..])?;
+    Ok(out)
+}
+
 #[cfg(test)]
 mod test {
     use crate::{
@@ -685,8 +754,10 @@ mod test {
         powershell::{
             install_powershell, run_powershell_get_admin_audit_log_config,
             run_powershell_get_anti_phish_policy, run_powershell_get_atp_policy_for_o365,
-            run_powershell_get_blocked_sender_address, run_powershell_get_dkim_signing_config,
-            run_powershell_get_dlp_compliance_policy, run_powershell_get_email_tenant_settings,
+            run_powershell_get_blocked_sender_address,
+            run_powershell_get_cs_teams_client_configuration,
+            run_powershell_get_dkim_signing_config, run_powershell_get_dlp_compliance_policy,
+            run_powershell_get_email_tenant_settings,
             run_powershell_get_eop_protection_policy_rule,
             run_powershell_get_hosted_outbound_spam_filter_policy, run_powershell_get_mailbox,
             run_powershell_get_malware_filter_policy, run_powershell_get_organization_config,
@@ -880,6 +951,14 @@ mod test {
     async fn test_run_powershell_eop_protection_policy_rule() -> Result<()> {
         let (splunk, secrets) = setup().await?;
         let result = run_powershell_get_eop_protection_policy_rule(&secrets).await?;
+        splunk.send_batch((&result).to_hec_events()?).await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_run_powershell_get_cs_teams_client_configuration() -> Result<()> {
+        let (splunk, secrets) = setup().await?;
+        let result = run_powershell_get_cs_teams_client_configuration(&secrets).await?;
         splunk.send_batch((&result).to_hec_events()?).await?;
         Ok(())
     }
