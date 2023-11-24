@@ -13,6 +13,7 @@ use crate::powershell::run_powershell_get_dkim_signing_config;
 use crate::powershell::run_powershell_get_dlp_compliance_policy;
 use crate::powershell::run_powershell_get_email_tenant_settings;
 use crate::powershell::run_powershell_get_eop_protection_policy_rule;
+use crate::powershell::run_powershell_get_hosted_content_filter_policy;
 use crate::powershell::run_powershell_get_hosted_outbound_spam_filter_policy;
 use crate::powershell::run_powershell_get_mailbox;
 use crate::powershell::run_powershell_get_malware_filter_policy;
@@ -163,8 +164,10 @@ impl MsGraph {
         Ok(result)
     }
 
-    pub async fn list_role_eligiblity_schedule(&self) -> Result<RoleEligibilitySchedule> {
-        let result = self.batch_get(&self.client, "/roleManagement/directory/roleEligibilitySchedules?$expand=roleDefinition,principal,directoryScope,appScope").await?;
+    pub async fn list_role_eligiblity_schedule_instance(
+        &self,
+    ) -> Result<RoleEligibilityScheduleInstance> {
+        let result = self.batch_get(&self.client, "/roleManagement/directory/roleAssignmentScheduleInstances?$expand=activatedUsing,appScope,directoryScope,principal,roleDefinition").await?;
         Ok(result)
     }
 
@@ -600,19 +603,19 @@ pub struct MsGraphResponse<T> {
 }
 
 #[derive(Debug, Serialize, Deserialize, Default)]
-pub struct RoleEligibilitySchedule {
+pub struct RoleEligibilityScheduleInstance {
     #[serde(rename = "value")]
     inner: Vec<serde_json::Value>,
 }
 
-impl ToHecEvents for &RoleEligibilitySchedule {
+impl ToHecEvents for &RoleEligibilityScheduleInstance {
     type Item = Value;
     fn source(&self) -> &str {
         "msgraph"
     }
 
     fn sourcetype(&self) -> &str {
-        "m365:role_eligibility_schedule"
+        "m365:role_eligibility_schedule_instance"
     }
 
     fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
@@ -962,7 +965,7 @@ pub async fn m365(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
     // M365 1.1.15 V2
     try_collect_send(
         "MS Graph List Role Eligibility Schedules",
-        ms_graph.list_role_eligiblity_schedule(),
+        ms_graph.list_role_eligiblity_schedule_instance(),
         &splunk,
     )
     .await?;
@@ -1131,6 +1134,13 @@ pub async fn m365(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
     try_collect_send(
         "Exchange Hosted Outbound Spam Filter Policy",
         run_powershell_get_hosted_outbound_spam_filter_policy(&secrets),
+        &splunk,
+    )
+    .await?;
+
+    try_collect_send(
+        "Exchange Hosted Content Filter Policy",
+        run_powershell_get_hosted_content_filter_policy(&secrets),
         &splunk,
     )
     .await?;
@@ -1485,9 +1495,9 @@ pub(crate) mod test {
     }
 
     #[tokio::test]
-    async fn list_role_eligiblity_schedule_instances() -> Result<()> {
+    async fn list_role_eligiblity_schedule_instance() -> Result<()> {
         let (splunk, ms_graph) = setup().await?;
-        let result = ms_graph.list_role_eligiblity_schedule().await?;
+        let result = ms_graph.list_role_eligiblity_schedule_instance().await?;
         splunk.send_batch((&result).to_hec_events()?).await?;
         Ok(())
     }
