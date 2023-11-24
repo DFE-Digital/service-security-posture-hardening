@@ -171,6 +171,14 @@ impl MsGraph {
         Ok(result)
     }
 
+    /// M365 V2 1.1.17
+    pub async fn list_legacy_policies(&self) -> Result<LegacyPolicies> {
+        let result = self
+            .batch_get(&self.beta_client, "/legacy/policies")
+            .await?;
+        Ok(result)
+    }
+
     pub async fn list_conditional_access_policies(&self) -> Result<ConditionalAccessPolicies> {
         let mut stream = self
             .client
@@ -477,6 +485,27 @@ impl MsGraph {
             .batch_get(&self.beta_client, "policies/deviceRegistrationPolicy")
             .await?;
         Ok(result)
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, Default)]
+pub struct LegacyPolicies {
+    #[serde(rename = "value")]
+    inner: Vec<serde_json::Value>,
+}
+
+impl ToHecEvents for &LegacyPolicies {
+    type Item = Value;
+    fn source(&self) -> &str {
+        "msgraph"
+    }
+
+    fn sourcetype(&self) -> &str {
+        "msgraph:legacy_policy"
+    }
+
+    fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
+        Box::new(self.inner.iter())
     }
 }
 
@@ -961,6 +990,14 @@ pub async fn m365(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
     //             .await?;
     //     }
     // }
+
+    // M365 1.1.17 V2
+    try_collect_send(
+        "MS Graph List Role Eligibility Schedules",
+        ms_graph.list_legacy_policies(),
+        &splunk,
+    )
+    .await?;
 
     // M365 1.1.15 V2
     try_collect_send(
@@ -1498,6 +1535,14 @@ pub(crate) mod test {
     async fn list_role_eligiblity_schedule_instance() -> Result<()> {
         let (splunk, ms_graph) = setup().await?;
         let result = ms_graph.list_role_eligiblity_schedule_instance().await?;
+        splunk.send_batch((&result).to_hec_events()?).await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn list_legacy_policies() -> Result<()> {
+        let (splunk, ms_graph) = setup().await?;
+        let result = ms_graph.list_legacy_policies().await?;
         splunk.send_batch((&result).to_hec_events()?).await?;
         Ok(())
     }
