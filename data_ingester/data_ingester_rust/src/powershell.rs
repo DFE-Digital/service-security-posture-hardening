@@ -631,6 +631,41 @@ impl ToHecEvents for &ProtectionAlert {
     }
 }
 
+// 4.13
+pub async fn run_powershell_get_hosted_content_filter_policy(
+    secrets: &Secrets,
+) -> Result<HostedContentFilterPolicy> {
+    let command = "Get-HostedContentFilterPolicy";
+    let result = run_exchange_online_powershell(secrets, command).await?;
+    Ok(result)
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[serde(untagged)]
+pub enum HostedContentFilterPolicy {
+    Collection(Vec<Value>),
+    Single(Value),
+}
+
+impl ToHecEvents for &HostedContentFilterPolicy {
+    type Item = Value;
+    fn source(&self) -> &'static str {
+        "powershell:ExchangeOnline:Get-HostedContentFilterPolicy"
+    }
+
+    fn sourcetype(&self) -> &'static str {
+        "m365:hosted_content_filter_policy"
+    }
+
+    fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
+        match self {
+            HostedContentFilterPolicy::Collection(collection) => Box::new(collection.iter()),
+            HostedContentFilterPolicy::Single(single) => Box::new(iter::once(single)),
+        }
+    }
+}
+
 // 3.7
 pub async fn run_powershell_get_cs_teams_client_configuration(
     secrets: &Secrets,
@@ -759,6 +794,7 @@ mod test {
             run_powershell_get_dkim_signing_config, run_powershell_get_dlp_compliance_policy,
             run_powershell_get_email_tenant_settings,
             run_powershell_get_eop_protection_policy_rule,
+            run_powershell_get_hosted_content_filter_policy,
             run_powershell_get_hosted_outbound_spam_filter_policy, run_powershell_get_mailbox,
             run_powershell_get_malware_filter_policy, run_powershell_get_organization_config,
             run_powershell_get_owa_mailbox_policy, run_powershell_get_protection_alert,
@@ -959,6 +995,14 @@ mod test {
     async fn test_run_powershell_get_cs_teams_client_configuration() -> Result<()> {
         let (splunk, secrets) = setup().await?;
         let result = run_powershell_get_cs_teams_client_configuration(&secrets).await?;
+        splunk.send_batch((&result).to_hec_events()?).await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_run_powershell_get_hosted_content_filter_policy() -> Result<()> {
+        let (splunk, secrets) = setup().await?;
+        let result = run_powershell_get_hosted_content_filter_policy(&secrets).await?;
         splunk.send_batch((&result).to_hec_events()?).await?;
         Ok(())
     }
