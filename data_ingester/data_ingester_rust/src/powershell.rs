@@ -748,7 +748,7 @@ pub async fn run_exchange_online_powershell<T: DeserializeOwned>(
 $pfx = New-Object System.Security.Cryptography.X509Certificates.X509Certificate -ArgumentList (,$pfxBytes);
 Import-Module ExchangeOnlineManagement;
 Connect-ExchangeOnline -ShowBanner:$false -Certificate $pfx -AppID "{}" -Organization "{}";
-{} | ConvertTo-Json -Compress -Depth 20 -WarningAction SilentlyContinue;"#,
+{} | ConvertTo-Json -Compress -Depth 20;"#,
                      secrets.azure_client_certificate,
                      secrets.azure_client_id,
                      secrets.azure_client_organization,
@@ -814,6 +814,7 @@ Connect-MicrosoftTeams -Certificate $pfx -ApplicationId "{}" -TenantId "{}" | Ou
         ]).output()?;
 
     let out = serde_json::from_slice::<T>(&output.stdout[..])?;
+
     Ok(out)
 }
 

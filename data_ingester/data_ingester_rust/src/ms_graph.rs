@@ -436,6 +436,7 @@ impl MsGraph {
         Ok(body)
     }
 
+    /// MS Graph Permission: Policy.Read.PermissionGrant
     pub async fn list_permission_grant_policy(&self) -> Result<PermissionGrantPolicy> {
         let response = self
             .client
