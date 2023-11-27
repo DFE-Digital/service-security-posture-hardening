@@ -736,6 +736,59 @@ impl ToHecEvents for &ManagementRoleAssignment {
     }
 }
 
+pub async fn run_powershell_exchange_login_test(secrets: &Secrets) -> Result<LoginTest> {
+    let output = Command::new("pwsh")
+        .args([
+            "-Command",
+            &format!(r#"
+[Byte[]]$pfxBytes = [Convert]::FromBase64String('{}');
+$pfx = New-Object System.Security.Cryptography.X509Certificates.X509Certificate -ArgumentList (,$pfxBytes);
+Import-Module ExchangeOnlineManagement;
+Connect-ExchangeOnline -Certificate $pfx -AppID "{}" -Organization "{}";"#,
+                     secrets.azure_client_certificate,
+                     secrets.azure_client_id,
+                     secrets.azure_client_organization,
+            )
+        ]).output()?;
+
+    let stdout = String::from_utf8(output.stdout)?;
+    let stderr = String::from_utf8(output.stderr)?;
+
+    Ok(LoginTest::Single(Output { stdout, stderr }))
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Output {
+    stdout: String,
+    stderr: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[serde(untagged)]
+pub enum LoginTest {
+    Collection(Vec<Output>),
+    Single(Output),
+}
+
+impl ToHecEvents for &LoginTest {
+    type Item = Output;
+    fn source(&self) -> &'static str {
+        "powershell:Exchange:connect_exchange:loging_type"
+    }
+
+    fn sourcetype(&self) -> &'static str {
+        "m365:Connet-ExchangOnline:login_test"
+    }
+
+    fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
+        match self {
+            LoginTest::Collection(collection) => Box::new(collection.iter()),
+            LoginTest::Single(single) => Box::new(iter::once(single)),
+        }
+    }
+}
+
 pub async fn run_exchange_online_powershell<T: DeserializeOwned>(
     secrets: &Secrets,
     command: &str,
@@ -823,9 +876,9 @@ mod test {
     use crate::{
         keyvault::{get_keyvault_secrets, Secrets},
         powershell::{
-            install_powershell, run_powershell_get_admin_audit_log_config,
-            run_powershell_get_anti_phish_policy, run_powershell_get_atp_policy_for_o365,
-            run_powershell_get_blocked_sender_address,
+            install_powershell, run_powershell_exchange_login_test,
+            run_powershell_get_admin_audit_log_config, run_powershell_get_anti_phish_policy,
+            run_powershell_get_atp_policy_for_o365, run_powershell_get_blocked_sender_address,
             run_powershell_get_cs_teams_client_configuration,
             run_powershell_get_dkim_signing_config, run_powershell_get_dlp_compliance_policy,
             run_powershell_get_email_tenant_settings,
@@ -1048,6 +1101,14 @@ mod test {
     async fn test_run_powershell_get_management_role_assignment() -> Result<()> {
         let (splunk, secrets) = setup().await?;
         let result = run_powershell_get_management_role_assignment(&secrets).await?;
+        splunk.send_batch((&result).to_hec_events()?).await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_run_powershell_exchange_login_test() -> Result<()> {
+        let (splunk, secrets) = setup().await?;
+        let result = run_powershell_exchange_login_test(&secrets).await?;
         splunk.send_batch((&result).to_hec_events()?).await?;
         Ok(())
     }

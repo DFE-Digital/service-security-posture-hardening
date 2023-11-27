@@ -4,6 +4,7 @@ use crate::conditional_access_policies::ConditionalAccessPolicies;
 use crate::dns::resolve_txt_record;
 use crate::groups::Groups;
 use crate::keyvault::Secrets;
+use crate::powershell::run_powershell_exchange_login_test;
 use crate::powershell::run_powershell_get_admin_audit_log_config;
 use crate::powershell::run_powershell_get_anti_phish_policy;
 use crate::powershell::run_powershell_get_atp_policy_for_o365;
@@ -436,7 +437,7 @@ impl MsGraph {
         Ok(body)
     }
 
-    /// MS Graph Permission: Policy.Read.PermissionGrant
+    /// MS Graph Permission Policy.Read.PermissionGrant
     pub async fn list_permission_grant_policy(&self) -> Result<PermissionGrantPolicy> {
         let response = self
             .client
@@ -1121,6 +1122,14 @@ pub async fn m365(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
     .await?;
 
     try_collect_send("MS Graph Groups", ms_graph.list_groups(), &splunk).await?;
+
+    // M365 V2.0 2.8
+    try_collect_send(
+        "Exchange Login test",
+        run_powershell_exchange_login_test(&secrets),
+        &splunk,
+    )
+    .await?;
 
     // M365 V2.0 2.8
     try_collect_send(
