@@ -701,6 +701,41 @@ impl ToHecEvents for &CsTeamsClientConfiguration {
     }
 }
 
+// M365 V2 2.8
+pub async fn run_powershell_get_management_role_assignment(
+    secrets: &Secrets,
+) -> Result<ManagementRoleAssignment> {
+    let command = "Get-ManagementRoleAssignment";
+    let result = run_exchange_online_powershell(secrets, command).await?;
+    Ok(result)
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[serde(untagged)]
+pub enum ManagementRoleAssignment {
+    Collection(Vec<Value>),
+    Single(Value),
+}
+
+impl ToHecEvents for &ManagementRoleAssignment {
+    type Item = Value;
+    fn source(&self) -> &'static str {
+        "powershell:MicrosoftTeams:Get-ManagementRoleAssignment"
+    }
+
+    fn sourcetype(&self) -> &'static str {
+        "m365:get_management_role_assignment"
+    }
+
+    fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
+        match self {
+            ManagementRoleAssignment::Collection(collection) => Box::new(collection.iter()),
+            ManagementRoleAssignment::Single(single) => Box::new(iter::once(single)),
+        }
+    }
+}
+
 pub async fn run_exchange_online_powershell<T: DeserializeOwned>(
     secrets: &Secrets,
     command: &str,
@@ -796,7 +831,8 @@ mod test {
             run_powershell_get_eop_protection_policy_rule,
             run_powershell_get_hosted_content_filter_policy,
             run_powershell_get_hosted_outbound_spam_filter_policy, run_powershell_get_mailbox,
-            run_powershell_get_malware_filter_policy, run_powershell_get_organization_config,
+            run_powershell_get_malware_filter_policy,
+            run_powershell_get_management_role_assignment, run_powershell_get_organization_config,
             run_powershell_get_owa_mailbox_policy, run_powershell_get_protection_alert,
             run_powershell_get_safe_attachment_policy, run_powershell_get_safe_links_policy,
             run_powershell_get_sharing_policy, run_powershell_get_spoof_intelligence_insight,
@@ -1003,6 +1039,14 @@ mod test {
     async fn test_run_powershell_get_hosted_content_filter_policy() -> Result<()> {
         let (splunk, secrets) = setup().await?;
         let result = run_powershell_get_hosted_content_filter_policy(&secrets).await?;
+        splunk.send_batch((&result).to_hec_events()?).await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_run_powershell_get_management_role_assignment() -> Result<()> {
+        let (splunk, secrets) = setup().await?;
+        let result = run_powershell_get_management_role_assignment(&secrets).await?;
         splunk.send_batch((&result).to_hec_events()?).await?;
         Ok(())
     }
