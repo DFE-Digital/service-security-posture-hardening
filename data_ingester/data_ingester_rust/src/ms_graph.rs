@@ -4,6 +4,7 @@ use crate::conditional_access_policies::ConditionalAccessPolicies;
 use crate::dns::resolve_txt_record;
 use crate::groups::Groups;
 use crate::keyvault::Secrets;
+use crate::powershell::run_powershell_exchange_login_test;
 use crate::powershell::run_powershell_get_admin_audit_log_config;
 use crate::powershell::run_powershell_get_anti_phish_policy;
 use crate::powershell::run_powershell_get_atp_policy_for_o365;
@@ -17,6 +18,7 @@ use crate::powershell::run_powershell_get_hosted_content_filter_policy;
 use crate::powershell::run_powershell_get_hosted_outbound_spam_filter_policy;
 use crate::powershell::run_powershell_get_mailbox;
 use crate::powershell::run_powershell_get_malware_filter_policy;
+use crate::powershell::run_powershell_get_management_role_assignment;
 use crate::powershell::run_powershell_get_organization_config;
 use crate::powershell::run_powershell_get_owa_mailbox_policy;
 use crate::powershell::run_powershell_get_protection_alert;
@@ -178,6 +180,15 @@ impl MsGraph {
             .await?;
         Ok(result)
     }
+
+    /// M365 V2 1.1.18
+    /// This does not work - No such API
+    // pub async fn get_app_family_details(&self) -> Result<AppFamilyDetails> {
+    //     let result = self
+    //         .batch_get(&self.beta_client, "/organization/getAppFamilyDetails")
+    //         .await?;
+    //     Ok(result)
+    // }
 
     pub async fn list_conditional_access_policies(&self) -> Result<ConditionalAccessPolicies> {
         let mut stream = self
@@ -426,6 +437,7 @@ impl MsGraph {
         Ok(body)
     }
 
+    /// MS Graph Permission Policy.Read.PermissionGrant
     pub async fn list_permission_grant_policy(&self) -> Result<PermissionGrantPolicy> {
         let response = self
             .client
@@ -589,6 +601,29 @@ impl ToHecEvents for &AdminFormSettings {
         Box::new(iter::once(self))
     }
 }
+
+//#[derive(Debug, Serialize, Deserialize, Default)]
+// pub struct AppFamilyDetails {
+//     #[serde(flatten)]
+//     value: serde_json::Value,
+// }
+// #[derive(Debug, Serialize, Deserialize, Default)]
+// pub struct AppFamilyDetails(Value);
+
+// impl ToHecEvents for &AppFamilyDetails {
+//     type Item = Self;
+//     fn source(&self) -> &str {
+//         "msgraph"
+//     }
+
+//     fn sourcetype(&self) -> &str {
+//         "m365:app_family_details"
+//     }
+
+//     fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
+//         Box::new(iter::once(self))
+//     }
+// }
 
 #[derive(Debug, Serialize, Deserialize, Default)]
 pub struct AuthorizationPolicy {
@@ -1088,6 +1123,22 @@ pub async fn m365(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
 
     try_collect_send("MS Graph Groups", ms_graph.list_groups(), &splunk).await?;
 
+    // M365 V2.0 2.8
+    try_collect_send(
+        "Exchange Login test",
+        run_powershell_exchange_login_test(&secrets),
+        &splunk,
+    )
+    .await?;
+
+    // M365 V2.0 2.8
+    try_collect_send(
+        "Exchange Get Management Role Assignment",
+        run_powershell_get_management_role_assignment(&secrets),
+        &splunk,
+    )
+    .await?;
+
     // M365 V2.0 3.7
     try_collect_send(
         "MsTeams Get Cs Teams Client Configuration",
@@ -1546,4 +1597,13 @@ pub(crate) mod test {
         splunk.send_batch((&result).to_hec_events()?).await?;
         Ok(())
     }
+
+    // API only exists in an undocumented preview state
+    // #[tokio::test]
+    // async fn get_app_family_details() -> Result<()> {
+    //     let (splunk, ms_graph) = setup().await?;
+    //     let result = ms_graph.get_app_family_details().await?;
+    //     splunk.send_batch((&result).to_hec_events()?).await?;
+    //     Ok(())
+    // }
 }
