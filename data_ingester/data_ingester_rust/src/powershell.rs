@@ -704,7 +704,7 @@ impl ToHecEvents for &CsTeamsClientConfiguration {
 // 3.6
 pub async fn run_powershell_get_cs_tenant_federation_configuration(
     secrets: &Secrets,
-) -> Result<CsTeamsClientConfiguration> {
+) -> Result<CsTenantFederationConfiguration> {
     let command = "Get-CsTenantFederationConfiguration";
     let result = run_microsoft_teams_powershell(secrets, command).await?;
     Ok(result)
