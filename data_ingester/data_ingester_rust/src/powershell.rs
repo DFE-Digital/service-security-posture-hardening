@@ -701,6 +701,41 @@ impl ToHecEvents for &CsTeamsClientConfiguration {
     }
 }
 
+// 3.6
+pub async fn run_powershell_get_cs_tenant_federation_configuration(
+    secrets: &Secrets,
+) -> Result<CsTeamsClientConfiguration> {
+    let command = "Get-CsTenantFederationConfiguration";
+    let result = run_microsoft_teams_powershell(secrets, command).await?;
+    Ok(result)
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[serde(untagged)]
+pub enum CsTenantFederationConfiguration {
+    Collection(Vec<Value>),
+    Single(Value),
+}
+
+impl ToHecEvents for &CsTenantFederationConfiguration {
+    type Item = Value;
+    fn source(&self) -> &'static str {
+        "powershell:MicrosoftTeams:Get-CsTenantFederationConfiguration"
+    }
+
+    fn sourcetype(&self) -> &'static str {
+        "m365:get_cs_teams_tenant_federation_configuration"
+    }
+
+    fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
+        match self {
+            CsTenantFederationConfiguration::Collection(collection) => Box::new(collection.iter()),
+            CsTenantFederationConfiguration::Single(single) => Box::new(iter::once(single)),
+        }
+    }
+}
+
 // M365 V2 2.8
 pub async fn run_powershell_get_management_role_assignment(
     secrets: &Secrets,
@@ -880,6 +915,7 @@ mod test {
             run_powershell_get_admin_audit_log_config, run_powershell_get_anti_phish_policy,
             run_powershell_get_atp_policy_for_o365, run_powershell_get_blocked_sender_address,
             run_powershell_get_cs_teams_client_configuration,
+            run_powershell_get_cs_tenant_federation_configuration,
             run_powershell_get_dkim_signing_config, run_powershell_get_dlp_compliance_policy,
             run_powershell_get_email_tenant_settings,
             run_powershell_get_eop_protection_policy_rule,
@@ -1109,6 +1145,14 @@ mod test {
     async fn test_run_powershell_exchange_login_test() -> Result<()> {
         let (splunk, secrets) = setup().await?;
         let result = run_powershell_exchange_login_test(&secrets).await?;
+        splunk.send_batch((&result).to_hec_events()?).await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_run_powershell_teams_cs_tenant_federation_configuration() -> Result<()> {
+        let (splunk, secrets) = setup().await?;
+        let result = run_powershell_get_cs_tenant_federation_configuration(&secrets).await?;
         splunk.send_batch((&result).to_hec_events()?).await?;
         Ok(())
     }
