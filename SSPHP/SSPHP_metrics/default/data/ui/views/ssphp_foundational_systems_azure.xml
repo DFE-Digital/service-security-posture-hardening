@@ -1,6 +1,6 @@
 <dashboard version="1.1" theme="dark" script="js/table_cell_color.js">
   <label>AZURE Benchmark : Security Posture Continuous Assurance</label>
-  <description>v1.0.1</description>
+  <description>v1.0.2</description>
   
   <init>
     <set token="tkn_selected_system">AZURE</set>
@@ -156,7 +156,7 @@ index="ssphp_metrics_summary"
      | fields ssphp.use_case.id, current_status]
 
 | fillnull value="include" current_status
-| search current_status="$tkn_show_ex$"
+| search current_status="$tkn_show_ex$" AND ssphp.use_case.title!=""
 
 | table ssphp.use_case.id, ssphp.use_case.title, Score, ssphp.cis_benchmark.control.title, ssphp.use_case.short_description, ssphp.use_case.description, ssphp.cis_benchmark.control.level, ssphp.cis_benchmark.controls.ig1, current_status
 
