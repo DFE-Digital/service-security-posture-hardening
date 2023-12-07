@@ -18,6 +18,8 @@ bytes = "*"
 dyn-fmt = "*"
 futures = "*"
 graph-rs-sdk = { git = "https://github.com/akinnane/graph-rs-sdk.git", features = ["rustls-tls"] }
+graph-core = { git = "https://github.com/akinnane/graph-rs-sdk.git" }
+graph-http = { git = "https://github.com/akinnane/graph-rs-sdk.git" }
 hostname = "*"
 hyper = "*"
 itertools = "*"
