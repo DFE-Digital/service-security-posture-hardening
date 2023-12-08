@@ -40,11 +40,16 @@ use crate::users::UsersMap;
 use anyhow::{Context, Result};
 use futures::Future;
 use futures::StreamExt;
+use graph_http::api_impl::RequestComponents;
+use graph_http::api_impl::RequestHandler;
 use graph_rs_sdk::oauth::AccessToken;
 use graph_rs_sdk::oauth::OAuth;
 use graph_rs_sdk::Graph;
 use graph_rs_sdk::ODataQuery;
-use serde::de::DeserializeOwned;
+use reqwest::header::HeaderMap;
+use reqwest::header::HeaderValue;
+use reqwest::header::CONTENT_TYPE;
+use reqwest::Method;
 use serde::Deserialize;
 use serde::Serialize;
 use serde_json::Value;
@@ -53,6 +58,7 @@ use std::fmt::Debug;
 use std::iter;
 use std::sync::Arc;
 use tokio::sync::mpsc::UnboundedSender;
+use url::Url;
 
 pub async fn login(client_id: &str, client_secret: &str, tenant_id: &str) -> Result<MsGraph> {
     let mut oauth = OAuth::new();
@@ -102,60 +108,62 @@ pub struct MsGraph {
     oauth: OAuth,
 }
 
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[serde(untagged)]
+pub enum MsGraphGetResponse {
+    Collection { value: Vec<serde_json::Value> },
+    Single(serde_json::Value),
+}
+
 impl MsGraph {
-    async fn batch_get<T>(&self, client: &Graph, url: &str) -> Result<T>
-    where
-        T: DeserializeOwned + Debug + Default,
-    {
-        let json = serde_json::json!({
-            "requests": [
-                {
-                    "id": "1",
-                    "method": "GET",
-                    "url": url,
-                },
-            ]
-        });
-
-        let response = client.batch(&json).send().await?;
-
-        let mut batch_response: MsGraphBatch<T> = response.json().await?;
-
-        let result = std::mem::take(
-            &mut batch_response
-                .responses
-                .first_mut()
-                .context("no response")?
-                .body,
+    async fn get(&self, client: &Graph, url: &str) -> Result<Vec<Value>> {
+        let current_client = graph_http::api_impl::Client::new(
+            self.oauth
+                .get_access_token()
+                .context("no access token")?
+                .bearer_token(),
         );
 
-        Ok(result)
+        let mut header_map = HeaderMap::new();
+
+        header_map
+            .entry(CONTENT_TYPE)
+            .or_insert(HeaderValue::from_static("application/json"));
+
+        let full_url = Url::parse(&format!("{}{}", client.url().as_str(), url))?;
+
+        let request_components = RequestComponents::new(
+            graph_core::resource::ResourceIdentity::Custom,
+            full_url,
+            Method::GET,
+        );
+
+        let request_handler =
+            RequestHandler::new(current_client.clone(), request_components, None, None)
+                .headers(header_map);
+
+        let mut stream = request_handler.paging().stream::<MsGraphGetResponse>()?;
+
+        let mut collection = Vec::default();
+        while let Some(result) = stream.next().await {
+            let response = result?;
+            let body = response.into_body()?;
+            match body {
+                MsGraphGetResponse::Collection { value } => collection.extend(value),
+                MsGraphGetResponse::Single(value) => collection.push(value),
+            }
+        }
+
+        Ok(collection)
     }
 
     /// 2.10
     /// MSGraph Permission: OrgSettings-Forms.Read.All
     /// https://graph.microsoft.com/beta/admin/forms
     pub async fn get_admin_form_settings(&self) -> Result<AdminFormSettings> {
-        let client = reqwest::Client::new();
-        let (client, request) = client
-            .get("https://graph.microsoft.com/beta/admin/forms")
-            .header(
-                "Authorization",
-                &format!(
-                    "Bearer {}",
-                    self.oauth
-                        .get_access_token()
-                        .context("can't get access token")?
-                        .bearer_token()
-                ),
-            )
-            .build_split();
-
-        let response = client.execute(request?).await?;
-
-        let body = response.json().await?;
-
-        Ok(body)
+        let result = self.get(&self.beta_client, "/admin/forms").await?;
+        Ok(AdminFormSettings { inner: result })
     }
 
     /// 1.1.9
@@ -163,32 +171,30 @@ impl MsGraph {
     /// https://learn.microsoft.com/en-us/graph/api/resources/groupsetting?view=graph-rest-1.0
     /// The /beta version of this resource is named directorySetting.
     pub async fn list_group_settings(&self) -> Result<GroupSettings> {
-        let result = self.batch_get(&self.client, "/groupSettings").await?;
-        Ok(result)
+        let result = self.get(&self.client, "/groupSettings").await?;
+        Ok(GroupSettings { inner: result })
     }
 
     pub async fn list_role_eligiblity_schedule_instance(
         &self,
     ) -> Result<RoleEligibilityScheduleInstance> {
-        let result = self.batch_get(&self.client, "/roleManagement/directory/roleAssignmentScheduleInstances?$expand=activatedUsing,appScope,directoryScope,principal,roleDefinition").await?;
-        Ok(result)
+        let result = self.get(&self.client, "/roleManagement/directory/roleAssignmentScheduleInstances?$expand=activatedUsing,appScope,directoryScope,principal,roleDefinition").await?;
+        Ok(RoleEligibilityScheduleInstance { inner: result })
     }
 
     /// M365 V2 1.1.17
     pub async fn list_legacy_policies(&self) -> Result<LegacyPolicies> {
-        let result = self
-            .batch_get(&self.beta_client, "/legacy/policies")
-            .await?;
-        Ok(result)
+        let result = self.get(&self.beta_client, "/legacy/policies").await?;
+        Ok(LegacyPolicies { inner: result })
     }
 
     /// M365 V2 1.1.18
     /// This does not work - No such API
     // pub async fn get_app_family_details(&self) -> Result<AppFamilyDetails> {
     //     let result = self
-    //         .batch_get(&self.beta_client, "/organization/getAppFamilyDetails")
+    //         .get(&self.beta_client, "/organization/getAppFamilyDetails")
     //         .await?;
-    //     Ok(result)
+    //     Ok(AppFamilyDetails { inner: result })
     // }
 
     pub async fn list_conditional_access_policies(&self) -> Result<ConditionalAccessPolicies> {
@@ -495,9 +501,9 @@ impl MsGraph {
     /// 1.22
     pub async fn get_device_registration_policy(&self) -> Result<DeviceRegistrationPolicy> {
         let result = self
-            .batch_get(&self.beta_client, "policies/deviceRegistrationPolicy")
+            .get(&self.beta_client, "/policies/deviceRegistrationPolicy")
             .await?;
-        Ok(result)
+        Ok(DeviceRegistrationPolicy { inner: result })
     }
 }
 
@@ -523,10 +529,12 @@ impl ToHecEvents for &LegacyPolicies {
 }
 
 #[derive(Debug, Serialize, Deserialize, Default)]
-pub struct DeviceRegistrationPolicy(Value);
+pub struct DeviceRegistrationPolicy {
+    inner: Vec<Value>,
+}
 
 impl ToHecEvents for &DeviceRegistrationPolicy {
-    type Item = Self;
+    type Item = Value;
     fn source(&self) -> &str {
         "msgraph"
     }
@@ -536,7 +544,7 @@ impl ToHecEvents for &DeviceRegistrationPolicy {
     }
 
     fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
-        Box::new(iter::once(self))
+        Box::new(self.inner.iter())
     }
 }
 
@@ -585,11 +593,11 @@ impl ToHecEvents for &AccessReviewDefinitions {
 #[derive(Debug, Serialize, Deserialize, Default)]
 pub struct AdminFormSettings {
     #[serde(rename = "settings")]
-    inner: serde_json::Value,
+    inner: Vec<serde_json::Value>,
 }
 
 impl ToHecEvents for &AdminFormSettings {
-    type Item = Self;
+    type Item = Value;
     fn source(&self) -> &str {
         "msgraph"
     }
@@ -599,20 +607,18 @@ impl ToHecEvents for &AdminFormSettings {
     }
 
     fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
-        Box::new(iter::once(self))
+        Box::new(self.inner.iter())
     }
 }
 
-//#[derive(Debug, Serialize, Deserialize, Default)]
+// #[derive(Debug, Serialize, Deserialize, Default)]
 // pub struct AppFamilyDetails {
 //     #[serde(flatten)]
-//     value: serde_json::Value,
+//     inner: Vec<Value>,
 // }
-// #[derive(Debug, Serialize, Deserialize, Default)]
-// pub struct AppFamilyDetails(Value);
 
 // impl ToHecEvents for &AppFamilyDetails {
-//     type Item = Self;
+//     type Item = Value;
 //     fn source(&self) -> &str {
 //         "msgraph"
 //     }
@@ -622,7 +628,7 @@ impl ToHecEvents for &AdminFormSettings {
 //     }
 
 //     fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
-//         Box::new(iter::once(self))
+//         Box::new(self.inner.iter())
 //     }
 // }
 
@@ -655,16 +661,6 @@ impl ToHecEvents for &AuthorizationPolicy {
     fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
         unimplemented!()
     }
-}
-
-#[derive(Debug, Serialize, Deserialize, Default)]
-pub struct MsGraphBatch<T> {
-    responses: Vec<MsGraphResponse<T>>,
-}
-
-#[derive(Debug, Serialize, Deserialize, Default)]
-pub struct MsGraphResponse<T> {
-    body: T,
 }
 
 #[derive(Debug, Serialize, Deserialize, Default)]
@@ -1608,6 +1604,7 @@ pub(crate) mod test {
     }
 
     // API only exists in an undocumented preview state
+    // #[ignore]
     // #[tokio::test]
     // async fn get_app_family_details() -> Result<()> {
     //     let (splunk, ms_graph) = setup().await?;

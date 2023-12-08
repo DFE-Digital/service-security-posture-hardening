@@ -1399,6 +1399,8 @@ dependencies = [
  "bytes",
  "dyn-fmt",
  "futures",
+ "graph-core",
+ "graph-http",
  "graph-rs-sdk",
  "hostname",
  "hyper 1.0.1",
