@@ -909,6 +909,12 @@ pub async fn azure_users(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<(
     let subscriptions = azure_rest.azure_subscriptions().await?;
     splunk.send_batch((&subscriptions).to_hec_events()?).await?;
 
+    splunk.log("Getting Azure Subscriptions").await?;
+    let subscription_policies = azure_rest.get_microsoft_subscription_policies().await?;
+    splunk
+        .send_batch((&subscription_policies).to_hec_events()?)
+        .await?;
+
     splunk
         .log("Getting Azure Subscription RoleDefinitions")
         .await?;
