@@ -1,6 +1,6 @@
 <dashboard version="1.1" theme="dark" script="js/table_cell_color.js">
   <label>Azure Active Directory CIS [L1/IG1] Benchmark : Security Posture Continuous Assurance</label>
-  <description>v1.1.6</description>
+  <description>v1.1.8</description>
   
   <init>
     <set token="tkn_selected_system">AZURE ACTIVE DIRECTORY</set>
@@ -34,8 +34,8 @@
 
         <search>
           <query>
-`ssphp_metrics_index` ssphp.use_case.id="aad_000" earliest=-1d@d latest=now
-[| search `ssphp_metrics_index` ssphp.use_case.id="aad_000" earliest=-1d@d latest=now
+`ssphp_metrics_index` ssphp.use_case.id="azure_000" earliest=-1d@d latest=now
+[| search `ssphp_metrics_index` ssphp.use_case.id="azure_000" earliest=-1d@d latest=now
   | stats max(SSPHP_RUN) as SSPHP_RUN
   | return SSPHP_RUN]
         
@@ -156,12 +156,12 @@
         <search>
           <query>
 index="ssphp_metrics_summary" 
-      ssphp.use_case.id="aad*" 
+      (ssphp.use_case.id="aad*" OR ssphp.use_case.id="azure_001*")
       ssphp.use_case.id!="*_000" 
       $tkn_show_l1$ 
       $tkn_show_ig$
 
-      [| search index="ssphp_metrics_summary" ssphp.use_case.id="aad*" ssphp.use_case.id!="*_000"
+      [| search index="ssphp_metrics_summary" (ssphp.use_case.id="aad*" OR ssphp.use_case.id="azure_001*") ssphp.use_case.id!="*_000"
         | stats max(SSPHP_RUN) as SSPHP_RUN by ssphp.use_case.id
         | eval search_text="(\"ssphp.use_case.id\"=\"".'ssphp.use_case.id'."\" AND SSPHP_RUN=\"".SSPHP_RUN."\")"
         | stats values(search_text) as search_text
@@ -201,8 +201,10 @@ index="ssphp_metrics_summary"
           current_status as "Exclusion Status",
           ssphp.cis_benchmark.controls.ig1 as "IG1 Status"
 
+| sort 0 Title
+
 ``` sort the lines properly ```
-| rex field=ssphp.use_case.id "^aad_00[0-9]{1}_cis_(?&lt;n1&gt;[^-]*)-(?&lt;n2&gt;[^-]*)"
+```| rex field=ssphp.use_case.id "^aad_00[0-9]{1}_cis_(?&lt;n1&gt;[^-]*)-(?&lt;n2&gt;[^-]*)"
   | rex field=ssphp.use_case.id "^aad_00[0-9]{1}_cis_[^-]*-[^-]*-(?&lt;n3&gt;.*)$"
   | fillnull value=0 n1, n2, n3
   | eval n2="00".n2, n2=substr(n2,len(n2)-1,2),
@@ -210,7 +212,7 @@ index="ssphp_metrics_summary"
           sort_field='n1'.'n2'.'n3',
           sort_field=replace(sort_field,"00000","99999")
   | sort 0 sort_field, ssphp.use_case.id
-  | fields - sort_field, n1, n2, n3
+  | fields - sort_field, n1, n2, n3```
 
 
 ``` i just put this in because i misnamed the controls (missed a -) so i wanted them out of the dashboard, but it will need to come out when the score have aged out```
