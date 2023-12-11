@@ -532,6 +532,15 @@ mod test {
     }
 
     #[tokio::test]
+    async fn test_azureclient_azure_role_assignments() -> Result<()> {
+        let (azure_rest, splunk) = setup().await?;
+        let collection = azure_rest.azure_role_assignments().await?;
+        splunk.send_batch((&collection).to_hec_events()?).await?;
+        assert!(!collection.is_empty());
+        Ok(())
+    }
+
+    #[tokio::test]
     async fn test_get_microsoft_subscription_policies() -> Result<()> {
         let (azure_rest, splunk) = setup().await?;
         let collection = azure_rest.get_microsoft_subscription_policies().await?;
