@@ -14,6 +14,8 @@ use azure_identity::TokenCredentialOptions;
 use dyn_fmt::AsStrFormatExt;
 use futures::stream::StreamExt;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use serde_json::Value;
+use std::iter;
 use std::{collections::HashMap, sync::Arc};
 use url::Url;
 
@@ -138,6 +140,15 @@ impl AzureRest {
     pub async fn get_microsoft_security_auto_provisioning_settings(&self) -> Result<ReturnTypes> {
         let url_template = "https://management.azure.com/subscriptions/{}/providers/Microsoft.Security/autoProvisioningSettings?api-version=2017-08-01-preview";
         let results = self.rest_request_subscription_iter(url_template).await?;
+        Ok(results)
+    }
+
+    /// Probably needs to iterate through all tenancies
+    /// Azure Foundations
+    /// 1.25
+    pub async fn get_microsoft_subscription_policies(&self) -> Result<SubscriptionPolicies> {
+        let url = "https://management.azure.com/providers/Microsoft.Subscription/policies/default?api-version=2021-01-01-privatepreview";
+        let results = self.rest_request(url).await?;
         Ok(results)
     }
 
@@ -519,6 +530,14 @@ mod test {
         assert!(!collection.is_empty());
         Ok(())
     }
+
+    #[tokio::test]
+    async fn test_get_microsoft_subscription_policies() -> Result<()> {
+        let (azure_rest, splunk) = setup().await?;
+        let collection = azure_rest.get_microsoft_subscription_policies().await?;
+        splunk.send_batch((&collection).to_hec_events()?).await?;
+        Ok(())
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -596,5 +615,26 @@ impl ToHecEvents for &Subscriptions {
 
     fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
         Box::new(self.inner.iter())
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub(crate) struct SubscriptionPolicies {
+    #[serde(flatten)]
+    inner: Value,
+}
+
+impl ToHecEvents for &SubscriptionPolicies {
+    type Item = Self;
+    fn source(&self) -> &str {
+        "azure_rest"
+    }
+
+    fn sourcetype(&self) -> &str {
+        "SSPHP.azure.subscription_policies"
+    }
+
+    fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
+        Box::new(iter::once(self))
     }
 }
