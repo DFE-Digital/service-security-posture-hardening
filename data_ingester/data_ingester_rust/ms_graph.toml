@@ -1,0 +1,44 @@
+[m365]
+admin_forms = { endpoint = "/beta/admin/forms", permissions_required = [
+  "",
+], cis_controls = [
+  { filename = "CIS_Microsoft_365_Foundations_Benchmark_v2.0.0.pdf", control_id = "2.10" },
+] }
+
+role_eligiblity_schedule = { endpoint = "/v1.0/roleManagement/directory/roleAssignmentScheduleInstances?$expand=activatedUsing,appScope,directoryScope,principal,roleDefinition", permissions_required = [
+  "",
+], cis_controls = [
+  { filename = "CIS_Microsoft_365_Foundations_Benchmark_v2.0.0.pdf", control_id = "???" },
+] }
+
+
+legacy_policies = { endpoint = "/beta/legacy/policies", permissions_required = [
+  "",
+], cis_controls = [
+  { filename = "CIS_Microsoft_365_Foundations_Benchmark_v2.0.0.pdf", control_id = "1.1.17" },
+] }
+
+group_settings = { endpoint = "/v1.0/groupSettings", permissions_required = [
+  "",
+], cis_controls = [
+  { filename = "CIS_Microsoft_365_Foundations_Benchmark_v2.0.0.pdf", control_id = "1.1.9" },
+  { filename = "CIS_Microsoft_365_Foundations_Benchmark_v2.0.0.pdf", control_id = "1.1.10" },  
+] }
+
+authorization_policy = { endpoint = "/beta/policies/authorizationPolicy", permissions_required = [
+  "",
+], cis_controls = [
+  { filename = "CIS_Microsoft_Azure_Foundations_Benchmark_v2.0.0.pdf", control_id = "1.1.16", control_logic="allowInvitesFrom=adminsAndGuestInviters"  },
+  { filename = "CIS_Microsoft_Azure_Foundations_Benchmark_v2.0.0.pdf", control_id = "1.1.19", control_logic='"defaultUserRolePermissions.allowedToCreateSecurityGroups"=true'  },  
+] }
+
+beta_group_settings = { endpoint = "/beta/settings", permissions_required = [
+  "",
+], cis_controls = [
+  { filename = "CIS_Microsoft_Azure_Foundations_Benchmark_v2.0.0.pdf", control_id = "1.1.20", control_logic="""| spath output=value "values{}.value" 
+| spath output=name "values{}.name" 
+| eval zipped=mvzip(name,value) 
+| mvexpand zipped 
+| where zipped="EnableGroupCreation,false"""  },
+] }
+

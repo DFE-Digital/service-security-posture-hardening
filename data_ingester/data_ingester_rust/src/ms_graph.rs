@@ -4,6 +4,7 @@ use crate::conditional_access_policies::ConditionalAccessPolicies;
 use crate::dns::resolve_txt_record;
 use crate::groups::Groups;
 use crate::keyvault::Secrets;
+use crate::msgraph_data::load_m365_toml;
 use crate::powershell::run_powershell_exchange_login_test;
 use crate::powershell::run_powershell_get_admin_audit_log_config;
 use crate::powershell::run_powershell_get_anti_phish_policy;
@@ -132,6 +133,47 @@ impl MsGraph {
             .or_insert(HeaderValue::from_static("application/json"));
 
         let full_url = Url::parse(&format!("{}{}", client.url().as_str(), url))?;
+
+        let request_components = RequestComponents::new(
+            graph_core::resource::ResourceIdentity::Custom,
+            full_url,
+            Method::GET,
+        );
+
+        let request_handler =
+            RequestHandler::new(current_client.clone(), request_components, None, None)
+                .headers(header_map);
+
+        let mut stream = request_handler.paging().stream::<MsGraphGetResponse>()?;
+
+        let mut collection = Vec::default();
+        while let Some(result) = stream.next().await {
+            let response = result?;
+            let body = response.into_body()?;
+            match body {
+                MsGraphGetResponse::Collection { value } => collection.extend(value),
+                MsGraphGetResponse::Single(value) => collection.push(value),
+            }
+        }
+
+        Ok(collection)
+    }
+
+    pub async fn get_url(&self, url: &str) -> Result<Vec<Value>> {
+        let current_client = graph_http::api_impl::Client::new(
+            self.oauth
+                .get_access_token()
+                .context("no access token")?
+                .bearer_token(),
+        );
+
+        let mut header_map = HeaderMap::new();
+
+        header_map
+            .entry(CONTENT_TYPE)
+            .or_insert(HeaderValue::from_static("application/json"));
+
+        let full_url = self.client.url().join(url)?;
 
         let request_components = RequestComponents::new(
             graph_core::resource::ResourceIdentity::Custom,
@@ -1003,6 +1045,13 @@ pub async fn m365(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
     .await?;
 
     splunk.log("MS Graph logged in").await?;
+
+    let sources = load_m365_toml()?;
+
+    splunk
+        .log(&format!("Loaded {} m365 sources", sources.len()))
+        .await?;
+    sources.process_sources(&ms_graph, &splunk).await?;
 
     // TODO move this into another function
     splunk.log("Getting SecurityScores").await?;

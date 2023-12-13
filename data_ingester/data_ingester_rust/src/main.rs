@@ -7,6 +7,7 @@ mod dns;
 mod groups;
 mod keyvault;
 mod ms_graph;
+mod msgraph_data;
 mod powershell;
 mod roles;
 mod security_score;
