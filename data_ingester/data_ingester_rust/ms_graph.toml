@@ -53,7 +53,7 @@ identity_security_defaults = { endpoint = "/v1.0/policies/identitySecurityDefaul
 ], cis_controls = [
   { filename = "CIS_Microsoft_365_Foundations_Benchmark_v2.0.0.pdf", control_id = "" },
   { filename = "CIS_Microsoft_365_Foundations_Benchmark_v2.0.0.pdf", control_id = "" },
-] }x
+] }
 
 permission_grant_policies = { endpoint = "/v1.0/policies/permissionGrantPolicies", permissions_required = [
   "",
