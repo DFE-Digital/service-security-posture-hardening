@@ -249,6 +249,7 @@ where
 
 /// Struct to use for creating dynamic / testing ToHec events
 #[cfg(test)]
+#[derive(Debug, Serialize, Deserialize, Default)]
 pub struct HecDynamic {
     inner: Value,
     sourcetype: String,

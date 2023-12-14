@@ -285,6 +285,7 @@ impl ToHecEvents for &AdminAuditLogConfig {
     }
 }
 
+/// TODO Casuses deserialization errors. Need to limit the fields to the ones used.
 pub async fn run_powershell_get_owa_mailbox_policy(secrets: &Secrets) -> Result<OwaMailboxPolicy> {
     let command = "Get-OwaMailboxPolicy";
     let result = run_exchange_online_powershell(secrets, command).await?;
