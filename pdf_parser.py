@@ -10,7 +10,7 @@ import sys
 foundational_system = "AZURE"
 sections = []
 
-
+#
 
 def Parse_IG(ig_text):
 
