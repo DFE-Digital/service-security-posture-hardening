@@ -245,8 +245,7 @@ def WriteControls(controls):
     global foundational_system
     now = datetime.now()
 
-    filename=f'/Users/ianpearl/Github/PDF_Parse/pdf_parser/{foundational_system.lower()}_cis_benchmark_v8_doc.csv'
-
+    filename=f'/SSPHP Documentation/{foundational_system.lower()}_cis_benchmark_v8_doc.csv'
 
     with open(filename, "w") as f:
 
@@ -363,9 +362,9 @@ def main():
     print(f'Processing Foundational System CIS Benchmark for {foundational_system}')
 
     if foundational_system == "DNS":
-        filename = "/Users/ianpearl/Github/service-security-posture-hardening/SSPHP Documentation/CIS_Amazon_Web_Services_Foundations_Benchmark_v2.0.0.pdf"
+        filename = "/SSPHP Documentation/CIS_Amazon_Web_Services_Foundations_Benchmark_v2.0.0.pdf"
     else:
-        filename = f'/Users/ianpearl/Github/service-security-posture-hardening/SSPHP Documentation/CIS_Microsoft_{foundational_system.upper()[0]}{foundational_system.lower()[1:]}_Foundations_Benchmark_v2.0.0.pdf'
+        filename = f'/SSPHP Documentation/CIS_Microsoft_{foundational_system.upper()[0]}{foundational_system.lower()[1:]}_Foundations_Benchmark_v2.0.0.pdf'
 
     print(f'Processing file {filename}')
     
