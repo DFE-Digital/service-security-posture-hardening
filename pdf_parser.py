@@ -121,11 +121,11 @@ def Parse_Control(control_text):
     control_text = re.sub(r"I\s*m\s*p\s*a\s*c\s*t\s*:","Impact:",control_text)
 
     # Extract the fields from the Control Text
-    match_1 = re.match(r"\s*Page\s+\d+\s+(?P<use_case_id>\d\d?\.\d\d?\.?\d?\d?)\s(?P<title>[\s\S]*?)Profile Applicability:", control_text)
-    match_2 = re.search(r"Profile Applicability:(?P<profile_applicability>[\s\S]*?)\sDescription:", control_text)
-    match_3 = re.search(r"Description:(?P<description>[\s\S]*?)\sRationale:", control_text)
-    match_4 = re.search(r"Rationale:(?P<rationale>[\s\S]*?)\s(Impact:|Audit:)", control_text)
-    match_5 = re.search(r"Impact:(?P<impact>[\s\S]*?)\sAudit:", control_text)
+    match_1 = re.match(r"\s*Page\s+\d+\s+(?P<use_case_id>\d\d?\.\d\d?\.?\d?\d?)\s(?P<title>[\s\S]*?)P\s*r\s*o\s*f\s*i\s*l\s*e\s+A\s*p\s*p\s*l\s*i\s*c\s*a\s*b\s*i\s*l\s*i\s*t\s*y\s*:", control_text)
+    match_2 = re.search(r"P\s*r\s*o\s*f\s*i\s*l\s*e\s+A\s*p\s*p\s*l\s*i\s*c\s*a\s*b\s*i\s*l\s*i\s*t\s*y\s*:(?P<profile_applicability>[\s\S]*?)\sD\s*e\s*s\s*c\s*r\s*i\s*p\s*t\s*i\s*o\s*n\s*:", control_text)
+    match_3 = re.search(r"D\s*e\s*s\s*c\s*r\s*i\s*p\s*t\s*i\s*o\s*n\s*:(?P<description>[\s\S]*?)\sR\s*a\s*t\s*i\s*o\s*n\s*a\s*l\s*e\s*:", control_text)
+    match_4 = re.search(r"R\s*a\s*t\s*i\s*o\s*n\s*a\s*l\s*e\s*:(?P<rationale>[\s\S]*?)\s(I\s*m\s*p\s*a\s*c\s*t\s*:|A\s*u\s*d\s*i\s*t\s*:)", control_text)
+    match_5 = re.search(r"I\s*m\s*p\s*a\s*c\s*t\s*:(?P<impact>[\s\S]*?)\sA\s*u\s*d\s*i\s*t\s*:", control_text)
     match_6 = re.search(r"C\s*I\s*S\s*C\s*o\s*n\s*t\s*r\s*o\s*l\s*s\s*:\s*C\s*o\s*n\s*t\s*r\s*o\s*l\s*s\s*V\s*e\s*r\s*s\s*i\s*o\s*n\s*\s*C\s*o\s*n\s*t\s*r\s*o\s*l\s*I\s*G\s*1\s*I\s*G\s*2\s*I\s*G\s*3(?P<ig_data>[\s\S]*)$",control_text)
 
 
@@ -135,7 +135,7 @@ def Parse_Control(control_text):
         title = match_1["title"]
 
         title = re.sub(r"\(L(1|2)\)\s","",title)
-        title = re.sub(r"\s\((Automated|Manual)\)","",title)
+        title = re.sub(r"\s\((A\s*u\s*t\s*o\s*m\s*a\s*t\s*e\s*d|M\s*a\s*n\s*u\s*a\s*l)\)","",title)
         title = title.replace("\n","")
         title = title.replace("  "," ")
         title = title.replace(" -","-")
@@ -202,7 +202,7 @@ def Parse_Control(control_text):
     use_case_group = re.match(r"(?P<ucg>[^\.]+).*",id)
     ucg = "00" + use_case_group["ucg"]
     ucg = ucg[len(ucg)-3:]
-    use_case_title = f'{foundational_system} [CIS {ucg} {id}]'
+    use_case_title = f'{foundational_system} {ucg} [CIS {id}]'
     use_case_id = f'{foundational_system.lower()}_{ucg}_cis_{id.replace(".","-")}'
     use_case_savedsearch = f'ssphp_use_case_{use_case_id}'
 
@@ -245,13 +245,13 @@ def WriteControls(controls):
     global foundational_system
     now = datetime.now()
 
-    filename=f'/SSPHP Documentation/{foundational_system.lower()}_cis_benchmark_v8_doc.csv'
+    filename=f'SSPHP Documentation\cis_benchmark_v8_doc_{foundational_system.lower()}.csv'
 
     with open(filename, "w") as f:
 
         # Write the file headings
         outline = f'\
-"sssphp.use_case.control", \
+"ssphp.cis_benchmark.control.number", \
 "ssphp.use_case.foundational_system", \
 "ssphp.use_case.id", \
 "ssphp.use_case.savedsearch", \
@@ -275,14 +275,7 @@ def WriteControls(controls):
 "ssphp.cis_benchmark.document.date", \
 "ssphp.cis_benchmark.version", \
 "ssphp.metadata.last_updated_by", \
-"ssphp.metadata.last_updated_date", \
-"ssphp.risk.expectancy", \
-"ssphp.risk.impact", \
-"ssphp.score.ciso_priority", \
-"ssphp.score.scoring_narrative", \
-"ssphp.score.threshold.green", \
-"ssphp.score.threshold.orange", \
-"ssphp.score.threshold.red"\
+"ssphp.metadata.last_updated_date"\
 \n'
         f.write(outline)
 
@@ -295,6 +288,8 @@ def WriteControls(controls):
                 benchmark_date = "2023-02-14"
             elif foundational_system == "M365":
                 benchmark_date = "2023-03-31"
+            elif foundational_system == "DNS":
+                benchmark_date = "2023-06-28"
             else:
                 benchmark_date = "-"
 
@@ -312,25 +307,18 @@ def WriteControls(controls):
 "{control["impact"]}", \
 "{control["section_header"]}", \
 "{control["cis_controls"]}", \
-"{control["cis_controls_ig1"]}", \
-"{control["cis_controls_ig2"]}", \
-"{control["cis_controls_ig3"]}", \
 "{control["ig1"]}", \
 "{control["ig2"]}", \
 "{control["ig3"]}", \
+"{control["cis_controls_ig1"]}", \
+"{control["cis_controls_ig2"]}", \
+"{control["cis_controls_ig3"]}", \
 "CIS Microsoft {foundational_system.upper()[0:1]}{foundational_system.lower()[1:]} Foundations Benchmark", \
 "2.0.0", \
 "{benchmark_date}", \
 "CIS v8", \
 "Auto Document Extraction Script", \
-"{now.strftime("%Y-%m-%d %H:%M:%S")}", \
-"5", \
-"5", \
-"-", \
-"Score is 100 if control requirements are confirmed, otherwise 0. Best=100, Worst=0.", \
-"99", \
-"-", \
-"-"\
+"{now.strftime("%Y-%m-%d %H:%M:%S")}"\
 \n'
 
 
@@ -362,9 +350,9 @@ def main():
     print(f'Processing Foundational System CIS Benchmark for {foundational_system}')
 
     if foundational_system == "DNS":
-        filename = "/SSPHP Documentation/CIS_Amazon_Web_Services_Foundations_Benchmark_v2.0.0.pdf"
+        filename = "SSPHP Documentation\CIS_Amazon_Web_Services_Foundations_Benchmark_v2.0.0.pdf"
     else:
-        filename = f'/SSPHP Documentation/CIS_Microsoft_{foundational_system.upper()[0]}{foundational_system.lower()[1:]}_Foundations_Benchmark_v2.0.0.pdf'
+        filename = f'SSPHP Documentation\CIS_Microsoft_{foundational_system.upper()[0]}{foundational_system.lower()[1:]}_Foundations_Benchmark_v2.0.0.pdf'
 
     print(f'Processing file {filename}')
     
@@ -415,7 +403,7 @@ def main():
             name = match_line['section_name'].rstrip()
             sections.append({"no": match_line['section_no'], "name": name})
 
-        match_line = re.match(r"Appendix[\s\S\.]*\s(?P<pno>\d+)\s*$", line)
+        match_line = re.match(r"A\s*p\s*p\s*e\s*n\s*d\s*i\s*x[\s\S\.]*\s(?P<pno>\d+)\s*$", line)
         if match_line:
             end_page = int(match_line["pno"])
             break
@@ -438,7 +426,7 @@ def main():
         if page_no > start_page - 1 and page_no < end_page:
 
             # Is this page that starts a new control?
-            match_start_page = re.match(r"\s*Page\s+\d+\s+(?P<use_case_id>\d\d?\.\d\d?\.?\d?\d?)\s(?P<title>[\s\S]*)Profile Applicability:", page.extract_text())
+            match_start_page = re.match(r"\s*P\s*a\s*g\s*e\s+\d+\s+(?P<use_case_id>\d\d?\.\d\d?\.?\d?\d?)\s(?P<title>[\s\S]*)P\s*r\s*o\s*f\s*i\s*l\s*e\s+A\s*p\s*p\s*l\s*i\s*c\s*a\s*b\s*i\s*l\s*i\s*t\s*y\s*:", page.extract_text())
             if match_start_page:
 
                 if not first_time_thru:
