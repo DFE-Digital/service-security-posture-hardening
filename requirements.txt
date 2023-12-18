@@ -8,3 +8,4 @@ pylint
 flake8
 ruff
 black
+pypdf
