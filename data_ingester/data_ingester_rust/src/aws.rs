@@ -10,7 +10,7 @@ use aws_sdk_account::types::ContactInformation;
 use serde::{Deserialize, Serialize};
 
 use crate::keyvault::Secrets;
-use crate::ms_graph::{try_collect_send};
+use crate::ms_graph::try_collect_send;
 use crate::splunk::{set_ssphp_run, Splunk, ToHecEvents};
 
 pub async fn aws(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
@@ -195,7 +195,7 @@ mod test {
 
     #[tokio::test]
     async fn test_aws_config() -> Result<()> {
-        let (splunk, aws) = setup().await?;
+        let (_splunk, _aws) = setup().await?;
         Ok(())
     }
 
