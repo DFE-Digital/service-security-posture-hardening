@@ -153,6 +153,7 @@ def Parse_Control(control_text):
 
     if match_3:
         description = match_3["description"]
+        description = re.sub(r"\u2022"," -",description)
         description = re.sub(r"Page\s\d*$","",description)
         description = re.sub(r"\n","",description.strip())
         description = description.replace("\"","\'")
@@ -163,6 +164,7 @@ def Parse_Control(control_text):
 
     if match_4:
         rationale = match_4["rationale"]
+        rationale = re.sub(r"\u2022"," -",rationale)
         rationale = re.sub(r"Page\s\d*$","",rationale)
         rationale = re.sub(r"\n","",rationale.strip())
         rationale = rationale.replace("\"","\'")
@@ -173,6 +175,7 @@ def Parse_Control(control_text):
  
     if match_5:
         impact = match_5["impact"]
+        impact = re.sub(r"\u2022"," -",impact)
         impact = re.sub(r"Page\s\d*$","",impact)
         impact = re.sub(r"\n","",impact.strip())
         impact = impact.replace("\"","\'")

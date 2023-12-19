@@ -1,6 +1,6 @@
 <dashboard theme="dark" version="1.1" script="js/addtags.js">
   <label>CIS Benchmark Security Posture : Control Drilldown</label>
-  <description>v1.4.2</description>
+  <description>v1.4.4</description>
   
   <init>
     <set token="c_red">"0xFF0000"</set>
@@ -160,7 +160,6 @@ index="ssphp_metrics_summary" ssphp.use_case.id=$tkn_use_case_id$
     <panel>
       <html>
         <span class="header_r0" style="color:	cyan">$tkn_fs$ $tkn_notfs$</span>
-        <span class="header_r2">$tkn_display_short_description$</span>
         <br></br>
         <span class="header_r1" style="color:	darkcyan">CIS Title</span>
         <span class="header_r2">$tkn_cis_title$</span>
