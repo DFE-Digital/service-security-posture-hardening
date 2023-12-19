@@ -1,4 +1,5 @@
 mod admin_request_consent_policy;
+mod aws;
 mod azure_functions;
 mod azure_rest;
 mod conditional_access_policies;

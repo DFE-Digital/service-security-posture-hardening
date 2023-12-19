@@ -36,6 +36,9 @@ trust-dns-proto = "*"
 trust-dns-resolver = { version = "*", features = ["dns-over-rustls"] }
 url = "*"
 warp = "*"
+aws-config = { version = "1.1.1", features = ["behavior-version-latest"] }
+aws-sdk-iam = "1.7.0"
+aws-sdk-account = "1.7.0"
 
 [dependencies.uuid]
 version = "1.4.1"
