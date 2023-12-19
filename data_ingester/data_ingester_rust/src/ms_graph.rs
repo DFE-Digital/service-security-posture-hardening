@@ -1403,7 +1403,7 @@ pub async fn m365(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
     Ok(())
 }
 
-async fn try_collect_send<T>(
+pub(crate) async fn try_collect_send<T>(
     name: &str,
     future: impl Future<Output = Result<T>>,
     splunk: &Splunk,

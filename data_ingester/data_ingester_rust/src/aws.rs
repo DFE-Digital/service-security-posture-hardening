@@ -1,30 +1,122 @@
 use std::iter;
+use std::sync::Arc;
 
 use anyhow::Result;
 use aws_config::meta::region::RegionProviderChain;
 use aws_config::{BehaviorVersion, SdkConfig};
+use aws_credential_types::provider::SharedCredentialsProvider;
+use aws_sdk_account::config::{Credentials, ProvideCredentials};
 use aws_sdk_account::types::ContactInformation;
 use serde::{Deserialize, Serialize};
 
-use crate::splunk::ToHecEvents;
+use crate::keyvault::Secrets;
+use crate::ms_graph::{try_collect_send};
+use crate::splunk::{set_ssphp_run, Splunk, ToHecEvents};
 
-async fn aws_config() -> Result<SdkConfig> {
-    let region_provider = RegionProviderChain::default_provider().or_else("us-east-1");
-    let config = aws_config::defaults(BehaviorVersion::latest())
-        .region(region_provider)
-        .load()
-        .await;
-    Ok(config)
+pub async fn aws(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
+    set_ssphp_run()?;
+
+    splunk.log("Starting AWS collection").await?;
+    splunk
+        .log(&format!("GIT_HASH: {}", env!("GIT_HASH")))
+        .await?;
+
+    let aws_client = AwsClient { secrets };
+
+    try_collect_send(
+        "aws_1_1_maintain_current_contact_details",
+        aws_client.aws_1_1_maintain_current_contact_details(),
+        &splunk,
+    )
+    .await?;
+
+    splunk.log("AWS Collection Complete").await?;
+
+    Ok(())
 }
-/// IAM: account:GetContactInformation
-/// https://docs.aws.amazon.com/accounts/latest/reference/API_GetContactInformation.html
-pub(crate) async fn aws_1_1_maintain_current_contact_details() -> Result<ContactInformationSerde> {
-    let config = aws_config().await?;
-    let client = aws_sdk_account::Client::new(&config);
-    let contact_information = client.get_contact_information().send().await?;
-    let out =
-        ContactInformationSerde::from(contact_information.to_owned().contact_information.unwrap());
-    Ok(out)
+
+impl Secrets {
+    async fn load_credentials(&self) -> aws_credential_types::provider::Result {
+        Ok(Credentials::new(
+            self.aws_access_key_id.clone(),
+            self.aws_secret_access_key.clone(),
+            None,
+            None,
+            "StaticCredentials",
+        ))
+    }
+}
+
+impl ProvideCredentials for Secrets {
+    fn provide_credentials<'a>(
+        &'a self,
+    ) -> aws_credential_types::provider::future::ProvideCredentials<'a>
+    where
+        Self: 'a,
+    {
+        aws_credential_types::provider::future::ProvideCredentials::new(self.load_credentials())
+    }
+}
+
+impl ProvideCredentials for AwsSecrets {
+    fn provide_credentials<'a>(
+        &'a self,
+    ) -> aws_credential_types::provider::future::ProvideCredentials<'a>
+    where
+        Self: 'a,
+    {
+        aws_credential_types::provider::future::ProvideCredentials::new(self.load_credentials())
+    }
+}
+
+#[derive(Debug)]
+struct AwsSecrets {
+    secrets: Arc<Secrets>,
+}
+
+impl AwsSecrets {
+    async fn load_credentials(&self) -> aws_credential_types::provider::Result {
+        Ok(Credentials::new(
+            self.secrets.aws_access_key_id.clone(),
+            self.secrets.aws_secret_access_key.clone(),
+            None,
+            None,
+            "StaticCredentials",
+        ))
+    }
+}
+
+#[derive(Debug)]
+struct AwsClient {
+    secrets: Arc<Secrets>,
+}
+
+impl AwsClient {
+    async fn config(&self) -> Result<SdkConfig> {
+        let region_provider = RegionProviderChain::default_provider().or_else("us-east-1");
+
+        let config = aws_config::defaults(BehaviorVersion::latest())
+            .credentials_provider(SharedCredentialsProvider::new(AwsSecrets {
+                secrets: self.secrets.clone(),
+            }))
+            .region(region_provider)
+            .load()
+            .await;
+        Ok(config)
+    }
+    /// IAM: account:GetContactInformation
+    /// https://docs.aws.amazon.com/accounts/latest/reference/API_GetContactInformation.html
+    pub(crate) async fn aws_1_1_maintain_current_contact_details(
+        &self,
+    ) -> Result<ContactInformationSerde> {
+        let config = self.config().await?;
+        let client = aws_sdk_account::Client::new(&config);
+        let contact_information = client.get_contact_information().send().await?;
+        let out = ContactInformationSerde::from(
+            contact_information.to_owned().contact_information.unwrap(),
+        );
+        Ok(out)
+    }
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -66,11 +158,11 @@ impl ToHecEvents for &ContactInformationSerde {
     type Item = Self;
 
     fn source(&self) -> &str {
-        "accounts_GetContactInformation:check_with_ian"
+        "accounts_GetContactInformation"
     }
 
     fn sourcetype(&self) -> &str {
-        "json:aws:check_with_ian"
+        "ssphp:aws:json"
     }
 
     fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
@@ -81,34 +173,46 @@ impl ToHecEvents for &ContactInformationSerde {
 #[cfg(test)]
 mod test {
     use std::env;
+    use std::sync::Arc;
 
-    use super::aws_config;
+    use super::{aws, AwsClient};
     use crate::splunk::ToHecEvents;
     use crate::{
-        aws::aws_1_1_maintain_current_contact_details,
         keyvault::get_keyvault_secrets,
         splunk::{set_ssphp_run, Splunk},
     };
     use anyhow::Result;
 
-    pub async fn setup() -> Result<Splunk> {
+    pub async fn setup() -> Result<(Splunk, AwsClient)> {
         let secrets = get_keyvault_secrets(&env::var("KEY_VAULT_NAME")?).await?;
         set_ssphp_run()?;
         let splunk = Splunk::new(&secrets.splunk_host, &secrets.splunk_token)?;
-        Ok(splunk)
+        let aws = AwsClient {
+            secrets: Arc::new(secrets),
+        };
+        Ok((splunk, aws))
     }
 
     #[tokio::test]
     async fn test_aws_config() -> Result<()> {
-        aws_config().await?;
+        let (splunk, aws) = setup().await?;
         Ok(())
     }
 
     #[tokio::test]
     async fn test_aws_1_1() -> Result<()> {
-        let splunk = setup().await?;
-        let result = aws_1_1_maintain_current_contact_details().await?;
+        let (splunk, aws) = setup().await?;
+        let result = aws.aws_1_1_maintain_current_contact_details().await?;
         splunk.send_batch((&result).to_hec_events()?).await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_aws() -> Result<()> {
+        let secrets = get_keyvault_secrets(&env::var("KEY_VAULT_NAME")?).await?;
+        set_ssphp_run()?;
+        let splunk = Splunk::new(&secrets.splunk_host, &secrets.splunk_token)?;
+        aws(Arc::new(secrets), Arc::new(splunk)).await?;
         Ok(())
     }
 }
