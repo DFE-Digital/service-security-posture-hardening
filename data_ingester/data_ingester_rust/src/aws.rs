@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::iter;
 use std::sync::Arc;
 
@@ -7,6 +8,7 @@ use aws_config::{BehaviorVersion, SdkConfig};
 use aws_credential_types::provider::SharedCredentialsProvider;
 use aws_sdk_account::config::{Credentials, ProvideCredentials};
 use aws_sdk_account::types::ContactInformation;
+use aws_sdk_iam::operation::get_account_summary::GetAccountSummaryOutput;
 use serde::{Deserialize, Serialize};
 
 use crate::keyvault::Secrets;
@@ -30,32 +32,16 @@ pub async fn aws(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
     )
     .await?;
 
+    try_collect_send(
+        "aws_1_4_ensure_no_root_user_account_access_key_exists()",
+        aws_client.aws_1_4_ensure_no_root_user_account_access_key_exists(),
+        &splunk,
+    )
+    .await?;
+
     splunk.log("AWS Collection Complete").await?;
 
     Ok(())
-}
-
-impl Secrets {
-    async fn load_credentials(&self) -> aws_credential_types::provider::Result {
-        Ok(Credentials::new(
-            self.aws_access_key_id.clone(),
-            self.aws_secret_access_key.clone(),
-            None,
-            None,
-            "StaticCredentials",
-        ))
-    }
-}
-
-impl ProvideCredentials for Secrets {
-    fn provide_credentials<'a>(
-        &'a self,
-    ) -> aws_credential_types::provider::future::ProvideCredentials<'a>
-    where
-        Self: 'a,
-    {
-        aws_credential_types::provider::future::ProvideCredentials::new(self.load_credentials())
-    }
 }
 
 impl ProvideCredentials for AwsSecrets {
@@ -117,6 +103,19 @@ impl AwsClient {
         );
         Ok(out)
     }
+
+    /// https://docs.aws.amazon.com/IAM/latest/APIReference/API_GetAccountSummary.html
+    /// https://docs.rs/aws-sdk-iam/latest/aws_sdk_iam/client/struct.Client.html#method.get_account_summary
+    pub(crate) async fn aws_1_4_ensure_no_root_user_account_access_key_exists(
+        &self,
+    ) -> Result<AccountSummary> {
+        let config = self.config().await?;
+        let client = aws_sdk_iam::Client::new(&config);
+        let response = client.get_account_summary().send().await?;
+        dbg!(&response);
+        let out = AccountSummary::from(response);
+        Ok(out)
+    }
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -170,6 +169,39 @@ impl ToHecEvents for &ContactInformationSerde {
     }
 }
 
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "PascalCase")]
+pub(crate) struct AccountSummary {
+    pub summary_map: ::std::collections::HashMap<String, i32>,
+}
+
+impl From<GetAccountSummaryOutput> for AccountSummary {
+    fn from(value: GetAccountSummaryOutput) -> Self {
+        let mut summary_map = HashMap::new();
+        for (k, v) in value.summary_map().unwrap() {
+            summary_map.insert(k.as_str().to_owned(), *v);
+        }
+
+        Self { summary_map }
+    }
+}
+
+impl ToHecEvents for &AccountSummary {
+    type Item = Self;
+
+    fn source(&self) -> &str {
+        "iam_GetAccountSummary"
+    }
+
+    fn sourcetype(&self) -> &str {
+        "ssphp:aws:json"
+    }
+
+    fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
+        Box::new(iter::once(self))
+    }
+}
+
 #[cfg(test)]
 mod test {
     use std::env;
@@ -194,6 +226,15 @@ mod test {
     }
 
     #[tokio::test]
+    async fn test_aws_full() -> Result<()> {
+        let secrets = get_keyvault_secrets(&env::var("KEY_VAULT_NAME")?).await?;
+        set_ssphp_run()?;
+        let splunk = Splunk::new(&secrets.splunk_host, &secrets.splunk_token)?;
+        aws(Arc::new(secrets), Arc::new(splunk)).await?;
+        Ok(())
+    }
+
+    #[tokio::test]
     async fn test_aws_config() -> Result<()> {
         let (_splunk, _aws) = setup().await?;
         Ok(())
@@ -208,11 +249,12 @@ mod test {
     }
 
     #[tokio::test]
-    async fn test_aws() -> Result<()> {
-        let secrets = get_keyvault_secrets(&env::var("KEY_VAULT_NAME")?).await?;
-        set_ssphp_run()?;
-        let splunk = Splunk::new(&secrets.splunk_host, &secrets.splunk_token)?;
-        aws(Arc::new(secrets), Arc::new(splunk)).await?;
+    async fn test_aws_1_4() -> Result<()> {
+        let (splunk, aws) = setup().await?;
+        let result = aws
+            .aws_1_4_ensure_no_root_user_account_access_key_exists()
+            .await?;
+        splunk.send_batch((&result).to_hec_events()?).await?;
         Ok(())
     }
 }
