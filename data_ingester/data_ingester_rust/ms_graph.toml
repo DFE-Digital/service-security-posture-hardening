@@ -39,7 +39,7 @@ conditional_access_polices = { endpoint = "/v1.0/identity/conditionalAccess/poli
 named_locations = { endpoint = "/v1.0/identity/conditionalAccess/namedLocations", permissions_required = [
   "",
 ], cis_controls = [
-  { filename = "CIS_Microsoft_Azure_Foundations_Benchmark_v2.0.0.pdf", control_id = "1.2.1", },
+  { filename = "CIS_Microsoft_Azure_Foundations_Benchmark_v2.0.0.pdf", control_id = "1.2.1" },
 ] }
 
 admin_consent_request_policy = { endpoint = "/v1.0/policies/adminConsentRequestPolicy", permissions_required = [
