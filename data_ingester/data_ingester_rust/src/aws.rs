@@ -2,13 +2,14 @@ use std::collections::HashMap;
 use std::iter;
 use std::sync::Arc;
 
-use anyhow::Result;
+use anyhow::{bail, Context, Result};
 use aws_config::meta::region::RegionProviderChain;
 use aws_config::{BehaviorVersion, SdkConfig};
 use aws_credential_types::provider::SharedCredentialsProvider;
 use aws_sdk_account::config::{Credentials, ProvideCredentials};
 use aws_sdk_account::types::ContactInformation;
 use aws_sdk_iam::operation::get_account_summary::GetAccountSummaryOutput;
+use aws_sdk_iam::types::PasswordPolicy;
 use serde::{Deserialize, Serialize};
 
 use crate::keyvault::Secrets;
@@ -35,6 +36,20 @@ pub async fn aws(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
     try_collect_send(
         "aws_1_4_ensure_no_root_user_account_access_key_exists()",
         aws_client.aws_1_4_ensure_no_root_user_account_access_key_exists(),
+        &splunk,
+    )
+    .await?;
+
+    try_collect_send(
+        "aws_1_8_ensure_iam_password_policy_requires_minimum_length_of_14",
+        aws_client.aws_1_8_ensure_iam_password_policy_requires_minimum_length_of_14(),
+        &splunk,
+    )
+    .await?;
+
+    try_collect_send(
+        "aws_1_10_ensure_mfa_is_enabled_for_all_iam_users_that_have_a_console_password",
+        aws_client.aws_1_10_ensure_mfa_is_enabled_for_all_iam_users_that_have_a_console_password(),
         &splunk,
     )
     .await?;
@@ -112,9 +127,51 @@ impl AwsClient {
         let config = self.config().await?;
         let client = aws_sdk_iam::Client::new(&config);
         let response = client.get_account_summary().send().await?;
-        dbg!(&response);
         let out = AccountSummary::from(response);
         Ok(out)
+    }
+
+    /// 1.8
+    /// 1.9
+    pub(crate) async fn aws_1_8_ensure_iam_password_policy_requires_minimum_length_of_14(
+        &self,
+    ) -> Result<AccountPasswordPolicy> {
+        let config = self.config().await?;
+        let client = aws_sdk_iam::Client::new(&config);
+        let out = match client.get_account_password_policy().send().await {
+            Ok(response) => {
+                AccountPasswordPolicy::from(response.password_policy.context("No password policy")?)
+            }
+            Err(_) => AccountPasswordPolicy::default(),
+        };
+        Ok(out)
+    }
+
+    pub(crate) async fn aws_1_10_ensure_mfa_is_enabled_for_all_iam_users_that_have_a_console_password(
+        &self,
+    ) -> Result<CredentialReport> {
+        let config = self.config().await?;
+        let client = aws_sdk_iam::Client::new(&config);
+
+        loop {
+            let generate_report = client.generate_credential_report().send().await?;
+            match generate_report.state {
+                Some(state) => match state {
+                    aws_sdk_iam::types::ReportStateType::Complete => break,
+                    aws_sdk_iam::types::ReportStateType::Inprogress => continue,
+                    aws_sdk_iam::types::ReportStateType::Started => continue,
+                    _ => bail!("Unknown Generate report state"),
+                },
+                None => continue,
+            }
+        }
+
+        let report = client.get_credential_report().send().await?;
+
+        let credential_report =
+            CredentialReport::from(report.content.context("No credential report")?.as_ref());
+
+        Ok(credential_report)
     }
 }
 
@@ -202,6 +259,113 @@ impl ToHecEvents for &AccountSummary {
     }
 }
 
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "PascalCase")]
+pub(crate) struct AccountPasswordPolicy {
+    minimum_password_length: Option<i32>,
+    require_symbols: bool,
+    require_numbers: bool,
+    require_uppercase_characters: bool,
+    require_lowercase_characters: bool,
+    allow_users_to_change_password: bool,
+    expire_passwords: bool,
+    max_password_age: Option<i32>,
+    password_reuse_prevention: Option<i32>,
+    hard_expiry: Option<bool>,
+}
+
+impl From<aws_sdk_iam::types::PasswordPolicy> for AccountPasswordPolicy {
+    fn from(value: PasswordPolicy) -> Self {
+        Self {
+            minimum_password_length: value.minimum_password_length,
+            require_symbols: value.require_symbols,
+            require_numbers: value.require_numbers,
+            require_uppercase_characters: value.require_uppercase_characters,
+            require_lowercase_characters: value.require_lowercase_characters,
+            allow_users_to_change_password: value.allow_users_to_change_password,
+            expire_passwords: value.expire_passwords,
+            max_password_age: value.max_password_age,
+            password_reuse_prevention: value.password_reuse_prevention,
+            hard_expiry: value.hard_expiry,
+        }
+    }
+}
+
+impl ToHecEvents for &AccountPasswordPolicy {
+    type Item = Self;
+
+    fn source(&self) -> &str {
+        "iam_GetAccountPasswordPolicy"
+    }
+
+    fn sourcetype(&self) -> &str {
+        "ssphp:aws:json"
+    }
+
+    fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
+        Box::new(iter::once(self))
+    }
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "PascalCase")]
+pub(crate) struct CredentialReport {
+    inner: Vec<CredentialReportUser>,
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+//#[serde(rename_all = "PascalCase")]
+pub(crate) struct CredentialReportUser {
+    user: String,
+    arn: String,
+    user_creation_time: String,
+    password_enabled: bool,
+    password_last_used: String,
+    password_last_changed: String,
+    password_next_rotation: String,
+    mfa_active: bool,
+    access_key_1_active: bool,
+    access_key_1_last_rotated: String,
+    access_key_1_last_used_date: String,
+    access_key_1_last_used_region: String,
+    access_key_1_last_used_service: String,
+    access_key_2_active: bool,
+    access_key_2_last_rotated: String,
+    access_key_2_last_used_date: String,
+    access_key_2_last_used_region: String,
+    access_key_2_last_used_service: String,
+    cert_1_active: bool,
+    cert_1_last_rotated: String,
+    cert_2_active: bool,
+    cert_2_last_rotated: String,
+}
+
+impl From<&[u8]> for CredentialReport {
+    fn from(value: &[u8]) -> Self {
+        let users = csv::Reader::from_reader(value)
+            .deserialize::<CredentialReportUser>()
+            .filter_map(|r| r.ok())
+            .collect();
+        Self { inner: users }
+    }
+}
+
+impl ToHecEvents for &CredentialReport {
+    type Item = CredentialReportUser;
+
+    fn source(&self) -> &str {
+        "iam_GetCredentialReport"
+    }
+
+    fn sourcetype(&self) -> &str {
+        "ssphp:aws:json"
+    }
+
+    fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
+        Box::new(self.inner.iter())
+    }
+}
+
 #[cfg(test)]
 mod test {
     use std::env;
@@ -253,6 +417,26 @@ mod test {
         let (splunk, aws) = setup().await?;
         let result = aws
             .aws_1_4_ensure_no_root_user_account_access_key_exists()
+            .await?;
+        splunk.send_batch((&result).to_hec_events()?).await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_aws_1_8() -> Result<()> {
+        let (splunk, aws) = setup().await?;
+        let result = aws
+            .aws_1_8_ensure_iam_password_policy_requires_minimum_length_of_14()
+            .await?;
+        splunk.send_batch((&result).to_hec_events()?).await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_aws_1_10() -> Result<()> {
+        let (splunk, aws) = setup().await?;
+        let result = aws
+            .aws_1_10_ensure_mfa_is_enabled_for_all_iam_users_that_have_a_console_password()
             .await?;
         splunk.send_batch((&result).to_hec_events()?).await?;
         Ok(())

@@ -1,5 +1,6 @@
 // build.rs
 use std::process::Command;
+
 fn main() {
     // note: add error checking yourself.
     let output = Command::new("git")
@@ -8,4 +9,8 @@ fn main() {
         .unwrap();
     let git_hash = String::from_utf8(output.stdout).unwrap();
     println!("cargo:rustc-env=GIT_HASH={}", git_hash);
+
+    // Check TOML is valid
+    let contents = include_str!("ms_graph.toml");
+    let _decoded: toml::Table = toml::from_str(contents).unwrap();
 }

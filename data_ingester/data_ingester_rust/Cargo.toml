@@ -40,6 +40,7 @@ aws-config = { version = "1.1.1", features = ["behavior-version-latest"] }
 aws-sdk-iam = "1.7.0"
 aws-sdk-account = "1.7.0"
 aws-credential-types = "*"
+csv = "*"
 
 [dependencies.uuid]
 version = "1.4.1"
@@ -48,6 +49,9 @@ features = [
     "fast-rng",          # Use a faster (but still sufficiently random) RNG
     "macro-diagnostics", # Enable better diagnostics for compile-time UUIDs
 ]
+
+[build-dependencies]
+toml = "*"
 
 
 [profile.release]
