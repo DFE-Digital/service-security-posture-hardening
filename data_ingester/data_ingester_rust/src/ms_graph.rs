@@ -462,7 +462,7 @@ impl MsGraph {
     pub async fn get_domains(&self) -> Result<Domains> {
         let response = self.client.domains().list_domain().send().await?;
         let mut body: Domains = response.json().await?;
-        for domain in body.value.iter_mut() {
+        for domain in body.inner.iter_mut() {
             if let Ok(txt) = resolve_txt_record(&domain.id).await {
                 domain.txt_records = Some(txt);
             }
@@ -765,17 +765,21 @@ impl ToHecEvents for &AuthenticationMethodsPolicy {
     }
 }
 
-// #[derive(Debug, Serialize, Deserialize, Default)]
-// pub struct Domains(serde_json::Value);
-
+/// CIS Azure 365 Azure 1.4
+/// CIS Azure 365 Azure 4.8
+/// CIS Azure 365 Azure 4.9
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Domains {
     #[serde(rename = "@odata.context")]
     pub odata_context: String,
-    pub value: Vec<Domain>,
+    #[serde(rename = "value")]
+    pub inner: Vec<Domain>,
 }
 
+/// CIS Azure 365 Azure 1.4
+/// CIS Azure 365 Azure 4.8
+/// CIS Azure 365 Azure 4.9
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Domain {
@@ -796,24 +800,17 @@ pub struct Domain {
 }
 
 impl ToHecEvents for &Domains {
-    type Item = Self;
+    type Item = Domain;
     fn source(&self) -> &str {
-        "msgraph"
+        "/v1.0/domains"
     }
 
     fn sourcetype(&self) -> &str {
-        "m365:domains"
+        "ssphp:ms_graph:json"
     }
 
-    fn to_hec_events(&self) -> anyhow::Result<Vec<crate::splunk::HecEvent>> {
-        Ok(vec![HecEvent::new(
-            &self,
-            self.source(),
-            self.sourcetype(),
-        )?])
-    }
     fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
-        unimplemented!()
+        Box::new(self.inner.iter())
     }
 }
 
@@ -1403,7 +1400,7 @@ pub async fn m365(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
     Ok(())
 }
 
-async fn try_collect_send<T>(
+pub(crate) async fn try_collect_send<T>(
     name: &str,
     future: impl Future<Output = Result<T>>,
     splunk: &Splunk,

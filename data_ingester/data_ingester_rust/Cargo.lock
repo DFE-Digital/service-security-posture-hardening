@@ -1781,6 +1781,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "aws-config",
+ "aws-credential-types",
  "aws-sdk-account",
  "aws-sdk-iam",
  "azure_core",

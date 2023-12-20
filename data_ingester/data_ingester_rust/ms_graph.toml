@@ -1,17 +1,17 @@
 [m365]
-definitions = { endpoint = "/v1.0/definitions", permissions_required = [
+definitions = { endpoint = "/v1.0/identityGovernance/accessReviews/definitions", permissions_required = [
   "",
 ], cis_controls = [
-  { filename = "CIS_Microsoft_365_Foundations_Benchmark_v2.0.0.pdf", control_id = "" },
-  { filename = "CIS_Microsoft_365_Foundations_Benchmark_v2.0.0.pdf", control_id = "" },
+  { filename = "CIS_Microsoft_365_Foundations_Benchmark_v2.0.0.pdf", control_id = "5.1.1" },
+  { filename = "CIS_Microsoft_365_Foundations_Benchmark_v2.0.0.pdf", control_id = "5.1.2" },
 ] }
 
-domains = { endpoint = "/v1.0/domains", permissions_required = [
-  "",
-], cis_controls = [
-  { filename = "CIS_Microsoft_365_Foundations_Benchmark_v2.0.0.pdf", control_id = "" },
-  { filename = "CIS_Microsoft_365_Foundations_Benchmark_v2.0.0.pdf", control_id = "" },
-] }
+# domains = { endpoint = "/v1.0/domains", permissions_required = [
+#   "",
+# ], cis_controls = [
+#   { filename = "CIS_Microsoft_365_Foundations_Benchmark_v2.0.0.pdf", control_id = "" },
+#   { filename = "CIS_Microsoft_365_Foundations_Benchmark_v2.0.0.pdf", control_id = "" },
+# ] }
 
 group_settings = { endpoint = "/v1.0/groupSettings", permissions_required = [
   "",
@@ -23,15 +23,23 @@ group_settings = { endpoint = "/v1.0/groupSettings", permissions_required = [
 groups = { endpoint = "/v1.0/groups", permissions_required = [
   "",
 ], cis_controls = [
-  { filename = "CIS_Microsoft_365_Foundations_Benchmark_v2.0.0.pdf", control_id = "" },
+  { filename = "CIS_Microsoft_365_Foundations_Benchmark_v2.0.0.pdf", control_id = "1.1.16" },
   { filename = "CIS_Microsoft_365_Foundations_Benchmark_v2.0.0.pdf", control_id = "" },
 ] }
 
 conditional_access_polices = { endpoint = "/v1.0/identity/conditionalAccess/policies", permissions_required = [
   "",
 ], cis_controls = [
-  { filename = "CIS_Microsoft_365_Foundations_Benchmark_v2.0.0.pdf", control_id = "" },
-  { filename = "CIS_Microsoft_365_Foundations_Benchmark_v2.0.0.pdf", control_id = "" },
+  { filename = "CIS_Microsoft_365_Foundations_Benchmark_v2.0.0.pdf", control_id = "1.1.3" },
+  { filename = "CIS_Microsoft_365_Foundations_Benchmark_v2.0.0.pdf", control_id = "1.1.6" },
+  { filename = "CIS_Microsoft_365_Foundations_Benchmark_v2.0.0.pdf", control_id = "1.1.11" },
+  { filename = "CIS_Microsoft_365_Foundations_Benchmark_v2.0.0.pdf", control_id = "1.1.13" },    
+] }
+
+named_locations = { endpoint = "/v1.0/identity/conditionalAccess/namedLocations", permissions_required = [
+  "",
+], cis_controls = [
+  { filename = "CIS_Microsoft_Azure_Foundations_Benchmark_v2.0.0.pdf", control_id = "1.2.1" },
 ] }
 
 admin_consent_request_policy = { endpoint = "/v1.0/policies/adminConsentRequestPolicy", permissions_required = [
@@ -65,7 +73,7 @@ permission_grant_policies = { endpoint = "/v1.0/policies/permissionGrantPolicies
 role_eligiblity_schedule = { endpoint = "/v1.0/roleManagement/directory/roleAssignmentScheduleInstances?$expand=activatedUsing,appScope,directoryScope,principal,roleDefinition", permissions_required = [
   "",
 ], cis_controls = [
-  { filename = "CIS_Microsoft_365_Foundations_Benchmark_v2.0.0.pdf", control_id = "???" },
+  { filename = "CIS_Microsoft_365_Foundations_Benchmark_v2.0.0.pdf", control_id = "1.1.15" },
 ] }
 
 token_lifetime_policies = { endpoint = "/v1.0/policies/tokenLifetimePolicies", permissions_required = [
@@ -84,8 +92,7 @@ admin_forms = { endpoint = "/beta/admin/forms", permissions_required = [
 role_definitions = { endpoint = "/beta/directory/roleDefinitions", permissions_required = [
   "",
 ], cis_controls = [
-  { filename = "CIS_Microsoft_365_Foundations_Benchmark_v2.0.0.pdf", control_id = "" },
-  { filename = "CIS_Microsoft_365_Foundations_Benchmark_v2.0.0.pdf", control_id = "" },
+  { filename = "CIS_Microsoft_Azure_Foundations_Benchmark_v2.0.0.pdf", control_id = ""},
 ] }
 
 legacy_policies = { endpoint = "/beta/legacy/policies", permissions_required = [
@@ -100,6 +107,8 @@ authorization_policy = { endpoint = "/beta/policies/authorizationPolicy", permis
 ], cis_controls = [
   { filename = "CIS_Microsoft_Azure_Foundations_Benchmark_v2.0.0.pdf", control_id = "1.1.16", control_logic="allowInvitesFrom=adminsAndGuestInviters"  },
   { filename = "CIS_Microsoft_Azure_Foundations_Benchmark_v2.0.0.pdf", control_id = "1.1.19", control_logic='"defaultUserRolePermissions.allowedToCreateSecurityGroups"=true'  },
+  { filename = "CIS_Microsoft_365_Foundations_Benchmark_v2.0.0.pdf", control_id = "1.1.22" },
+  { filename = "CIS_Microsoft_365_Foundations_Benchmark_v2.0.0.pdf", control_id = "2.7" },    
 ] }
 
 device_registration_policy = { endpoint = "/beta/policies/deviceRegistrationPolicy", permissions_required = [
@@ -112,8 +121,8 @@ device_registration_policy = { endpoint = "/beta/policies/deviceRegistrationPoli
 secure_scores = { endpoint = "/beta/security/secureScores", permissions_required = [
   "",
 ], cis_controls = [
-  { filename = "CIS_Microsoft_365_Foundations_Benchmark_v2.0.0.pdf", control_id = "" },
-  { filename = "CIS_Microsoft_365_Foundations_Benchmark_v2.0.0.pdf", control_id = "" },
+  { filename = "CIS_Microsoft_365_Foundations_Benchmark_v2.0.0.pdf", control_id = "1.7" },
+  { filename = "CIS_Microsoft_365_Foundations_Benchmark_v2.0.0.pdf", control_id = "6.2" },
 ] }
 
 beta_group_settings = { endpoint = "/beta/settings", permissions_required = [

@@ -115,7 +115,7 @@ impl MsGraphSource {
     fn sourcetype(&self) -> &str {
         match self.sourcetype.as_ref() {
             Some(sourcetype) => sourcetype.as_str(),
-            None => "ms_graph:json",
+            None => "ssphp:ms_graph:json",
         }
     }
 }

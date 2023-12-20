@@ -15,6 +15,8 @@ pub(crate) struct Secrets {
     pub(crate) azure_client_certificate: String,
     pub(crate) azure_client_organization: String,
     pub(crate) azure_tenant_id: String,
+    pub(crate) aws_access_key_id: String,
+    pub(crate) aws_secret_access_key: String,
 }
 
 pub async fn get_keyvault_secrets(keyvault_name: &str) -> Result<Secrets> {
@@ -31,6 +33,8 @@ pub async fn get_keyvault_secrets(keyvault_name: &str) -> Result<Secrets> {
     let azure_client_certificate = secret_client.get("ad-client-certificate").into_future();
     let azure_client_organization = secret_client.get("ad-client-organization").into_future();
     let azure_tenant_id = secret_client.get("ad-tenant-id").into_future();
+    let aws_access_key_id = secret_client.get("aws-access-key-id").into_future();
+    let aws_secret_access_key = secret_client.get("aws-secret-access-key").into_future();
 
     let (
         splunk_host,
@@ -40,6 +44,8 @@ pub async fn get_keyvault_secrets(keyvault_name: &str) -> Result<Secrets> {
         azure_client_certificate,
         azure_client_organization,
         azure_tenant_id,
+        aws_access_key_id,
+        aws_secret_access_key,
     ) = try_join!(
         splunk_host,
         splunk_token,
@@ -47,7 +53,9 @@ pub async fn get_keyvault_secrets(keyvault_name: &str) -> Result<Secrets> {
         azure_client_secret,
         azure_client_certificate,
         azure_client_organization,
-        azure_tenant_id
+        azure_tenant_id,
+        aws_access_key_id,
+        aws_secret_access_key,
     )?;
 
     Ok(Secrets {
@@ -58,5 +66,7 @@ pub async fn get_keyvault_secrets(keyvault_name: &str) -> Result<Secrets> {
         azure_client_certificate: azure_client_certificate.value,
         azure_client_organization: azure_client_organization.value,
         azure_tenant_id: azure_tenant_id.value,
+        aws_access_key_id: aws_access_key_id.value,
+        aws_secret_access_key: aws_secret_access_key.value,
     })
 }

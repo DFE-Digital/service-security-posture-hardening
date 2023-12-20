@@ -7,6 +7,7 @@ use tokio::sync::oneshot::Sender;
 use tokio::sync::Mutex;
 use warp::{http::Response, Filter};
 
+use crate::aws::aws;
 use crate::keyvault::get_keyvault_secrets;
 use crate::ms_graph::azure_users;
 use crate::ms_graph::m365;
@@ -221,7 +222,67 @@ pub(crate) async fn start_server(tx: Sender<()>) -> Result<()> {
             }
         });
 
-    let routes = warp::post().and(azure).or(m365);
+    let aws_in_progress = Arc::new(Mutex::new(()));
+    let aws = warp::post().and(warp::path("aws")).then({
+        let aws_in_progress = aws_in_progress.clone();
+        let aws_splunk = splunk.clone();
+        let aws_secrets = secrets.clone();
+
+        move || {
+            let in_progress = aws_in_progress.clone();
+            let aws_splunk = aws_splunk.clone();
+            let aws_secrets = aws_secrets.clone();
+
+            async move {
+                eprintln!("GIT_HASH: {}", env!("GIT_HASH"));
+
+                let mut response = AzureInvokeResponse {
+                    outputs: None,
+                    logs: vec![format!("GIT_HASH: {}", env!("GIT_HASH"))],
+                    return_value: None,
+                };
+                let lock = match in_progress.try_lock() {
+                    Ok(lock) => {
+                        aws_splunk.log("Aquired lock, starting").await.unwrap();
+                        lock
+                    }
+                    Err(_) => {
+                        aws_splunk
+                            .log("AWS collection is already in progress. NOT starting.")
+                            .await
+                            .unwrap();
+                        response.logs.push(
+                            "AWS collection is already in progress. NOT starting.".to_owned(),
+                        );
+                        return response;
+                    }
+                };
+
+                let result = match aws(aws_secrets, aws_splunk).await {
+                    Ok(_) => "Success".to_owned(),
+                    Err(e) => format!("{:?}", e),
+                };
+
+                response.logs.push(result);
+                if let Some(usage) = memory_stats() {
+                    println!(
+                        "Current physical memory usage: {}",
+                        usage.physical_mem / 1_000_000
+                    );
+                    println!(
+                        "Current virtual memory usage: {}",
+                        usage.virtual_mem / 1_000_000
+                    );
+                } else {
+                    println!("Couldn't get the current memory usage :(");
+                }
+                drop(lock);
+                response
+            }
+        }
+    });
+
+    let routes = warp::post().and(azure).or(m365).or(aws);
 
     let port_key = "FUNCTIONS_CUSTOMHANDLER_PORT";
     let port: u16 = match env::var(port_key) {
