@@ -9,7 +9,7 @@ use aws_credential_types::provider::SharedCredentialsProvider;
 use aws_sdk_account::config::{Credentials, ProvideCredentials};
 use aws_sdk_account::types::ContactInformation;
 use aws_sdk_iam::operation::get_account_summary::GetAccountSummaryOutput;
-use aws_sdk_iam::types::{PasswordPolicy, AccessKeyMetadata};
+use aws_sdk_iam::types::{AccessKeyMetadata, PasswordPolicy};
 use serde::{Deserialize, Serialize};
 
 use crate::keyvault::Secrets;
@@ -50,6 +50,15 @@ pub async fn aws(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
     try_collect_send(
         "aws_1_10_ensure_mfa_is_enabled_for_all_iam_users_that_have_a_console_password",
         aws_client.aws_1_10_ensure_mfa_is_enabled_for_all_iam_users_that_have_a_console_password(),
+        &splunk,
+    )
+    .await?;
+
+    try_collect_send(
+        "aws_1_13_ensure_there_is_only_one_active_access_key_available_for_any_single_iam_user",
+        aws_client
+            .aws_1_13_ensure_there_is_only_one_active_access_key_available_for_any_single_iam_user(
+            ),
         &splunk,
     )
     .await?;
@@ -179,23 +188,32 @@ impl AwsClient {
     ) -> Result<AccessKeys> {
         let config = self.config().await?;
         let client = aws_sdk_iam::Client::new(&config);
-        let users: Result<Vec<aws_sdk_iam::types::User>, _> = client.list_users().into_paginator().items().send().collect().await;
-        let mut access_keys: Vec<AccessKeyMetadataSerde> = vec!();
+        let users: Result<Vec<aws_sdk_iam::types::User>, _> = client
+            .list_users()
+            .into_paginator()
+            .items()
+            .send()
+            .collect()
+            .await;
+        let mut access_keys: Vec<AccessKeyMetadataSerde> = vec![];
         for user in users? {
-            let keys = client.list_access_keys().user_name(user.user_name()).send().await?;
+            let keys = client
+                .list_access_keys()
+                .user_name(user.user_name())
+                .send()
+                .await?;
             for key in keys.access_key_metadata {
                 access_keys.push(key.into());
             }
         }
-        Ok(AccessKeys{ inner: access_keys})
+        Ok(AccessKeys { inner: access_keys })
     }
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub(crate) struct AccessKeys {
-    inner: Vec<AccessKeyMetadataSerde>
+    inner: Vec<AccessKeyMetadataSerde>,
 }
-
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub(crate) struct AccessKeyMetadataSerde {
@@ -213,14 +231,14 @@ impl From<AccessKeyMetadata> for AccessKeyMetadataSerde {
                 aws_sdk_iam::types::StatusType::Inactive => Some("InActive".to_string()),
                 // aws_sdk_iam::types::StatusType::Unknown(_) => Some("Unknown".to_string()),
                 _ => None,
-            }
+            },
             None => None,
         };
         Self {
             user_name: value.user_name,
             access_key_id: value.access_key_id,
             status,
-            create_date: value.create_date.map(|date| date.as_secs_f64())
+            create_date: value.create_date.map(|date| date.as_secs_f64()),
         }
     }
 }
@@ -240,7 +258,6 @@ impl ToHecEvents for &AccessKeys {
         Box::new(self.inner.iter())
     }
 }
-
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub(crate) struct ContactInformationSerde {
@@ -512,12 +529,10 @@ mod test {
     #[tokio::test]
     async fn test_aws_1_13() -> Result<()> {
         let (splunk, aws) = setup().await?;
-        let result = aws.
-            aws_1_13_ensure_there_is_only_one_active_access_key_available_for_any_single_iam_user()
+        let result = aws
+            .aws_1_13_ensure_there_is_only_one_active_access_key_available_for_any_single_iam_user()
             .await?;
         splunk.send_batch((&result).to_hec_events()?).await?;
         Ok(())
     }
-
-
 }
