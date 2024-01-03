@@ -136,6 +136,8 @@ def Parse_Control(control_text):
 
         title = re.sub(r"\(L(1|2)\)\s","",title)
         title = re.sub(r"\s\((A\s*u\s*t\s*o\s*m\s*a\s*t\s*e\s*d|M\s*a\s*n\s*u\s*a\s*l)\)","",title)
+        title = re.sub(r"\u2022","",title)
+        title = re.sub(r"(‘|’)","\'",title)
         title = title.replace("\n","")
         title = title.replace("  "," ")
         title = title.replace(" -","-")
@@ -144,6 +146,7 @@ def Parse_Control(control_text):
     if match_2:
         profile_applicability = match_2["profile_applicability"]
         profile_applicability = re.sub(r"\u2022","",profile_applicability)
+        profile_applicability = re.sub(r"(‘|’)","\'",profile_applicability)
         profile_applicability = re.sub(r"Page\s\d*$","",profile_applicability)
         profile_applicability = re.sub(r"\n","",profile_applicability.strip())
         profile_applicability = profile_applicability.replace("  "," ")
@@ -154,6 +157,7 @@ def Parse_Control(control_text):
     if match_3:
         description = match_3["description"]
         description = re.sub(r"\u2022"," -",description)
+        description = re.sub(r"(‘|’)","\'",description)
         description = re.sub(r"Page\s\d*$","",description)
         description = re.sub(r"\n","",description.strip())
         description = description.replace("\"","\'")
@@ -165,6 +169,7 @@ def Parse_Control(control_text):
     if match_4:
         rationale = match_4["rationale"]
         rationale = re.sub(r"\u2022"," -",rationale)
+        rationale = re.sub(r"(‘|’)","\'",rationale)
         rationale = re.sub(r"Page\s\d*$","",rationale)
         rationale = re.sub(r"\n","",rationale.strip())
         rationale = rationale.replace("\"","\'")
@@ -176,6 +181,7 @@ def Parse_Control(control_text):
     if match_5:
         impact = match_5["impact"]
         impact = re.sub(r"\u2022"," -",impact)
+        impact = re.sub(r"(‘|’)","\'",impact)
         impact = re.sub(r"Page\s\d*$","",impact)
         impact = re.sub(r"\n","",impact.strip())
         impact = impact.replace("\"","\'")
