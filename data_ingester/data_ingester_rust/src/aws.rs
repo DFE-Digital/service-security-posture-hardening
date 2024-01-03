@@ -63,6 +63,13 @@ pub async fn aws(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
     )
     .await?;
 
+    try_collect_send(
+        "aws_1_15_ensure_iam_users_receive_permissions_only_through_groups",
+        aws_client.aws_1_15_ensure_iam_users_receive_permissions_only_through_groups(),
+        &splunk,
+    )
+    .await?;
+
     splunk.log("AWS Collection Complete").await?;
 
     Ok(())
@@ -207,6 +214,114 @@ impl AwsClient {
             }
         }
         Ok(AccessKeys { inner: access_keys })
+    }
+
+    pub(crate) async fn aws_1_15_ensure_iam_users_receive_permissions_only_through_groups(
+        &self,
+    ) -> Result<Users> {
+        let config = self.config().await?;
+        let client = aws_sdk_iam::Client::new(&config);
+        let users: Result<Vec<aws_sdk_iam::types::User>, _> = client
+            .list_users()
+            .into_paginator()
+            .items()
+            .send()
+            .collect()
+            .await;
+
+        let mut users: Users = users?.into();
+        for user in &mut users.inner {
+            user.attached_policies = client
+                .list_attached_user_policies()
+                .user_name(&user.user_name)
+                .send()
+                .await?
+                .attached_policies
+                .map(|policies| policies.into_iter().map(|policy| policy.into()).collect())
+                .unwrap_or_default();
+
+            user.policies = client
+                .list_user_policies()
+                .user_name(&user.user_name)
+                .send()
+                .await?
+                .policy_names;
+        }
+
+        Ok(users)
+    }
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub(crate) struct Users {
+    inner: Vec<User>,
+}
+
+impl From<Vec<aws_sdk_iam::types::User>> for Users {
+    fn from(value: Vec<aws_sdk_iam::types::User>) -> Self {
+        Self {
+            inner: value.into_iter().map(|u| u.into()).collect(),
+        }
+    }
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub(crate) struct User {
+    arn: String,
+    path: String,
+    user_name: String,
+    user_id: String,
+    create_date: f64,
+    attached_policies: Vec<AttachedPolicy>,
+    policies: Vec<String>,
+    // password_last_used: Option<f64>,
+    // pub password_last_used: ::std::option::Option<::aws_smithy_types::DateTime>,
+    // pub permissions_boundary: ::std::option::Option<crate::types::AttachedPermissionsBoundary>,
+    // pub tags: ::std::option::Option<::std::vec::Vec<crate::types::Tag>>,
+}
+
+impl ToHecEvents for &Users {
+    type Item = User;
+
+    fn source(&self) -> &str {
+        "iam_ListUsers"
+    }
+
+    fn sourcetype(&self) -> &str {
+        "ssphp:aws:json"
+    }
+
+    fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
+        Box::new(self.inner.iter())
+    }
+}
+
+impl From<aws_sdk_iam::types::User> for User {
+    fn from(value: aws_sdk_iam::types::User) -> Self {
+        Self {
+            arn: value.arn,
+            path: value.path,
+            user_name: value.user_name,
+            user_id: value.user_id,
+            create_date: value.create_date.as_secs_f64(),
+            attached_policies: vec![],
+            policies: vec![],
+        }
+    }
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub(crate) struct AttachedPolicy {
+    policy_name: Option<String>,
+    policy_arn: Option<String>,
+}
+
+impl From<aws_sdk_iam::types::AttachedPolicy> for AttachedPolicy {
+    fn from(value: aws_sdk_iam::types::AttachedPolicy) -> Self {
+        Self {
+            policy_arn: value.policy_arn,
+            policy_name: value.policy_name,
+        }
     }
 }
 
@@ -532,6 +647,17 @@ mod test {
         let result = aws
             .aws_1_13_ensure_there_is_only_one_active_access_key_available_for_any_single_iam_user()
             .await?;
+        splunk.send_batch((&result).to_hec_events()?).await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_aws_1_15() -> Result<()> {
+        let (splunk, aws) = setup().await?;
+        let result = aws
+            .aws_1_15_ensure_iam_users_receive_permissions_only_through_groups()
+            .await?;
+
         splunk.send_batch((&result).to_hec_events()?).await?;
         Ok(())
     }
