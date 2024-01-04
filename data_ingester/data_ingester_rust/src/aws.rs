@@ -12,6 +12,8 @@ use aws_sdk_iam::operation::get_account_summary::GetAccountSummaryOutput;
 use aws_sdk_iam::types::{AccessKeyMetadata, PasswordPolicy};
 use serde::{Deserialize, Serialize};
 
+use crate::aws_entities_for_policy::EntitiesForPolicyOutput;
+use crate::aws_policy::Policies;
 use crate::keyvault::Secrets;
 use crate::ms_graph::try_collect_send;
 use crate::splunk::{set_ssphp_run, Splunk, ToHecEvents};
@@ -66,6 +68,21 @@ pub async fn aws(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
     try_collect_send(
         "aws_1_15_ensure_iam_users_receive_permissions_only_through_groups",
         aws_client.aws_1_15_ensure_iam_users_receive_permissions_only_through_groups(),
+        &splunk,
+    )
+    .await?;
+
+    try_collect_send(
+        "aws_1_16_ensure_iam_policies_that_allow_full_administrative_privileges_are_not_attached",
+        aws_client.aws_1_16_ensure_iam_policies_that_allow_full_administrative_privileges_are_not_attached(),
+        &splunk,
+    )
+        .await?;
+
+    try_collect_send(
+        "aws_1_17_ensure_a_support_role_has_been_created_to_manage_incidents_with_aws_support",
+        aws_client
+            .aws_1_17_ensure_a_support_role_has_been_created_to_manage_incidents_with_aws_support(),
         &splunk,
     )
     .await?;
@@ -249,6 +266,71 @@ impl AwsClient {
         }
 
         Ok(users)
+    }
+
+    pub(crate) async fn aws_1_16_ensure_iam_policies_that_allow_full_administrative_privileges_are_not_attached(
+        &self,
+    ) -> Result<Policies> {
+        let config = self.config().await?;
+        let client = aws_sdk_iam::Client::new(&config);
+        let policies: Result<Vec<aws_sdk_iam::types::Policy>, _> = client
+            .list_policies()
+            .set_only_attached(Some(true))
+            .into_paginator()
+            .items()
+            .send()
+            .collect()
+            .await;
+
+        let mut policies: Policies = policies?.into();
+
+        for policy in policies.inner.iter_mut() {
+            let policy_version = client
+                .get_policy_version()
+                .set_policy_arn(policy.arn.clone())
+                .set_version_id(policy.default_version_id.clone())
+                .send()
+                .await?;
+
+            let document = policy_version
+                .policy_version()
+                .and_then(|policy_version| policy_version.document());
+
+            policy.full_admin_permissions = if let Some(document) = document {
+                let decoded = urlencoding::decode(document).expect("UTF-8");
+                let json_document: crate::aws_policy::AwsPolicy = serde_json::from_str(&decoded)?;
+
+                match &json_document.statement {
+                    crate::aws_policy::Statement::StatementVec(vec) => Some(
+                        vec.iter()
+                            .any(|statement| statement.contains_full_permissions()),
+                    ),
+                    crate::aws_policy::Statement::StatementElement(statement) => {
+                        Some(statement.contains_full_permissions())
+                    }
+                }
+            } else {
+                Some(false)
+            };
+        }
+
+        Ok(policies)
+    }
+
+    pub(crate) async fn aws_1_17_ensure_a_support_role_has_been_created_to_manage_incidents_with_aws_support(
+        &self,
+    ) -> Result<EntitiesForPolicyOutput> {
+        let config = self.config().await?;
+        let client = aws_sdk_iam::Client::new(&config);
+        let arn = Some("arn:aws:iam::aws:policy/AWSSupportAccess".to_string());
+        let mut entities_for_policy: EntitiesForPolicyOutput = client
+            .list_entities_for_policy()
+            .set_policy_arn(arn.clone())
+            .send()
+            .await?
+            .into();
+        entities_for_policy.arn = arn;
+        Ok(entities_for_policy)
     }
 }
 
@@ -658,6 +740,27 @@ mod test {
             .aws_1_15_ensure_iam_users_receive_permissions_only_through_groups()
             .await?;
 
+        splunk.send_batch((&result).to_hec_events()?).await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_aws_1_16() -> Result<()> {
+        let (splunk, aws) = setup().await?;
+        let result = aws
+            .aws_1_16_ensure_iam_policies_that_allow_full_administrative_privileges_are_not_attached()
+            .await?;
+
+        splunk.send_batch((&result).to_hec_events()?).await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_aws_1_17() -> Result<()> {
+        let (splunk, aws) = setup().await?;
+        let result = aws
+            .aws_1_17_ensure_a_support_role_has_been_created_to_manage_incidents_with_aws_support()
+            .await?;
         splunk.send_batch((&result).to_hec_events()?).await?;
         Ok(())
     }
