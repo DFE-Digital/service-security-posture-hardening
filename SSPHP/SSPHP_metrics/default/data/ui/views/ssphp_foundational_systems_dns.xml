@@ -1,6 +1,6 @@
 <dashboard version="1.1" theme="dark" script="js/table_cell_color.js">
   <label>DNS Benchmark : Security Posture Continuous Assurance</label>
-  <description>v1.0.4</description>
+  <description>v1.0.5</description>
   
   <init>
     <set token="tkn_selected_system">DNS</set>
@@ -178,6 +178,16 @@ index="ssphp_metrics_summary"
           ssphp.cis_benchmark.controls.ig1 as "IG1 Status"
 
 | sort 0 ssphp.use_case.id
+
+``` sort the lines properly ```
+| rex field=ssphp.use_case.id "^dns_00[0-9]{1}_cis_(?&lt;n1&gt;[^-]*)-(?&lt;n2&gt;[^-]*)"
+| rex field=ssphp.use_case.id "^dns_00[0-9]{1}_cis_[^-]*-[^-]*-(?&lt;n3&gt;.*)$"
+| fillnull value=0 n3
+| eval n2="00".n2, n2=substr(n2,len(n2)-1,2),
+        n3="00".n3, n3=substr(n3,len(n3)-1,2), 
+        sort_field='n1'.'n2'.'n3'
+| sort 0 "CISO Priority", sort_field
+| fields - sort_field, n1, n2, n3
 
 | eventstats count
           </query>
