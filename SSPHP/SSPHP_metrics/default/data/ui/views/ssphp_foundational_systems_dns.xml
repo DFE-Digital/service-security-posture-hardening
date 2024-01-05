@@ -1,6 +1,6 @@
 <dashboard version="1.1" theme="dark" script="js/table_cell_color.js">
   <label>DNS Benchmark : Security Posture Continuous Assurance</label>
-  <description>v1.0.2</description>
+  <description>v1.0.4</description>
   
   <init>
     <set token="tkn_selected_system">DNS</set>
@@ -94,8 +94,17 @@
     </html>
     <html>
       <style>
-       #table2 th:nth-child(2) {
+        #table1 th:nth-child(1) {
           width: 200px;
+        }
+        #table1 th:nth-child(3) {
+          width: 300px;
+        }
+        #table2 th:nth-child(1) {
+          width: 200px;
+        }
+        #table2 th:nth-child(3) {
+          width: 300px;
         }
       </style>
     </html>
@@ -138,7 +147,8 @@ index="ssphp_metrics_summary"
 
 | eval Score='ssphp.score.score'."|".'ssphp.score.color',
        ssphp.cis_benchmark.controls.v8=split('ssphp.cis_benchmark.controls.v8',"
-")
+"),
+       ssphp.use_case.description=coalesce('ssphp.use_case.description','ssphp.cis_benchmark.control.description')
 
 | search Score=*
 
@@ -158,10 +168,9 @@ index="ssphp_metrics_summary"
 | fillnull value="include" current_status
 | search current_status="$tkn_show_ex$"
 
-| table ssphp.use_case.id, ssphp.use_case.title, Score, ssphp.cis_benchmark.control.title, ssphp.use_case.short_description, ssphp.use_case.description, ssphp.cis_benchmark.control.level, ssphp.cis_benchmark.controls.ig1, current_status
+| table ssphp.use_case.id, ssphp.use_case.title, Score, ssphp.cis_benchmark.control.title, ssphp.use_case.description, ssphp.cis_benchmark.control.level, ssphp.cis_benchmark.controls.ig1, current_status
 
 | rename  ssphp.use_case.title as "Title",
-          ssphp.use_case.short_description as "Name"
           ssphp.use_case.description as "Description",
           ssphp.cis_benchmark.control.title as "Control Title",
           ssphp.cis_benchmark.control.level as "Level",
@@ -185,7 +194,7 @@ index="ssphp_metrics_summary"
         <option name="totalsRow">false</option>
         <option name="wrap">true</option>
         <!-- #<fields>"Name", "Title", Score, "Control Title", "Description", "Level", "IG1 Status", "Exclusion Status"</fields># --> 
-        <fields>"Name", "Title", Score, "Description"</fields>
+        <fields>"Title", Score, "Control Title", "Description"</fields>
         <option name="drilldown">row</option>
         <drilldown>
           <link target="_blank">/app/$tkn_current_app$/ssphp_foundational_systems_drilldown_non_cis?tkn_use_case_id=$row.ssphp.use_case.id$</link>
