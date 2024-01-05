@@ -41,6 +41,7 @@ aws-sdk-iam = "1.7.0"
 aws-sdk-account = "1.7.0"
 aws-credential-types = "*"
 csv = "*"
+urlencoding = "*"
 
 [dependencies.uuid]
 version = "1.4.1"

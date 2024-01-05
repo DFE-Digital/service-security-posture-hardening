@@ -1832,6 +1832,7 @@ dependencies = [
  "trust-dns-proto",
  "trust-dns-resolver",
  "url",
+ "urlencoding",
  "uuid",
  "warp",
 ]
