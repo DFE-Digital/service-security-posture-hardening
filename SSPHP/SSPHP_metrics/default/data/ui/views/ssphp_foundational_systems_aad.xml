@@ -1,6 +1,6 @@
 <dashboard version="1.1" theme="dark" script="js/table_cell_color.js">
   <label>Azure Active Directory CIS [L1/IG1] Benchmark : Security Posture Continuous Assurance</label>
-  <description>v1.2.0</description>
+  <description>v1.2.2</description>
   
   <init>
     <set token="tkn_selected_system">AZURE ACTIVE DIRECTORY</set>
@@ -195,7 +195,6 @@ index="ssphp_metrics_summary"
 | table ssphp.use_case.id, ssphp.use_case.title, Score, ssphp.cis_benchmark.control.title, ssphp.use_case.description, ssphp.cis_benchmark.control.level, ssphp.cis_benchmark.controls.ig1, current_status
 
 | rename  ssphp.use_case.title as "Title",
-          ssphp.use_case.short_description as "Name"
           ssphp.use_case.description as "Description",
           ssphp.cis_benchmark.control.title as "Control Title",
           ssphp.cis_benchmark.control.level as "Level",
