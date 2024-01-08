@@ -14,6 +14,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::aws_entities_for_policy::EntitiesForPolicyOutput;
 use crate::aws_policy::Policies;
+use crate::aws_trail::{TrailWrapper, TrailWrappers};
 use crate::keyvault::Secrets;
 use crate::ms_graph::try_collect_send;
 use crate::splunk::{set_ssphp_run, Splunk, ToHecEvents};
@@ -83,6 +84,28 @@ pub async fn aws(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
         "aws_1_17_ensure_a_support_role_has_been_created_to_manage_incidents_with_aws_support",
         aws_client
             .aws_1_17_ensure_a_support_role_has_been_created_to_manage_incidents_with_aws_support(),
+        &splunk,
+    )
+    .await?;
+
+    try_collect_send(
+        "aws_1_19_ensure_that_all_the_expired_tls_certificates_stored_in_aws_iam_are_removed",
+        aws_client
+            .aws_1_19_ensure_that_all_the_expired_tls_certificates_stored_in_aws_iam_are_removed(),
+        &splunk,
+    )
+    .await?;
+
+    try_collect_send(
+        "aws_1_20_ensure_that_iam_access_analyzer_is_enabled_for_all_regions",
+        aws_client.aws_1_20_ensure_that_iam_access_analyzer_is_enabled_for_all_regions(),
+        &splunk,
+    )
+    .await?;
+
+    try_collect_send(
+        "aws_3_1_ensure_cloudtrail_is_enabled_in_all_regions",
+        aws_client.aws_3_1_ensure_cloudtrail_is_enabled_in_all_regions(),
         &splunk,
     )
     .await?;
@@ -331,6 +354,191 @@ impl AwsClient {
             .into();
         entities_for_policy.arn = arn;
         Ok(entities_for_policy)
+    }
+
+    pub(crate) async fn aws_1_19_ensure_that_all_the_expired_tls_certificates_stored_in_aws_iam_are_removed(
+        &self,
+    ) -> Result<ServerCertificatesMetadata> {
+        let config = self.config().await?;
+        let client = aws_sdk_iam::Client::new(&config);
+        let server_certificates: ServerCertificatesMetadata = client
+            .list_server_certificates()
+            .send()
+            .await?
+            .server_certificate_metadata_list
+            .into();
+
+        Ok(server_certificates)
+    }
+
+    /// TODO Might need to check other regions
+    pub(crate) async fn aws_1_20_ensure_that_iam_access_analyzer_is_enabled_for_all_regions(
+        &self,
+    ) -> Result<AnalyzerSummaries> {
+        let config = self.config().await?;
+        let client = aws_sdk_accessanalyzer::Client::new(&config);
+        let access_analyzers: AnalyzerSummaries =
+            client.list_analyzers().send().await?.analyzers.into();
+
+        dbg!(&access_analyzers);
+        Ok(access_analyzers)
+    }
+
+    pub(crate) async fn aws_3_1_ensure_cloudtrail_is_enabled_in_all_regions(
+        &self,
+    ) -> Result<TrailWrappers> {
+        let config = self.config().await?;
+        let client = aws_sdk_cloudtrail::Client::new(&config);
+        let trails = client.describe_trails().send().await?;
+
+        dbg!(&trails);
+
+        let mut trail_wrappers = vec![];
+        for trail in trails.trail_list.unwrap_or_default().into_iter() {
+            let name = match &trail.name {
+                Some(name) => Some(name.to_string()),
+                None => continue,
+            };
+            let trail_status = client
+                .get_trail_status()
+                .set_name(name.clone())
+                .send()
+                .await?;
+            dbg!(&trail_status);
+            let event_selectors = client
+                .get_event_selectors()
+                .set_trail_name(name)
+                .send()
+                .await?;
+            dbg!(&event_selectors);
+            trail_wrappers.push(TrailWrapper {
+                trail,
+                trail_status,
+                event_selectors: event_selectors.into(),
+            });
+        }
+
+        Ok(TrailWrappers {
+            inner: trail_wrappers,
+        })
+    }
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub(crate) struct AnalyzerSummaries {
+    inner: Vec<AnalyzerSummary>,
+}
+
+impl From<Vec<aws_sdk_accessanalyzer::types::AnalyzerSummary>> for AnalyzerSummaries {
+    fn from(value: Vec<aws_sdk_accessanalyzer::types::AnalyzerSummary>) -> Self {
+        Self {
+            inner: value.into_iter().map(|u| u.into()).collect(),
+        }
+    }
+}
+
+impl ToHecEvents for &AnalyzerSummaries {
+    type Item = AnalyzerSummary;
+
+    fn source(&self) -> &str {
+        "accessanalyzers_ListAnalyzers"
+    }
+
+    fn sourcetype(&self) -> &str {
+        "ssphp:aws:json"
+    }
+
+    fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
+        Box::new(self.inner.iter())
+    }
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub(crate) struct AnalyzerSummary {
+    /// <p>The ARN of the analyzer.</p>
+    pub arn: ::std::string::String,
+    /// <p>The name of the analyzer.</p>
+    pub name: ::std::string::String,
+    /// <p>The type of analyzer, which corresponds to the zone of trust chosen for the analyzer.</p>
+    pub r#type: String,
+    /// <p>A timestamp for the time at which the analyzer was created.</p>
+    pub created_at: f64,
+    /// <p>The resource that was most recently analyzed by the analyzer.</p>
+    pub last_resource_analyzed: ::std::option::Option<::std::string::String>,
+    /// <p>The time at which the most recently analyzed resource was analyzed.</p>
+    pub last_resource_analyzed_at: ::std::option::Option<f64>,
+}
+
+impl From<aws_sdk_accessanalyzer::types::AnalyzerSummary> for AnalyzerSummary {
+    fn from(value: aws_sdk_accessanalyzer::types::AnalyzerSummary) -> Self {
+        Self {
+            arn: value.arn,
+            name: value.name,
+            r#type: value.r#type.as_str().to_string(),
+            created_at: value.created_at.as_secs_f64(),
+            last_resource_analyzed: value.last_resource_analyzed,
+            last_resource_analyzed_at: value
+                .last_resource_analyzed_at
+                .map(|lraa| lraa.as_secs_f64()),
+        }
+    }
+}
+
+//////////////////
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub(crate) struct ServerCertificatesMetadata {
+    inner: Vec<ServerCertificateMetadata>,
+}
+
+impl From<Vec<aws_sdk_iam::types::ServerCertificateMetadata>> for ServerCertificatesMetadata {
+    fn from(value: Vec<aws_sdk_iam::types::ServerCertificateMetadata>) -> Self {
+        Self {
+            inner: value.into_iter().map(|u| u.into()).collect(),
+        }
+    }
+}
+
+impl ToHecEvents for &ServerCertificatesMetadata {
+    type Item = ServerCertificateMetadata;
+
+    fn source(&self) -> &str {
+        "iam_ListServerCertificates"
+    }
+
+    fn sourcetype(&self) -> &str {
+        "ssphp:aws:json"
+    }
+
+    fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
+        Box::new(self.inner.iter())
+    }
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub(crate) struct ServerCertificateMetadata {
+    pub path: ::std::string::String,
+    /// <p>The name that identifies the server certificate.</p>
+    pub server_certificate_name: ::std::string::String,
+    /// <p>The stable and unique string identifying the server certificate. For more information about IDs, see <a href="https://docs.aws.amazon.com/IAM/latest/UserGuide/Using_Identifiers.html">IAM identifiers</a> in the <i>IAM User Guide</i>.</p>
+    pub server_certificate_id: ::std::string::String,
+    /// <p>The Amazon Resource Name (ARN) specifying the server certificate. For more information about ARNs and how to use them in policies, see <a href="https://docs.aws.amazon.com/IAM/latest/UserGuide/Using_Identifiers.html">IAM identifiers</a> in the <i>IAM User Guide</i>.</p>
+    pub arn: ::std::string::String,
+    /// <p>The date when the server certificate was uploaded.</p>
+    pub upload_date: ::std::option::Option<f64>,
+    /// <p>The date on which the certificate is set to expire.</p>
+    pub expiration: ::std::option::Option<f64>,
+}
+
+impl From<aws_sdk_iam::types::ServerCertificateMetadata> for ServerCertificateMetadata {
+    fn from(value: aws_sdk_iam::types::ServerCertificateMetadata) -> Self {
+        Self {
+            arn: value.arn,
+            path: value.path,
+            server_certificate_name: value.server_certificate_name,
+            server_certificate_id: value.server_certificate_id,
+            upload_date: value.upload_date.map(|ud| ud.as_secs_f64()),
+            expiration: value.expiration.map(|e| e.as_secs_f64()),
+        }
     }
 }
 
@@ -760,6 +968,36 @@ mod test {
         let (splunk, aws) = setup().await?;
         let result = aws
             .aws_1_17_ensure_a_support_role_has_been_created_to_manage_incidents_with_aws_support()
+            .await?;
+        splunk.send_batch((&result).to_hec_events()?).await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_aws_1_19() -> Result<()> {
+        let (splunk, aws) = setup().await?;
+        let result = aws
+            .aws_1_19_ensure_that_all_the_expired_tls_certificates_stored_in_aws_iam_are_removed()
+            .await?;
+        splunk.send_batch((&result).to_hec_events()?).await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_aws_1_20() -> Result<()> {
+        let (splunk, aws) = setup().await?;
+        let result = aws
+            .aws_1_20_ensure_that_iam_access_analyzer_is_enabled_for_all_regions()
+            .await?;
+        splunk.send_batch((&result).to_hec_events()?).await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_aws_3_1() -> Result<()> {
+        let (splunk, aws) = setup().await?;
+        let result = aws
+            .aws_3_1_ensure_cloudtrail_is_enabled_in_all_regions()
             .await?;
         splunk.send_batch((&result).to_hec_events()?).await?;
         Ok(())

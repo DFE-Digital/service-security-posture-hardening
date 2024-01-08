@@ -215,10 +215,57 @@ dependencies = [
 ]
 
 [[package]]
+name = "aws-sdk-accessanalyzer"
+version = "1.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5670052cd590a3e3601cc328d35a0b831f8b399e99dc0e25934287ef319c33b6"
+dependencies = [
+ "aws-credential-types",
+ "aws-http",
+ "aws-runtime",
+ "aws-smithy-async",
+ "aws-smithy-http",
+ "aws-smithy-json",
+ "aws-smithy-runtime",
+ "aws-smithy-runtime-api",
+ "aws-smithy-types",
+ "aws-types",
+ "bytes",
+ "fastrand 2.0.1",
+ "http 0.2.11",
+ "once_cell",
+ "regex-lite",
+ "tracing",
+]
+
+[[package]]
 name = "aws-sdk-account"
 version = "1.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "31cb2d378771881a52c833bd0454a932d309abdc12effa1549f3dace997ac9e5"
+dependencies = [
+ "aws-credential-types",
+ "aws-http",
+ "aws-runtime",
+ "aws-smithy-async",
+ "aws-smithy-http",
+ "aws-smithy-json",
+ "aws-smithy-runtime",
+ "aws-smithy-runtime-api",
+ "aws-smithy-types",
+ "aws-types",
+ "bytes",
+ "http 0.2.11",
+ "once_cell",
+ "regex-lite",
+ "tracing",
+]
+
+[[package]]
+name = "aws-sdk-cloudtrail"
+version = "1.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8c1bbdda55eed8192d7c8e051f37a1ca30659864372a705e67b6fd17858fa4e2"
 dependencies = [
  "aws-credential-types",
  "aws-http",
@@ -1803,8 +1850,11 @@ dependencies = [
  "anyhow",
  "aws-config",
  "aws-credential-types",
+ "aws-sdk-accessanalyzer",
  "aws-sdk-account",
+ "aws-sdk-cloudtrail",
  "aws-sdk-iam",
+ "aws-smithy-types",
  "azure_core",
  "azure_identity",
  "azure_mgmt_authorization",
