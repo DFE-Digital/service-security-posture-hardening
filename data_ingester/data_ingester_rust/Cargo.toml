@@ -42,6 +42,9 @@ aws-sdk-account = "1.7.0"
 aws-credential-types = "*"
 csv = "*"
 urlencoding = "*"
+aws-sdk-accessanalyzer = "*"
+aws-sdk-cloudtrail = "*"
+aws-smithy-types = "*"
 
 [dependencies.uuid]
 version = "1.4.1"
