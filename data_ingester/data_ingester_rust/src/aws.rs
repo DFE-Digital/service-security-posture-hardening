@@ -12,8 +12,13 @@ use aws_sdk_iam::operation::get_account_summary::GetAccountSummaryOutput;
 use aws_sdk_iam::types::{AccessKeyMetadata, PasswordPolicy};
 use serde::{Deserialize, Serialize};
 
+use crate::aws_config::DescribeConfigurationRecordersOutput;
 use crate::aws_entities_for_policy::EntitiesForPolicyOutput;
 use crate::aws_policy::Policies;
+use crate::aws_s3::{
+    GetBucketAclOutput, GetBucketAclOutputs, GetBucketLoggingOutput, GetBucketLoggingOutputs,
+    GetBucketPolicyOutput, GetBucketPolicyOutputs,
+};
 use crate::aws_trail::{TrailWrapper, TrailWrappers};
 use crate::keyvault::Secrets;
 use crate::ms_graph::try_collect_send;
@@ -106,6 +111,38 @@ pub async fn aws(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
     try_collect_send(
         "aws_3_1_ensure_cloudtrail_is_enabled_in_all_regions",
         aws_client.aws_3_1_ensure_cloudtrail_is_enabled_in_all_regions(),
+        &splunk,
+    )
+    .await?;
+
+    try_collect_send(
+        "aws_3_3_ensure_the_s3_bucket_used_to_store_cloudtrail_logs_is_not_publicly_accessible_acl",
+        aws_client
+            .aws_3_3_ensure_the_s3_bucket_used_to_store_cloudtrail_logs_is_not_publicly_accessible_acl(
+            ),
+        &splunk,
+    )
+    .await?;
+
+    try_collect_send(
+        "aws_3_3_ensure_the_s3_bucket_used_to_store_cloudtrail_logs_is_not_publicly_accessible_bucket_policy",
+        aws_client
+            .aws_3_3_ensure_the_s3_bucket_used_to_store_cloudtrail_logs_is_not_publicly_accessible_bucket_policy(
+            ),
+        &splunk,
+    )
+        .await?;
+
+    try_collect_send(
+        "aws_3_5_ensure_aws_config_is_enabled_in_all_regions",
+        aws_client.aws_3_5_ensure_aws_config_is_enabled_in_all_regions(),
+        &splunk,
+    )
+    .await?;
+
+    try_collect_send(
+        "aws_3_6_ensure_s3_bucket_access_logging_is_enabled_on_the_cloudtrail_s3_bucket",
+        aws_client.aws_3_6_ensure_s3_bucket_access_logging_is_enabled_on_the_cloudtrail_s3_bucket(),
         &splunk,
     )
     .await?;
@@ -390,7 +427,6 @@ impl AwsClient {
         let client = aws_sdk_cloudtrail::Client::new(&config);
         let trails = client.describe_trails().send().await?;
 
-
         let mut trail_wrappers = vec![];
         for trail in trails.trail_list.unwrap_or_default().into_iter() {
             let name = match &trail.name {
@@ -419,6 +455,146 @@ impl AwsClient {
         Ok(TrailWrappers {
             inner: trail_wrappers,
         })
+    }
+
+    pub(crate) async fn aws_3_3_ensure_the_s3_bucket_used_to_store_cloudtrail_logs_is_not_publicly_accessible_acl(
+        &self,
+    ) -> Result<GetBucketAclOutputs> {
+        let config = self.config().await?;
+        let trail_client = aws_sdk_cloudtrail::Client::new(&config);
+        let trails = trail_client.describe_trails().send().await?;
+
+        let s3_client = aws_sdk_s3::Client::new(&config);
+
+        let mut acls = vec![];
+        for trail in trails.trail_list.unwrap_or_default().into_iter() {
+            let bucket_name = trail.s3_bucket_name;
+            match s3_client
+                .get_bucket_acl()
+                .set_bucket(bucket_name.clone())
+                .send()
+                .await
+            {
+                Ok(acl) => {
+                    let mut bucket_acl: GetBucketAclOutput = acl.into();
+                    bucket_acl.trail_arn = trail.trail_arn;
+                    bucket_acl.bucket_name = bucket_name.clone();
+                    acls.push(bucket_acl);
+                }
+
+                Err(e) => {
+                    eprintln!("Error getting bucket acl: {:?} {:?}", bucket_name, e);
+                }
+            }
+        }
+        Ok(GetBucketAclOutputs { inner: acls })
+    }
+
+    pub(crate) async fn aws_3_3_ensure_the_s3_bucket_used_to_store_cloudtrail_logs_is_not_publicly_accessible_bucket_policy(
+        &self,
+    ) -> Result<GetBucketPolicyOutputs> {
+        let config = self.config().await?;
+        let trail_client = aws_sdk_cloudtrail::Client::new(&config);
+        let trails = trail_client.describe_trails().send().await?;
+
+        let s3_client = aws_sdk_s3::Client::new(&config);
+
+        let mut policies = vec![];
+        for trail in trails.trail_list.unwrap_or_default().into_iter() {
+            let bucket_name = trail.s3_bucket_name;
+            match s3_client
+                .get_bucket_policy()
+                .set_bucket(bucket_name.clone())
+                .send()
+                .await
+            {
+                Ok(policy) => {
+                    let mut policy: GetBucketPolicyOutput = policy.into();
+                    policy.bucket_name = bucket_name.clone();
+                    policy.trail_arn = trail.trail_arn;
+                    policies.push(policy);
+                }
+                Err(e) => {
+                    eprintln!("Error getting bucket policy: {:?} {:?}", bucket_name, e);
+                }
+            }
+        }
+        Ok(GetBucketPolicyOutputs { inner: policies })
+    }
+
+    pub(crate) async fn aws_3_6_ensure_s3_bucket_access_logging_is_enabled_on_the_cloudtrail_s3_bucket(
+        &self,
+    ) -> Result<GetBucketLoggingOutputs> {
+        let config = self.config().await?;
+        let trail_client = aws_sdk_cloudtrail::Client::new(&config);
+        let trails = trail_client.describe_trails().send().await?;
+
+        let s3_client = aws_sdk_s3::Client::new(&config);
+
+        let mut logging_policies = vec![];
+        for trail in trails.trail_list.unwrap_or_default().into_iter() {
+            let bucket_name = trail.s3_bucket_name;
+            match s3_client
+                .get_bucket_logging()
+                .set_bucket(bucket_name.clone())
+                .send()
+                .await
+            {
+                Ok(logging) => {
+                    let mut logging: GetBucketLoggingOutput = logging.into();
+                    logging.bucket_name = bucket_name.clone();
+                    logging.trail_arn = trail.trail_arn;
+                    logging_policies.push(logging);
+                }
+                Err(e) => {
+                    eprintln!("Error getting bucket policy: {:?} {:?}", bucket_name, e);
+                }
+            }
+        }
+        Ok(GetBucketLoggingOutputs {
+            inner: logging_policies,
+        })
+    }
+    pub(crate) async fn aws_3_5_ensure_aws_config_is_enabled_in_all_regions(
+        &self,
+    ) -> Result<DescribeConfigurationRecordersOutput> {
+        let config = self.config().await?;
+        let config_client = aws_sdk_config::Client::new(&config);
+        let mut configs: DescribeConfigurationRecordersOutput = config_client
+            .describe_configuration_recorders()
+            .send()
+            .await?
+            .into();
+
+        if configs.configuration_recorders.is_none() {
+            return Ok(configs);
+        }
+
+        for config in configs
+            .configuration_recorders
+            .as_mut()
+            .expect("Should have configuration recorders")
+            .iter_mut()
+        {
+            match config_client
+                .describe_configuration_recorder_status()
+                .set_configuration_recorder_names(
+                    config.name.as_ref().map(|name| vec![name.clone()]),
+                )
+                .send()
+                .await
+            {
+                Ok(status) => {
+                    config.status = status
+                        .configuration_recorders_status
+                        .map(|vec| vec.into_iter().map(|crs| crs.into()).collect());
+                }
+                Err(e) => {
+                    eprintln!("Error getting bucket policy: {:?} {:?}", config.name, e);
+                }
+            }
+        }
+        Ok(configs)
     }
 }
 
@@ -996,6 +1172,46 @@ mod test {
         let (splunk, aws) = setup().await?;
         let result = aws
             .aws_3_1_ensure_cloudtrail_is_enabled_in_all_regions()
+            .await?;
+        splunk.send_batch((&result).to_hec_events()?).await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_aws_3_3_acl() -> Result<()> {
+        let (splunk, aws) = setup().await?;
+        let result = aws
+            .aws_3_3_ensure_the_s3_bucket_used_to_store_cloudtrail_logs_is_not_publicly_accessible_acl()
+            .await?;
+        splunk.send_batch((&result).to_hec_events()?).await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_aws_3_3_bucket_policy() -> Result<()> {
+        let (splunk, aws) = setup().await?;
+        let result = aws
+            .aws_3_3_ensure_the_s3_bucket_used_to_store_cloudtrail_logs_is_not_publicly_accessible_bucket_policy()
+            .await?;
+        splunk.send_batch((&result).to_hec_events()?).await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_aws_3_5() -> Result<()> {
+        let (splunk, aws) = setup().await?;
+        let result = aws
+            .aws_3_5_ensure_aws_config_is_enabled_in_all_regions()
+            .await?;
+        splunk.send_batch((&result).to_hec_events()?).await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_aws_3_6() -> Result<()> {
+        let (splunk, aws) = setup().await?;
+        let result = aws
+            .aws_3_6_ensure_s3_bucket_access_logging_is_enabled_on_the_cloudtrail_s3_bucket()
             .await?;
         splunk.send_batch((&result).to_hec_events()?).await?;
         Ok(())

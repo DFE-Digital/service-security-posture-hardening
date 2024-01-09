@@ -44,6 +44,8 @@ csv = "*"
 urlencoding = "*"
 aws-sdk-accessanalyzer = "*"
 aws-sdk-cloudtrail = "*"
+aws-sdk-s3 = "*"
+aws-sdk-config = "*"
 aws-smithy-types = "*"
 
 [dependencies.uuid]
