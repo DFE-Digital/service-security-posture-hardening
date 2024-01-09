@@ -380,7 +380,6 @@ impl AwsClient {
         let access_analyzers: AnalyzerSummaries =
             client.list_analyzers().send().await?.analyzers.into();
 
-        dbg!(&access_analyzers);
         Ok(access_analyzers)
     }
 
@@ -391,7 +390,6 @@ impl AwsClient {
         let client = aws_sdk_cloudtrail::Client::new(&config);
         let trails = client.describe_trails().send().await?;
 
-        dbg!(&trails);
 
         let mut trail_wrappers = vec![];
         for trail in trails.trail_list.unwrap_or_default().into_iter() {
@@ -404,13 +402,13 @@ impl AwsClient {
                 .set_name(name.clone())
                 .send()
                 .await?;
-            dbg!(&trail_status);
+
             let event_selectors = client
                 .get_event_selectors()
                 .set_trail_name(name)
                 .send()
                 .await?;
-            dbg!(&event_selectors);
+
             trail_wrappers.push(TrailWrapper {
                 trail,
                 trail_status,
