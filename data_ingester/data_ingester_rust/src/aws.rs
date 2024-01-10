@@ -19,6 +19,7 @@ use crate::aws_s3::{
     GetBucketAclOutput, GetBucketAclOutputs, GetBucketLoggingOutput, GetBucketLoggingOutputs,
     GetBucketPolicyOutput, GetBucketPolicyOutputs,
 };
+use crate::aws_securityhub::DescribeHubOutput;
 use crate::aws_trail::{TrailWrapper, TrailWrappers};
 use crate::keyvault::Secrets;
 use crate::ms_graph::try_collect_send;
@@ -143,6 +144,13 @@ pub async fn aws(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
     try_collect_send(
         "aws_3_6_ensure_s3_bucket_access_logging_is_enabled_on_the_cloudtrail_s3_bucket",
         aws_client.aws_3_6_ensure_s3_bucket_access_logging_is_enabled_on_the_cloudtrail_s3_bucket(),
+        &splunk,
+    )
+    .await?;
+
+    try_collect_send(
+        "aws_4_16_ensure_aws_security_hub_is_enabled",
+        aws_client.aws_4_16_ensure_aws_security_hub_is_enabled(),
         &splunk,
     )
     .await?;
@@ -555,6 +563,7 @@ impl AwsClient {
             inner: logging_policies,
         })
     }
+
     pub(crate) async fn aws_3_5_ensure_aws_config_is_enabled_in_all_regions(
         &self,
     ) -> Result<DescribeConfigurationRecordersOutput> {
@@ -595,6 +604,16 @@ impl AwsClient {
             }
         }
         Ok(configs)
+    }
+
+    pub(crate) async fn aws_4_16_ensure_aws_security_hub_is_enabled(
+        &self,
+    ) -> Result<DescribeHubOutput> {
+        let config = self.config().await?;
+        let client = aws_sdk_securityhub::Client::new(&config);
+        let hubs: DescribeHubOutput = client.describe_hub().send().await?.into();
+
+        Ok(hubs)
     }
 }
 
@@ -1213,6 +1232,14 @@ mod test {
         let result = aws
             .aws_3_6_ensure_s3_bucket_access_logging_is_enabled_on_the_cloudtrail_s3_bucket()
             .await?;
+        splunk.send_batch((&result).to_hec_events()?).await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_aws_4_16() -> Result<()> {
+        let (splunk, aws) = setup().await?;
+        let result = aws.aws_4_16_ensure_aws_security_hub_is_enabled().await?;
         splunk.send_batch((&result).to_hec_events()?).await?;
         Ok(())
     }

@@ -363,6 +363,29 @@ dependencies = [
 ]
 
 [[package]]
+name = "aws-sdk-securityhub"
+version = "1.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2b2c70f794b049b1da1158efb610ab81f652e5807ac0ffcd84782feb675c725f"
+dependencies = [
+ "aws-credential-types",
+ "aws-http",
+ "aws-runtime",
+ "aws-smithy-async",
+ "aws-smithy-http",
+ "aws-smithy-json",
+ "aws-smithy-runtime",
+ "aws-smithy-runtime-api",
+ "aws-smithy-types",
+ "aws-types",
+ "bytes",
+ "http 0.2.11",
+ "once_cell",
+ "regex-lite",
+ "tracing",
+]
+
+[[package]]
 name = "aws-sdk-sso"
 version = "1.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2071,6 +2094,7 @@ dependencies = [
  "aws-sdk-config",
  "aws-sdk-iam",
  "aws-sdk-s3",
+ "aws-sdk-securityhub",
  "aws-smithy-types",
  "azure_core",
  "azure_identity",
