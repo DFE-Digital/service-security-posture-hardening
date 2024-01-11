@@ -1,7 +1,10 @@
 mod admin_request_consent_policy;
 mod aws;
+mod aws_config;
 mod aws_entities_for_policy;
 mod aws_policy;
+mod aws_s3;
+mod aws_securityhub;
 mod aws_trail;
 mod azure_functions;
 mod azure_rest;
