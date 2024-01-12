@@ -10,10 +10,13 @@ use aws_sdk_account::config::{Credentials, ProvideCredentials};
 use aws_sdk_account::types::ContactInformation;
 use aws_sdk_iam::operation::get_account_summary::GetAccountSummaryOutput;
 use aws_sdk_iam::types::{AccessKeyMetadata, PasswordPolicy};
+use aws_sdk_kms::types::KeyListEntry;
 use serde::{Deserialize, Serialize};
 
 use crate::aws_config::DescribeConfigurationRecordersOutput;
+use crate::aws_ec2::{DescribeFlowLogs, DescribeVpcs, FlowLog, Vpc};
 use crate::aws_entities_for_policy::EntitiesForPolicyOutput;
+use crate::aws_kms::{KeyMetadata, KeyMetadatas};
 use crate::aws_policy::Policies;
 use crate::aws_s3::{
     GetBucketAclOutput, GetBucketAclOutputs, GetBucketLoggingOutput, GetBucketLoggingOutputs,
@@ -144,6 +147,27 @@ pub async fn aws(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
     try_collect_send(
         "aws_3_6_ensure_s3_bucket_access_logging_is_enabled_on_the_cloudtrail_s3_bucket",
         aws_client.aws_3_6_ensure_s3_bucket_access_logging_is_enabled_on_the_cloudtrail_s3_bucket(),
+        &splunk,
+    )
+    .await?;
+
+    try_collect_send(
+        "aws_3_8_ensure_rotation_for_customer_created_symmetric_cmks_is_enabled",
+        aws_client.aws_3_8_ensure_rotation_for_customer_created_symmetric_cmks_is_enabled(),
+        &splunk,
+    )
+    .await?;
+
+    try_collect_send(
+        "aws_3_9_ensure_vpc_flow_logging_is_enabled_in_all_vpcs_vpc",
+        aws_client.aws_3_9_ensure_vpc_flow_logging_is_enabled_in_all_vpcs_vpc(),
+        &splunk,
+    )
+    .await?;
+
+    try_collect_send(
+        "aws_3_9_ensure_vpc_flow_logging_is_enabled_in_all_vpcs_flow_logs",
+        aws_client.aws_3_9_ensure_vpc_flow_logging_is_enabled_in_all_vpcs_flow_logs(),
         &splunk,
     )
     .await?;
@@ -604,6 +628,101 @@ impl AwsClient {
             }
         }
         Ok(configs)
+    }
+
+    pub(crate) async fn aws_3_9_ensure_vpc_flow_logging_is_enabled_in_all_vpcs_vpc(
+        &self,
+    ) -> Result<DescribeVpcs> {
+        let config = self.config().await?;
+        let ec2_client = aws_sdk_ec2::Client::new(&config);
+        let vpcs: Vec<Vpc> = ec2_client
+            .describe_vpcs()
+            .into_paginator()
+            .items()
+            .send()
+            .collect::<Result<Vec<aws_sdk_ec2::types::Vpc>, _>>()
+            .await?
+            .into_iter()
+            .map(|vpc| vpc.into())
+            .collect();
+        Ok(DescribeVpcs { inner: vpcs })
+    }
+
+    pub(crate) async fn aws_3_9_ensure_vpc_flow_logging_is_enabled_in_all_vpcs_flow_logs(
+        &self,
+    ) -> Result<DescribeFlowLogs> {
+        let config = self.config().await?;
+        let ec2_client = aws_sdk_ec2::Client::new(&config);
+        let flow_logs: Vec<FlowLog> = ec2_client
+            .describe_flow_logs()
+            .into_paginator()
+            .items()
+            .send()
+            .collect::<Result<Vec<aws_sdk_ec2::types::FlowLog>, _>>()
+            .await?
+            .into_iter()
+            .map(|vpc| vpc.into())
+            .collect();
+        Ok(DescribeFlowLogs { inner: flow_logs })
+    }
+
+    pub(crate) async fn aws_3_8_ensure_rotation_for_customer_created_symmetric_cmks_is_enabled(
+        &self,
+    ) -> Result<KeyMetadatas> {
+        let config = self.config().await?;
+        let client = aws_sdk_kms::Client::new(&config);
+        let mut key_list_entries: Vec<KeyListEntry> = client
+            .list_keys()
+            .into_paginator()
+            .items()
+            .send()
+            .collect::<Result<Vec<KeyListEntry>, _>>()
+            .await?;
+
+        let mut customer_key_metadatas: Vec<KeyMetadata> = vec![];
+        for key in key_list_entries.iter_mut() {
+            let describe_key = client
+                .describe_key()
+                .set_key_id(key.key_id.clone())
+                .send()
+                .await?;
+
+            let key_manager_type_is_customer = describe_key
+                .key_metadata()
+                .and_then(|km| km.key_manager.as_ref())
+                .is_some_and(|km| matches!(km, aws_sdk_kms::types::KeyManagerType::Customer));
+
+            let key_spec_is_symmetric_default = describe_key
+                .key_metadata()
+                .and_then(|km| km.key_spec.as_ref())
+                .is_some_and(|ks| matches!(ks, aws_sdk_kms::types::KeySpec::SymmetricDefault));
+
+            match (key_manager_type_is_customer, key_spec_is_symmetric_default) {
+                (true, true) => {
+                    let mut describe_key_metadata: KeyMetadata = match describe_key.key_metadata {
+                        Some(km) => km.into(),
+                        None => continue,
+                    };
+                    match client
+                        .get_key_rotation_status()
+                        .set_key_id(key.key_id.clone())
+                        .send()
+                        .await
+                    {
+                        Ok(krs) => {
+                            describe_key_metadata.key_rotation_status = Some(krs.into());
+                        }
+                        Err(_) => continue,
+                    }
+                    customer_key_metadatas.push(describe_key_metadata);
+                }
+                (_, _) => continue,
+            }
+        }
+
+        Ok(KeyMetadatas {
+            inner: customer_key_metadatas,
+        })
     }
 
     pub(crate) async fn aws_4_16_ensure_aws_security_hub_is_enabled(
@@ -1227,10 +1346,30 @@ mod test {
     }
 
     #[tokio::test]
-    async fn test_aws_3_6() -> Result<()> {
+    async fn test_aws_3_8() -> Result<()> {
         let (splunk, aws) = setup().await?;
         let result = aws
-            .aws_3_6_ensure_s3_bucket_access_logging_is_enabled_on_the_cloudtrail_s3_bucket()
+            .aws_3_8_ensure_rotation_for_customer_created_symmetric_cmks_is_enabled()
+            .await?;
+        splunk.send_batch((&result).to_hec_events()?).await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_aws_3_9_vpcs() -> Result<()> {
+        let (splunk, aws) = setup().await?;
+        let result = aws
+            .aws_3_9_ensure_vpc_flow_logging_is_enabled_in_all_vpcs_vpc()
+            .await?;
+        splunk.send_batch((&result).to_hec_events()?).await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_aws_3_9_flow_logs() -> Result<()> {
+        let (splunk, aws) = setup().await?;
+        let result = aws
+            .aws_3_9_ensure_vpc_flow_logging_is_enabled_in_all_vpcs_flow_logs()
             .await?;
         splunk.send_batch((&result).to_hec_events()?).await?;
         Ok(())
