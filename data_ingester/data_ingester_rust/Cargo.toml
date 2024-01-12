@@ -46,7 +46,9 @@ aws-sdk-accessanalyzer = "*"
 aws-sdk-cloudtrail = "*"
 aws-sdk-s3 = "*"
 aws-sdk-config = "*"
+aws-sdk-kms = "*"
 aws-sdk-securityhub = "*"
+aws-sdk-ec2 = "*"
 aws-smithy-types = "*"
 
 [dependencies.uuid]
