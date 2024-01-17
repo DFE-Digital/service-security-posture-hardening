@@ -1,6 +1,6 @@
 <dashboard version="1.1" theme="dark" script="js/table_cell_color.js">
   <label>DNS Benchmark : Security Posture Continuous Assurance</label>
-  <description>v1.0.5</description>
+  <description>v2.0.4</description>
   
   <init>
     <set token="tkn_selected_system">DNS</set>
@@ -21,21 +21,9 @@
     <set token="tkn_list_title">M365 : ALL</set>
   </init>
 
-
-  <search id="base_rollup_1">
-    <query>
-`ssphp_metrics_index` ssphp.use_case.id="dns_000" earliest=-1d@d latest=now
-[| search `ssphp_metrics_index` ssphp.use_case.id="dns_000" earliest=-1d@d latest=now
-  | stats max(SSPHP_RUN) as SSPHP_RUN
-  | return SSPHP_RUN]
-        
-| fields ssphp.use_case.id, ssphp.score.score
-    </query>
-  </search>
-
   
 
-<!-- ################### M365 Rollup ################### --> 
+<!-- ################### DNS Rollup ################### --> 
 
   <row>
     <panel>
@@ -44,18 +32,12 @@
       </html>
       <single>
 
-        <search base="base_rollup_1">
+        <search>
           <query>
-| search ssphp.use_case.id="dns_000"
-| table ssphp.score.score
+| makeresults
+| eval out_field=$tkn_controls_compliant|s$." / ".$tkn_controls_ciso|s$
+| table out_field
 
-
-| append 
-    [| makeresults
-    | eval ssphp.score.score="-"
-    | fields - _time]
-| sort - ssphp.score.score
-| head 1
           </query>
         </search>
         <option name="colorMode">block</option>
@@ -97,14 +79,14 @@
         #table1 th:nth-child(1) {
           width: 200px;
         }
+        #table1 th:nth-child(2) {
+          width: 100px;
+        }
         #table1 th:nth-child(3) {
           width: 300px;
         }
-        #table2 th:nth-child(1) {
+        #table1 th:nth-child(4) {
           width: 200px;
-        }
-        #table2 th:nth-child(3) {
-          width: 300px;
         }
       </style>
     </html>
@@ -127,8 +109,8 @@
     </panel>
 
     <panel>
-      <title>DNS - Control Details &amp; Scores [$tkn_control_count$]</title>
-      <table id="table2">
+      <title>DNS - Control Details &amp; Scores [$tkn_controls_total$]</title>
+      <table id="table1">
         <search>
           <query>
 index="ssphp_metrics_summary" 
@@ -136,6 +118,7 @@ index="ssphp_metrics_summary"
       ssphp.use_case.id!="*_000" 
       $tkn_show_l1$ 
       $tkn_show_ig$
+      ssphp.score.ciso_priority!="-"
 
       [| search index="ssphp_metrics_summary" ssphp.use_case.id="dns*" ssphp.use_case.id!="*_000"
         | stats max(SSPHP_RUN) as SSPHP_RUN by ssphp.use_case.id
@@ -147,54 +130,70 @@ index="ssphp_metrics_summary"
 
 | eval Score='ssphp.score.score'."|".'ssphp.score.color',
        ssphp.cis_benchmark.controls.v8=split('ssphp.cis_benchmark.controls.v8',"
-"),
+ "),
        ssphp.use_case.description=coalesce('ssphp.use_case.description','ssphp.cis_benchmark.control.description')
+ 
+ | search Score=*
+ 
 
-| search Score=*
+ ``` Eliminate all the Use Cases which have a current status set to "exclude" ```
+ | join type=outer ssphp.use_case.id
+     [| search index="ssphp_metrics_summary" ssphp.type="exclusion" earliest=0 latest=now
+      | sort 0 - SSPHP_RUN
+      | eval ssphp.dfe_benchmark.exclusion.status=case('ssphp.dfe_benchmark.exclusion.status'="TRUE","exclude",
+                                                       'ssphp.dfe_benchmark.exclusion.status'="FALSE","include",
+                                                       1==1,'ssphp.dfe_benchmark.exclusion.status'),
+        ssphp.dfe_benchmark.exclusion.updated=strftime(SSPHP_RUN,"%Y-%m-%d %H:%M:%S")
+      | stats list(ssphp.dfe_benchmark.exclusion.*) as *, max(ssphp.dfe_benchmark.exclusion.updated) as last_updated by ssphp.use_case.id
+      | eval current_status=mvindex(status,mvfind(updated,'last_updated'))
+      | sort 0 ssphp.use_case.id
+      | fields ssphp.use_case.id, current_status]
+ 
+ | fillnull value="include" current_status
+ | search current_status="*"
 
-``` Eliminate all the Use Cases which have a current status set to "exclude" ```
-| join type=outer ssphp.use_case.id
-    [| search index="ssphp_metrics_summary" ssphp.type="exclusion" earliest=0 latest=now
-     | sort 0 - SSPHP_RUN
-     | eval ssphp.dfe_benchmark.exclusion.status=case('ssphp.dfe_benchmark.exclusion.status'="TRUE","exclude",
-                                                      'ssphp.dfe_benchmark.exclusion.status'="FALSE","include",
-                                                      1==1,'ssphp.dfe_benchmark.exclusion.status'),
-       ssphp.dfe_benchmark.exclusion.updated=strftime(SSPHP_RUN,"%Y-%m-%d %H:%M:%S")
-     | stats list(ssphp.dfe_benchmark.exclusion.*) as *, max(ssphp.dfe_benchmark.exclusion.updated) as last_updated by ssphp.use_case.id
-     | eval current_status=mvindex(status,mvfind(updated,'last_updated'))
-     | sort 0 ssphp.use_case.id
-     | fields ssphp.use_case.id, current_status]
+ 
+ ``` Is this use case compliant ```
+ | eval "Compliance Status"=if('ssphp.score.score'=100,"Compliant","Non-Compliant")
+ 
 
-| fillnull value="include" current_status
-| search current_status="$tkn_show_ex$"
+ | table ssphp.use_case.id, ssphp.use_case.title, Score, "Compliance Status", ssphp.score.ciso_priority, ssphp.cis_benchmark.control.title, ssphp.use_case.description, ssphp.cis_benchmark.control.level, ssphp.cis_benchmark.controls.ig1, current_status
+ 
+ | rename  ssphp.use_case.title as "Title",
+           ssphp.use_case.description as "Description",
+           ssphp.cis_benchmark.control.title as "Control Title",
+           ssphp.cis_benchmark.control.level as "Level",
+           current_status as "Exclusion Status",
+           ssphp.cis_benchmark.controls.ig1 as "IG1 Status",
+           ssphp.score.ciso_priority as "CISO Priority"
+ 
+ | sort 0 ssphp.use_case.id
+ 
 
-| table ssphp.use_case.id, ssphp.use_case.title, Score, ssphp.cis_benchmark.control.title, ssphp.use_case.description, ssphp.cis_benchmark.control.level, ssphp.cis_benchmark.controls.ig1, current_status
+ ``` sort the lines properly ```
+ | rex field=ssphp.use_case.id "^dns_00[0-9]{1}_cis_(?&lt;n1&gt;[^-]*)-(?&lt;n2&gt;[^-]*)"
+ | rex field=ssphp.use_case.id "^dns_00[0-9]{1}_cis_[^-]*-[^-]*-(?&lt;n3&gt;.*)$"
+ | fillnull value=0 n3
+ | eval n2="00".n2, n2=substr(n2,len(n2)-1,2),
+         n3="00".n3, n3=substr(n3,len(n3)-1,2), 
+         sort_field='n1'.'n2'.'n3'
+ | sort 0 "CISO Priority", sort_field
+ | fields - sort_field, n1, n2, n3
+ 
 
-| rename  ssphp.use_case.title as "Title",
-          ssphp.use_case.description as "Description",
-          ssphp.cis_benchmark.control.title as "Control Title",
-          ssphp.cis_benchmark.control.level as "Level",
-          current_status as "Exclusion Status",
-          ssphp.cis_benchmark.controls.ig1 as "IG1 Status"
-
-| sort 0 ssphp.use_case.id
-
-``` sort the lines properly ```
-| rex field=ssphp.use_case.id "^dns_00[0-9]{1}_cis_(?&lt;n1&gt;[^-]*)-(?&lt;n2&gt;[^-]*)"
-| rex field=ssphp.use_case.id "^dns_00[0-9]{1}_cis_[^-]*-[^-]*-(?&lt;n3&gt;.*)$"
-| fillnull value=0 n3
-| eval n2="00".n2, n2=substr(n2,len(n2)-1,2),
-        n3="00".n3, n3=substr(n3,len(n3)-1,2), 
-        sort_field='n1'.'n2'.'n3'
-| sort 0 "CISO Priority", sort_field
-| fields - sort_field, n1, n2, n3
-
-| eventstats count
+ | eventstats count as number_controls_total, 
+              sum(eval(if('CISO Priority'=1,1,0))) as number_controls_ciso_1, 
+              sum(eval(if('CISO Priority'=1 AND 'Compliance Status'="Compliant",1,0))) as number_controls_compliant, 
+              sum(eval(if('CISO Priority'=1 AND 'Compliance Status'="Non-Compliant",1,0))) as number_controls_non_compliant
           </query>
           <earliest>-1d@d</earliest>
           <sampleRatio>1</sampleRatio>
           <done>
-            <set token="tkn_control_count">$result.count$</set>
+            <set token="tkn_controls_total">$result.number_controls_total$</set>
+            
+            <set token="tkn_controls_ciso">$result.number_controls_ciso_1$</set>
+            <set token="tkn_controls_compliant">$result.number_controls_compliant$</set>
+            <set token="tkn_controls_non_compliant">$result.number_controls_non_compliant$</set>
           </done>
         </search>
         <option name="count">100</option>
@@ -204,7 +203,7 @@ index="ssphp_metrics_summary"
         <option name="totalsRow">false</option>
         <option name="wrap">true</option>
         <!-- #<fields>"Name", "Title", Score, "Control Title", "Description", "Level", "IG1 Status", "Exclusion Status"</fields># --> 
-        <fields>"Title", Score, "Control Title", "Description"</fields>
+        <fields>"Title", Score, "Compliance Status", "CISO Priority", "Control Title", "Description"</fields>
         <option name="drilldown">row</option>
         <drilldown>
           <link target="_blank">/app/$tkn_current_app$/ssphp_foundational_systems_drilldown_non_cis?tkn_use_case_id=$row.ssphp.use_case.id$</link>
