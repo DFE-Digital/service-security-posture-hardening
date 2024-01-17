@@ -1456,12 +1456,13 @@ mod test {
     async fn test_aws_1_1() -> Result<()> {
         let (splunk, aws) = setup().await?;
         let result = aws.aws_1_1_maintain_current_contact_details().await?;
+        assert!(!result.full_name.is_empty());
         splunk.send_batch((&result).to_hec_events()?).await?;
         Ok(())
     }
 
     #[tokio::test]
-    async fn test_aws_1_2_() -> Result<()> {
+    async fn test_aws_1_2() -> Result<()> {
         let (splunk, aws) = setup().await?;
         let result = aws
             .aws_1_2_ensure_security_contact_information_is_registered()
@@ -1476,6 +1477,7 @@ mod test {
         let result = aws
             .aws_1_4_ensure_no_root_user_account_access_key_exists()
             .await?;
+        assert!(!result.summary_map.is_empty());
         splunk.send_batch((&result).to_hec_events()?).await?;
         Ok(())
     }
@@ -1486,6 +1488,7 @@ mod test {
         let result = aws
             .aws_1_6_ensure_hardware_mfa_is_enabled_for_the_root_user_account()
             .await?;
+        assert!(!result.inner.is_empty());
         splunk.send_batch((&result).to_hec_events()?).await?;
         Ok(())
     }
@@ -1506,6 +1509,7 @@ mod test {
         let result = aws
             .aws_1_10_ensure_mfa_is_enabled_for_all_iam_users_that_have_a_console_password()
             .await?;
+        assert!(!result.inner.is_empty());
         splunk.send_batch((&result).to_hec_events()?).await?;
         Ok(())
     }
@@ -1516,6 +1520,7 @@ mod test {
         let result = aws
             .aws_1_13_ensure_there_is_only_one_active_access_key_available_for_any_single_iam_user()
             .await?;
+        assert!(!result.inner.is_empty());
         splunk.send_batch((&result).to_hec_events()?).await?;
         Ok(())
     }
@@ -1526,7 +1531,8 @@ mod test {
         let result = aws
             .aws_1_15_ensure_iam_users_receive_permissions_only_through_groups()
             .await?;
-
+        assert!(result.inner.iter().any(|u| !u.attached_policies.is_empty()));
+        assert!(result.inner.iter().any(|u| !u.policies.is_empty()));
         splunk.send_batch((&result).to_hec_events()?).await?;
         Ok(())
     }
@@ -1537,7 +1543,11 @@ mod test {
         let result = aws
             .aws_1_16_ensure_iam_policies_that_allow_full_administrative_privileges_are_not_attached()
             .await?;
-
+        assert!(result.inner.iter().all(|e| e.arn.is_some()));
+        assert!(result
+            .inner
+            .iter()
+            .any(|e| e.full_admin_permissions.is_some()));
         splunk.send_batch((&result).to_hec_events()?).await?;
         Ok(())
     }
@@ -1548,6 +1558,8 @@ mod test {
         let result = aws
             .aws_1_17_ensure_a_support_role_has_been_created_to_manage_incidents_with_aws_support()
             .await?;
+
+        assert!(result.arn.is_some());
         splunk.send_batch((&result).to_hec_events()?).await?;
         Ok(())
     }
@@ -1578,6 +1590,7 @@ mod test {
         let result = aws
             .aws_1_22_ensure_access_to_awscloudshellfullaccess_is_restricted()
             .await?;
+        assert!(result.arn.is_some());
         splunk.send_batch((&result).to_hec_events()?).await?;
         Ok(())
     }
@@ -1671,6 +1684,9 @@ mod test {
         let result = aws
             .aws_3_3_ensure_the_s3_bucket_used_to_store_cloudtrail_logs_is_not_publicly_accessible_bucket_policy()
             .await?;
+        assert!(result.inner.iter().all(|l| l.bucket_name.is_some()));
+        assert!(result.inner.iter().all(|l| l.trail_arn.is_some()));
+        assert!(result.inner.iter().any(|l| l.policy.is_some()));
         splunk.send_batch((&result).to_hec_events()?).await?;
         Ok(())
     }
@@ -1681,6 +1697,19 @@ mod test {
         let result = aws
             .aws_3_5_ensure_aws_config_is_enabled_in_all_regions()
             .await?;
+        splunk.send_batch((&result).to_hec_events()?).await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_aws_3_6() -> Result<()> {
+        let (splunk, aws) = setup().await?;
+        let result = aws
+            .aws_3_6_ensure_s3_bucket_access_logging_is_enabled_on_the_cloudtrail_s3_bucket()
+            .await?;
+        assert!(result.inner.iter().all(|l| l.bucket_name.is_some()));
+        assert!(result.inner.iter().all(|l| l.trail_arn.is_some()));
+        assert!(result.inner.iter().any(|l| l.logging_enabled.is_some()));
         splunk.send_batch((&result).to_hec_events()?).await?;
         Ok(())
     }
