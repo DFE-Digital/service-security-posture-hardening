@@ -1,10 +1,10 @@
-use azure_mgmt_authorization::models::role_assignment_properties::PrincipalType;
-use azure_mgmt_authorization::{
+use azure_mgmt_authorization::package_2022_04_01::models::role_assignment_properties::PrincipalType;
+use azure_mgmt_authorization::package_2022_04_01::{
     models::{RoleAssignment as SDKRoleAssignment, RoleDefinition as SDKRoleDefinition},
-    package_2022_04_01::Client as ClientAuthorization,
+    Client as ClientAuthorization,
 };
-use azure_mgmt_subscription::{
-    models::Subscription, package_2021_10::Client as ClientSubscription,
+use azure_mgmt_subscription::package_2021_10::{
+    models::Subscription, Client as ClientSubscription,
 };
 
 use anyhow::{Context, Result};
@@ -46,7 +46,7 @@ impl AzureRest {
     }
 
     pub async fn azure_subscriptions(&self) -> Result<Subscriptions> {
-        let client = ClientSubscription::builder(self.credential.clone()).build();
+        let client = ClientSubscription::builder(self.credential.clone()).build()?;
         let mut stream = client.subscriptions_client().list().into_stream();
         let mut subscriptions = vec![];
         while let Some(item) = stream.next().await {
@@ -79,7 +79,7 @@ impl AzureRest {
 
     // Azure Foundation V2.0.0 1.23
     pub async fn azure_role_definitions(&self) -> Result<HashMap<String, RoleDefinition>> {
-        let client = ClientAuthorization::builder(self.credential.clone()).build();
+        let client = ClientAuthorization::builder(self.credential.clone()).build()?;
         let mut collection = HashMap::new();
         for sub in self.subscriptions.inner.iter() {
             let sub_id = sub.subscription_id.as_ref().context("no sub id")?;
@@ -101,7 +101,7 @@ impl AzureRest {
     }
 
     pub async fn azure_role_assignments(&self) -> Result<HashMap<String, RoleAssignment>> {
-        let client = ClientAuthorization::builder(self.credential.clone()).build();
+        let client = ClientAuthorization::builder(self.credential.clone()).build()?;
         let mut collection = HashMap::new();
         for sub in self.subscriptions.inner.iter() {
             let sub_id = sub.subscription_id.as_ref().context("no sub id")?;
@@ -188,7 +188,7 @@ impl AzureRest {
     ) -> Result<T> {
         let response = self
             .credential
-            .get_token("https://management.azure.com")
+            .get_token(&["https://management.azure.com"])
             .await?;
 
         let response = reqwest::Client::new()
@@ -212,7 +212,7 @@ impl AzureRest {
     ) -> Result<Vec<ReturnType>> {
         let response = self
             .credential
-            .get_token("https://management.azure.com")
+            .get_token(&["https://management.azure.com"])
             .await?;
 
         let mut collection = vec![];
@@ -240,7 +240,7 @@ impl AzureRest {
     pub async fn rest_request_subscription_iter(&self, url_template: &str) -> Result<ReturnTypes> {
         let response = self
             .credential
-            .get_token("https://management.azure.com")
+            .get_token(&["https://management.azure.com"])
             .await?;
 
         let mut collection = ReturnTypes::default();

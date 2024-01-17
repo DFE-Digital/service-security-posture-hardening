@@ -13,14 +13,17 @@ use aws_sdk_iam::types::{AccessKeyMetadata, PasswordPolicy};
 use aws_sdk_kms::types::KeyListEntry;
 use serde::{Deserialize, Serialize};
 
+use crate::aws_alternate_contact_information::AlternateContact;
 use crate::aws_config::DescribeConfigurationRecordersOutput;
 use crate::aws_ec2::{DescribeFlowLogs, DescribeVpcs, FlowLog, Vpc};
 use crate::aws_entities_for_policy::EntitiesForPolicyOutput;
+use crate::aws_iam::VirtualMfaDevices;
 use crate::aws_kms::{KeyMetadata, KeyMetadatas};
 use crate::aws_policy::Policies;
 use crate::aws_s3::{
     GetBucketAclOutput, GetBucketAclOutputs, GetBucketLoggingOutput, GetBucketLoggingOutputs,
-    GetBucketPolicyOutput, GetBucketPolicyOutputs,
+    GetBucketPolicyOutput, GetBucketPolicyOutputs, GetBucketVersioningOutput,
+    GetBucketVersioningOutputs, GetPublicAccessBlockOutput, GetPublicAccessBlocks,
 };
 use crate::aws_securityhub::DescribeHubOutput;
 use crate::aws_trail::{TrailWrapper, TrailWrappers};
@@ -46,6 +49,13 @@ pub async fn aws(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
     .await?;
 
     try_collect_send(
+        "aws_1_2_ensure_security_contact_information_is_registered",
+        aws_client.aws_1_2_ensure_security_contact_information_is_registered(),
+        &splunk,
+    )
+    .await?;
+
+    try_collect_send(
         "aws_1_4_ensure_no_root_user_account_access_key_exists()",
         aws_client.aws_1_4_ensure_no_root_user_account_access_key_exists(),
         &splunk,
@@ -55,6 +65,13 @@ pub async fn aws(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
     try_collect_send(
         "aws_1_8_ensure_iam_password_policy_requires_minimum_length_of_14",
         aws_client.aws_1_8_ensure_iam_password_policy_requires_minimum_length_of_14(),
+        &splunk,
+    )
+    .await?;
+
+    try_collect_send(
+        "aws_1_6_ensure_hardware_mfa_is_enabled_for_the_root_user_account",
+        aws_client.aws_1_6_ensure_hardware_mfa_is_enabled_for_the_root_user_account(),
         &splunk,
     )
     .await?;
@@ -108,6 +125,42 @@ pub async fn aws(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
     try_collect_send(
         "aws_1_20_ensure_that_iam_access_analyzer_is_enabled_for_all_regions",
         aws_client.aws_1_20_ensure_that_iam_access_analyzer_is_enabled_for_all_regions(),
+        &splunk,
+    )
+    .await?;
+
+    try_collect_send(
+        "aws_1_22_ensure_access_to_awscloudshellfullaccess_is_restricted",
+        aws_client.aws_1_22_ensure_access_to_awscloudshellfullaccess_is_restricted(),
+        &splunk,
+    )
+    .await?;
+
+    try_collect_send(
+        "aws_2_1_1_ensure_s3_bucket_policy_is_set_to_deny_http_requests",
+        aws_client.aws_2_1_1_ensure_s3_bucket_policy_is_set_to_deny_http_requests(),
+        &splunk,
+    )
+    .await?;
+
+    try_collect_send(
+        "aws_2_1_2_ensure_mfa_delete_is_enabled_on_s3_buckets",
+        aws_client.aws_2_1_2_ensure_mfa_delete_is_enabled_on_s3_buckets(),
+        &splunk,
+    )
+    .await?;
+
+    try_collect_send(
+        "aws_2_1_4_ensure_that_s3_buckets_are_configured_with_block_public_access",
+        aws_client.aws_2_1_4_ensure_that_s3_buckets_are_configured_with_block_public_access(),
+        &splunk,
+    )
+    .await?;
+
+    try_collect_send(
+        "aws_2_1_4_ensure_that_s3_buckets_are_configured_with_block_public_access_accounts",
+        aws_client
+            .aws_2_1_4_ensure_that_s3_buckets_are_configured_with_block_public_access_accounts(),
         &splunk,
     )
     .await?;
@@ -242,6 +295,43 @@ impl AwsClient {
             contact_information.to_owned().contact_information.unwrap(),
         );
         Ok(out)
+    }
+
+    pub(crate) async fn aws_1_2_ensure_security_contact_information_is_registered(
+        &self,
+    ) -> Result<AlternateContact> {
+        let config = self.config().await?;
+        let client = aws_sdk_account::Client::new(&config);
+        let alternate_contact_information = match client
+            .get_alternate_contact()
+            .set_alternate_contact_type(Some(
+                aws_sdk_account::types::AlternateContactType::Security,
+            ))
+            .send()
+            .await
+        {
+            Ok(ac) => ac.alternate_contact.map(|ac| ac.into()).unwrap_or_default(),
+            Err(_) => AlternateContact::default(),
+        };
+        Ok(alternate_contact_information)
+    }
+
+    pub(crate) async fn aws_1_6_ensure_hardware_mfa_is_enabled_for_the_root_user_account(
+        &self,
+    ) -> Result<VirtualMfaDevices> {
+        let config = self.config().await?;
+        let client = aws_sdk_iam::Client::new(&config);
+        let virtual_mfa = client
+            .list_virtual_mfa_devices()
+            .into_paginator()
+            .items()
+            .send()
+            .collect::<Result<Vec<aws_sdk_iam::types::VirtualMfaDevice>, _>>()
+            .await?
+            .into_iter()
+            .map(|vmd| vmd.into())
+            .collect();
+        Ok(VirtualMfaDevices { inner: virtual_mfa })
     }
 
     /// https://docs.aws.amazon.com/IAM/latest/APIReference/API_GetAccountSummary.html
@@ -452,6 +542,163 @@ impl AwsClient {
         Ok(access_analyzers)
     }
 
+    pub(crate) async fn aws_1_22_ensure_access_to_awscloudshellfullaccess_is_restricted(
+        &self,
+    ) -> Result<EntitiesForPolicyOutput> {
+        let config = self.config().await?;
+        let client = aws_sdk_iam::Client::new(&config);
+        let arn = Some("arn:aws:iam::aws:policy/AWSCloudShellFullAccess".to_string());
+        let mut entities_for_policy: EntitiesForPolicyOutput = client
+            .list_entities_for_policy()
+            .set_policy_arn(arn.clone())
+            .send()
+            .await?
+            .into();
+        entities_for_policy.arn = arn;
+        Ok(entities_for_policy)
+    }
+
+    pub(crate) async fn aws_2_1_1_ensure_s3_bucket_policy_is_set_to_deny_http_requests(
+        &self,
+    ) -> Result<GetBucketPolicyOutputs> {
+        let config = self.config().await?;
+
+        let s3_client = aws_sdk_s3::Client::new(&config);
+        let buckets = s3_client.list_buckets().send().await?;
+
+        let mut policies = vec![];
+
+        for bucket in buckets.buckets.unwrap_or_default().into_iter() {
+            let bucket_name = bucket.name;
+            match s3_client
+                .get_bucket_policy()
+                .set_bucket(bucket_name.clone())
+                .send()
+                .await
+            {
+                Ok(policy) => {
+                    let mut policy: GetBucketPolicyOutput = policy.into();
+                    policy.bucket_name = bucket_name;
+                    policies.push(policy);
+                }
+                Err(e) => {
+                    eprintln!("Error getting bucket policy: {:?} {:?}", bucket_name, e);
+                    policies.push(GetBucketPolicyOutput {
+                        policy: None,
+                        bucket_name,
+                        trail_arn: None,
+                    })
+                }
+            }
+        }
+        Ok(GetBucketPolicyOutputs { inner: policies })
+    }
+
+    pub(crate) async fn aws_2_1_2_ensure_mfa_delete_is_enabled_on_s3_buckets(
+        &self,
+    ) -> Result<GetBucketVersioningOutputs> {
+        let config = self.config().await?;
+
+        let s3_client = aws_sdk_s3::Client::new(&config);
+        let buckets = s3_client.list_buckets().send().await?;
+
+        let mut versionings = vec![];
+
+        for bucket in buckets.buckets.unwrap_or_default().into_iter() {
+            let bucket_name = bucket.name;
+            match s3_client
+                .get_bucket_versioning()
+                .set_bucket(bucket_name.clone())
+                .send()
+                .await
+            {
+                Ok(versioning) => {
+                    let mut versioning: GetBucketVersioningOutput = versioning.into();
+                    versioning.bucket_name = bucket_name.clone();
+                    versionings.push(versioning);
+                }
+                Err(e) => {
+                    eprintln!("Error getting bucket policy: {:?} {:?}", bucket_name, e);
+                    versionings.push(GetBucketVersioningOutput {
+                        status: None,
+                        mfa_delete: None,
+                        bucket_name,
+                    })
+                }
+            }
+        }
+        Ok(GetBucketVersioningOutputs { inner: versionings })
+    }
+
+    pub(crate) async fn aws_2_1_4_ensure_that_s3_buckets_are_configured_with_block_public_access(
+        &self,
+    ) -> Result<GetPublicAccessBlocks> {
+        let config = self.config().await?;
+
+        let s3_client = aws_sdk_s3::Client::new(&config);
+        let buckets = s3_client.list_buckets().send().await?;
+
+        let mut blocks = vec![];
+
+        for bucket in buckets.buckets.unwrap_or_default().into_iter() {
+            let bucket_name = bucket.name;
+            match s3_client
+                .get_public_access_block()
+                .set_bucket(bucket_name.clone())
+                .send()
+                .await
+            {
+                Ok(block) => {
+                    let mut block: GetPublicAccessBlockOutput = block.into();
+                    block.bucket_name = bucket_name;
+                    blocks.push(block);
+                }
+                Err(e) => {
+                    eprintln!("Error getting bucket policy: {:?} {:?}", bucket_name, e);
+                    blocks.push(GetPublicAccessBlockOutput {
+                        public_access_block_configuration: None,
+                        bucket_name,
+                    });
+                }
+            }
+        }
+        Ok(GetPublicAccessBlocks { inner: blocks })
+    }
+
+    pub(crate) async fn aws_2_1_4_ensure_that_s3_buckets_are_configured_with_block_public_access_accounts(
+        &self,
+    ) -> Result<crate::aws_s3control::GetPublicAccessBlockOutput> {
+        let config = self.config().await?;
+
+        let s3control_client = aws_sdk_s3control::Client::new(&config);
+        let sts_client = aws_sdk_sts::Client::new(&config);
+
+        let account_id = sts_client.get_caller_identity().send().await?.account;
+        let public_access_block = match s3control_client
+            .get_public_access_block()
+            .set_account_id(account_id.clone())
+            .send()
+            .await
+        {
+            Ok(pab) => {
+                let mut pab: crate::aws_s3control::GetPublicAccessBlockOutput = pab.into();
+                pab.account_id = account_id;
+                pab
+            }
+            Err(e) => {
+                eprintln!(
+                    "Error getting public access block for: {:?} {:?}",
+                    account_id, e
+                );
+                crate::aws_s3control::GetPublicAccessBlockOutput {
+                    public_access_block_configuration: None,
+                    account_id,
+                }
+            }
+        };
+        Ok(public_access_block)
+    }
+
     pub(crate) async fn aws_3_1_ensure_cloudtrail_is_enabled_in_all_regions(
         &self,
     ) -> Result<TrailWrappers> {
@@ -600,7 +847,7 @@ impl AwsClient {
             .into();
 
         if configs.configuration_recorders.is_none() {
-            return Ok(configs);
+            return Ok(DescribeConfigurationRecordersOutput { configuration_recorders: None });
         }
 
         for config in configs
@@ -1209,6 +1456,17 @@ mod test {
     async fn test_aws_1_1() -> Result<()> {
         let (splunk, aws) = setup().await?;
         let result = aws.aws_1_1_maintain_current_contact_details().await?;
+        assert!(!result.full_name.is_empty());
+        splunk.send_batch((&result).to_hec_events()?).await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_aws_1_2() -> Result<()> {
+        let (splunk, aws) = setup().await?;
+        let result = aws
+            .aws_1_2_ensure_security_contact_information_is_registered()
+            .await?;
         splunk.send_batch((&result).to_hec_events()?).await?;
         Ok(())
     }
@@ -1219,6 +1477,18 @@ mod test {
         let result = aws
             .aws_1_4_ensure_no_root_user_account_access_key_exists()
             .await?;
+        assert!(!result.summary_map.is_empty());
+        splunk.send_batch((&result).to_hec_events()?).await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_aws_1_6() -> Result<()> {
+        let (splunk, aws) = setup().await?;
+        let result = aws
+            .aws_1_6_ensure_hardware_mfa_is_enabled_for_the_root_user_account()
+            .await?;
+        assert!(!result.inner.is_empty());
         splunk.send_batch((&result).to_hec_events()?).await?;
         Ok(())
     }
@@ -1239,6 +1509,7 @@ mod test {
         let result = aws
             .aws_1_10_ensure_mfa_is_enabled_for_all_iam_users_that_have_a_console_password()
             .await?;
+        assert!(!result.inner.is_empty());
         splunk.send_batch((&result).to_hec_events()?).await?;
         Ok(())
     }
@@ -1249,6 +1520,7 @@ mod test {
         let result = aws
             .aws_1_13_ensure_there_is_only_one_active_access_key_available_for_any_single_iam_user()
             .await?;
+        assert!(!result.inner.is_empty());
         splunk.send_batch((&result).to_hec_events()?).await?;
         Ok(())
     }
@@ -1259,7 +1531,8 @@ mod test {
         let result = aws
             .aws_1_15_ensure_iam_users_receive_permissions_only_through_groups()
             .await?;
-
+        assert!(result.inner.iter().any(|u| !u.attached_policies.is_empty()));
+        assert!(result.inner.iter().any(|u| !u.policies.is_empty()));
         splunk.send_batch((&result).to_hec_events()?).await?;
         Ok(())
     }
@@ -1270,7 +1543,11 @@ mod test {
         let result = aws
             .aws_1_16_ensure_iam_policies_that_allow_full_administrative_privileges_are_not_attached()
             .await?;
-
+        assert!(result.inner.iter().all(|e| e.arn.is_some()));
+        assert!(result
+            .inner
+            .iter()
+            .any(|e| e.full_admin_permissions.is_some()));
         splunk.send_batch((&result).to_hec_events()?).await?;
         Ok(())
     }
@@ -1281,6 +1558,8 @@ mod test {
         let result = aws
             .aws_1_17_ensure_a_support_role_has_been_created_to_manage_incidents_with_aws_support()
             .await?;
+
+        assert!(result.arn.is_some());
         splunk.send_batch((&result).to_hec_events()?).await?;
         Ok(())
     }
@@ -1301,6 +1580,80 @@ mod test {
         let result = aws
             .aws_1_20_ensure_that_iam_access_analyzer_is_enabled_for_all_regions()
             .await?;
+        splunk.send_batch((&result).to_hec_events()?).await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_aws_1_22() -> Result<()> {
+        let (splunk, aws) = setup().await?;
+        let result = aws
+            .aws_1_22_ensure_access_to_awscloudshellfullaccess_is_restricted()
+            .await?;
+        assert!(result.arn.is_some());
+        splunk.send_batch((&result).to_hec_events()?).await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_aws_2_1_1() -> Result<()> {
+        let (splunk, aws) = setup().await?;
+        let result = aws
+            .aws_2_1_1_ensure_s3_bucket_policy_is_set_to_deny_http_requests()
+            .await?;
+        assert!(result
+            .inner
+            .iter()
+            .all(|bucket| bucket.bucket_name.is_some()));
+        assert!(result.inner.iter().any(|bucket| bucket.policy.is_some()));
+        splunk.send_batch((&result).to_hec_events()?).await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_aws_2_1_2() -> Result<()> {
+        let (splunk, aws) = setup().await?;
+        let result = aws
+            .aws_2_1_2_ensure_mfa_delete_is_enabled_on_s3_buckets()
+            .await?;
+        assert!(result
+            .inner
+            .iter()
+            .all(|bucket| bucket.bucket_name.is_some()));
+        assert!(result
+            .inner
+            .iter()
+            .any(|bucket| bucket.mfa_delete.is_some() || bucket.status.is_some()));
+        splunk.send_batch((&result).to_hec_events()?).await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_aws_2_1_4() -> Result<()> {
+        let (splunk, aws) = setup().await?;
+        let result = aws
+            .aws_2_1_4_ensure_that_s3_buckets_are_configured_with_block_public_access()
+            .await?;
+        assert!(result
+            .inner
+            .iter()
+            .all(|bucket| bucket.bucket_name.is_some()));
+        assert!(result
+            .inner
+            .iter()
+            .any(|bucket| bucket.public_access_block_configuration.is_some()));
+        splunk.send_batch((&result).to_hec_events()?).await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_aws_2_1_4_accounts() -> Result<()> {
+        let (splunk, aws) = setup().await?;
+        let result = aws
+            .aws_2_1_4_ensure_that_s3_buckets_are_configured_with_block_public_access_accounts()
+            .await?;
+        assert!(result.account_id.is_some());
+        assert!(result.public_access_block_configuration.is_some());
         splunk.send_batch((&result).to_hec_events()?).await?;
         Ok(())
     }
@@ -1331,6 +1684,9 @@ mod test {
         let result = aws
             .aws_3_3_ensure_the_s3_bucket_used_to_store_cloudtrail_logs_is_not_publicly_accessible_bucket_policy()
             .await?;
+        assert!(result.inner.iter().all(|l| l.bucket_name.is_some()));
+        assert!(result.inner.iter().all(|l| l.trail_arn.is_some()));
+        assert!(result.inner.iter().any(|l| l.policy.is_some()));
         splunk.send_batch((&result).to_hec_events()?).await?;
         Ok(())
     }
@@ -1341,6 +1697,21 @@ mod test {
         let result = aws
             .aws_3_5_ensure_aws_config_is_enabled_in_all_regions()
             .await?;
+        assert!(&result.configuration_recorders.is_some());
+        assert!(&result.configuration_recorders.as_ref().unwrap().iter().any(|r| r.status.is_some()));
+        splunk.send_batch((&result).to_hec_events()?).await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_aws_3_6() -> Result<()> {
+        let (splunk, aws) = setup().await?;
+        let result = aws
+            .aws_3_6_ensure_s3_bucket_access_logging_is_enabled_on_the_cloudtrail_s3_bucket()
+            .await?;
+        assert!(result.inner.iter().all(|l| l.bucket_name.is_some()));
+        assert!(result.inner.iter().all(|l| l.trail_arn.is_some()));
+        assert!(result.inner.iter().any(|l| l.logging_enabled.is_some()));
         splunk.send_batch((&result).to_hec_events()?).await?;
         Ok(())
     }

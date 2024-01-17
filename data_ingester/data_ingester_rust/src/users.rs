@@ -10,7 +10,7 @@ use crate::roles::RoleDefinitions;
 use crate::splunk::ToHecEvents;
 use anyhow::Context;
 use anyhow::Result;
-use azure_mgmt_authorization::models::role_assignment_properties::PrincipalType;
+use azure_mgmt_authorization::package_2022_04_01::models::role_assignment_properties::PrincipalType;
 use regex::Regex;
 use serde::Deserialize;
 use serde::Serialize;
