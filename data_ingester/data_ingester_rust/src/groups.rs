@@ -94,7 +94,7 @@ fn group_role_ids() {
         display_name: None,
         visibility: None,
     };
-    let groups = vec![group1, group2];
+    let groups = [group1, group2];
     let groups = groups.iter().collect::<Groups>();
     assert_eq!(groups.ids(), ["id_1", "id_2"]);
 }
