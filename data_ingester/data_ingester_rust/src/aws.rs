@@ -847,7 +847,7 @@ impl AwsClient {
             .into();
 
         if configs.configuration_recorders.is_none() {
-            return Ok(configs);
+            return Ok(DescribeConfigurationRecordersOutput { configuration_recorders: None });
         }
 
         for config in configs
@@ -1697,6 +1697,8 @@ mod test {
         let result = aws
             .aws_3_5_ensure_aws_config_is_enabled_in_all_regions()
             .await?;
+        assert!(&result.configuration_recorders.is_some());
+        assert!(&result.configuration_recorders.as_ref().unwrap().iter().any(|r| r.status.is_some()));
         splunk.send_batch((&result).to_hec_events()?).await?;
         Ok(())
     }
