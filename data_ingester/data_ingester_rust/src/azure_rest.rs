@@ -188,7 +188,7 @@ impl AzureRest {
     ) -> Result<T> {
         let response = self
             .credential
-            .get_token(&["https://management.azure.com"])
+            .get_token(&["https://management.azure.com/.default"])
             .await?;
 
         let response = reqwest::Client::new()
@@ -212,7 +212,7 @@ impl AzureRest {
     ) -> Result<Vec<ReturnType>> {
         let response = self
             .credential
-            .get_token(&["https://management.azure.com"])
+            .get_token(&["https://management.azure.com/.default"])
             .await?;
 
         let mut collection = vec![];
@@ -240,7 +240,7 @@ impl AzureRest {
     pub async fn rest_request_subscription_iter(&self, url_template: &str) -> Result<ReturnTypes> {
         let response = self
             .credential
-            .get_token(&["https://management.azure.com"])
+            .get_token(&["https://management.azure.com/.default"])
             .await?;
 
         let mut collection = ReturnTypes::default();
@@ -425,7 +425,7 @@ mod test {
     use super::AzureRest;
 
     async fn setup() -> Result<(AzureRest, Splunk)> {
-        let secrets = get_keyvault_secrets(&env::var("KEY_VAULT_NAME").unwrap())
+        let secrets = get_keyvault_secrets(&env::var("KEY_VAULT_NAME").expect("Need KEY_VAULT_NAME enviornment variable"))
             .await
             .unwrap();
         let splunk = Splunk::new(&secrets.splunk_host, &secrets.splunk_token)?;
