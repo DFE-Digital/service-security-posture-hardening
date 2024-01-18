@@ -72,4 +72,3 @@ strip = true
 
 [build]
 rustflags = ["-Z", "threads=8"]
-
