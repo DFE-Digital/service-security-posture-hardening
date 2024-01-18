@@ -9,7 +9,7 @@ require([
     var CustomRangeRenderer = TableView.BaseCellRenderer.extend({
         canRender: function (cell) {
             //return true;
-            return _(['Score','AAD-01','AAD-02','AAD-03','AAD-04','AAD-05','AZURE-01 : Identity and Access Management','AZURE-02 : Microsoft Defender','AZURE-03 : Storage Accounts','AZURE-04 : Database Services','AZURE-05 : Logging and Monitoring','AZURE-06 : Networking','AZURE-07 : Virtual Machines','AZURE-08 : Key Vault','AZURE-09 : AppService','AZURE-10 : Miscellaneous','DNS-01','DNS-02','DNS-03','DNS-04','DNS-05']).contains(cell.field);
+            return _(['Score','Compliance Status','AAD-01','AAD-02','AAD-03','AAD-04','AAD-05','AZURE-01 : Identity and Access Management','AZURE-02 : Microsoft Defender','AZURE-03 : Storage Accounts','AZURE-04 : Database Services','AZURE-05 : Logging and Monitoring','AZURE-06 : Networking','AZURE-07 : Virtual Machines','AZURE-08 : Key Vault','AZURE-09 : AppService','AZURE-10 : Miscellaneous','DNS-01','DNS-02','DNS-03','DNS-04','DNS-05']).contains(cell.field);
         },
         render: function ($td, cell) {
             var label = cell.value.split("|")[0];
