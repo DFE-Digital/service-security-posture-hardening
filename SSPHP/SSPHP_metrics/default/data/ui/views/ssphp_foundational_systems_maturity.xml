@@ -1,6 +1,6 @@
 <dashboard version="1.1" theme="dark" script="js/table_cell_color.js">
   <label>Security Posture Continuous Assurance : Maturity Dashboard</label>
-  <description>v1.0.0</description>
+  <description>v1.0.1</description>
   
   <init>
     <set token="tkn_colour_red">#D32D41</set>
@@ -55,7 +55,7 @@
 
 <!-- ################### Main Data Table ################### --> 
 
-  <row>
+  <row depends="$never_show$">
     <panel>
       <table>
         <search>
@@ -108,7 +108,7 @@ index="ssphp_metrics_summary"
 | eval "z_{FoundationalService}"=mvappend(IG1, IG2, IG3)
 | table z_*
 | rename z_* as *
-| stats values(*) as *
+| stats list(*) as *
 
 | foreach * 
     [| eval z_&lt;&lt;FIELD&gt;&gt;_IG1=mvindex(&lt;&lt;FIELD&gt;&gt;,0),
