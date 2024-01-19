@@ -1,6 +1,6 @@
 <dashboard version="1.1" theme="dark" script="js/table_cell_color.js">
   <label>Security Posture Continuous Assurance : Service Dashboard</label>
-  <description>v1.0.1</description>
+  <description>v1.0.2</description>
   
   <init>
     <set token="tkn_selected_service_name"></set>
@@ -78,7 +78,7 @@
       <input type="checkbox" token="tkn_fields" searchWhenChanged="true">
         <label>Show Only</label>
         <choice value="N">Non-Compliant</choice>
-        <choice value="C">CISO Priority 1</choice>
+        <choice value="C">DfE Mandated</choice>
         <initialValue>N,C</initialValue>
         <default>*</default>
       </input>
@@ -91,7 +91,7 @@
           <query>
 | makeresults
 | eval txt1="| where match('Compliance Status',\"^Non-Compliant.*\")",
-       txt2="| where 'CISO Priority'=\"1\"",
+       txt2="| where 'DfE Mandated'=\"1\"",
        infield=$tkn_fields|s$,
        
        C=if(like(infield,"%C%"),'txt2'," "),
@@ -107,9 +107,6 @@
       </table>
     </panel>
   </row>
-  
-<!-- #| where match('Compliance Status',"^Non-Compliant.*")# --> 
-<!-- #| where 'CISO Priority'="1"# --> 
   
 
 <!-- ################### Main Data Table ################### --> 
@@ -212,7 +209,7 @@ index="ssphp_metrics_summary"
           ssphp.cis_benchmark.control.level as "Level",
           current_status as "Exclusion Status",
           ssphp.cis_benchmark.controls.ig1 as "IG1 Status",
-          ssphp.score.ciso_priority as "CISO Priority",
+          ssphp.score.ciso_priority as "DfE Mandated",
           ssphp.score.color as Colour
           
 | sort 0 ssphp.use_case.id
@@ -225,14 +222,14 @@ index="ssphp_metrics_summary"
 | eval n2="00".n2, n2=substr(n2,len(n2)-1,2),
        n3="00".n3, n3=substr(n3,len(n3)-1,2), 
        sort_field='n1'.'n2'.'n3'
-| sort 0 "CISO Priority", sort_field
+| sort 0 "DfE Mandated", sort_field
 | fields - sort_field, n1, n2, n3
  
 
 | eventstats count as number_controls_total, 
-             sum(eval(if('CISO Priority'=1,1,0))) as number_controls_ciso_1, 
-             sum(eval(if('CISO Priority'=1 AND match('Compliance Status',"^Compliant\|.*"),1,0))) as number_controls_compliant, 
-             sum(eval(if('CISO Priority'=1 AND match('Compliance Status',"^Non-Compliant\|.*"),1,0))) as number_controls_non_compliant
+             sum(eval(if('DfE Mandated'=1,1,0))) as number_controls_ciso_1, 
+             sum(eval(if('DfE Mandated'=1 AND match('Compliance Status',"^Compliant\|.*"),1,0))) as number_controls_compliant, 
+             sum(eval(if('DfE Mandated'=1 AND match('Compliance Status',"^Non-Compliant\|.*"),1,0))) as number_controls_non_compliant
 
 | eval number_controls_compliant_text='number_controls_compliant'." / ".'number_controls_ciso_1',
        number_controls_compliant_text_colour=if('number_controls_ciso_1'='number_controls_compliant',"$tkn_colour_green$","$tkn_colour_red$")
@@ -241,7 +238,7 @@ index="ssphp_metrics_summary"
 
 ``` Dashboard Filters
 | where match('Compliance Status',"^Non-Compliant.*")
-| where 'CISO Priority'="1"```
+| where 'DfE Mandated'="1"```
 $tkn_search_filter$
           </query>
           <latest>now</latest>
@@ -262,10 +259,10 @@ $tkn_search_filter$
         <option name="rowNumbers">false</option>
         <option name="totalsRow">false</option>
         <option name="wrap">true</option>
-        <fields>"Title", Score, "Compliance Status", "CISO Priority", "Control Title", "Description"</fields>
+        <fields>"Title", Score, "Compliance Status", "DfE Mandated", "Control Title", "Description"</fields>
         <option name="drilldown">row</option>
         <drilldown>
-          <link target="_blank">/app/$tkn_current_app$/ssphp_foundational_systems_drilldown_non_cis?tkn_use_case_id=$row.ssphp.use_case.id$</link>
+          <link target="_blank">/app/$tkn_current_app$/ssphp_foundational_systems_drilldown_cis?tkn_use_case_id=$row.ssphp.use_case.id$</link>
         </drilldown>
       </table>
     </panel>

@@ -1,6 +1,7 @@
-<dashboard version="1.1" theme="dark" script="js/table_cell_color.js">
+<dashboard version="1.1" theme="dark">
+  
   <label>Security Posture Continuous Assurance : Maturity Dashboard</label>
-  <description>v1.0.1</description>
+  <description>v1.0.4</description>
   
   <init>
     <set token="tkn_colour_red">#D32D41</set>
@@ -8,58 +9,38 @@
     <set token="tkn_colour_green">#B3C100</set>
     <set token="tkn_colour_green">#6AB187</set>
     <set token="tkn_colour_blue">#A5D8DD</set>
+    
+    <unset token="tkn_show_results"></unset>
+  
+    <set token="tkn_aad_ig1">-</set>
+    <set token="tkn_aad_ig2">-</set>
+    <set token="tkn_aad_ig3">-</set>
+    <set token="tkn_azure_ig1">-</set>
+    <set token="tkn_azure_ig2">-</set>
+    <set token="tkn_azure_ig3">-</set>
+    <set token="tkn_dns_ig1">-</set>
+    <set token="tkn_dns_ig2">-</set>
+    <set token="tkn_dns_ig3">-</set>
+    <set token="tkn_m365_ig1">-</set>
+    <set token="tkn_m365_ig2">-</set>
+    <set token="tkn_m365_ig3">-</set>
   </init>
 
-  
-  
-
-<!-- ################### Summary Row ################### --> 
-  <row>
-    <panel><html><div id="div_header" style="background:#171d21;color:white;font-weight:bold;font-size:200%;text-align:center;padding:10">FOUNDATIONAL SERVICE</div></html></panel>
-    <panel><html><div id="div_header" style="background:#171d21;color:white;font-weight:bold;font-size:200%;text-align:center;padding:10">IG1</div></html></panel>
-    <panel><html><div id="div_header" style="background:#171d21;color:white;font-weight:bold;font-size:200%;text-align:center;padding:10">IG2</div></html></panel>
-    <panel><html><div id="div_header" style="background:#171d21;color:white;font-weight:bold;font-size:200%;text-align:center;padding:10">IG3</div></html></panel>
-  </row>
-  
-  <row>
-    <panel><html><div id="div_header" style="background:#171d21;color:white;font-weight:bold;font-size:300%;text-align:left;padding:50">AZURE</div></html></panel>
-    <panel><html><div id="div_header" style="background:#171d21;color:white;font-weight:bold;font-size:400%;text-align:center;padding:50">$tkn_azure_ig1$</div></html></panel>
-    <panel><html><div id="div_header" style="background:#171d21;color:white;font-weight:bold;font-size:400%;text-align:center;padding:50">$tkn_azure_ig2$</div></html></panel>
-    <panel><html><div id="div_header" style="background:#171d21;color:white;font-weight:bold;font-size:400%;text-align:center;padding:50">$tkn_azure_ig3$</div></html></panel>
-  </row>
-
-  <row>
-    <panel><html><div id="div_header" style="background:#171d21;color:white;font-weight:bold;font-size:300%;text-align:left;padding:50">DNS</div></html></panel>
-    <panel><html><div id="div_header" style="background:#171d21;color:white;font-weight:bold;font-size:400%;text-align:center;padding:50">$tkn_dns_ig1$</div></html></panel>
-    <panel><html><div id="div_header" style="background:#171d21;color:white;font-weight:bold;font-size:400%;text-align:center;padding:50">$tkn_dns_ig2$</div></html></panel>
-    <panel><html><div id="div_header" style="background:#171d21;color:white;font-weight:bold;font-size:400%;text-align:center;padding:50">$tkn_dns_ig3$</div></html></panel>
-  </row>
-
-  <row>
-    <panel><html><div id="div_header" style="background:#171d21;color:white;font-weight:bold;font-size:300%;text-align:left;padding:50">ENTRA (AAD)</div></html></panel>
-    <panel><html><div id="div_header" style="background:#171d21;color:white;font-weight:bold;font-size:400%;text-align:center;padding:50">$tkn_aad_ig1$</div></html></panel>
-    <panel><html><div id="div_header" style="background:#171d21;color:white;font-weight:bold;font-size:400%;text-align:center;padding:50">$tkn_aad_ig2$</div></html></panel>
-    <panel><html><div id="div_header" style="background:#171d21;color:white;font-weight:bold;font-size:400%;text-align:center;padding:50">$tkn_aad_ig3$</div></html></panel>
-  </row>
-
-  <row>
-    <panel><html><div id="div_header" style="background:#171d21;color:white;font-weight:bold;font-size:300%;text-align:left;padding:50">Office 365</div></html></panel>
-    <panel><html><div id="div_header" style="background:#171d21;color:white;font-weight:bold;font-size:400%;text-align:center;padding:50">$tkn_m365_ig1$</div></html></panel>
-    <panel><html><div id="div_header" style="background:#171d21;color:white;font-weight:bold;font-size:400%;text-align:center;padding:50">$tkn_m365_ig2$</div></html></panel>
-    <panel><html><div id="div_header" style="background:#171d21;color:white;font-weight:bold;font-size:400%;text-align:center;padding:50">$tkn_m365_ig3$</div></html></panel>
-  </row>
+  <fieldset submitButton="false">
+    <input type="radio" token="tkn_type" searchWhenChanged="true">
+      <label>Show</label>
+      <choice value="absolute">Absolute</choice>
+      <choice value="percent">Percent</choice>
+      <default>absolute</default>
+      <prefix>| search type="</prefix>
+      <suffix>"</suffix>
+      <initialValue>absolute</initialValue>
+    </input>
+  </fieldset>
 
 
-
-  
-
-<!-- ################### Main Data Table ################### --> 
-
-  <row depends="$never_show$">
-    <panel>
-      <table>
-        <search>
-          <query>
+<search id="base_1">
+  <query>
 index="ssphp_metrics_summary" 
       (ssphp.use_case.id="azure*" OR ssphp.use_case.id="dns*" OR ssphp.use_case.id="m365*")
       ssphp.use_case.id!="*_000"
@@ -106,7 +87,7 @@ index="ssphp_metrics_summary"
 | rename ssphp.use_case.foundational_system as "FoundationalService"
 | fields "FoundationalService", IG1, IG2, IG3
 | eval "z_{FoundationalService}"=mvappend(IG1, IG2, IG3)
-| table z_*
+| fields z_*
 | rename z_* as *
 | stats list(*) as *
 
@@ -116,25 +97,172 @@ index="ssphp_metrics_summary"
             z_&lt;&lt;FIELD&gt;&gt;_IG3=mvindex(&lt;&lt;FIELD&gt;&gt;,2)
     ]
 
-| table z_*
+| fields z_*
 | rename z_* as *
+
+| eval type=mvappend("percent","absolute")
+| mvexpand type
+
+| eval AAD_IG1=if(type="percent",floor((tonumber(mvindex(split('AAD_IG1'," / "),0))*100) / (tonumber(mvindex(split('AAD_IG1'," / "),1)))),'AAD_IG1'),
+       AAD_IG2=if(type="percent",floor((tonumber(mvindex(split('AAD_IG2'," / "),0))*100) / (tonumber(mvindex(split('AAD_IG2'," / "),1)))),'AAD_IG2'),
+       AAD_IG3=if(type="percent",floor((tonumber(mvindex(split('AAD_IG3'," / "),0))*100) / (tonumber(mvindex(split('AAD_IG3'," / "),1)))),'AAD_IG3'),
+       AZURE_IG1=if(type="percent",floor((tonumber(mvindex(split('AZURE_IG1'," / "),0))*100) / (tonumber(mvindex(split('AZURE_IG1'," / "),1)))),'AZURE_IG1'),
+       AZURE_IG2=if(type="percent",floor((tonumber(mvindex(split('AZURE_IG2'," / "),0))*100) / (tonumber(mvindex(split('AZURE_IG2'," / "),1)))),'AZURE_IG2'),
+       AZURE_IG3=if(type="percent",floor((tonumber(mvindex(split('AZURE_IG3'," / "),0))*100) / (tonumber(mvindex(split('AZURE_IG3'," / "),1)))),'AZURE_IG3'),
+       DNS_IG1=if(type="percent",floor((tonumber(mvindex(split('DNS_IG1'," / "),0))*100) / (tonumber(mvindex(split('DNS_IG1'," / "),1)))),'DNS_IG1'),
+       DNS_IG2=if(type="percent",floor((tonumber(mvindex(split('DNS_IG2'," / "),0))*100) / (tonumber(mvindex(split('DNS_IG2'," / "),1)))),'DNS_IG2'),
+       DNS_IG3=if(type="percent",floor((tonumber(mvindex(split('DNS_IG3'," / "),0))*100) / (tonumber(mvindex(split('DNS_IG3'," / "),1)))),'DNS_IG3'),
+       M365_IG1=if(type="percent",floor((tonumber(mvindex(split('M365_IG1'," / "),0))*100) / (tonumber(mvindex(split('M365_IG1'," / "),1)))),'M365_IG1'),
+       M365_IG2=if(type="percent",floor((tonumber(mvindex(split('M365_IG2'," / "),0))*100) / (tonumber(mvindex(split('M365_IG2'," / "),1)))),'M365_IG2'),
+       M365_IG3=if(type="percent",floor((tonumber(mvindex(split('M365_IG3'," / "),0))*100) / (tonumber(mvindex(split('M365_IG3'," / "),1)))),'M365_IG3')
+
+| table *
+  </query>
+  <latest>now</latest>
+  <earliest>-1d@d</earliest>
+  <done>
+    <set token="tkn_show_results">show</set>
+  </done>
+</search>
+
+  
+<!-- ################### Summary Row ################### --> 
+  <row>
+    <panel>
+      <html>
+        <div id="div_header" style="background:#171d21;color:white;font-weight:bold;font-size:200%;text-align:center;padding:10">FOUNDATIONAL SERVICE</div>
+      </html>
+    </panel>
+    <panel>
+      <html>
+        <div id="div_header" style="background:#171d21;color:white;font-weight:bold;font-size:200%;text-align:center;padding:10">IG1</div>
+      </html>
+    </panel>
+    <panel>
+      <html>
+        <div id="div_header" style="background:#171d21;color:white;font-weight:bold;font-size:200%;text-align:center;padding:10">IG2</div>
+      </html>
+    </panel>
+    <panel>
+      <html>
+        <div id="div_header" style="background:#171d21;color:white;font-weight:bold;font-size:200%;text-align:center;padding:10">IG3</div>
+      </html>
+    </panel>
+  </row>
+  
+  <row depends="$tkn_show_results$">
+    <panel>
+      <html>
+        <div id="div_header" style="background:#171d21;color:white;font-weight:bold;font-size:300%;text-align:left;padding:50">AZURE</div>
+      </html>
+    </panel>
+    <panel>
+      <html>
+        <div id="div_header" style="background:#171d21;color:white;font-weight:bold;font-size:400%;text-align:center;padding:50">$tkn_azure_ig1$</div>
+      </html>
+    </panel>
+    <panel>
+      <html>
+        <div id="div_header" style="background:#171d21;color:white;font-weight:bold;font-size:400%;text-align:center;padding:50">$tkn_azure_ig2$</div>
+      </html>
+    </panel>
+    <panel>
+      <html>
+        <div id="div_header" style="background:#171d21;color:white;font-weight:bold;font-size:400%;text-align:center;padding:50">$tkn_azure_ig3$</div>
+      </html>
+    </panel>
+  </row>
+  
+  <row depends="$tkn_show_results$">
+    <panel>
+      <html>
+        <div id="div_header" style="background:#171d21;color:white;font-weight:bold;font-size:300%;text-align:left;padding:50">DNS</div>
+      </html>
+    </panel>
+    <panel>
+      <html>
+        <div id="div_header" style="background:#171d21;color:white;font-weight:bold;font-size:400%;text-align:center;padding:50">$tkn_dns_ig1$</div>
+      </html>
+    </panel>
+    <panel>
+      <html>
+        <div id="div_header" style="background:#171d21;color:white;font-weight:bold;font-size:400%;text-align:center;padding:50">$tkn_dns_ig2$</div>
+      </html>
+    </panel>
+    <panel>
+      <html>
+        <div id="div_header" style="background:#171d21;color:white;font-weight:bold;font-size:400%;text-align:center;padding:50">$tkn_dns_ig3$</div>
+      </html>
+    </panel>
+  </row>
+  
+  <row depends="$tkn_show_results$">
+    <panel>
+      <html>
+        <div id="div_header" style="background:#171d21;color:white;font-weight:bold;font-size:300%;text-align:left;padding:50">ENTRA (AAD)</div>
+      </html>
+    </panel>
+    <panel>
+      <html>
+        <div id="div_header" style="background:#171d21;color:white;font-weight:bold;font-size:400%;text-align:center;padding:50">$tkn_aad_ig1$</div>
+      </html>
+    </panel>
+    <panel>
+      <html>
+        <div id="div_header" style="background:#171d21;color:white;font-weight:bold;font-size:400%;text-align:center;padding:50">$tkn_aad_ig2$</div>
+      </html>
+    </panel>
+    <panel>
+      <html>
+        <div id="div_header" style="background:#171d21;color:white;font-weight:bold;font-size:400%;text-align:center;padding:50">$tkn_aad_ig3$</div>
+      </html>
+    </panel>
+  </row>
+  
+  <row depends="$tkn_show_results$">
+    <panel>
+      <html>
+        <div id="div_header" style="background:#171d21;color:white;font-weight:bold;font-size:300%;text-align:left;padding:50">Office 365</div>
+      </html>
+    </panel>
+    <panel>
+      <html>
+        <div id="div_header" style="background:#171d21;color:white;font-weight:bold;font-size:400%;text-align:center;padding:50">$tkn_m365_ig1$</div>
+      </html>
+    </panel>
+    <panel>
+      <html>
+        <div id="div_header" style="background:#171d21;color:white;font-weight:bold;font-size:400%;text-align:center;padding:50">$tkn_m365_ig2$</div>
+      </html>
+    </panel>
+    <panel>
+      <html>
+        <div id="div_header" style="background:#171d21;color:white;font-weight:bold;font-size:400%;text-align:center;padding:50">$tkn_m365_ig3$</div>
+      </html>
+    </panel>
+  </row>
+  
+
+<!-- ################### Main Data Table ################### --> 
+  <row depends="$never_show$">
+    <panel>
+      <table>
+        <search base="base_1">
+          <query>
+$tkn_type$
+
+| fields - type
           </query>
-          <latest>now</latest>
-          <earliest>-1d@d</earliest>
-          <sampleRatio>1</sampleRatio>
           <done>
             <set token="tkn_aad_ig1">$result.AAD_IG1$</set>
             <set token="tkn_aad_ig2">$result.AAD_IG2$</set>
             <set token="tkn_aad_ig3">$result.AAD_IG3$</set>
-            
             <set token="tkn_azure_ig1">$result.AZURE_IG1$</set>
             <set token="tkn_azure_ig2">$result.AZURE_IG2$</set>
             <set token="tkn_azure_ig3">$result.AZURE_IG3$</set>
-            
             <set token="tkn_dns_ig1">$result.DNS_IG1$</set>
             <set token="tkn_dns_ig2">$result.DNS_IG2$</set>
             <set token="tkn_dns_ig3">$result.DNS_IG3$</set>
-            
             <set token="tkn_m365_ig1">$result.M365_IG1$</set>
             <set token="tkn_m365_ig2">$result.M365_IG2$</set>
             <set token="tkn_m365_ig3">$result.M365_IG3$</set>
