@@ -59,7 +59,7 @@
     <panel>
       <html>
         <div id="div_header" style="background:$tkn_controls_compliant_text_colour$;color:white;font-weight:bold;font-size:800%;text-align:center;padding:50">$tkn_controls_compliant_text$</div> 
-        <div id="div_header" style="background:$tkn_controls_compliant_text_colour$;color:white;font-size:100%;text-align:center">$tkn_selected_service_name$ Compliant / # CISO 1 Controls</div> 
+        <div id="div_header" style="background:$tkn_controls_compliant_text_colour$;color:white;font-size:100%;text-align:center">$tkn_selected_service_name$ Compliant / # DfE Mandated Controls</div> 
       </html>
     </panel>
   </row>
@@ -262,7 +262,7 @@ $tkn_search_filter$
         <fields>"Title", Score, "Compliance Status", "DfE Mandated", "Control Title", "Description"</fields>
         <option name="drilldown">row</option>
         <drilldown>
-          <link target="_blank">/app/$tkn_current_app$/ssphp_foundational_systems_drilldown_cis?tkn_use_case_id=$row.ssphp.use_case.id$</link>
+          <link target="_blank">/app/$tkn_current_app$/ssphp_foundational_systems_detail_cis?tkn_use_case_id=$row.ssphp.use_case.id$</link>
         </drilldown>
       </table>
     </panel>
