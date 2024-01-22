@@ -1,6 +1,6 @@
 <dashboard theme="dark" version="1.1" script="js/addtags.js, js/table_cell_backcolor.js">
   <label>Security Posture Continuous Assurance : CIS Control Drilldown Dashboard</label>
-  <description>v1.5.0</description>
+  <description>v1.5.1</description>
   
   <init>
     <set token="tkn_colour_red">#D32D41</set>
@@ -326,7 +326,7 @@ index="ssphp_metrics_summary" ssphp.use_case.id=$tkn_use_case_id$
       </table>
     </panel>
 ## -->
-  <row>
+  <row depends="$tkn_show_dashboard$">
     <panel>
       <html>
         <span class="header_r1" style="color:	darkcyan">Scoring Narrative</span>
@@ -336,8 +336,7 @@ index="ssphp_metrics_summary" ssphp.use_case.id=$tkn_use_case_id$
     </panel>    
   </row>
 
-<!-- ##   <row depends="$tkn_show_dashboard$">## -->
-  <row>
+  <row depends="$tkn_show_dashboard$">
     <panel depends="$never_show$">
       <table>
         <title>test</title>
@@ -392,7 +391,7 @@ index="ssphp_metrics_summary" ssphp.use_case.id=$tkn_use_case_id$
     </html>
   </row>
     
-  <row>
+  <row depends="$tkn_show_dashboard$">
     <panel>
       <title>Underlying Data</title>
       <table id="table3">
@@ -401,7 +400,7 @@ index="ssphp_metrics_summary" ssphp.use_case.id=$tkn_use_case_id$
 $tkn_use_case_search_text$
 
 
-| rename *{} as *__
+| rename *{}* as *__*
 | rename * as z_*
 | rename z_ssphp* as ssphp*
 | foreach z_* 
@@ -410,10 +409,10 @@ $tkn_use_case_search_text$
                fld_val=if(isnull('fld_val') OR trim('fld_val')="" OR len('fld_val')&lt;3,"-",'fld_val'),
                fld_name=replace(replace("&lt;&lt;FIELD&gt;&gt;","__","{}"),"z_",""),
                "&lt;&lt;FIELD&gt;&gt;"=if(match('ssphp.score.non_compliant_fields','fld_name'), 'fld_val'."|red", 'fld_val')]
-```| foreach * 
-    [| eval "&lt;&lt;FIELD&gt;&gt;"=split('&lt;&lt;FIELD&gt;&gt;',"~~")]```
+| foreach * 
+    [| eval "&lt;&lt;FIELD&gt;&gt;"=split('&lt;&lt;FIELD&gt;&gt;',"~~")]
 | rename z_* as *
-| rename *__ as *{}
+| rename *__* as *{}*
 
 | sort 0 - ssphp.score.score
 

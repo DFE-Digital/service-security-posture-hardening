@@ -9,7 +9,7 @@ require([
     var CustomRangeRenderer = TableView.BaseCellRenderer.extend({
         canRender: function (cell) {
             //return true;
-            return _(['state','conditions.users.includeGroups{}','conditions.clientAppTypes{}','grantControls.builtInControls{}']).contains(cell.field);
+            return _(['state','conditions.locations.includeLocations{}','conditions.locations.excludeLocations{}','grantControls.builtInControls{}','conditions.users.includeGroups{}','conditions.clientAppTypes{}','grantControls.builtInControls{}','isEnabled','implementationStatus','isTrusted','ipRanges{}.cidrAddress']).contains(cell.field);
         },
         render: function ($td, cell) {
             var label = cell.value.split("|")[0];
