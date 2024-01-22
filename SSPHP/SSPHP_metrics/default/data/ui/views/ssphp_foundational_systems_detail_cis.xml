@@ -1,6 +1,6 @@
 <dashboard theme="dark" version="1.1" script="js/addtags.js, js/table_cell_backcolor.js">
   <label>Security Posture Continuous Assurance : CIS Control Drilldown Dashboard</label>
-  <description>v1.5.1</description>
+  <description>v1.5.2</description>
   
   <init>
     <set token="tkn_colour_red">#D32D41</set>
@@ -400,6 +400,7 @@ index="ssphp_metrics_summary" ssphp.use_case.id=$tkn_use_case_id$
 $tkn_use_case_search_text$
 
 
+| rename *{} as *¬¬
 | rename *{}* as *__*
 | rename * as z_*
 | rename z_ssphp* as ssphp*
@@ -411,8 +412,9 @@ $tkn_use_case_search_text$
                "&lt;&lt;FIELD&gt;&gt;"=if(match('ssphp.score.non_compliant_fields','fld_name'), 'fld_val'."|red", 'fld_val')]
 | foreach * 
     [| eval "&lt;&lt;FIELD&gt;&gt;"=split('&lt;&lt;FIELD&gt;&gt;',"~~")]
-| rename z_* as *
-| rename *__* as *{}*
+    | rename z_* as *
+    | rename *¬¬ as *{}
+    | rename *__* as *{}*
 
 | sort 0 - ssphp.score.score
 

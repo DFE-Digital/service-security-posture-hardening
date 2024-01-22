@@ -9,7 +9,29 @@ require([
     var CustomRangeRenderer = TableView.BaseCellRenderer.extend({
         canRender: function (cell) {
             //return true;
-            return _(['state','conditions.locations.includeLocations{}','conditions.locations.excludeLocations{}','grantControls.builtInControls{}','conditions.users.includeGroups{}','conditions.clientAppTypes{}','grantControls.builtInControls{}','isEnabled','implementationStatus','isTrusted','ipRanges{}.cidrAddress']).contains(cell.field);
+            return _(['state',
+                      'defaultUserRolePermissions.allowedToCreateTenants',
+                      'conditions.locations.includeLocations{}',
+                      'conditions.locations.excludeLocations{}',
+                      'conditions.users.includeUsers{}',
+                      'conditions.users.includeGroups{}',
+                      'conditions.clientAppTypes{}',
+                      'grantControls.builtInControls{}',
+                      'conditions.signInRiskLevels{}',
+                      'isEnabled',
+                      'implementationStatus',
+                      'isTrusted',
+                      'values{}.value',
+                      'values{}.name',
+                      'permissionGrantPolicyIdsAssignedToDefaultUserRole{}',
+                      'defaultUserRolePermissions.allowedToCreateApps',
+                      'guestUserRoleId',
+                      'allowInvitesFrom',
+                      'defaultUserRolePermissions.allowedToCreateSecurityGroups',
+                      'properties.type',
+                      'properties.assignableScopes{}',
+                      'properties.permissions{}.actions{}',
+                      'ipRanges{}.cidrAddress']).contains(cell.field);
         },
         render: function ($td, cell) {
             var label = cell.value.split("|")[0];
