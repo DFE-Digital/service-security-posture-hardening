@@ -43,6 +43,9 @@ require([
                       'roleName',
                       'blockSubscriptionsIntoTenant',
                       'blockSubscriptionsLeavingTenant',
+                      'kind',
+                      'properties.serverKeyType',
+                      'uri',
                       'ipRanges{}.cidrAddress']).contains(cell.field);
         },
         render: function ($td, cell) {
