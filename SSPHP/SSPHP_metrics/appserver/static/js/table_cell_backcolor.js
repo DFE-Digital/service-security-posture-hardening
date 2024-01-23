@@ -31,6 +31,10 @@ require([
                       'properties.type',
                       'properties.assignableScopes{}',
                       'properties.permissions{}.actions{}',
+                      'permissions{}.actions{}',
+                      'roleName',
+                      'blockSubscriptionsIntoTenant',
+                      'blockSubscriptionsLeavingTenant',
                       'ipRanges{}.cidrAddress']).contains(cell.field);
         },
         render: function ($td, cell) {
