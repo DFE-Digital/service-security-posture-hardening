@@ -46,7 +46,22 @@ require([
                       'kind',
                       'properties.serverKeyType',
                       'uri',
-                      'ipRanges{}.cidrAddress']).contains(cell.field);
+                      'ipRanges{}.cidrAddress',
+                      'alternateContactType',
+                      'emailAddress',
+                      'name',
+                      'phoneNumber',
+                      'SummaryMap.AccountAccessKeysPresent',
+                      'SummaryMap.AccountMFAEnabled',
+                      'serialNumber',
+                      'SummaryMap.AccountMFAEnabled',
+                      'number_with_AccountMFAEnabled',
+                      'MinimumPasswordLength',
+                      'PasswordReusePrevention',
+                      'password_enabled',
+                      'mfa_active',
+                      'access_key_1_last_used_date',
+                      'title']).contains(cell.field);
         },
         render: function ($td, cell) {
             var label = cell.value.split("|")[0];
