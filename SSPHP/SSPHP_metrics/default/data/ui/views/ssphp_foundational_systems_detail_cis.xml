@@ -1,6 +1,6 @@
 <dashboard theme="dark" version="1.1" script="js/addtags.js, js/table_cell_backcolor.js">
   <label>Security Posture Continuous Assurance : CIS Control Drilldown Dashboard</label>
-  <description>v1.5.5</description>
+  <description>v1.5.6</description>
   
   <init>
     <set token="tkn_colour_red">#D32D41</set>
@@ -411,11 +411,13 @@ $tkn_use_case_search_text$
                fld_val=if(isnull('fld_val') OR trim('fld_val')="" OR (len('fld_val')&lt;2 AND NOT match('fld_val',"^[a-zA-Z0-9]+$")),"-",'fld_val'),
                fld_name=replace(replace(replace("&lt;&lt;FIELD&gt;&gt;","¬¬","{}"),"__","{}"),"z_",""),
                "&lt;&lt;FIELD&gt;&gt;"=if(match('ssphp.score.non_compliant_fields','fld_name'), 'fld_val'."|red", 'fld_val')]
+
 | foreach * 
-    [| eval "&lt;&lt;FIELD&gt;&gt;"=split('&lt;&lt;FIELD&gt;&gt;',"~~")]
-    | rename z_* as *
-    | rename *¬¬ as *{}
-    | rename *__* as *{}*
+  [| eval "&lt;&lt;FIELD&gt;&gt;"=if("&lt;&lt;FIELD&gt;&gt;" == "ssphp.score.non_compliant_fields", 'ssphp.score.non_compliant_fields', split('&lt;&lt;FIELD&gt;&gt;',"~~"))]
+               
+| rename z_* as *
+| rename *¬¬ as *{}
+| rename *__* as *{}*
 
 | sort 0 ssphp.score.score
 
