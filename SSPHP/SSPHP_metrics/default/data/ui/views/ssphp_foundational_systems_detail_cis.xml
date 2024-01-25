@@ -1,6 +1,6 @@
 <dashboard theme="dark" version="1.1" script="js/addtags.js, js/table_cell_backcolor.js">
   <label>Security Posture Continuous Assurance : CIS Control Drilldown Dashboard</label>
-  <description>v1.5.6</description>
+  <description>v1.5.7</description>
   
   <init>
     <set token="tkn_colour_red">#D32D41</set>
@@ -222,11 +222,13 @@ index="ssphp_metrics_summary" ssphp.use_case.id=$tkn_use_case_id$
 
     <panel>
       <html>
-        <span class="header_r1" style="color:	darkcyan">Numerator</span>
-        <span class="header_r2">$tkn_numerator$</span>
-        <br></br>
-        <span class="header_r1" style="color:	darkcyan">Denominator</span>
+<!--    <span class="header_r1" style="color:	darkcyan">Denominator</span> --> 
+        <span class="header_r1" style="color:	darkcyan">Total Tests in this Control</span>
         <span class="header_r2">$tkn_denominator$</span>
+        <br></br>
+<!--    <span class="header_r1" style="color:	darkcyan">Numerator</span> --> 
+        <span class="header_r1" style="color:	darkcyan">Tests Passed/Failed in this Control</span>
+        <span class="header_r2">$tkn_numerator$</span>
         <br></br>
       </html>
     </panel>

@@ -91,9 +91,17 @@ require([
                       'displayName',
                       'id_state',
                       'name_val',
+                      'visibility',
                       'displayLocationInformationRequiredState.state',
                       'displayAppInformationRequiredState.state',
                       'assignmentType',
+                      'B2BManagementPolicy.InvitationsAllowedAndBlockedDomainsPolicy.AllowedDomains{}',
+                      'defaultUserRolePermissions.allowedToCreateTenants',
+                      'OAuth2ClientProfileEnabled',
+                      'passwordValidityPeriodInDays',
+                      'onPremisesSyncEnabled',
+                      'assignedPlans{}.servicePlanId',
+                      'on',
                       'title']).contains(cell.field);
         },
         render: function ($td, cell) {
