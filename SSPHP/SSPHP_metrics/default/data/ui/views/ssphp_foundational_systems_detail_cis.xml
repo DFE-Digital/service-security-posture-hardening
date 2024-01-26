@@ -1,6 +1,6 @@
 <dashboard theme="dark" version="1.1" script="js/addtags.js, js/table_cell_backcolor.js">
   <label>Security Posture Continuous Assurance : CIS Control Drilldown Dashboard</label>
-  <description>v1.5.7</description>
+  <description>v1.5.11</description>
   
   <init>
     <set token="tkn_colour_red">#D32D41</set>
@@ -200,9 +200,17 @@ index="ssphp_metrics_summary" ssphp.use_case.id=$tkn_use_case_id$
         <br></br>
         <div id="div_header" style="background:$tkn_score_color$;color:white;font-weight:bold;font-size:800%;text-align:center;padding:50">$tkn_score$</div> 
         <br></br>
-        <span class="header_r1" style="color:	darkcyan">Compliance Status</span>
+<!--    <span class="header_r1" style="color:	darkcyan">Denominator</span> --> 
+        <span class="header_r1" style="color:	darkcyan">Tests in this Control</span>
+        <span class="header_r2">$tkn_denominator$</span>
         <br></br>
-        <span id="div_header" style="color:$tkn_score_color$;font-weight:bold;font-size:100%">$tkn_compliance_status$</span>        
+<!--    <span class="header_r1" style="color:	darkcyan">Numerator</span> --> 
+        <span class="header_r1" style="color:	darkcyan">Tests Failed in this Control</span>
+        <span class="header_r2">$tkn_numerator$</span>
+        <br></br>
+        <span class="header_r1" style="color:	darkcyan">Compliance Status</span>
+<!--    <span id="div_header" style="color:$tkn_score_color$;font-weight:bold;font-size:100%">$tkn_compliance_status$</span> -->    
+        <span class="header_r2" style="color:$tkn_score_color$">$tkn_compliance_status$</span>   
         <br></br>
       </html>
     </panel>
@@ -217,19 +225,6 @@ index="ssphp_metrics_summary" ssphp.use_case.id=$tkn_use_case_id$
         <br></br>
         <span class="header_r1" style="color:	darkcyan">IG3 Controls</span>
         <span class="header_r2">$tkn_cis_ig3$</span>
-      </html>
-    </panel>
-
-    <panel>
-      <html>
-<!--    <span class="header_r1" style="color:	darkcyan">Denominator</span> --> 
-        <span class="header_r1" style="color:	darkcyan">Total Tests in this Control</span>
-        <span class="header_r2">$tkn_denominator$</span>
-        <br></br>
-<!--    <span class="header_r1" style="color:	darkcyan">Numerator</span> --> 
-        <span class="header_r1" style="color:	darkcyan">Tests Passed/Failed in this Control</span>
-        <span class="header_r2">$tkn_numerator$</span>
-        <br></br>
       </html>
     </panel>
 
@@ -257,7 +252,7 @@ index="ssphp_metrics_summary" ssphp.use_case.id=$tkn_use_case_id$
       <html>
         <style>
           #panel1{
-            width:60% !important;
+            width:75% !important;
           }
         </style>
         <span class="header_r1" style="color:	yellow">CIS M365 Foundations Benchmark</span>
@@ -281,7 +276,7 @@ index="ssphp_metrics_summary" ssphp.use_case.id=$tkn_use_case_id$
       <html>
         <style>
           #panel2{
-            width:40% !important;
+            width:25% !important;
           }
         </style>
         <span class="header_r1" style="color:	yellow">CIS Navigator Critical Security Controls</span>
