@@ -202,6 +202,10 @@ require([
                       'settings.recurrence.range.endDate',
                       'settings.recurrence.pattern.type',
                       'settings.recurrence.pattern.interval',
+                      'UnifiedAuditLogIngestionEnabled',
+                      'AuditDisabled',
+                      'ThirdPartyFileProvidersEnabled',
+                      'AdditionalStorageProvidersAvailable',
                       'title']).contains(cell.field);
         },
         render: function ($td, cell) {
