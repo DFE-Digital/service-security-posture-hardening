@@ -9,7 +9,7 @@ resource "azurerm_service_plan" "SSPHP_rust" {
 
 data "archive_file" "data_ingester_rust" {
   type        = "zip"
-  source_dir  = "${path.module}/../../data_ingester_rust/function_zip/"
+  source_dir  = "${path.module}/../../data_ingester_workspace/data_ingester_functions_entrypoint/function_zip/"
   output_path = "${path.module}/data_ingester_rust_${formatdate("YYYYMMDDHHmmss", timestamp())}.zip"
 }
 
