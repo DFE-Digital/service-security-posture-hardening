@@ -4,18 +4,16 @@ use crate::conditional_access_policies::ConditionalAccessPolicies;
 use data_ingester_supporting::dns::resolve_txt_record;
 use crate::groups::Groups;
 use data_ingester_supporting::keyvault::Secrets;
-//use crate::keyvault::Secrets;
+
 use crate::msgraph_data::load_m365_toml;
 use crate::roles::RoleDefinitions;
 use crate::security_score::SecurityScores;
 use data_ingester_splunk::splunk::HecEvent;
-use data_ingester_splunk::splunk::Message;
 use data_ingester_splunk::splunk::ToHecEvents;
 use data_ingester_splunk::splunk::{set_ssphp_run, Splunk};
 use crate::users::Users;
 use crate::users::UsersMap;
 use anyhow::{Context, Result};
-use futures::Future;
 use futures::StreamExt;
 use graph_http::api_impl::RequestComponents;
 use graph_http::api_impl::RequestHandler;
@@ -36,6 +34,7 @@ use std::iter;
 use std::sync::Arc;
 use tokio::sync::mpsc::UnboundedSender;
 use url::Url;
+use data_ingester_splunk::splunk::try_collect_send;
 
 //use crate::azure_rest::AzureRest;
 
@@ -1038,86 +1037,8 @@ pub async fn m365(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
 
     try_collect_send("MS Graph Groups", ms_graph.list_groups(), &splunk).await?;
 
-    // try_collect_send(
-    //     "Azure Security Contacts",
-    //     azure_rest.get_security_contacts(),
-    //     &splunk,
-    // )
-    // .await?;
-
-    // try_collect_send(
-    //     "Azure Security Center built in",
-    //     azure_rest.get_security_center_built_in(),
-    //     &splunk,
-    // )
-    // .await?;
-
-    // try_collect_send(
-    //     "Azure Security Auto Provisioning Settings",
-    //     azure_rest.get_microsoft_security_auto_provisioning_settings(),
-    //     &splunk,
-    // )
-    // .await?;
-
-    // try_collect_send(
-    //     "Azure Security Settings",
-    //     azure_rest.get_microsoft_security_settings(),
-    //     &splunk,
-    // )
-    // .await?;
-
-    // try_collect_send(
-    //     "Azure Security SQL Encryption protection",
-    //     azure_rest.get_microsoft_sql_encryption_protection(),
-    //     &splunk,
-    // )
-    // .await?;
-
     splunk.log("M365 Collection Complete").await?;
 
-    Ok(())
-}
-
-pub(crate) async fn try_collect_send<T>(
-    name: &str,
-    future: impl Future<Output = Result<T>>,
-    splunk: &Splunk,
-) -> Result<()>
-where
-    for<'a> &'a T: ToHecEvents + Debug,
-{
-    splunk.log(&format!("Getting {}", &name)).await?;
-    match future.await {
-        Ok(ref result) => {
-            let hec_events = match result.to_hec_events() {
-                Ok(hec_events) => hec_events,
-                Err(e) => {
-                    eprintln!("Failed converting to HecEvents: {}", e);
-                    dbg!(&result);
-                    vec![HecEvent::new(
-                        &Message {
-                            event: format!("Failed converting to HecEvents: {}", e),
-                        },
-                        "data_ingester_rust",
-                        "data_ingester_rust_logs",
-                    )?]
-                }
-            };
-
-            match splunk.send_batch(&hec_events).await {
-                Ok(_) => eprintln!("Sent to Splunk"),
-                Err(e) => {
-                    eprintln!("Failed Sending to Splunk: {}", e);
-                    //dbg!(&hec_events);
-                }
-            };
-        }
-        Err(err) => {
-            splunk
-                .log(&format!("Failed to get {}: {}", &name, err))
-                .await?
-        }
-    };
     Ok(())
 }
 

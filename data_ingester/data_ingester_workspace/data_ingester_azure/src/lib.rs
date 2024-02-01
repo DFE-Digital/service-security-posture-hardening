@@ -5,6 +5,7 @@ use data_ingester_splunk::splunk::{set_ssphp_run, Splunk, ToHecEvents};
 use data_ingester_ms_graph::users::UsersMap;
 use data_ingester_ms_graph::ms_graph::login;
 use data_ingester_azure_rest::azure_rest::AzureRest;
+use data_ingester_splunk::splunk::try_collect_send;
 
 pub async fn azure_users(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
     set_ssphp_run()?;
@@ -85,6 +86,41 @@ pub async fn azure_users(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<(
         .send_batch((&aad_role_definitions).to_hec_events()?)
         .await?;
 
+    try_collect_send(
+        "Azure Security Contacts",
+        azure_rest.get_security_contacts(),
+        &splunk,
+    )
+    .await?;
+
+    try_collect_send(
+        "Azure Security Center built in",
+        azure_rest.get_security_center_built_in(),
+        &splunk,
+    )
+    .await?;
+
+    try_collect_send(
+        "Azure Security Auto Provisioning Settings",
+        azure_rest.get_microsoft_security_auto_provisioning_settings(),
+        &splunk,
+    )
+    .await?;
+
+    try_collect_send(
+        "Azure Security Settings",
+        azure_rest.get_microsoft_security_settings(),
+        &splunk,
+    )
+    .await?;
+
+    try_collect_send(
+        "Azure Security SQL Encryption protection",
+        azure_rest.get_microsoft_sql_encryption_protection(),
+        &splunk,
+    )
+    .await?;    
+
     let process_to_splunk = tokio::spawn(async move {
         while let Some(mut users) = reciever.recv().await {
             users.set_is_privileged(&aad_role_definitions);
@@ -111,6 +147,8 @@ pub async fn azure_users(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<(
     splunk_clone
         .send_batch((&admin_request_consent_policy).to_hec_events().unwrap())
         .await?;
+
+
 
     let _ = list_users.await?;
 
