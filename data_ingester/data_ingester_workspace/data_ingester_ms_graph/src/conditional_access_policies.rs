@@ -2,7 +2,6 @@ use std::collections::HashSet;
 
 use data_ingester_splunk::splunk::ToHecEvents;
 
-
 use crate::users::User;
 use serde::Deserialize;
 use serde::Serialize;

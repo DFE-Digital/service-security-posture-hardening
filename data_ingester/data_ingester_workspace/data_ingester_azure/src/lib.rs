@@ -1,11 +1,11 @@
+use anyhow::{Context, Result};
+use data_ingester_azure_rest::azure_rest::AzureRest;
+use data_ingester_ms_graph::ms_graph::login;
+use data_ingester_ms_graph::users::UsersMap;
+use data_ingester_splunk::splunk::try_collect_send;
+use data_ingester_splunk::splunk::{set_ssphp_run, Splunk, ToHecEvents};
 use data_ingester_supporting::keyvault::Secrets;
 use std::sync::Arc;
-use anyhow::{Context, Result};
-use data_ingester_splunk::splunk::{set_ssphp_run, Splunk, ToHecEvents};
-use data_ingester_ms_graph::users::UsersMap;
-use data_ingester_ms_graph::ms_graph::login;
-use data_ingester_azure_rest::azure_rest::AzureRest;
-use data_ingester_splunk::splunk::try_collect_send;
 
 pub async fn azure_users(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
     set_ssphp_run()?;
@@ -21,7 +21,6 @@ pub async fn azure_users(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<(
         &secrets.azure_tenant_id,
     )
     .await?;
-
 
     let azure_rest = AzureRest::new(
         &secrets.azure_client_id,
@@ -119,7 +118,7 @@ pub async fn azure_users(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<(
         azure_rest.get_microsoft_sql_encryption_protection(),
         &splunk,
     )
-    .await?;    
+    .await?;
 
     let process_to_splunk = tokio::spawn(async move {
         while let Some(mut users) = reciever.recv().await {
@@ -147,8 +146,6 @@ pub async fn azure_users(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<(
     splunk_clone
         .send_batch((&admin_request_consent_policy).to_hec_events().unwrap())
         .await?;
-
-
 
     let _ = list_users.await?;
 

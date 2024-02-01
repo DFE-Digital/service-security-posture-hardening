@@ -1,5 +1,3 @@
-use data_ingester_azure_rest::azure_rest::RoleAssignments as AzureRoleAssignments;
-use data_ingester_azure_rest::azure_rest::RoleDefinitions as AzureRoleDefinitions;
 use crate::conditional_access_policies::ConditionalAccessPolicies;
 use crate::conditional_access_policies::UserConditionalAccessPolicy;
 use crate::directory_roles::DirectoryRole;
@@ -7,10 +5,12 @@ use crate::directory_roles::DirectoryRoles;
 use crate::groups::Group;
 use crate::groups::Groups;
 use crate::roles::RoleDefinitions as EntraRoleDefinitions;
-use data_ingester_splunk::splunk::ToHecEvents;
 use anyhow::Context;
 use anyhow::Result;
 use azure_mgmt_authorization::package_2022_04_01::models::role_assignment_properties::PrincipalType;
+use data_ingester_azure_rest::azure_rest::RoleAssignments as AzureRoleAssignments;
+use data_ingester_azure_rest::azure_rest::RoleDefinitions as AzureRoleDefinitions;
+use data_ingester_splunk::splunk::ToHecEvents;
 use regex::Regex;
 use serde::Deserialize;
 use serde::Serialize;
@@ -18,7 +18,6 @@ use serde_json::Value;
 use serde_with::skip_serializing_none;
 use std::collections::HashMap;
 use std::ops::Deref;
-
 
 // https://learn.microsoft.com/en-us/graph/api/resources/user?view=graph-rest-1.0
 #[skip_serializing_none]
@@ -246,7 +245,9 @@ impl<'a> UsersMap<'a> {
                 .role_definition_id()
                 .context("No Role definition")?;
 
-            let Some(role_definition) = role_definitions.inner.get(*role_assignment_role_definition_id)
+            let Some(role_definition) = role_definitions
+                .inner
+                .get(*role_assignment_role_definition_id)
             else {
                 continue;
             };

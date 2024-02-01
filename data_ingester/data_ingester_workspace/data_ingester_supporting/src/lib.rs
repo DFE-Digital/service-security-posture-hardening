@@ -1,2 +1,2 @@
-pub mod keyvault;
 pub mod dns;
+pub mod keyvault;

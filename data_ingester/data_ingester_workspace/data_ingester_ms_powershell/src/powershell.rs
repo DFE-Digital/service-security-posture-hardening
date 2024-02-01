@@ -4,8 +4,8 @@ use serde_json::Value;
 use std::iter;
 use std::process::Command;
 
-use data_ingester_supporting::keyvault::Secrets;
 use data_ingester_splunk::splunk::ToHecEvents;
+use data_ingester_supporting::keyvault::Secrets;
 
 pub async fn install_powershell() -> Result<()> {
     eprintln!("Downloading Powershell .deb");
@@ -911,28 +911,26 @@ Connect-MicrosoftTeams -Certificate $pfx -ApplicationId "{}" -TenantId "{}" | Ou
 #[cfg(test)]
 mod test {
 
-
     use crate::powershell::{
-            install_powershell, run_powershell_exchange_login_test,
-            run_powershell_get_admin_audit_log_config, run_powershell_get_anti_phish_policy,
-            run_powershell_get_atp_policy_for_o365, run_powershell_get_blocked_sender_address,
-            run_powershell_get_cs_teams_client_configuration,
-            run_powershell_get_cs_tenant_federation_configuration,
-            run_powershell_get_dkim_signing_config, run_powershell_get_dlp_compliance_policy,
-            run_powershell_get_email_tenant_settings,
-            run_powershell_get_eop_protection_policy_rule,
-            run_powershell_get_hosted_content_filter_policy,
-            run_powershell_get_hosted_outbound_spam_filter_policy, run_powershell_get_mailbox,
-            run_powershell_get_malware_filter_policy,
-            run_powershell_get_management_role_assignment, run_powershell_get_organization_config,
-            run_powershell_get_owa_mailbox_policy, run_powershell_get_protection_alert,
-            run_powershell_get_safe_attachment_policy, run_powershell_get_safe_links_policy,
-            run_powershell_get_sharing_policy, run_powershell_get_spoof_intelligence_insight,
-            run_powershell_get_transport_rule, run_powershell_get_user_vip,
+        install_powershell, run_powershell_exchange_login_test,
+        run_powershell_get_admin_audit_log_config, run_powershell_get_anti_phish_policy,
+        run_powershell_get_atp_policy_for_o365, run_powershell_get_blocked_sender_address,
+        run_powershell_get_cs_teams_client_configuration,
+        run_powershell_get_cs_tenant_federation_configuration,
+        run_powershell_get_dkim_signing_config, run_powershell_get_dlp_compliance_policy,
+        run_powershell_get_email_tenant_settings, run_powershell_get_eop_protection_policy_rule,
+        run_powershell_get_hosted_content_filter_policy,
+        run_powershell_get_hosted_outbound_spam_filter_policy, run_powershell_get_mailbox,
+        run_powershell_get_malware_filter_policy, run_powershell_get_management_role_assignment,
+        run_powershell_get_organization_config, run_powershell_get_owa_mailbox_policy,
+        run_powershell_get_protection_alert, run_powershell_get_safe_attachment_policy,
+        run_powershell_get_safe_links_policy, run_powershell_get_sharing_policy,
+        run_powershell_get_spoof_intelligence_insight, run_powershell_get_transport_rule,
+        run_powershell_get_user_vip,
     };
-    use data_ingester_splunk::splunk::{set_ssphp_run, Splunk, ToHecEvents};
-    use data_ingester_supporting::keyvault::{get_keyvault_secrets, Secrets};    
     use anyhow::Result;
+    use data_ingester_splunk::splunk::{set_ssphp_run, Splunk, ToHecEvents};
+    use data_ingester_supporting::keyvault::{get_keyvault_secrets, Secrets};
     use std::env;
 
     async fn setup() -> Result<(Splunk, Secrets)> {

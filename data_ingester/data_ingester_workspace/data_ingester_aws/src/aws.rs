@@ -27,9 +27,9 @@ use crate::aws_s3::{
 };
 use crate::aws_securityhub::DescribeHubOutput;
 use crate::aws_trail::{TrailWrapper, TrailWrappers};
-use data_ingester_supporting::keyvault::Secrets;
 use data_ingester_splunk::splunk::try_collect_send;
 use data_ingester_splunk::splunk::{set_ssphp_run, Splunk, ToHecEvents};
+use data_ingester_supporting::keyvault::Secrets;
 
 pub async fn aws(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
     set_ssphp_run()?;
@@ -847,7 +847,9 @@ impl AwsClient {
             .into();
 
         if configs.configuration_recorders.is_none() {
-            return Ok(DescribeConfigurationRecordersOutput { configuration_recorders: None });
+            return Ok(DescribeConfigurationRecordersOutput {
+                configuration_recorders: None,
+            });
         }
 
         for config in configs
@@ -1422,8 +1424,8 @@ mod test {
     use super::{aws, AwsClient};
 
     use data_ingester_splunk::splunk::{set_ssphp_run, Splunk, ToHecEvents};
-    use data_ingester_supporting::keyvault::{get_keyvault_secrets};
-    
+    use data_ingester_supporting::keyvault::get_keyvault_secrets;
+
     use anyhow::Result;
 
     pub async fn setup() -> Result<(Splunk, AwsClient)> {
@@ -1697,7 +1699,12 @@ mod test {
             .aws_3_5_ensure_aws_config_is_enabled_in_all_regions()
             .await?;
         assert!(&result.configuration_recorders.is_some());
-        assert!(&result.configuration_recorders.as_ref().unwrap().iter().any(|r| r.status.is_some()));
+        assert!(&result
+            .configuration_recorders
+            .as_ref()
+            .unwrap()
+            .iter()
+            .any(|r| r.status.is_some()));
         splunk.send_batch((&result).to_hec_events()?).await?;
         Ok(())
     }

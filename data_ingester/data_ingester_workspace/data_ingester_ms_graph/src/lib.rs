@@ -1,9 +1,9 @@
-pub mod msgraph_data;
-pub mod ms_graph;
 pub mod admin_request_consent_policy;
 pub mod conditional_access_policies;
+pub mod directory_roles;
 pub mod groups;
-pub mod users;
+pub mod ms_graph;
+pub mod msgraph_data;
 pub mod roles;
 pub mod security_score;
-pub mod directory_roles;
+pub mod users;

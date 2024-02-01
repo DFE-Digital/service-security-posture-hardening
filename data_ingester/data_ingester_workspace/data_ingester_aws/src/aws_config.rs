@@ -1,6 +1,6 @@
 use serde::Serialize;
 
-use crate::{aws_trail::date_time_def};
+use crate::aws_trail::date_time_def;
 use data_ingester_splunk::splunk::ToHecEvents;
 
 #[derive(::std::clone::Clone, ::std::cmp::PartialEq, ::std::fmt::Debug, Serialize)]

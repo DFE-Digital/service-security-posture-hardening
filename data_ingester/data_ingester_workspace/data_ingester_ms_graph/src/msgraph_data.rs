@@ -2,8 +2,8 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use crate::ms_graph::MsGraph;
-use data_ingester_splunk::splunk::{to_hec_events, HecEvent, Message, Splunk};
 use anyhow::Result;
+use data_ingester_splunk::splunk::{to_hec_events, HecEvent, Message, Splunk};
 use serde::Deserialize;
 
 /// Loads data from the ms_graph.toml file
@@ -128,12 +128,10 @@ impl MsGraphSource {
 mod test {
     use std::{env, sync::Arc};
 
-    use crate::{
-        ms_graph::login, msgraph_data::load_m365_toml,
-    };
-    use data_ingester_splunk::splunk::{Splunk};
-    use data_ingester_supporting::keyvault::{get_keyvault_secrets};    
+    use crate::{ms_graph::login, msgraph_data::load_m365_toml};
     use anyhow::Result;
+    use data_ingester_splunk::splunk::Splunk;
+    use data_ingester_supporting::keyvault::get_keyvault_secrets;
 
     #[test]
     fn test_toml() -> Result<()> {

@@ -2,7 +2,6 @@ use std::iter;
 
 use serde::{Deserialize, Serialize};
 
-
 use data_ingester_splunk::splunk::ToHecEvents;
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub(crate) struct EntitiesForPolicyOutput {

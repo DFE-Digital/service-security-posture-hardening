@@ -35,10 +35,10 @@ impl ToHecEvents for &SecurityScores {
 
 #[cfg(test)]
 mod test {
-    use crate::{ms_graph::test::setup};
+    use crate::ms_graph::test::setup;
 
-    use data_ingester_splunk::splunk::{ToHecEvents};
-    
+    use data_ingester_splunk::splunk::ToHecEvents;
+
     use anyhow::Result;
     #[tokio::test]
     async fn test_to_hec_events_collection() -> Result<()> {

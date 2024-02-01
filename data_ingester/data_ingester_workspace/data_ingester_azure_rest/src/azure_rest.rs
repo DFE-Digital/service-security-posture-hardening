@@ -19,8 +19,8 @@ use std::iter;
 use std::{collections::HashMap, sync::Arc};
 use url::Url;
 
-use data_ingester_splunk::splunk::ToHecEvents;
 use data_ingester_splunk::splunk::HecEvent;
+use data_ingester_splunk::splunk::ToHecEvents;
 //use crate::splunk::{HecEvent, ToHecEvents};
 
 pub struct AzureRest {
@@ -99,7 +99,7 @@ impl AzureRest {
                 }
             }
         }
-        Ok(RoleDefinitions{inner: collection})
+        Ok(RoleDefinitions { inner: collection })
     }
 
     pub async fn azure_role_assignments(&self) -> Result<RoleAssignments> {
@@ -124,7 +124,7 @@ impl AzureRest {
                 }
             }
         }
-        Ok(RoleAssignments{inner: collection})
+        Ok(RoleAssignments { inner: collection })
     }
 
     // pub async fn get_microsoft_authorization_role_assignments(&self) -> Result<Vec<HecEvent>> {
@@ -417,18 +417,19 @@ impl ToHecEvents for &ReturnTypes {
 mod test {
     use std::env;
 
-
     use crate::azure_rest::Subscriptions;
-    use data_ingester_supporting::keyvault::get_keyvault_secrets;
-    use data_ingester_splunk::splunk::{set_ssphp_run, Splunk, ToHecEvents};
     use anyhow::Result;
+    use data_ingester_splunk::splunk::{set_ssphp_run, Splunk, ToHecEvents};
+    use data_ingester_supporting::keyvault::get_keyvault_secrets;
 
     use super::AzureRest;
 
     async fn setup() -> Result<(AzureRest, Splunk)> {
-        let secrets = get_keyvault_secrets(&env::var("KEY_VAULT_NAME").expect("Need KEY_VAULT_NAME enviornment variable"))
-            .await
-            .unwrap();
+        let secrets = get_keyvault_secrets(
+            &env::var("KEY_VAULT_NAME").expect("Need KEY_VAULT_NAME enviornment variable"),
+        )
+        .await
+        .unwrap();
         let splunk = Splunk::new(&secrets.splunk_host, &secrets.splunk_token)?;
         set_ssphp_run()?;
         let azure_rest = AzureRest::new(

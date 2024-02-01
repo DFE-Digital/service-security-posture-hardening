@@ -1,19 +1,20 @@
 use crate::admin_request_consent_policy::AdminRequestConsentPolicy;
 
 use crate::conditional_access_policies::ConditionalAccessPolicies;
-use data_ingester_supporting::dns::resolve_txt_record;
 use crate::groups::Groups;
+use data_ingester_supporting::dns::resolve_txt_record;
 use data_ingester_supporting::keyvault::Secrets;
 
 use crate::msgraph_data::load_m365_toml;
 use crate::roles::RoleDefinitions;
 use crate::security_score::SecurityScores;
-use data_ingester_splunk::splunk::HecEvent;
-use data_ingester_splunk::splunk::ToHecEvents;
-use data_ingester_splunk::splunk::{set_ssphp_run, Splunk};
 use crate::users::Users;
 use crate::users::UsersMap;
 use anyhow::{Context, Result};
+use data_ingester_splunk::splunk::try_collect_send;
+use data_ingester_splunk::splunk::HecEvent;
+use data_ingester_splunk::splunk::ToHecEvents;
+use data_ingester_splunk::splunk::{set_ssphp_run, Splunk};
 use futures::StreamExt;
 use graph_http::api_impl::RequestComponents;
 use graph_http::api_impl::RequestHandler;
@@ -34,7 +35,6 @@ use std::iter;
 use std::sync::Arc;
 use tokio::sync::mpsc::UnboundedSender;
 use url::Url;
-use data_ingester_splunk::splunk::try_collect_send;
 
 //use crate::azure_rest::AzureRest;
 
@@ -880,7 +880,6 @@ pub struct Group {
     // pub service_provisioning_errors: Vec<Value>,
 }
 
-
 pub async fn m365(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
     //    let secrets = get_keyvault_secrets(&env::var("KEY_VAULT_NAME")?).await?;
 
@@ -1047,13 +1046,11 @@ pub(crate) mod test {
     use std::env;
 
     use super::{login, MsGraph};
-    use crate::{
-        users::UsersMap,
-    };
+    use crate::users::UsersMap;
 
-    use data_ingester_splunk::splunk::{set_ssphp_run, HecDynamic, Splunk, ToHecEvents};
-    use data_ingester_supporting::keyvault::{get_keyvault_secrets};    
     use anyhow::Result;
+    use data_ingester_splunk::splunk::{set_ssphp_run, HecDynamic, Splunk, ToHecEvents};
+    use data_ingester_supporting::keyvault::get_keyvault_secrets;
 
     pub async fn setup() -> Result<(Splunk, MsGraph)> {
         let secrets = get_keyvault_secrets(&env::var("KEY_VAULT_NAME")?).await?;
