@@ -17,6 +17,3 @@ unwrap_used = "warn"
 [profile.release]
 strip = true
 # lto = true
-
-# [build]
-# rustflags = ["-Z", "threads=8"]
