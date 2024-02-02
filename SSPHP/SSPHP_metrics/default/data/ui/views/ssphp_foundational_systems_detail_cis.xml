@@ -1,6 +1,6 @@
 <dashboard theme="dark" version="1.1" script="js/addtags.js, js/table_cell_backcolor.js">
   <label>Security Posture Continuous Assurance : CIS Control Drilldown Dashboard</label>
-  <description>v1.5.12</description>
+  <description>v1.5.13</description>
   
   <init>
     <set token="tkn_colour_red">#D32D41</set>
@@ -117,6 +117,9 @@ index="ssphp_metrics_summary" ssphp.use_case.id=$tkn_use_case_id$
 ",
        ssphp.score.scoring_narrative=replace('ssphp.score.scoring_narrative',"~~",'nl')
 
+| eval ssphp.score.ciso_priority=case('ssphp.score.ciso_priority'=1,"DfE Mandated",
+       'ssphp.score.ciso_priority'=2,"Recommended",
+       1==1,"Desirable")
 
 | table ssphp*, fs, notfs, control, safeguard, asset_type, title, description, score_color, compliance_status, last_run
           </query>
@@ -186,7 +189,7 @@ index="ssphp_metrics_summary" ssphp.use_case.id=$tkn_use_case_id$
         <span class="header_r1" style="color:	darkcyan">CIS Profile Applicability</span>
         <span class="header_r2">$tkn_cis_profile$</span>
         <br></br>
-        <span class="header_r1" style="color:	darkcyan">DfE Mandated</span>
+        <span class="header_r1" style="color:	darkcyan">Control Type</span>
         <span class="header_r2">$tkn_ciso_priority$</span>
         <br></br>
         <span class="header_r1" style="color:	darkcyan">CIS M365 Benchmark Version 3 Control</span>
