@@ -1,0 +1,14 @@
+[package]
+name = "data_ingester_azure"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+tokio = { version = "1.25.0", features = ["full"] }
+data_ingester_supporting = { path = "../data_ingester_supporting" }
+data_ingester_ms_graph = { path = "../data_ingester_ms_graph" }
+data_ingester_azure_rest = { path = "../data_ingester_azure_rest" }
+data_ingester_splunk = { path = "../data_ingester_splunk" }
+anyhow = { version = "*", features=["backtrace"]}

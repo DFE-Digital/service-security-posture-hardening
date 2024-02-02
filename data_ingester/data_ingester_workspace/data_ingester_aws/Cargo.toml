@@ -1,0 +1,32 @@
+        [package]
+name = "data_ingester_aws"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+aws-config = { version = "1.1.1", features = ["behavior-version-latest"] }
+aws-sdk-iam = "1.7.0"
+aws-sdk-account = "1.7.0"
+aws-credential-types = "*"
+aws-sdk-accessanalyzer = "*"
+aws-sdk-cloudtrail = "*"
+aws-sdk-s3 = "*"
+aws-sdk-s3control = "*"
+aws-sdk-config = "*"
+aws-sdk-kms = "*"
+aws-sdk-securityhub = "*"
+aws-sdk-ec2 = "*"
+aws-smithy-types = "*"
+aws-sdk-sts = "*"
+serde_json = "*"
+csv = "*"
+urlencoding = "*"
+serde = { version = "1.0", features = ["derive"] }
+data_ingester_splunk = { path = "../data_ingester_splunk" }
+data_ingester_supporting = { path = "../data_ingester_supporting" }
+anyhow = "*"
+
+[dev-dependencies]
+tokio = { version = "1.25.0", features = ["full"] }

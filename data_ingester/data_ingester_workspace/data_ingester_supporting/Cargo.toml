@@ -1,0 +1,15 @@
+[package]
+name = "data_ingester_supporting"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+anyhow = { version = "*", features=["backtrace"]}
+azure_identity = { version = "*", default-features = false, features = ["enable_reqwest_rustls", "client_certificate"]}
+azure_security_keyvault = { version = "*", default-features = false,  features = ["enable_reqwest_rustls"]}
+futures = "*"
+trust-dns-resolver = { version = "*", features = ["dns-over-rustls"] }
+trust-dns-proto = "*"
+tokio = { version = "1.25.0", features = ["full"] }

@@ -1,0 +1,30 @@
+[package]
+name = "data_ingester_functions_entrypoint"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+anyhow = { version = "*", features=["backtrace"]}
+tokio = { version = "1.25.0", features = ["full"] }
+memory-stats = "1.0.0"
+warp = "*"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "*"
+data_ingester_splunk = { path = "../data_ingester_splunk" }
+data_ingester_aws = { path = "../data_ingester_aws" }
+data_ingester_ms_powershell = { path = "../data_ingester_ms_powershell" }
+data_ingester_ms_graph = { path = "../data_ingester_ms_graph" }
+data_ingester_supporting = { path = "../data_ingester_supporting" }
+data_ingester_azure = { path = "../data_ingester_azure" }
+
+[profile.release]
+strip = true
+# lto = true
+
+[build]
+rustflags = ["-Z", "threads=8"]
+
+[dev-dependencies]
+reqwest = "*"
