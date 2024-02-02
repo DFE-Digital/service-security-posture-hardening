@@ -7,24 +7,20 @@ edition = "2021"
 
 [dependencies]
 anyhow = { version = "*", features=["backtrace"]}
-tokio = { version = "1.25.0", features = ["full"] }
+data_ingester_aws = { path = "../data_ingester_aws" }
+data_ingester_azure = { path = "../data_ingester_azure" }
+data_ingester_ms_graph = { path = "../data_ingester_ms_graph" }
+data_ingester_ms_powershell = { path = "../data_ingester_ms_powershell" }
+data_ingester_splunk = { path = "../data_ingester_splunk" }
+data_ingester_supporting = { path = "../data_ingester_supporting" }
 memory-stats = "1.0.0"
-warp = "*"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "*"
-data_ingester_splunk = { path = "../data_ingester_splunk" }
-data_ingester_aws = { path = "../data_ingester_aws" }
-data_ingester_ms_powershell = { path = "../data_ingester_ms_powershell" }
-data_ingester_ms_graph = { path = "../data_ingester_ms_graph" }
-data_ingester_supporting = { path = "../data_ingester_supporting" }
-data_ingester_azure = { path = "../data_ingester_azure" }
-
-[profile.release]
-strip = true
-# lto = true
-
-[build]
-rustflags = ["-Z", "threads=8"]
+tokio = { version = "1.25.0", features = ["full"] }
+warp = "*"
 
 [dev-dependencies]
 reqwest = "*"
+
+[lints]
+workspace = true

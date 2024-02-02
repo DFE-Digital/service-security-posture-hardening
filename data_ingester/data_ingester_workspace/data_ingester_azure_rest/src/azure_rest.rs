@@ -168,13 +168,19 @@ impl AzureRest {
                     next_link: _,
                 } => {
                     for server in value.iter() {
-                        let url = format!(
-                            "https://management.azure.com{}/encryptionProtector?api-version=2022-05-01-preview",
-                            server.as_object().unwrap().get("id").unwrap().as_str().unwrap());
-                        let result = self.rest_request::<ReturnType>(&url).await?;
-                        collection
-                            .collection
-                            .push(result.into_return_type_wrapper(url.as_str().to_string()));
+                        if let Some(server_url) = server
+                            .as_object()
+                            .and_then(|o| o.get("id"))
+                            .and_then(|id| id.as_str())
+                        {
+                            let url = format!(
+                                "https://management.azure.com{}/encryptionProtector?api-version=2022-05-01-preview",
+                                server_url);
+                            let result = self.rest_request::<ReturnType>(&url).await?;
+                            collection
+                                .collection
+                                .push(result.into_return_type_wrapper(url.as_str().to_string()));
+                        }
                     }
                 }
                 _ => unreachable!(),

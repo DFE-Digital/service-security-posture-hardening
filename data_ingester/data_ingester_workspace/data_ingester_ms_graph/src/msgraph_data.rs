@@ -10,7 +10,8 @@ use serde::Deserialize;
 pub fn load_m365_toml() -> Result<MsGraphData> {
     let contents = include_str!("../ms_graph.toml");
 
-    let decoded: MsGraphData = toml::from_str(contents).unwrap();
+    let decoded: MsGraphData =
+        toml::from_str(contents).expect("ms_graph.toml should exist and be valid");
     println!("{:#?}", decoded);
     Ok(decoded)
 }
@@ -136,7 +137,7 @@ mod test {
     #[test]
     fn test_toml() -> Result<()> {
         let sources = load_m365_toml()?;
-        assert!(sources.len() > 0);
+        assert!(!sources.is_empty());
         Ok(())
     }
 

@@ -291,9 +291,10 @@ impl AwsClient {
         let config = self.config().await?;
         let client = aws_sdk_account::Client::new(&config);
         let contact_information = client.get_contact_information().send().await?;
-        let out = ContactInformationSerde::from(
-            contact_information.to_owned().contact_information.unwrap(),
-        );
+        let out = contact_information
+            .contact_information
+            .map(|ci| ci.into())
+            .unwrap_or_default();
         Ok(out)
     }
 
@@ -1279,15 +1280,16 @@ impl ToHecEvents for &ContactInformationSerde {
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "PascalCase")]
 pub(crate) struct AccountSummary {
-    pub summary_map: ::std::collections::HashMap<String, i32>,
+    pub summary_map: Option<::std::collections::HashMap<String, i32>>,
 }
 
 impl From<GetAccountSummaryOutput> for AccountSummary {
     fn from(value: GetAccountSummaryOutput) -> Self {
-        let mut summary_map = HashMap::new();
-        for (k, v) in value.summary_map().unwrap() {
-            summary_map.insert(k.as_str().to_owned(), *v);
-        }
+        let summary_map = value.summary_map().map(|sm| {
+            sm.iter()
+                .map(|(k, v)| (k.as_str().to_owned(), *v))
+                .collect::<HashMap<String, i32>>()
+        });
 
         Self { summary_map }
     }
@@ -1478,7 +1480,11 @@ mod test {
         let result = aws
             .aws_1_4_ensure_no_root_user_account_access_key_exists()
             .await?;
-        assert!(!result.summary_map.is_empty());
+        assert!(!result
+            .summary_map
+            .as_ref()
+            .map(|sm| sm.is_empty())
+            .unwrap_or_else(|| true));
         splunk.send_batch((&result).to_hec_events()?).await?;
         Ok(())
     }

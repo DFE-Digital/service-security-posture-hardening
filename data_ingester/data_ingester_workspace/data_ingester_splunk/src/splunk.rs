@@ -30,10 +30,11 @@ pub struct HecEvent {
 impl HecEvent {
     // TODO: Should return Result
     pub fn new<T: Serialize>(event: &T, source: &str, sourcetype: &str) -> Result<HecEvent> {
-        let ssphp_run = *SSPHP_RUN.read().unwrap();
+        let ssphp_run = *SSPHP_RUN
+            .read()
+            .expect("Should always be able to read SSPHP_RUN");
         let ssphp_event = SsphpEvent { ssphp_run, event };
-        let hostname = hostname::get()
-            .unwrap()
+        let hostname = hostname::get()?
             .into_string()
             .unwrap_or("NO HOSTNAME".to_owned());
         Ok(HecEvent {
@@ -57,7 +58,10 @@ pub fn set_ssphp_run() -> Result<()> {
     let start = SystemTime::now();
     let since_the_epoch = start.duration_since(UNIX_EPOCH)?;
 
-    *SSPHP_RUN.write().unwrap() = since_the_epoch.as_secs();
+    match SSPHP_RUN.write() {
+        Ok(mut ssphp_run) => *ssphp_run = since_the_epoch.as_secs(),
+        Err(err) => eprintln!("Unable to lock SSPHP_RUN for writing: {:?}", err),
+    }
     Ok(())
 }
 
@@ -171,8 +175,8 @@ impl Splunk {
         events: impl IntoIterator<Item = impl Borrow<HecEvent> + Serialize>,
     ) -> Result<()> {
         for batch in events.into_iter().batching(batch_lines) {
-            let request = self.client.post(&self.url).body(batch).build().unwrap();
-            let _response = self.client.execute(request).await.unwrap();
+            let request = self.client.post(&self.url).body(batch).build()?;
+            let _response = self.client.execute(request).await?;
         }
         Ok(())
     }
@@ -233,8 +237,13 @@ where
                 break;
             }
             Some(x) => {
-                //                let s = x.unwrap();
-                let json = serde_json::to_string(&x).unwrap();
+                let json = match serde_json::to_string(&x) {
+                    Ok(json) => json,
+                    Err(err) => {
+                        eprintln!("Failed to serialize Item for Splunk:  {err}");
+                        continue;
+                    }
+                };
                 size += json.len();
                 lines.push_str(json.as_str());
                 lines.push('\n');
@@ -300,11 +309,11 @@ where
             let hec_events = match result.to_hec_events() {
                 Ok(hec_events) => hec_events,
                 Err(e) => {
-                    eprintln!("Failed converting to HecEvents: {}", e);
+                    eprintln!("Failed converting to HecEvents: {e}");
                     dbg!(&result);
                     vec![HecEvent::new(
                         &Message {
-                            event: format!("Failed converting to HecEvents: {}", e),
+                            event: format!("Failed converting to HecEvents: {e}"),
                         },
                         "data_ingester_rust",
                         "data_ingester_rust_logs",
@@ -313,17 +322,14 @@ where
             };
 
             match splunk.send_batch(&hec_events).await {
-                Ok(_) => eprintln!("Sent to Splunk"),
+                Ok(()) => eprintln!("Sent to Splunk"),
                 Err(e) => {
-                    eprintln!("Failed Sending to Splunk: {}", e);
-                    //dbg!(&hec_events);
+                    eprintln!("Failed Sending to Splunk: {e}");
                 }
             };
         }
         Err(err) => {
-            splunk
-                .log(&format!("Failed to get {}: {}", &name, err))
-                .await?
+            splunk.log(&format!("Failed to get {name}: {err}")).await?;
         }
     };
     Ok(())

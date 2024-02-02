@@ -226,11 +226,11 @@ impl MsGraph {
 
         let mut caps = ConditionalAccessPolicies::new();
         while let Some(result) = stream.next().await {
-            let response = result.unwrap();
+            let response = result?;
 
             let body = response.into_body();
 
-            caps.inner.extend(body.unwrap().inner)
+            caps.inner.extend(body?.inner)
         }
         Ok(caps)
     }
@@ -247,11 +247,11 @@ impl MsGraph {
 
         let mut collection = NamedLocations::default();
         while let Some(result) = stream.next().await {
-            let response = result.unwrap();
+            let response = result?;
 
             let body = response.into_body();
 
-            collection.inner.extend(body.unwrap().inner)
+            collection.inner.extend(body?.inner)
         }
         Ok(collection)
     }
@@ -304,14 +304,13 @@ impl MsGraph {
             .directory()
             .list_role_definitions()
             .paging()
-            .stream::<RoleDefinitions>()
-            .unwrap();
+            .stream::<RoleDefinitions>()?;
 
         let mut roles = RoleDefinitions::new();
         while let Some(result) = stream.next().await {
-            let response = result.unwrap();
+            let response = result?;
 
-            let body = response.into_body().unwrap();
+            let body = response.into_body()?;
 
             roles.value.extend(body.value)
         }
@@ -324,17 +323,15 @@ impl MsGraph {
             .groups()
             .list_group()
             .paging()
-            .stream::<Groups>()
-            .unwrap();
+            .stream::<Groups>()?;
 
         let mut groups = Groups::default();
+
         while let Some(result) = stream.next().await {
-            let response = result.unwrap();
-
-            let body = response.into_body()?;
-
+            let body = result?.into_body()?;
             groups.inner.extend(body.inner);
         }
+
         Ok(groups)
     }
 
@@ -1030,6 +1027,13 @@ pub async fn m365(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
     try_collect_send(
         "MS Graph Permission Grant Policy",
         ms_graph.list_permission_grant_policy(),
+        &splunk,
+    )
+    .await?;
+
+    try_collect_send(
+        "Exchange Get Security Default Policy",
+        ms_graph.get_identity_security_defaults_enforcement_policy(),
         &splunk,
     )
     .await?;

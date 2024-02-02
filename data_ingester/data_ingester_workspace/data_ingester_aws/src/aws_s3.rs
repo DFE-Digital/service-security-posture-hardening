@@ -159,7 +159,10 @@ impl From<aws_sdk_s3::operation::get_bucket_policy::GetBucketPolicyOutput>
 {
     fn from(value: aws_sdk_s3::operation::get_bucket_policy::GetBucketPolicyOutput) -> Self {
         Self {
-            policy: value.policy().map(|p| serde_json::from_str(p).unwrap()),
+            policy: value.policy().map(|p| {
+                serde_json::from_str(p)
+                    .unwrap_or_else(|e| serde_json::json!({"error_parsing_policy": e.to_string()}))
+            }),
             bucket_name: None,
             trail_arn: None,
         }

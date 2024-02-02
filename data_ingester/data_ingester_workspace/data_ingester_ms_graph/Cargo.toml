@@ -7,24 +7,24 @@ edition = "2021"
 
 [dependencies]
 anyhow = { version = "*", features=["backtrace"]}
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "*"
-tokio = { version = "1.25.0", features = ["full"] }
-graph-rs-sdk = { git = "https://github.com/akinnane/graph-rs-sdk.git", features = ["rustls-tls"] }
+azure_mgmt_authorization = { version = "*", default-features = false, features = ["enable_reqwest_rustls", "package-2022-04-01"]}
+data_ingester_azure_rest = { path = "../data_ingester_azure_rest" }
+data_ingester_splunk = { path = "../data_ingester_splunk" }
+data_ingester_supporting = { path = "../data_ingester_supporting" }
+futures = "*"
 graph-core = { git = "https://github.com/akinnane/graph-rs-sdk.git" }
 graph-http = { git = "https://github.com/akinnane/graph-rs-sdk.git" }
+graph-rs-sdk = { git = "https://github.com/akinnane/graph-rs-sdk.git", features = ["rustls-tls"] }
+regex = "*"
 reqwest = {version = "*", features = ["rustls-tls"]}
-url = "*"
-futures = "*"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "*"
+serde_with = "*"
+tokio = { version = "1.25.0", features = ["full"] }
 toml = "*"
 trust-dns-proto = "*"
 trust-dns-resolver = { version = "*", features = ["dns-over-rustls"] }
-data_ingester_splunk = { path = "../data_ingester_splunk" }
-data_ingester_supporting = { path = "../data_ingester_supporting" }
-data_ingester_azure_rest = { path = "../data_ingester_azure_rest" }
-serde_with = "*"
-azure_mgmt_authorization = { version = "*", default-features = false, features = ["enable_reqwest_rustls", "package-2022-04-01"]}
-regex = "*"
+url = "*"
 
 [build-dependencies]
 toml = "*"
@@ -32,3 +32,6 @@ toml = "*"
 [dev-dependencies]
 data_ingester_supporting = { path = "../data_ingester_supporting" }
 tokio = { version = "1.25.0", features = ["full"] }
+
+[lints]
+workspace = true
