@@ -6,11 +6,12 @@ fn main() {
     let output = Command::new("git")
         .args(["rev-parse", "HEAD"])
         .output()
-        .unwrap();
-    let git_hash = String::from_utf8(output.stdout).unwrap();
+        .expect("Should be able to get current GIT commit hash");
+
+    let git_hash = String::from_utf8(output.stdout).expect("Git hash should be valid UTF8");
     println!("cargo:rustc-env=GIT_HASH={}", git_hash);
 
     // Check TOML is valid
     let contents = include_str!("ms_graph.toml");
-    let _decoded: toml::Table = toml::from_str(contents).unwrap();
+    let _decoded: toml::Table = toml::from_str(contents).expect("Toml should be valid");
 }

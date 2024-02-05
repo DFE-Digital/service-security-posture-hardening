@@ -7,18 +7,21 @@ edition = "2021"
 
 [dependencies]
 anyhow = { version = "*", features=["backtrace"]}
+azure_core = { version = "*", default-features = false, features = ["enable_reqwest_rustls"]}
+azure_identity = { version = "*", default-features = false, features = ["enable_reqwest_rustls", "client_certificate"]}
 azure_mgmt_authorization = { version = "*", default-features = false, features = ["enable_reqwest_rustls", "package-2022-04-01"]}
 azure_mgmt_subscription = { version = "*", default-features = false, features = ["enable_reqwest_rustls", "package-2021-10"]}
-azure_core = { version = "*", default-features = false, features = ["enable_reqwest_rustls"]}
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "*"
+data_ingester_splunk = { path = "../data_ingester_splunk" }
 dyn-fmt = "*"
-url = "*"
 futures = "*"
 reqwest = {version = "*", features = ["rustls-tls"]}
-data_ingester_splunk = { path = "../data_ingester_splunk" }
-azure_identity = { version = "*", default-features = false, features = ["enable_reqwest_rustls", "client_certificate"]}
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "*"
+url = "*"
 
 [dev-dependencies]
 data_ingester_supporting = { path = "../data_ingester_supporting" }
 tokio = { version = "1.25.0", features = ["full"] }
+
+[lints]
+workspace = true

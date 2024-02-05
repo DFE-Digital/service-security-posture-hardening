@@ -2,9 +2,18 @@
 resolver = "2"
 members = [
     "data_ingester_aws",
+    "data_ingester_azure",
+    "data_ingester_azure_rest",
+    "data_ingester_functions_entrypoint",
+    "data_ingester_ms_graph",
+    "data_ingester_ms_powershell",
     "data_ingester_splunk",
     "data_ingester_supporting",
-    "data_ingester_ms_powershell",
-    "data_ingester_azure_rest",
-    "data_ingester_ms_graph", "data_ingester_functions_entrypoint", "data_ingester_azure",
     ]
+
+[workspace.lints.clippy]
+unwrap_used = "warn"
+
+[profile.release]
+strip = true
+# lto = true

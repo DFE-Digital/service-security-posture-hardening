@@ -1,3 +1,12 @@
+use anyhow::Result;
+use std::sync::Arc;
+
+use data_ingester_splunk::splunk::set_ssphp_run;
+
+use data_ingester_splunk::splunk::try_collect_send;
+use data_ingester_splunk::splunk::Splunk;
+use data_ingester_supporting::keyvault::Secrets;
+
 use crate::powershell::run_powershell_exchange_login_test;
 use crate::powershell::run_powershell_get_admin_audit_log_config;
 use crate::powershell::run_powershell_get_anti_phish_policy;
@@ -24,13 +33,9 @@ use crate::powershell::run_powershell_get_spoof_intelligence_insight;
 use crate::powershell::run_powershell_get_transport_rule;
 use crate::powershell::run_powershell_get_user_vip;
 
-
-pub async fn m365(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
-    //    let secrets = get_keyvault_secrets(&env::var("KEY_VAULT_NAME")?).await?;
-
+pub async fn powershell(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
     set_ssphp_run()?;
 
-    //    let splunk = Splunk::new(&secrets.splunk_host, &secrets.splunk_token)?;
     splunk.log("Starting M365 Powershell collection").await?;
     splunk
         .log(&format!("GIT_HASH: {}", env!("GIT_HASH")))
@@ -101,13 +106,6 @@ pub async fn m365(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
     try_collect_send(
         "Exchange Get Email Tenant Settings",
         run_powershell_get_email_tenant_settings(&secrets),
-        &splunk,
-    )
-    .await?;
-
-    try_collect_send(
-        "Exchange Get Security Default Policy",
-        ms_graph.get_identity_security_defaults_enforcement_policy(),
         &splunk,
     )
     .await?;

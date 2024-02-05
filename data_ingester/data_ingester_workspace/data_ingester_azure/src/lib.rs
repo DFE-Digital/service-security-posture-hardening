@@ -44,9 +44,6 @@ pub async fn azure_users(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<(
         anyhow::Ok::<()>(())
     });
 
-    let ms_graph_clone = ms_graph.clone();
-    let splunk_clone = splunk.clone();
-
     splunk.log("Getting Azure Subscriptions").await?;
     let subscriptions = azure_rest.azure_subscriptions().await?;
     splunk.send_batch((&subscriptions).to_hec_events()?).await?;
@@ -137,15 +134,6 @@ pub async fn azure_users(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<(
         }
         anyhow::Ok::<()>(())
     });
-
-    let admin_request_consent_policy = ms_graph_clone
-        .get_admin_request_consent_policy()
-        .await
-        .unwrap();
-
-    splunk_clone
-        .send_batch((&admin_request_consent_policy).to_hec_events().unwrap())
-        .await?;
 
     let _ = list_users.await?;
 

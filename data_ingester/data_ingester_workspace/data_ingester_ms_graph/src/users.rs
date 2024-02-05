@@ -134,37 +134,42 @@ impl<'a> User<'a> {
     pub fn groups(&self) -> Groups {
         self.transitive_member_of
             .as_ref()
-            .unwrap()
-            .iter()
-            .filter_map(|dir_object| match dir_object {
-                GroupOrRole::Group(group) => Some(group),
-                GroupOrRole::Role(_) => None,
+            .map(|tmo| {
+                tmo.iter()
+                    .filter_map(|dir_object| match dir_object {
+                        GroupOrRole::Group(group) => Some(group),
+                        GroupOrRole::Role(_) => None,
+                    })
+                    .collect::<Groups>()
             })
-            .collect::<Groups>()
+            .unwrap_or_default()
     }
 
     pub fn roles(&self) -> DirectoryRoles {
         self.transitive_member_of
             .as_ref()
-            .unwrap()
-            .iter()
-            .filter_map(|dir_object| match dir_object {
-                GroupOrRole::Group(_) => None,
-                GroupOrRole::Role(role) => Some(role),
+            .map(|tmo| {
+                tmo.iter()
+                    .filter_map(|dir_object| match dir_object {
+                        GroupOrRole::Group(_) => None,
+                        GroupOrRole::Role(role) => Some(role),
+                    })
+                    .collect::<DirectoryRoles>()
             })
-            .collect::<DirectoryRoles>()
+            .unwrap_or_default()
     }
 
     pub fn roles_mut(&mut self) -> Vec<&mut DirectoryRole> {
-        self.transitive_member_of
-            .as_mut()
-            .unwrap()
-            .iter_mut()
-            .filter_map(|dir_object| match dir_object {
-                GroupOrRole::Group(_) => None,
-                GroupOrRole::Role(role) => Some(role),
-            })
-            .collect::<Vec<&mut DirectoryRole>>()
+        if let Some(tmo) = self.transitive_member_of.as_mut() {
+            tmo.iter_mut()
+                .filter_map(|dir_object| match dir_object {
+                    GroupOrRole::Group(_) => None,
+                    GroupOrRole::Role(role) => Some(role),
+                })
+                .collect::<Vec<&mut DirectoryRole>>()
+        } else {
+            Vec::new()
+        }
     }
 
     pub fn set_is_privileged(&mut self, role_definitions: &EntraRoleDefinitions) {
@@ -230,7 +235,8 @@ impl<'a> UsersMap<'a> {
         role_assignments: &AzureRoleAssignments,
         role_definitions: &AzureRoleDefinitions,
     ) -> Result<()> {
-        let admin_roles_regex = Regex::new(r"(?i)(Owner|contributor|admin)").unwrap();
+        let admin_roles_regex = Regex::new(r"(?i)(Owner|contributor|admin)")
+            .expect("Static regex should always compile");
 
         for (_, role_assignment) in role_assignments.inner.iter() {
             match &role_assignment
@@ -275,13 +281,11 @@ impl<'a> UsersMap<'a> {
             }
 
             if priviliged {
-                user.azure_roles
-                    .as_mut()
-                    .unwrap()
-                    .privileged_roles
-                    .push(azure_role);
-            } else {
-                user.azure_roles.as_mut().unwrap().roles.push(azure_role);
+                if let Some(ar) = user.azure_roles.as_mut() {
+                    ar.privileged_roles.push(azure_role);
+                }
+            } else if let Some(ar) = user.azure_roles.as_mut() {
+                ar.roles.push(azure_role);
             }
         }
         Ok(())
