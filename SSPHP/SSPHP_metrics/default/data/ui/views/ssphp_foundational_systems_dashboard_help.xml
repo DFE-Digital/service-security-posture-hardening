@@ -1,0 +1,29 @@
+<dashboard version="1.1" theme="dark" hideFilters="true" script="js/table_cell_color.js">
+
+  <label>Security Posture Continuous Assurance : Dashboard Help</label>
+  <description>v1.0.0</description>
+
+  <init>
+    <set token="tkn_ciso_level">1</set>
+    <set token="tkn_not_ready_to_show">true</set>
+    <unset token="tkn_ready_to_show"></unset>
+    <set token="tkn_colour_red">#D32D41</set>
+    <set token="tkn_colour_orange">#EA6A47</set>
+    <set token="tkn_colour_green">#B3C100</set>
+    <set token="tkn_colour_green">#6AB187</set>
+    <set token="tkn_colour_blue">#A5D8DD</set>
+  </init>
+  
+  <row>
+    <panel>
+      <html>
+        <span class="header_r1" style="color:	yellow">Dashboard Help</span>
+        <br></br>
+        <span class="header_r1" style="color:	darkcyan">What's it about</span>
+        <span class="header_r2">Explanation</span>
+
+      </html>
+    </panel>
+  </row>
+</dashboard>
+  

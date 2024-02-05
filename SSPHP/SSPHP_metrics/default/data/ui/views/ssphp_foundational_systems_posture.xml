@@ -1,7 +1,7 @@
 <dashboard version="1.1" theme="dark" hideFilters="true" script="js/table_cell_color.js">
 
   <label>Security Posture Continuous Assurance : Posture Dashboard</label>
-  <description>v1.1.2</description>
+  <description>v1.1.5</description>
 
   <init>
     <set token="tkn_ciso_level">1</set>
@@ -88,13 +88,15 @@
 
 <!-- ################### Header Row ################### --> 
 
-  <row>
-    <panel>
-      <html>
-        <div id="div_header" style="font-weight:bold;font-size:125%">FOUNDATIONAL SERVICES : COMPLIANT CONTROLS</div> 
-      </html>
-    </panel>
-  </row>
+<row>
+  <panel>
+    <html>
+      <div id="div_header" style="font-weight:bold;font-size:125%">FOUNDATIONAL SERVICES : COMPLIANT CONTROLS
+        <span><a href="ssphp_foundational_systems_dashboard_help" class="btn btn-primary" style="color:black;background-color:grey;text-align:center;display:block;float:right;width:6%;" target="_blank">Dashboard Help</a></span>
+      </div> 
+    </html>
+  </panel>
+</row>
 
 
 <!-- ################### DISPLAY ROWS ################### -->   
