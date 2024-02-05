@@ -222,7 +222,7 @@ pub(crate) async fn start_server(tx: Sender<()>) -> Result<()> {
 
     let powershell_in_progress = Arc::new(Mutex::new(()));
     let powershell_installed = Arc::new(Mutex::new(false));
-    let powershell = warp::post().and(warp::path("m365")).then({
+    let powershell = warp::post().and(warp::path("powershell")).then({
         let powershell_in_progress = powershell_in_progress.clone();
         let powershell_installed = powershell_installed.clone();
         let powershell_splunk = splunk.clone();
