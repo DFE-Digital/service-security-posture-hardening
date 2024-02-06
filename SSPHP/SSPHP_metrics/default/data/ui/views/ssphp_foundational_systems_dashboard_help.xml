@@ -17,11 +17,10 @@
   <row>
     <panel>
       <html>
-        <span class="header_r1" style="color:	yellow">Dashboard Help</span>
-        <br></br>
-        <span class="header_r1" style="color:	darkcyan">What's it about</span>
-        <span class="header_r2">Explanation</span>
-
+        <div class="row">
+          <div class="column"></div>
+          <div class="column"></div>
+        </div>
       </html>
     </panel>
   </row>
