@@ -5,6 +5,8 @@
   
   <init>
     <set token="tkn_controls_compliant_text"></set>
+    <unset token="tkn_ready"></unset>
+
 
     <set token="tkn_colour_red">#D32D41</set>
     <set token="tkn_colour_orange">#EA6A47</set>
@@ -68,7 +70,7 @@
 <!-- ################### Summary Row ################### --> 
 
 
-  <row depends="$never_show$">
+  <row depends="$tkn_ready$,$never_show$">
     <panel>
       <table>
         <search>
@@ -98,7 +100,7 @@
   </row>
 
   <row>
-    <panel depends="$tkn_show_abs$">
+    <panel depends="$tkn_ready$,$tkn_show_abs$">
       <html>
         <div id="div_header" style="background:$tkn_controls_compliant_text_colour$;color:white;font-weight:bold;font-size:800%;text-align:center;padding:50">$tkn_controls_compliant_text$</div> 
         <div id="div_header" style="background:$tkn_controls_compliant_text_colour$;color:white;font-size:100%;text-align:center">$tkn_selected_service_name$ Compliant of # DfE Mandated Controls</div> 
@@ -116,7 +118,7 @@
 
 <!-- ################### Main Data Table Filters ################### --> 
 
-  <row>
+  <row depends="$tkn_ready$">
     <panel>
       <html>
         <div id="div_header" style="font-size:175%;color:yellow;">$tkn_selected_service_name$</div> 
@@ -204,7 +206,7 @@
 
 
 
-  <row>
+  <row depends="$tkn_ready$">
     <panel>
       <table id="table1">
         <search>
@@ -247,6 +249,7 @@ $tkn_search_filter$
           <earliest>0</earliest>
           <sampleRatio>1</sampleRatio>
           <done>
+            <set token="tkn_ready">true</set>
             <set token="tkn_controls_total">$result.number_controls_total$</set>
           </done>
         </search>

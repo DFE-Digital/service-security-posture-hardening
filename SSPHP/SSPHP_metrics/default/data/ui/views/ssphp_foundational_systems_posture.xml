@@ -1,17 +1,12 @@
 <dashboard version="1.1" theme="dark" hideFilters="true" script="js/table_cell_color.js">
 
   <label>Security Posture Continuous Assurance : Posture Dashboard</label>
-  <description>v1.3.1</description>
+  <description>v3.0.1</description>
 
   <init>
-    <set token="tkn_colour_red">#D32D41</set>
-    <set token="tkn_colour_orange">#EA6A47</set>
-    <set token="tkn_colour_green">#B3C100</set>
-    <set token="tkn_colour_green">#6AB187</set>
-    <set token="tkn_colour_blue">#A5D8DD</set>
+    <unset token="tkn_ready"></unset>
   </init>
-  
-  
+
   <fieldset submitButton="false">
     <input type="radio" token="tkn_view" searchWhenChanged="true">
       <label>View</label>
@@ -57,330 +52,140 @@
 
 <!-- ################### Header Row ################### --> 
 
-<row>
-  <panel>
+  <row>
     <html>
-      <div id="div_header" style="font-weight:bold;font-size:125%">FOUNDATIONAL SERVICES : COMPLIANT CONTROLS
-        <span><a href="ssphp_foundational_systems_dashboard_help" class="btn btn-primary" style="color:black;background-color:grey;text-align:center;display:block;float:right;width:6%;" target="_blank">Dashboard Help</a></span>
-      </div> 
+      <div id="div_header" style="color:yellow;font-weight:bold;font-size:125%;padding:10;">FOUNDATIONAL SERVICES : COMPLIANT CONTROLS
+        <span><a href="ssphp_foundational_systems_dashboard_help" class="btn btn-primary" style="color:black;background-color:grey;text-align:center;display:block;float:right;width:6%;" target="_blank">Dashboard Help</a></span></div> 
     </html>
-  </panel>
-</row>
+  </row>
 
 
 <!-- ################### DISPLAY ROWS ################### -->   
+
+  <row depends="$never_show$">
+      <html>
+        <style>
+          .absolute {
+            color: white !important;
+            font-weight: bold !important;
+            font-size: 800% !important;
+            text-align: center !important;
+            padding: 10 !important;
+            line-height: 1.25 !important;
+          }
+          .undervalue {
+            color: white !important;
+            font-weight: bold !important;
+            font-size: 150% !important;
+            text-align: center !important;
+            padding: 10 !important;
+            line-height: 1.5 !important;
+          }
+          a:link {
+            color: white;
+            background-color: transparent;
+            text-decoration: none;
+          }
+          a:visited {
+            color: white;
+            background-color: transparent;
+            text-decoration: none;
+          }
+          a:hover {
+            color: LightBlue;
+            background-color: transparent;
+            text-decoration: underline;
+          }
+          a:active {
+            color: white;
+            background-color: transparent;
+            text-decoration: underline;
+          }
+        </style>
+      </html>
+  </row>
   
-  <row depends="$tkn_show_abs$">
-
-    <panel>
+  <row depends="$tkn_ready$,$tkn_show_abs$">
       <html>
-       <style type="text/css">
-
-       #single_abs_aad .svg-container{
-       background-color: $tkn_AAD_color$;
-       }
-       #single_abs_aad .single-result{
-       fill: rgb(255,255,255)!important;
-       font-size: 300px !important;
-       }
-       #single_abs_aad .under-label {
-          font-size: 25px !important;
-          fill: rgb(255,255,255)!important;
-       }
-       </style>
-     </html>
-      <single id="single_abs_aad">
-        <search>
-          <query>
-| loadjob savedsearch="nobody:$tkn_current_app$:ssphp_create_dashboard_dataset"
-| search line_type="summary" AND ssphp.use_case.foundational_system="AAD"
-| table compliant_abs, compliant_color
-          </query>
-          <done>
-            <set token="tkn_AAD_color">$result.compliant_color$</set>
-          </done>
-        </search>
-        <option name="height">200</option>
-        <option name="field">text_out</option>
-        <option name="underLabel">AAD</option>
-        <option name="drilldown">all</option>
-        <drilldown>
-          <link target="_blank">/app/$tkn_current_app$/ssphp_foundational_systems_service?form.tkn__service=aad</link>
-        </drilldown>
-      </single>
-    </panel>
+        <div class="absolute" style="background:$tkn_AAD_color$;"><a href="ssphp_foundational_systems_service?form.tkn__service=aad" target="_blank">$tkn_AAD_score_abs$</a></div>
+        <div class="undervalue" style="background:$tkn_AAD_color$;"><a href="ssphp_foundational_systems_service?form.tkn__service=aad" target="_blank">AAD Entra</a></div>
+      </html>
     
-    <panel>
       <html>
-       <style type="text/css">
+        <div class="absolute" style="background:$tkn_AZURE_color$;"><a href="ssphp_foundational_systems_service?form.tkn__service=azure" target="_blank">$tkn_AZURE_score_abs$</a></div>
+        <div class="undervalue" style="background:$tkn_AZURE_color$;"><a href="ssphp_foundational_systems_service?form.tkn__service=azure" target="_blank">AZURE</a></div>
+      </html>
 
-       #single_abs_azure .svg-container{
-       background-color: $tkn_AZURE_color$;
-       }
-       #single_abs_azure .single-result{
-       fill: rgb(255,255,255)!important;
-       font-size: 300px !important;
-       }
-       #single_abs_azure .under-label {
-          font-size: 25px !important;
-          fill: rgb(255,255,255)!important;
-       }
-       </style>
-     </html>
-      <single id="single_abs_azure">
+      <html>
+        <div class="absolute" style="background:$tkn_DNS_color$;"><a href="ssphp_foundational_systems_service?form.tkn__service=dns" target="_blank">$tkn_DNS_score_abs$</a></div>
+        <div class="undervalue" style="background:$tkn_DNS_color$;"><a href="ssphp_foundational_systems_service?form.tkn__service=dns" target="_blank">DNS</a></div>
+      </html>
+
+      <html>
+        <div class="absolute" style="background:$tkn_M365_color$;"><a href="ssphp_foundational_systems_service?form.tkn__service=m365" target="_blank">$tkn_M365_score_abs$</a></div>
+        <div class="undervalue" style="background:$tkn_M365_color$;"><a href="ssphp_foundational_systems_service?form.tkn__service=m365" target="_blank">M365</a></div>
+      </html>
+  </row>
+  
+  
+  <row depends="$tkn_ready$,$tkn_show_perc$">
+      <html>
+        <div class="absolute" style="background:$tkn_AAD_color$;"><a href="ssphp_foundational_systems_service?form.tkn__service=aad" target="_blank">$tkn_AAD_score_perc$</a></div>
+        <div class="undervalue" style="background:$tkn_AAD_color$;"><a href="ssphp_foundational_systems_service?form.tkn__service=aad" target="_blank">AAD Entra</a></div>
+      </html>
+    
+      <html>
+        <div class="absolute" style="background:$tkn_AZURE_color$;"><a href="ssphp_foundational_systems_service?form.tkn__service=azure" target="_blank">$tkn_AZURE_score_perc$</a></div>
+        <div class="undervalue" style="background:$tkn_AZURE_color$;"><a href="ssphp_foundational_systems_service?form.tkn__service=azure" target="_blank">AZURE</a></div>
+      </html>
+
+      <html>
+        <div class="absolute" style="background:$tkn_DNS_color$;"><a href="ssphp_foundational_systems_service?form.tkn__service=dns" target="_blank">$tkn_DNS_score_perc$</a></div>
+        <div class="undervalue" style="background:$tkn_DNS_color$;"><a href="ssphp_foundational_systems_service?form.tkn__service=dns" target="_blank">DNS</a></div>
+      </html>
+
+      <html>
+        <div class="absolute" style="background:$tkn_M365_color$;"><a href="ssphp_foundational_systems_service?form.tkn__service=m365" target="_blank">$tkn_M365_score_perc$</a></div>
+        <div class="undervalue" style="background:$tkn_M365_color$;"><a href="ssphp_foundational_systems_service?form.tkn__service=m365" target="_blank">M365</a></div>
+      </html>
+  </row>
+  
+  
+  <row depends="$never_show$">
+    <panel>
+      <table>
         <search>
           <query>
-            | loadjob savedsearch="nobody:$tkn_current_app$:ssphp_create_dashboard_dataset"
-            | search line_type="summary" AND ssphp.use_case.foundational_system="AZURE"
-            | table compliant_abs, compliant_color
+| loadjob savedsearch="nobody:SSPHP_metrics:ssphp_create_dashboard_dataset"
+| search line_type="summary" AND ssphp.use_case.foundational_system="*"
+| eval compliant_perc='compliant_perc'."%"
+| table ssphp.use_case.foundational_system, compliant_perc, compliant_abs, compliant_color
+| foreach compliant_* [| eval {ssphp.use_case.foundational_system}_&lt;&lt;FIELD&gt;&gt;='&lt;&lt;FIELD&gt;&gt;']
+| fields - ssphp.use_case.foundational_system, compliant_perc, compliant_abs, compliant_color
+| stats values(*) as *
           </query>
           <done>
-            <set token="tkn_AZURE_color">$result.compliant_color$</set>
+            <set token="tkn_AAD_color">$result.AAD_compliant_color$</set>
+            <set token="tkn_AAD_score_abs">$result.AAD_compliant_abs$</set>
+            <set token="tkn_AAD_score_perc">$result.AAD_compliant_perc$</set>
+            
+            <set token="tkn_AZURE_color">$result.AZURE_compliant_color$</set>
+            <set token="tkn_AZURE_score_abs">$result.AZURE_compliant_abs$</set>
+            <set token="tkn_AZURE_score_perc">$result.AZURE_compliant_perc$</set>
+            
+            <set token="tkn_DNS_color">$result.DNS_compliant_color$</set>
+            <set token="tkn_DNS_score_abs">$result.DNS_compliant_abs$</set>
+            <set token="tkn_DNS_score_perc">$result.DNS_compliant_perc$</set>
+            
+            <set token="tkn_M365_color">$result.M365_compliant_color$</set>
+            <set token="tkn_M365_score_abs">$result.M365_compliant_abs$</set>
+            <set token="tkn_M365_score_perc">$result.M365_compliant_perc$</set>
+
+            <set token="tkn_ready">true</set>
           </done>
         </search>
-        <option name="height">200</option>
-        <option name="field">text_out</option>
-        <option name="underLabel">AZURE</option>
-        <option name="drilldown">all</option>
-        <drilldown>
-          <link target="_blank">/app/$tkn_current_app$/ssphp_foundational_systems_service?form.tkn__service=azure</link>
-        </drilldown>
-      </single>
-    </panel>
-
-    <panel>
-      <html>
-       <style type="text/css">
-
-       #single_abs_dns .svg-container{
-       background-color: $tkn_DNS_color$;
-       }
-       #single_abs_dns .single-result{
-       fill: rgb(255,255,255)!important;
-       font-size: 300px !important;
-       }
-       #single_abs_dns .under-label {
-          font-size: 25px !important;
-          fill: rgb(255,255,255)!important;
-       }
-       </style>
-     </html>
-      <single id="single_abs_dns">
-        <search>
-          <query>
-            | loadjob savedsearch="nobody:$tkn_current_app$:ssphp_create_dashboard_dataset"
-            | search line_type="summary" AND ssphp.use_case.foundational_system="DNS"
-            | table compliant_abs, compliant_color
-          </query>
-          <done>
-            <set token="tkn_DNS_color">$result.compliant_color$</set>
-          </done>
-        </search>
-        <option name="height">200</option>
-        <option name="field">text_out</option>
-        <option name="underLabel">DNS</option>
-        <option name="drilldown">all</option>
-        <drilldown>
-          <link target="_blank">/app/$tkn_current_app$/ssphp_foundational_systems_service?form.tkn__service=dns</link>
-        </drilldown>
-      </single>
-    </panel>
-
-    <panel>
-      <html>
-       <style type="text/css">
-
-       #single_abs_m365 .svg-container{
-       background-color: $tkn_M365_color$;
-       }
-       #single_abs_m365 .single-result{
-       fill: rgb(255,255,255)!important;
-       font-size: 300px !important;
-       }
-       #single_abs_m365 .under-label {
-          font-size: 25px !important;
-          fill: rgb(255,255,255)!important;
-       }
-       </style>
-     </html>
-      <single id="single_abs_m365">
-        <search>
-          <query>
-            | loadjob savedsearch="nobody:$tkn_current_app$:ssphp_create_dashboard_dataset"
-            | search line_type="summary" AND ssphp.use_case.foundational_system="M365"
-            | table compliant_abs, compliant_color
-          </query>
-          <done>
-            <set token="tkn_M365_color">$result.compliant_color$</set>
-          </done>
-        </search>
-        <option name="height">200</option>
-        <option name="field">text_out</option>
-        <option name="underLabel">M365</option>
-        <option name="drilldown">all</option>
-        <drilldown>
-          <link target="_blank">/app/$tkn_current_app$/ssphp_foundational_systems_service?form.tkn__service=m365</link>
-        </drilldown>
-      </single>
+      </table>
     </panel>
   </row>
   
-  <row depends="$tkn_show_perc$">
-    <panel>
-      <html>
-       <style type="text/css">
-
-       #single_perc_aad .svg-container{
-       background-color: $tkn_AAD_color$;
-       }
-       #single_perc_aad .single-result{
-       fill: rgb(255,255,255)!important;
-       font-size: 120px !important;
-       }
-       #single_perc_aad .under-label {
-          font-size: 25px !important;
-          fill: rgb(255,255,255)!important;
-       }
-       </style>
-     </html>
-      <single id="single_perc_aad">
-        <search>
-          <query>
-            | loadjob savedsearch="nobody:$tkn_current_app$:ssphp_create_dashboard_dataset"
-            | search line_type="summary" AND ssphp.use_case.foundational_system="AAD"
-            | table compliant_perc, compliant_color
-          </query>
-          <done>
-            <set token="tkn_AAD_color">$result.compliant_color$</set>
-          </done>
-        </search>
-        <option name="height">200</option>
-        <option name="field">text_out</option>
-        <option name="underLabel">AAD</option>
-        <option name="drilldown">all</option>
-        <option name="unit">%</option>
-        <drilldown>
-          <link target="_blank">/app/$tkn_current_app$/ssphp_foundational_systems_service?form.tkn__service=aad</link>
-        </drilldown>
-      </single>
-    </panel>
-    
-    <panel>
-      <html>
-       <style type="text/css">
-
-       #single_perc_azure .svg-container{
-       background-color: $tkn_AZURE_color$;
-       }
-       #single_perc_azure .single-result{
-       fill: rgb(255,255,255)!important;
-       font-size: 120px !important;
-       }
-       #single_perc_azure .under-label {
-          font-size: 25px !important;
-          fill: rgb(255,255,255)!important;
-       }
-       </style>
-     </html>
-      <single id="single_perc_azure">
-        <search>
-          <query>
-            | loadjob savedsearch="nobody:$tkn_current_app$:ssphp_create_dashboard_dataset"
-            | search line_type="summary" AND ssphp.use_case.foundational_system="AZURE"
-            | table compliant_perc, compliant_color
-          </query>
-          <done>
-            <set token="tkn_AZURE_color">$result.compliant_color$</set>
-          </done>
-        </search>
-        <option name="height">200</option>
-        <option name="field">text_out</option>
-        <option name="underLabel">AZURE</option>
-        <option name="drilldown">all</option>
-        <option name="unit">%</option>
-        <drilldown>
-          <link target="_blank">/app/$tkn_current_app$/ssphp_foundational_systems_service?form.tkn__service=azure</link>
-        </drilldown>
-      </single>
-    </panel>
-
-    <panel>
-      <html>
-       <style type="text/css">
-
-       #single_perc_dns .svg-container{
-       background-color: $tkn_DNS_color$;
-       }
-       #single_perc_dns .single-result{
-       fill: rgb(255,255,255)!important;
-       font-size: 120px !important;
-       }
-       #single_perc_dns .under-label {
-          font-size: 25px !important;
-          fill: rgb(255,255,255)!important;
-       }
-       </style>
-     </html>
-      <single id="single_perc_dns">
-        <search>
-          <query>
-            | loadjob savedsearch="nobody:$tkn_current_app$:ssphp_create_dashboard_dataset"
-            | search line_type="summary" AND ssphp.use_case.foundational_system="DNS"
-            | table compliant_perc, compliant_color
-          </query>
-          <done>
-            <set token="tkn_DNS_color">$result.compliant_color$</set>
-          </done>
-        </search>
-        <option name="height">200</option>
-        <option name="field">text_out</option>
-        <option name="underLabel">DNS</option>
-        <option name="drilldown">all</option>
-        <option name="unit">%</option>
-        <drilldown>
-          <link target="_blank">/app/$tkn_current_app$/ssphp_foundational_systems_service?form.tkn__service=dns</link>
-        </drilldown>
-      </single>
-    </panel>
-
-    <panel>
-      <html>
-       <style type="text/css">
-
-       #single_perc_m365 .svg-container{
-       background-color: $tkn_M365_color$;
-       }
-       #single_perc_m365 .single-result{
-       fill: rgb(255,255,255)!important;
-       font-size: 120px !important;
-       }
-       #single_perc_m365 .under-label {
-          font-size: 25px !important;
-          fill: rgb(255,255,255)!important;
-       }
-       </style>
-     </html>
-      <single id="single_perc_m365">
-        <search>
-          <query>
-            | loadjob savedsearch="nobody:$tkn_current_app$:ssphp_create_dashboard_dataset"
-            | search line_type="summary" AND ssphp.use_case.foundational_system="M365"
-            | table compliant_perc, compliant_color
-          </query>
-          <done>
-            <set token="tkn_M365_color">$result.compliant_color$</set>
-          </done>
-        </search>
-        <option name="height">200</option>
-        <option name="field">text_out</option>
-        <option name="underLabel">M365</option>
-        <option name="drilldown">all</option>
-        <option name="unit">%</option>
-        <drilldown>
-          <link target="_blank">/app/$tkn_current_app$/ssphp_foundational_systems_service?form.tkn__service=m365</link>
-        </drilldown>
-      </single>
-    </panel>
-  </row>
 </dashboard>
-  
