@@ -1,7 +1,7 @@
 <dashboard version="1.1" theme="dark" hideFilters="true" script="js/table_cell_color.js">
 
   <label>Security Posture Continuous Assurance : Service Dashboard</label>
-  <description>v2.0.2</description>
+  <description>v2.0.5</description>
   
   <init>
     <set token="tkn_controls_compliant_text"></set>
@@ -18,7 +18,7 @@
   <fieldset submitButton="false">
     <input type="dropdown" token="tkn__service" searchWhenChanged="true">
       <label>Service</label>
-      <choice value="*">ALL</choice>
+      <choice value=".*">ALL</choice>
       <choice value="azure">Azure</choice>
       <choice value="dns">DNS</choice>
       <choice value="aad">Entra AAD</choice>
@@ -63,6 +63,22 @@
         </search>
       </table>
     </panel>
+
+    <panel>
+      <table>
+        <search>
+          <query>
+  | makeresults
+  | eval s=$tkn__service|s$,
+         service_name=if('s'=".*","ALL",upper('s'))
+  | table service_name
+          </query>
+          <done>
+            <set token="tkn_current_service">$result.service_name$</set>
+          </done>
+        </search>
+      </table>
+    </panel>
   </row>
   
   
@@ -76,7 +92,7 @@
         <search>
           <query>
 | loadjob savedsearch="nobody:$tkn_current_app$:ssphp_create_dashboard_dataset"
-| where 'line_type'="summary" AND lower('ssphp.use_case.foundational_system')=$tkn__service|s$
+| where 'line_type'="summary" AND match(lower('ssphp.use_case.foundational_system'),$tkn__service|s$)
 
 | eval ssphp.score.ciso_priority=case('ssphp.score.ciso_priority'=1,"DfE Mandated",
                                       'ssphp.score.ciso_priority'=2,"Recommended",
@@ -88,7 +104,6 @@
           <earliest>0</earliest>
           <sampleRatio>1</sampleRatio>
           <done>
-            <set token="tkn_selected_service_name">$result.ssphp.use_case.foundational_system$</set>
             <set token="tkn_controls_ciso">$result.number_controls_ciso_1$</set>
             <set token="tkn_controls_compliant_text">$result.compliant_abs$</set>
             <set token="tkn_controls_compliant_perc">$result.compliant_perc$</set>
@@ -103,13 +118,13 @@
     <panel depends="$tkn_ready$,$tkn_show_abs$">
       <html>
         <div id="div_header" style="background:$tkn_controls_compliant_text_colour$;color:white;font-weight:bold;font-size:800%;text-align:center;padding:50">$tkn_controls_compliant_text$</div> 
-        <div id="div_header" style="background:$tkn_controls_compliant_text_colour$;color:white;font-size:100%;text-align:center">$tkn_selected_service_name$ Compliant of # DfE Mandated Controls</div> 
+        <div id="div_header" style="background:$tkn_controls_compliant_text_colour$;color:white;font-size:100%;text-align:center">$tkn_current_service$ Compliant of # DfE Mandated Controls</div> 
       </html>
     </panel>
     <panel depends="$tkn_show_perc$">
       <html>
         <div id="div_header" style="background:$tkn_controls_compliant_text_colour$;color:white;font-weight:bold;font-size:800%;text-align:center;padding:50">$tkn_controls_compliant_perc$%</div> 
-        <div id="div_header" style="background:$tkn_controls_compliant_text_colour$;color:white;font-size:100%;text-align:center">Percentage $tkn_selected_service_name$ Compliant of DfE Mandated Controls</div> 
+        <div id="div_header" style="background:$tkn_controls_compliant_text_colour$;color:white;font-size:100%;text-align:center">Percentage $tkn_current_service$ Compliant of DfE Mandated Controls</div> 
       </html>
     </panel>
   </row>
@@ -121,7 +136,7 @@
   <row depends="$tkn_ready$">
     <panel>
       <html>
-        <div id="div_header" style="font-size:175%;color:yellow;">$tkn_selected_service_name$</div> 
+        <div id="div_header" style="font-size:175%;color:yellow;">$tkn_current_service$</div> 
         <div id="div_header" style="font-size:120%">Control Details &amp; Scores [$tkn_controls_total$]</div> 
       </html>
     </panel>
@@ -212,7 +227,7 @@
         <search>
           <query>
 | loadjob savedsearch="nobody:$tkn_current_app$:ssphp_create_dashboard_dataset"
-| where 'line_type'="detail" AND lower('ssphp.use_case.foundational_system')=$tkn__service|s$
+| where 'line_type'="detail" AND match(lower('ssphp.use_case.foundational_system'),$tkn__service|s$)
 
 | eval ssphp.score.ciso_priority=case('ssphp.score.ciso_priority'=1,"DfE Mandated",
                                       'ssphp.score.ciso_priority'=2,"Recommended",
