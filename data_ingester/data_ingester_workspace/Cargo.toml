@@ -17,3 +17,8 @@ unwrap_used = "warn"
 [profile.release]
 strip = true
 # lto = true
+
+[patch.crates-io]
+# Nightly build fails due to removal of the unstable stdsimd feature
+# https://github.com/zowens/crc32c/issues/51
+crc32c = { git = "https://github.com/LDeakin/crc32c", branch="stdsimd" }

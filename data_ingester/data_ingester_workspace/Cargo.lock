@@ -1020,8 +1020,7 @@ dependencies = [
 [[package]]
 name = "crc32c"
 version = "0.6.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d8f48d60e5b4d2c53d5c2b1d8a58c849a70ae5e5509b08a48d047e3b65714a74"
+source = "git+https://github.com/LDeakin/crc32c?branch=stdsimd#b70d1b17d0d2f19dbf022a5e700ec4f5b461804c"
 dependencies = [
  "rustc_version",
 ]
