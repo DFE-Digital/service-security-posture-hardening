@@ -393,7 +393,7 @@ impl AwsClient {
     pub(crate) async fn aws_1_13_ensure_there_is_only_one_active_access_key_available_for_any_single_iam_user(
         &self,
     ) -> Result<AccessKeys> {
-        let config = self.config().await?;
+        let config = self.config().await.context("Building config")?;
         let client = aws_sdk_iam::Client::new(&config);
         let users: Result<Vec<aws_sdk_iam::types::User>, _> = client
             .list_users()
@@ -402,13 +402,14 @@ impl AwsClient {
             .send()
             .collect()
             .await;
+        let users = users.context("Getting Users")?;
         let mut access_keys: Vec<AccessKeyMetadataSerde> = vec![];
-        for user in users? {
+        for user in users {
             let keys = client
                 .list_access_keys()
                 .user_name(user.user_name())
                 .send()
-                .await?;
+                .await.context("Getting access keys")?;
             for key in keys.access_key_metadata {
                 access_keys.push(key.into());
             }
