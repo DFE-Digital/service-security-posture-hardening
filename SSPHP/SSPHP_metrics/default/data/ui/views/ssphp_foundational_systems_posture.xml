@@ -1,12 +1,9 @@
 <dashboard version="1.1" theme="dark" hideFilters="true" script="js/table_cell_color.js">
 
   <label>Security Posture Continuous Assurance : Posture Dashboard</label>
-  <description>v1.1.2</description>
+  <description>v1.3.1</description>
 
   <init>
-    <set token="tkn_ciso_level">1</set>
-    <set token="tkn_not_ready_to_show">true</set>
-    <unset token="tkn_ready_to_show"></unset>
     <set token="tkn_colour_red">#D32D41</set>
     <set token="tkn_colour_orange">#EA6A47</set>
     <set token="tkn_colour_green">#B3C100</set>
@@ -39,67 +36,41 @@
 
 <!-- ################### Set Target Service and other Tokens ################### --> 
 
-<row depends="$never_show$">
-  <panel>
-    <table>
-      <search>
-        <query>
-| makeresults
-| eval tkn_selected_service_name=upper($tkn__service|s$),
-     tkn_selected_service=lower($tkn__service|s$)
-| table tkn_selected_service_name, tkn_selected_service
-        </query>
-        <done>
-          <set token="tkn_selected_service_name">$result.tkn_selected_service_name$</set>
-          <set token="tkn_selected_service">$result.tkn_selected_service$</set>
-        </done>
-      </search>
-    </table>
-  </panel>
-  
-  <panel>
-    <table>
-      <search>
-        <query>
-| makeresults
-| eval app=$env:app|s$
-| table app
-        </query>
-        <done>
-          <set token="tkn_current_app">$result.app$</set>
-        </done>
-      </search>
-    </table>
-  </panel>
-</row>
-
-  
-  <row depends="$tkn_not_ready_to_show$">
+  <row depends="$never_show$">
     <panel>
-      <html>
-        <div id="div_header" style="background:black;color:grey;font-size:100%;text-align:center">PROCESSING</div> 
-      </html>
+      <table>
+        <search>
+          <query>
+  | makeresults
+  | eval app=$env:app|s$
+  | table app
+          </query>
+          <done>
+            <set token="tkn_current_app">$result.app$</set>
+          </done>
+        </search>
+      </table>
     </panel>
   </row>
-
-
 
 
 
 <!-- ################### Header Row ################### --> 
 
-  <row>
-    <panel>
-      <html>
-        <div id="div_header" style="font-weight:bold;font-size:125%">FOUNDATIONAL SERVICES : COMPLIANT CONTROLS</div> 
-      </html>
-    </panel>
-  </row>
+<row>
+  <panel>
+    <html>
+      <div id="div_header" style="font-weight:bold;font-size:125%">FOUNDATIONAL SERVICES : COMPLIANT CONTROLS
+        <span><a href="ssphp_foundational_systems_dashboard_help" class="btn btn-primary" style="color:black;background-color:grey;text-align:center;display:block;float:right;width:6%;" target="_blank">Dashboard Help</a></span>
+      </div> 
+    </html>
+  </panel>
+</row>
 
 
 <!-- ################### DISPLAY ROWS ################### -->   
   
-  <row depends="$tkn_ready_to_show$,$tkn_show_abs$">
+  <row depends="$tkn_show_abs$">
 
     <panel>
       <html>
@@ -121,10 +92,13 @@
       <single id="single_abs_aad">
         <search>
           <query>
-| makeresults
-| eval text_out=$tkn_AAD_compliant_abs|s$
-| table text_out
+| loadjob savedsearch="nobody:$tkn_current_app$:ssphp_create_dashboard_dataset"
+| search line_type="summary" AND ssphp.use_case.foundational_system="AAD"
+| table compliant_abs, compliant_color
           </query>
+          <done>
+            <set token="tkn_AAD_color">$result.compliant_color$</set>
+          </done>
         </search>
         <option name="height">200</option>
         <option name="field">text_out</option>
@@ -156,10 +130,13 @@
       <single id="single_abs_azure">
         <search>
           <query>
-| makeresults
-| eval text_out=$tkn_AZURE_compliant_abs|s$
-| table text_out
+            | loadjob savedsearch="nobody:$tkn_current_app$:ssphp_create_dashboard_dataset"
+            | search line_type="summary" AND ssphp.use_case.foundational_system="AZURE"
+            | table compliant_abs, compliant_color
           </query>
+          <done>
+            <set token="tkn_AZURE_color">$result.compliant_color$</set>
+          </done>
         </search>
         <option name="height">200</option>
         <option name="field">text_out</option>
@@ -191,10 +168,13 @@
       <single id="single_abs_dns">
         <search>
           <query>
-| makeresults
-| eval text_out=$tkn_DNS_compliant_abs|s$
-| table text_out
+            | loadjob savedsearch="nobody:$tkn_current_app$:ssphp_create_dashboard_dataset"
+            | search line_type="summary" AND ssphp.use_case.foundational_system="DNS"
+            | table compliant_abs, compliant_color
           </query>
+          <done>
+            <set token="tkn_DNS_color">$result.compliant_color$</set>
+          </done>
         </search>
         <option name="height">200</option>
         <option name="field">text_out</option>
@@ -226,10 +206,13 @@
       <single id="single_abs_m365">
         <search>
           <query>
-| makeresults
-| eval text_out=$tkn_AAD_compliant_abs|s$
-| table text_out
+            | loadjob savedsearch="nobody:$tkn_current_app$:ssphp_create_dashboard_dataset"
+            | search line_type="summary" AND ssphp.use_case.foundational_system="M365"
+            | table compliant_abs, compliant_color
           </query>
+          <done>
+            <set token="tkn_M365_color">$result.compliant_color$</set>
+          </done>
         </search>
         <option name="height">200</option>
         <option name="field">text_out</option>
@@ -242,7 +225,7 @@
     </panel>
   </row>
   
-  <row depends="$tkn_ready_to_show$,$tkn_show_perc$">
+  <row depends="$tkn_show_perc$">
     <panel>
       <html>
        <style type="text/css">
@@ -263,10 +246,13 @@
       <single id="single_perc_aad">
         <search>
           <query>
-| makeresults
-| eval text_out=$tkn_AAD_compliant_perc|s$
-| table text_out
+            | loadjob savedsearch="nobody:$tkn_current_app$:ssphp_create_dashboard_dataset"
+            | search line_type="summary" AND ssphp.use_case.foundational_system="AAD"
+            | table compliant_perc, compliant_color
           </query>
+          <done>
+            <set token="tkn_AAD_color">$result.compliant_color$</set>
+          </done>
         </search>
         <option name="height">200</option>
         <option name="field">text_out</option>
@@ -299,10 +285,13 @@
       <single id="single_perc_azure">
         <search>
           <query>
-| makeresults
-| eval text_out=$tkn_AZURE_compliant_perc|s$
-| table text_out
+            | loadjob savedsearch="nobody:$tkn_current_app$:ssphp_create_dashboard_dataset"
+            | search line_type="summary" AND ssphp.use_case.foundational_system="AZURE"
+            | table compliant_perc, compliant_color
           </query>
+          <done>
+            <set token="tkn_AZURE_color">$result.compliant_color$</set>
+          </done>
         </search>
         <option name="height">200</option>
         <option name="field">text_out</option>
@@ -335,10 +324,13 @@
       <single id="single_perc_dns">
         <search>
           <query>
-| makeresults
-| eval text_out=$tkn_DNS_compliant_perc|s$
-| table text_out
+            | loadjob savedsearch="nobody:$tkn_current_app$:ssphp_create_dashboard_dataset"
+            | search line_type="summary" AND ssphp.use_case.foundational_system="DNS"
+            | table compliant_perc, compliant_color
           </query>
+          <done>
+            <set token="tkn_DNS_color">$result.compliant_color$</set>
+          </done>
         </search>
         <option name="height">200</option>
         <option name="field">text_out</option>
@@ -371,10 +363,13 @@
       <single id="single_perc_m365">
         <search>
           <query>
-| makeresults
-| eval text_out=$tkn_M365_compliant_perc|s$
-| table text_out
+            | loadjob savedsearch="nobody:$tkn_current_app$:ssphp_create_dashboard_dataset"
+            | search line_type="summary" AND ssphp.use_case.foundational_system="M365"
+            | table compliant_perc, compliant_color
           </query>
+          <done>
+            <set token="tkn_M365_color">$result.compliant_color$</set>
+          </done>
         </search>
         <option name="height">200</option>
         <option name="field">text_out</option>
@@ -385,41 +380,6 @@
           <link target="_blank">/app/$tkn_current_app$/ssphp_foundational_systems_service?form.tkn__service=m365</link>
         </drilldown>
       </single>
-    </panel>
-  </row>
-  
-  
-  <row depends="$never_show$">
-    <panel>
-      <table>
-        <search>
-          <query>
-| loadjob savedsearch="nobody:$tkn_current_app$:ssphp_create_dashboard_dataset_posture"
-          </query>
-          <earliest>0</earliest>
-          <latest>now</latest>
-          <done>
-            <unset token="tkn_not_ready_to_show"></unset>
-            <set token="tkn_ready_to_show">true</set>
-            
-            <set token="tkn_AAD_compliant_abs">$result.AAD_compliant_abs$</set>
-            <set token="tkn_AAD_compliant_perc">$result.AAD_compliant_perc$</set>
-            <set token="tkn_AAD_color">$result.AAD_color$</set>
-            
-            <set token="tkn_AZURE_compliant_abs">$result.AZURE_compliant_abs$</set>
-            <set token="tkn_AZURE_compliant_perc">$result.AZURE_compliant_perc$</set>
-            <set token="tkn_AZURE_color">$result.AZURE_color$</set>
-            
-            <set token="tkn_M365_compliant_abs">$result.M365_compliant_abs$</set>
-            <set token="tkn_M365_compliant_perc">$result.M365_compliant_perc$</set>
-            <set token="tkn_M365_color">$result.M365_color$</set>
-            
-            <set token="tkn_DNS_compliant_abs">$result.DNS_compliant_abs$</set>
-            <set token="tkn_DNS_compliant_perc">$result.DNS_compliant_perc$</set>
-            <set token="tkn_DNS_color">$result.DNS_color$</set>
-          </done>
-        </search>
-      </table>
     </panel>
   </row>
 </dashboard>
