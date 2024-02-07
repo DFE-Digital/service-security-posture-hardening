@@ -191,10 +191,11 @@ index="ssphp_metrics_summary" ssphp.use_case.id=$tkn_use_case_id$
             <set token="tkn_score_color">$result.score_color$</set>
             <set token="tkn_compliance_status">$result.compliance_status$</set>
             <set token="tkn_last_run">$result.last_run$</set>
-            <set token="tkn_show_dashboard">show</set>
 
             <set token="tkn_doc_link">$result.doc_link$</set>
             <set token="tkn_doc_name">$result.doc_name$</set>
+            
+            <set token="tkn_show_dashboard">show</set>
           </done>
         </search>
       </table>
@@ -401,7 +402,7 @@ index="ssphp_metrics_summary" ssphp.use_case.id=$tkn_use_case_id$
     </panel>
   </row>
     
-  <row>
+  <row depends="$tkn_show_dashboard$">
     <html>
       <style>
          .css_for_green{ 

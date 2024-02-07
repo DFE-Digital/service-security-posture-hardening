@@ -10,6 +10,15 @@ require([
         canRender: function (cell) {
             //return true;
             return _(['state',
+                      'access_key_1_last_rotated',
+                      'access_key_2_last_rotated',
+                      'attached_policies{}.policy_arn',
+                      'policies{}',
+                      'BucketName',
+                      'Principal',
+                      'Condition.Bool.aws:SecureTransport',
+                      'Effect',
+                      'Action',
                       'defaultUserRolePermissions.allowedToCreateTenants',
                       'conditions.locations.includeLocations{}',
                       'conditions.locations.excludeLocations{}',
