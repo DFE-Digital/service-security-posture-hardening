@@ -7,6 +7,7 @@ use tokio::sync::oneshot;
 #[tokio::main]
 async fn main() -> Result<()> {
     eprintln!("Starting Data Ingester...");
+    eprintln!("RUST_BACKTRACE={}", &std::env::var("RUST_BACKTRACE").unwrap_or_else(|_| "NO VALUE SET".to_string()));
     let (tx, rx) = oneshot::channel::<()>();
     let server = tokio::spawn(start_server(tx));
     let _ = rx.await;

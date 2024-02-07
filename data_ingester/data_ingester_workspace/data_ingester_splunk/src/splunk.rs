@@ -1,3 +1,4 @@
+use anyhow::Context;
 use itertools::Itertools;
 use reqwest::header::HeaderMap;
 use reqwest::header::HeaderValue;
@@ -303,7 +304,10 @@ pub async fn try_collect_send<T>(
 where
     for<'a> &'a T: ToHecEvents + Debug,
 {
-    splunk.log(&format!("Getting {}", &name)).await?;
+    splunk
+        .log(&format!("Getting {}", &name))
+        .await
+        .context("Unable log to send to Splunk")?;
     match future.await {
         Ok(ref result) => {
             let hec_events = match result.to_hec_events() {
@@ -313,7 +317,7 @@ where
                     dbg!(&result);
                     vec![HecEvent::new(
                         &Message {
-                            event: format!("Failed converting to HecEvents: {e}"),
+                            event: format!("Failed converting to HecEvents: {e:?}"),
                         },
                         "data_ingester_rust",
                         "data_ingester_rust_logs",
@@ -329,7 +333,10 @@ where
             };
         }
         Err(err) => {
-            splunk.log(&format!("Failed to get {name}: {err}")).await?;
+            splunk
+                .log(&format!("Failed to get {name}: {err:?}"))
+                .await
+                .context("Unable log to send to Splunk")?;
         }
     };
     Ok(())

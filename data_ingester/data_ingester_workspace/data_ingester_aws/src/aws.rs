@@ -273,6 +273,7 @@ struct AwsClient {
 impl AwsClient {
     async fn config(&self) -> Result<SdkConfig> {
         let region_provider = RegionProviderChain::default_provider().or_else("us-east-1");
+        eprintln!("AWS Client: region_provider: {:?}", &region_provider.region().await);
 
         let config = aws_config::defaults(BehaviorVersion::latest())
             .credentials_provider(SharedCredentialsProvider::new(AwsSecrets {
@@ -409,7 +410,8 @@ impl AwsClient {
                 .list_access_keys()
                 .user_name(user.user_name())
                 .send()
-                .await.context("Getting access keys")?;
+                .await
+                .context("Getting access keys")?;
             for key in keys.access_key_metadata {
                 access_keys.push(key.into());
             }
