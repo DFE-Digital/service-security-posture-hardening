@@ -15,7 +15,7 @@ members = [
 unwrap_used = "warn"
 
 [profile.release]
-strip = true
+# strip = true
 # lto = true
 
 [patch.crates-io]
