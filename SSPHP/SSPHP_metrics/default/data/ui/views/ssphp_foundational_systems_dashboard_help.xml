@@ -1,28 +1,43 @@
 <dashboard version="1.1" theme="dark" hideFilters="true" script="js/table_cell_color.js">
 
   <label>Security Posture Continuous Assurance : Dashboard Help</label>
-  <description>v1.0.0</description>
+  <description>v1.0.3</description>
 
-  <init>
-    <set token="tkn_ciso_level">1</set>
-    <set token="tkn_not_ready_to_show">true</set>
-    <unset token="tkn_ready_to_show"></unset>
-    <set token="tkn_colour_red">#D32D41</set>
-    <set token="tkn_colour_orange">#EA6A47</set>
-    <set token="tkn_colour_green">#B3C100</set>
-    <set token="tkn_colour_green">#6AB187</set>
-    <set token="tkn_colour_blue">#A5D8DD</set>
-  </init>
-  
+  <row depends="$never_show$">
+    <html>
+      <style>
+        .help-header {
+          color: yellow !important;
+          font-weight: bold !important;
+          font-size: 200% !important;
+          text-align: left !important;
+          padding: 10 !important;
+          line-height: 1.25 !important;
+          background: dark-grey;
+        }
+        .help-text {
+          color: white !important;
+          font-weight: normal !important;
+          font-size: 125% !important;
+          text-align: left !important;
+          padding: 10 !important;
+          line-height: 1.25 !important;
+          background: dark-grey;
+        }
+      </style>
+    </html>
+</row>
+
   <row>
-    <panel>
-      <html>
-        <div class="row">
-          <div class="column"></div>
-          <div class="column"></div>
-        </div>
-      </html>
-    </panel>
+    <html>
+      <div class="help-header">Posture Dashboard</div>
+      <br></br>
+      <div class="help-text">
+This dashboard shows the number of compliant controls vs the total number of DfE Mandated Controls.
+
+The data can either be displayed as an 'absolte' ie X of Y, or as a Percentage.
+      </div>
+    </html>
   </row>
 </dashboard>
   
