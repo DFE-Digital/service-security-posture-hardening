@@ -409,7 +409,8 @@ impl AwsClient {
                 .list_access_keys()
                 .user_name(user.user_name())
                 .send()
-                .await.context("Getting access keys")?;
+                .await
+                .context("Getting access keys")?;
             for key in keys.access_key_metadata {
                 access_keys.push(key.into());
             }
