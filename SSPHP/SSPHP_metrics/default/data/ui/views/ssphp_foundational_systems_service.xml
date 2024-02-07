@@ -1,7 +1,7 @@
 <dashboard version="1.1" theme="dark" hideFilters="true" script="js/table_cell_color.js">
 
   <label>Security Posture Continuous Assurance : Service Dashboard</label>
-  <description>v2.0.5</description>
+  <description>v2.0.7</description>
   
   <init>
     <set token="tkn_controls_compliant_text"></set>
@@ -121,6 +121,7 @@
         <div id="div_header" style="background:$tkn_controls_compliant_text_colour$;color:white;font-size:100%;text-align:center">$tkn_current_service$ Compliant of # DfE Mandated Controls</div> 
       </html>
     </panel>
+
     <panel depends="$tkn_show_perc$">
       <html>
         <div id="div_header" style="background:$tkn_controls_compliant_text_colour$;color:white;font-weight:bold;font-size:800%;text-align:center;padding:50">$tkn_controls_compliant_perc$%</div> 
@@ -140,6 +141,8 @@
         <div id="div_header" style="font-size:120%">Control Details &amp; Scores [$tkn_controls_total$]</div> 
       </html>
     </panel>
+
+
     <panel>
       <input type="checkbox" token="tkn_fields" searchWhenChanged="true">
         <label>Show Only</label>
@@ -148,6 +151,12 @@
         <initialValue>N,C</initialValue>
         <default>*</default>
       </input>
+    </panel>
+
+    <panel>
+      <html>
+        <div><span><a href="ssphp_foundational_systems_dashboard_help" class="btn btn-primary" style="color:black;background-color:grey;text-align:center;display:block;float:right;width:20%;" target="_blank">Dashboard Help</a></span></div> 
+      </html>
     </panel>
     
 <!-- Search to build filter text --> 
