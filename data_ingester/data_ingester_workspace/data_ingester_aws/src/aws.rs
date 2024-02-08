@@ -273,7 +273,10 @@ struct AwsClient {
 impl AwsClient {
     async fn config(&self) -> Result<SdkConfig> {
         let region_provider = RegionProviderChain::default_provider().or_else("us-east-1");
-        eprintln!("AWS Client: region_provider: {:?}", &region_provider.region().await);
+        eprintln!(
+            "AWS Client: region_provider: {:?}",
+            &region_provider.region().await
+        );
 
         let config = aws_config::defaults(BehaviorVersion::latest())
             .credentials_provider(SharedCredentialsProvider::new(AwsSecrets {
@@ -284,6 +287,40 @@ impl AwsClient {
             .await;
         Ok(config)
     }
+
+    async fn client_for_bucket(
+        &self,
+        s3_client: &aws_sdk_s3::Client,
+        bucket_name: &str,
+    ) -> Result<aws_sdk_s3::Client> {
+        let bucket_location = s3_client
+            .get_bucket_location()
+            .set_bucket(Some(bucket_name.to_string()))
+            .send()
+            .await
+            .context(format!(
+                "Getting s3_client.get_bucket_location for bucket: {}",
+                bucket_name
+            ))?
+            .location_constraint()
+            .map(|lc| lc.as_str().to_owned())
+            .unwrap_or_else(|| "us-east-1".to_owned());
+
+        let bucket_region = aws_config::Region::new(bucket_location);
+
+        let region_provider = RegionProviderChain::first_try(bucket_region);
+
+        let bucket_client_config = aws_config::defaults(BehaviorVersion::latest())
+            .credentials_provider(SharedCredentialsProvider::new(AwsSecrets {
+                secrets: self.secrets.clone(),
+            }))
+            .region(region_provider)
+            .load()
+            .await;
+
+        Ok(aws_sdk_s3::Client::new(&bucket_client_config))
+    }
+
     /// IAM: account:GetContactInformation
     /// https://docs.aws.amazon.com/accounts/latest/reference/API_GetContactInformation.html
     pub(crate) async fn aws_1_1_maintain_current_contact_details(
@@ -574,7 +611,16 @@ impl AwsClient {
 
         for bucket in buckets.buckets.unwrap_or_default().into_iter() {
             let bucket_name = bucket.name;
-            match s3_client
+
+            let bucket_client = self
+                .client_for_bucket(
+                    &s3_client,
+                    bucket_name.as_ref().context("Bucket should have name")?,
+                )
+                .await
+                .context("Building client for bucket")?;
+
+            match bucket_client
                 .get_bucket_policy()
                 .set_bucket(bucket_name.clone())
                 .send()
@@ -610,7 +656,16 @@ impl AwsClient {
 
         for bucket in buckets.buckets.unwrap_or_default().into_iter() {
             let bucket_name = bucket.name;
-            match s3_client
+
+            let bucket_client = self
+                .client_for_bucket(
+                    &s3_client,
+                    bucket_name.as_ref().context("Bucket should have name")?,
+                )
+                .await
+                .context("Building client for bucket")?;
+
+            match bucket_client
                 .get_bucket_versioning()
                 .set_bucket(bucket_name.clone())
                 .send()
@@ -646,7 +701,16 @@ impl AwsClient {
 
         for bucket in buckets.buckets.unwrap_or_default().into_iter() {
             let bucket_name = bucket.name;
-            match s3_client
+
+            let bucket_client = self
+                .client_for_bucket(
+                    &s3_client,
+                    bucket_name.as_ref().context("Bucket should have name")?,
+                )
+                .await
+                .context("Building client for bucket")?;
+
+            match bucket_client
                 .get_public_access_block()
                 .set_bucket(bucket_name.clone())
                 .send()
@@ -752,7 +816,26 @@ impl AwsClient {
         let mut acls = vec![];
         for trail in trails.trail_list.unwrap_or_default().into_iter() {
             let bucket_name = trail.s3_bucket_name;
-            match s3_client
+
+            let bucket_client = match self
+                .client_for_bucket(
+                    &s3_client,
+                    bucket_name.as_ref().context("Bucket should have name")?,
+                )
+                .await
+                .context("Building client for bucket")
+            {
+                Ok(client) => client,
+                Err(err) => {
+                    eprintln!(
+                        "Error building client for bucket: {:?}, {:?}",
+                        &bucket_name, err
+                    );
+                    continue;
+                }
+            };
+
+            match bucket_client
                 .get_bucket_acl()
                 .set_bucket(bucket_name.clone())
                 .send()
@@ -785,7 +868,26 @@ impl AwsClient {
         let mut policies = vec![];
         for trail in trails.trail_list.unwrap_or_default().into_iter() {
             let bucket_name = trail.s3_bucket_name;
-            match s3_client
+
+            let bucket_client = match self
+                .client_for_bucket(
+                    &s3_client,
+                    bucket_name.as_ref().context("Bucket should have name")?,
+                )
+                .await
+                .context("Building client for bucket")
+            {
+                Ok(client) => client,
+                Err(err) => {
+                    eprintln!(
+                        "Error building client for bucket: {:?}, {:?}",
+                        &bucket_name, err
+                    );
+                    continue;
+                }
+            };
+
+            match bucket_client
                 .get_bucket_policy()
                 .set_bucket(bucket_name.clone())
                 .send()
@@ -808,16 +910,39 @@ impl AwsClient {
     pub(crate) async fn aws_3_6_ensure_s3_bucket_access_logging_is_enabled_on_the_cloudtrail_s3_bucket(
         &self,
     ) -> Result<GetBucketLoggingOutputs> {
-        let config = self.config().await?;
+        let config = self.config().await.context("building confing")?;
         let trail_client = aws_sdk_cloudtrail::Client::new(&config);
-        let trails = trail_client.describe_trails().send().await?;
+        let trails = trail_client
+            .describe_trails()
+            .send()
+            .await
+            .context("AWS describe_trails")?;
 
         let s3_client = aws_sdk_s3::Client::new(&config);
 
         let mut logging_policies = vec![];
         for trail in trails.trail_list.unwrap_or_default().into_iter() {
             let bucket_name = trail.s3_bucket_name;
-            match s3_client
+
+            let bucket_client = match self
+                .client_for_bucket(
+                    &s3_client,
+                    bucket_name.as_ref().context("Bucket should have name")?,
+                )
+                .await
+                .context("Building client for bucket")
+            {
+                Ok(client) => client,
+                Err(err) => {
+                    eprintln!(
+                        "Error building client for bucket: {:?}, {:?}",
+                        &bucket_name, err
+                    );
+                    continue;
+                }
+            };
+
+            match bucket_client
                 .get_bucket_logging()
                 .set_bucket(bucket_name.clone())
                 .send()
