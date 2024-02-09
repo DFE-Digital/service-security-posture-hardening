@@ -1,7 +1,7 @@
-<dashboard theme="dark" version="1.1" script="js/addtags.js, js/table_cell_backcolor.js">
+<dashboard theme="dark" version="1.1" script="js/addtags.js, js/table_cell_backcolor_multivalue.js">
 
   <label>Security Posture Continuous Assurance : CIS Control Detail Dashboard</label>
-  <description>v2.1.0</description>
+  <description>v2.2.1</description>
   
   <init>
     <set token="tkn_colour_red">#D32D41</set>
@@ -390,7 +390,7 @@ index="ssphp_metrics_summary" ssphp.use_case.id=$tkn_use_case_id$
       | search eai:acl.app="SSPHP_metrics" AND uc_id="ssphp_use_case_*"
       | rex field=search "^(?&lt;search_text&gt;[\s\S]*?)``` ##################### end dashboard query ##################### ```"
       | eval search_text=replace('search_text',"\|\s*fields","| table"),
-             search_text='search_text'."| sort 0 - ssphp.score.score"
+             search_text='search_text'."| sort 0 - ssphp.score.score | fields - temp_total_count"
       | table uc_id, search, search_text]
   | table uc_id, search, search_text
           </query>
