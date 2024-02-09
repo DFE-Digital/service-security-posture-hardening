@@ -10,6 +10,12 @@ require([
         canRender: function (cell) {
             //return true;
             return _(['state',
+                      'mfaDelete',
+                      'acceptable_policy_keys',
+                      'publicAccessBlockConfiguration.blockPublicAcls',
+                      'publicAccessBlockConfiguration.blockPublicPolicy',
+                      'publicAccessBlockConfiguration.ignorePublicAcls',
+                      'publicAccessBlockConfiguration.restrictPublicBuckets',
                       'access_key_1_last_rotated',
                       'access_key_2_last_rotated',
                       'attached_policies{}.policy_arn',
