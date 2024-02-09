@@ -10,6 +10,7 @@ require([
         canRender: function (cell) {
             //return true;
             return _(['state',
+                      'conditionalAccessPlans_key',
                       'in_r53',
                       'total_no_periods',
                       'periods_no_cloudtrail',

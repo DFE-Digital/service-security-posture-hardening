@@ -1,7 +1,7 @@
 <dashboard theme="dark" version="1.1" script="js/addtags.js, js/table_cell_backcolor_multivalue.js">
 
   <label>Security Posture Continuous Assurance : CIS Control Detail Dashboard</label>
-  <description>v2.2.1</description>
+  <description>v2.2.2</description>
   
   <init>
     <set token="tkn_colour_red">#D32D41</set>
@@ -337,32 +337,6 @@ index="ssphp_metrics_summary" ssphp.use_case.id=$tkn_use_case_id$
   </row>
 
 
-    <!-- ## Panel to find the name of the macro that the savedsearch uses to get it's data. Some savedsearches re-use a different macro ##
-  <row depends="$tkn_show_dashboard$">
-    <panel depends="$never_show$">
-      <table>
-        <title>test</title>
-        <search>
-          <query>
-  | makeresults
-  | eval uc_id=$tkn_use_case_id|s$, uc_id="ssphp_use_case_".uc_id
-  | fields uc_id
-
-  | join type=outer uc_id
-    [| rest /servicesNS/-/-/saved/searches splunk_server=local
-      | rename title as uc_id
-      | search eai:acl.app="SSPHP_metrics" AND uc_id="ssphp_use_case_*"
-      | rex field=search "[^`]*`(?&lt;macro&gt;[^`]*)`"
-      | table uc_id, macro, search]
-  | table uc_id, macro
-          </query>
-          <done>
-            <set token="tkn_use_case_macro">$result.macro$</set>
-          </done>
-        </search>
-      </table>
-    </panel>
-## -->
   <row depends="$tkn_show_dashboard$">
     <panel>
       <html>
@@ -374,10 +348,9 @@ index="ssphp_metrics_summary" ssphp.use_case.id=$tkn_use_case_id$
     </panel>    
   </row>
 
-  <row depends="$tkn_show_dashboard$">
-    <panel depends="$never_show$">
+  <row depends="$never_show$">
+    <panel>
       <table>
-        <title>test</title>
         <search>
           <query>
 | makeresults
@@ -447,7 +420,7 @@ $tkn_use_case_search_text$
                fld_val=mvjoin('fld_val',"~~"),
                fld_val=if(isnull('fld_val') OR trim('fld_val')="" OR (len('fld_val')&lt;2 AND NOT match('fld_val',"^[a-zA-Z0-9]+$")),"-",'fld_val'),
                fld_name=replace(replace(replace("&lt;&lt;FIELD&gt;&gt;","¬¬","{}"),"__","{}"),"z_",""),
-               "&lt;&lt;FIELD&gt;&gt;"=if('ssphp.score.non_compliant_fields'='fld_name', 'fld_val'."|red", 'fld_val')]
+               "&lt;&lt;FIELD&gt;&gt;"=if('ssphp.score.non_compliant_fields'='fld_name', 'fld_val'."¬red", 'fld_val')]
 
 | foreach * 
   [| eval "&lt;&lt;FIELD&gt;&gt;"=if("&lt;&lt;FIELD&gt;&gt;" == "ssphp.score.non_compliant_fields", 'ssphp.score.non_compliant_fields', split('&lt;&lt;FIELD&gt;&gt;',"~~"))]

@@ -10,6 +10,9 @@ require([
         canRender: function (cell) {
             //return true;
             return _(['state',
+                      'surname',
+                      'conditionalAccessPlans_key',
+                      'conditionalAccessPolicies_key',
                       'in_r53',
                       'total_no_periods',
                       'periods_no_cloudtrail',
@@ -235,14 +238,14 @@ require([
             var arrlen = cell.value.length;
             
             // Extract custom CSS class from last element.
-            // What happens when the last value doesn't have a '|'?
-            var css_class = cell.value[arrlen - 1].split("|")[1];
+            // What happens when the last value doesn't have a '¬'?
+            var css_class = cell.value[arrlen - 1].split("¬")[1];
             
             // Add the CSS class to the TD
             $td.addClass("css_for_".concat(css_class));
             
             // Remove the CSS class  from the last element of the array
-            cell.value[arrlen - 1] = cell.value[arrlen - 1].split("|")[0];
+            cell.value[arrlen - 1] = cell.value[arrlen - 1].split("¬")[0];
             
             // Join the array together with '\n' for display
             var label = cell.value.join("\n");
