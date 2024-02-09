@@ -12,11 +12,11 @@ data_ingester_azure_rest = { path = "../data_ingester_azure_rest" }
 data_ingester_splunk = { path = "../data_ingester_splunk" }
 data_ingester_supporting = { path = "../data_ingester_supporting" }
 futures = "*"
-graph-core = { git = "https://github.com/akinnane/graph-rs-sdk.git" }
-graph-http = { git = "https://github.com/akinnane/graph-rs-sdk.git" }
-graph-rs-sdk = { git = "https://github.com/akinnane/graph-rs-sdk.git", features = ["rustls-tls"] }
+graph-core = { git = "https://github.com/akinnane/graph-rs-sdk.git"}
+graph-http = { git = "https://github.com/akinnane/graph-rs-sdk.git", features = ["rustls-tls"], default-features = false }
+graph-rs-sdk = { git = "https://github.com/akinnane/graph-rs-sdk.git", features = ["rustls-tls"], default-features = false }
 regex = "*"
-reqwest = {version = "*", features = ["rustls-tls"]}
+reqwest = {version = "*", features = ["rustls-tls"], default-features = false}
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "*"
 serde_with = "*"

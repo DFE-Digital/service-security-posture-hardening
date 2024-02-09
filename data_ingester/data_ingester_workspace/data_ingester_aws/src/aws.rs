@@ -722,7 +722,7 @@ impl AwsClient {
                     blocks.push(block);
                 }
                 Err(e) => {
-                    eprintln!("Error getting bucket policy: {:?} {:?}", bucket_name, e);
+                    eprintln!("Error getting bucket policy: {:?} {:?}", bucket_name, &e);
                     blocks.push(GetPublicAccessBlockOutput {
                         public_access_block_configuration: None,
                         bucket_name,
