@@ -1,7 +1,7 @@
 <dashboard theme="dark" version="1.1" script="js/addtags.js, js/table_cell_backcolor_multivalue.js">
 
   <label>Security Posture Continuous Assurance : Control Detail Dashboard</label>
-  <description>v3.0.0</description>
+  <description>v3.0.2</description>
   
   <init>
     <set token="tkn_colour_red">#D32D41</set>
@@ -485,7 +485,10 @@ $tkn_use_case_search_text$
 | foreach z_* 
        [| eval fld_val='&lt;&lt;FIELD&gt;&gt;',
                fld_val=mvjoin('fld_val',"~~"),
-               fld_val=if(isnull('fld_val') OR trim('fld_val')="" OR (len('fld_val')&lt;2 AND NOT match('fld_val',"^[a-zA-Z0-9]+$")),"-",'fld_val'),
+               fld_val=case(isnull('fld_val'),"-",
+                            trim('fld_val')="","-",
+                            len('fld_val')&lt;2 AND !match('fld_val',"[a-zA-Z0-9]+") AND !match('fld_val',"^\*$"),"-",
+                            1==1,'fld_val'),
                fld_name=replace(replace(replace("&lt;&lt;FIELD&gt;&gt;","¬¬","{}"),"__","{}"),"z_",""),
                "&lt;&lt;FIELD&gt;&gt;"=if('ssphp.score.non_compliant_fields'='fld_name', 'fld_val'."¬red", 'fld_val')]
 
