@@ -1,7 +1,7 @@
 <dashboard version="1.1" theme="dark" hideFilters="true" script="js/table_cell_color.js">
 
   <label>Security Posture Continuous Assurance : Service Dashboard</label>
-  <description>v2.0.9</description>
+  <description>v2.0.10</description>
   
   <init>
     <set token="tkn_controls_compliant_text"></set>
@@ -155,7 +155,7 @@
 
     <panel>
       <html>
-        <div><span><a href="ssphp_foundational_systems_dashboard_help" class="btn btn-primary" style="color:black;background-color:grey;text-align:center;display:block;float:right;width:20%;" target="_blank">Dashboard Help</a></span></div> 
+        <div><span><a href="ssphp_foundational_systems_dashboard_help?tkn_service=true" class="btn btn-primary" style="color:black;background-color:grey;text-align:center;display:block;float:right;width:20%;" target="_blank">Dashboard Help</a></span></div> 
       </html>
     </panel>
     
