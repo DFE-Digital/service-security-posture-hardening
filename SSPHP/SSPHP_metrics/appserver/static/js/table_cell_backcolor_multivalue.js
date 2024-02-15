@@ -10,6 +10,53 @@ require([
         canRender: function (cell) {
             //return true;
             return _(['state',
+                      'expiration',
+                      'hub_arn',
+                      'surname',
+                      'Effect',
+                      'principals',
+                      'conditions',
+                      'LoggingEnabled.TargetBucket',
+                      'CloudWatchLogsLogGroupArn',
+                      'IsMultiRegionTrail',
+                      'EventSelectors.DataResources.Type',
+                      'EventSelectors.DataResources.Values',
+                      'EventSelectors.ReadWriteType',
+                      'KmsKeyId',
+                      'keyManager',
+                      'keySpec',
+                      'keyRotationStatus.keyRotationEnabled',
+                      'deliverLogsStatus',
+                      'TrailStatus.LatestCloudWatchLogsDeliveryTime',
+                      'hours_since_last_cloudwatch_delivery',
+                      'Grants{}.Permission',
+                      'Grants{}.Grantee.Uri',
+                      'RecordingGroup.AllSupported',
+                      'RecordingGroup.IncludeGlobalResourceTypes',
+                      'Status{}.Recording',
+                      'Status{}.LastStatus',
+                      'arn',
+                      'LogFileValidationEnabled',
+                      'IsMultiRegionTrail',
+                      'TrailStatus.IsLogging',
+                      'IncludeManagementEvents',
+                      'policy_groups{}',
+                      'policy_roles{}',
+                      'policy_users{}',
+                      'user_name',
+                      'PolicyRoles',
+                      'conditionalAccessPlans_key',
+                      'conditionalAccessPolicies_key',
+                      'full_admin_permissions',
+                      'in_r53',
+                      'total_no_periods',
+                      'periods_no_cloudtrail',
+                      'mfaDelete',
+                      'acceptable_policy_keys',
+                      'publicAccessBlockConfiguration.blockPublicAcls',
+                      'publicAccessBlockConfiguration.blockPublicPolicy',
+                      'publicAccessBlockConfiguration.ignorePublicAcls',
+                      'publicAccessBlockConfiguration.restrictPublicBuckets',
                       'access_key_1_last_rotated',
                       'access_key_2_last_rotated',
                       'attached_policies{}.policy_arn',
@@ -226,14 +273,14 @@ require([
             var arrlen = cell.value.length;
             
             // Extract custom CSS class from last element.
-            // What happens when the last value doesn't have a '|'?
-            var css_class = cell.value[arrlen - 1].split("|")[1];
+            // What happens when the last value doesn't have a '¬'?
+            var css_class = cell.value[arrlen - 1].split("¬")[1];
             
             // Add the CSS class to the TD
             $td.addClass("css_for_".concat(css_class));
             
             // Remove the CSS class  from the last element of the array
-            cell.value[arrlen - 1] = cell.value[arrlen - 1].split("|")[0];
+            cell.value[arrlen - 1] = cell.value[arrlen - 1].split("¬")[0];
             
             // Join the array together with '\n' for display
             var label = cell.value.join("\n");

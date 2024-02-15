@@ -1,7 +1,7 @@
-<dashboard theme="dark" version="1.1" script="js/addtags.js, js/table_cell_backcolor.js">
+<dashboard theme="dark" version="1.1" script="js/addtags.js, js/table_cell_backcolor_multivalue.js">
 
-  <label>Security Posture Continuous Assurance : CIS Control Detail Dashboard</label>
-  <description>v2.1.0</description>
+  <label>Security Posture Continuous Assurance : Control Detail Dashboard</label>
+  <description>v3.0.2</description>
   
   <init>
     <set token="tkn_colour_red">#D32D41</set>
@@ -84,7 +84,9 @@
     </html>
   </row>
 
-<!-- ################### Data Row ################### --> 
+
+
+<!-- ########################################################################## DATA Row ########################################################################## --> 
   <row depends="$never_show$">
     <panel>
       <table>
@@ -101,12 +103,14 @@ index="ssphp_metrics_summary" ssphp.use_case.id=$tkn_use_case_id$
 
 | lookup ssphp_cis_critical_security_controls_v8_all.csv safeguard
 
+``` ===== normalise title, description, rationale, impact from different control types into single fields ===== ```
+| eval ssphp_control_title=coalesce('ssphp.cis_benchmark.control.title','ssphp.dfe_benchmark.control.title',"-"),
+       ssphp_control_description=coalesce('ssphp.cis_benchmark.control.description','ssphp.dfe_benchmark.control.description',"-"),
+       ssphp_control_rationale=coalesce('ssphp.cis_benchmark.control.rationale','ssphp.dfe_benchmark.control.rationale',"-"),
+       ssphp_control_impact=coalesce('ssphp.cis_benchmark.control.impact','ssphp.dfe_benchmark.control.impact',"-")
+
 | fillnull value="-" ssphp.microsoft.description, 
-                    ssphp.microsoft.implementation_status, 
-                    ssphp.cis_benchmark.control.title, 
-                    ssphp.cis_benchmark.control.description, 
-                    ssphp.cis_benchmark.control.rationale, 
-                    ssphp.cis_benchmark.control.impact,
+                    ssphp.microsoft.implementation_status,
                     ssphp.cis_benchmark.document.name,
                     ssphp.cis_benchmark.document.version,
                     ssphp.cis_benchmark.version,
@@ -116,11 +120,13 @@ index="ssphp_metrics_summary" ssphp.use_case.id=$tkn_use_case_id$
                     ssphp.risk.expectancy,
                     ssphp.risk.impact,
                     control, safeguard, asset_type, title, description
-| eval ssphp.cis_benchmark.control.title=if('ssphp.cis_benchmark.control.title'="","-",'ssphp.cis_benchmark.control.title'),
-       ssphp.cis_benchmark.control.description=if('ssphp.cis_benchmark.control.description'="","-",'ssphp.cis_benchmark.control.description'),
-       ssphp.cis_benchmark.control.rationale=if('ssphp.cis_benchmark.control.rationale'="","-",'ssphp.cis_benchmark.control.rationale'),
-       ssphp.cis_benchmark.control.impact=if('ssphp.cis_benchmark.control.impact'="","-",'ssphp.cis_benchmark.control.impact'),
-       last_run=strftime(SSPHP_RUN,"%Y-%m-%d %H:%M:%S"),
+
+| eval ssphp_control_title=if('ssphp_control_title'="","-",'ssphp_control_title'),
+       ssphp_control_description=if('ssphp_control_description'="","-",'ssphp_control_description'),
+       ssphp_control_rationale=if('ssphp_control_rationale'="","-",'ssphp_control_rationale'),
+       ssphp_control_impact=if('ssphp_control_impact'="","-",'ssphp_control_impact')
+       
+| eval last_run=strftime(SSPHP_RUN,"%Y-%m-%d %H:%M:%S"),
        score_color=case('ssphp.score.color'="red",$tkn_colour_red|s$,
                         'ssphp.score.color'="green",$tkn_colour_green|s$,
                         'ssphp.score.color'="orange",$tkn_colour_orange|s$,
@@ -166,10 +172,11 @@ index="ssphp_metrics_summary" ssphp.use_case.id=$tkn_use_case_id$
             <set token="tkn_ms_description">$result.ssphp.microsoft.desciption$</set>
             <set token="tkn_ms_implementation_status">$result.ssphp.microsoft.implementation_status$</set>
 
-            <set token="tkn_cis_title">$result.ssphp.cis_benchmark.control.title$</set>
-            <set token="tkn_cis_description">$result.ssphp.cis_benchmark.control.description$</set>
-            <set token="tkn_cis_rationale">$result.ssphp.cis_benchmark.control.rationale$</set>
-            <set token="tkn_cis_impact">$result.ssphp.cis_benchmark.control.impact$</set>
+            <set token="tkn_control_title">$result.ssphp_control_title$</set>
+            <set token="tkn_control_description">$result.ssphp_control_description$</set>
+            <set token="tkn_control_rationale">$result.ssphp_control_rationale$</set>
+            <set token="tkn_control_impact">$result.ssphp_control_impact$</set>
+            
             <set token="tkn_cis_benchmark">$result.ssphp.cis_benchmark.document.name$ : $result.ssphp.cis_benchmark.document.version$ $result.ssphp.cis_benchmark.version$</set>
             <set token="tkn_cis_controls">$result.ssphp.cis_benchmark.controls.v8$</set>
             <set token="tkn_cis_profile">$result.ssphp.cis_benchmark.control.profile_applicability$</set>
@@ -203,20 +210,47 @@ index="ssphp_metrics_summary" ssphp.use_case.id=$tkn_use_case_id$
   </row>
 
 
-<!-- ################### Top Row ################### --> 
+
+<!-- ########################################################################## TOP Row ########################################################################## --> 
+
   <row depends="$tkn_show_dashboard$">
-    <panel>
+    <panel depends="$tkn_show_cis_panels$">
       <html>
         <span class="header_r0" style="color:	cyan">$tkn_fs$ $tkn_notfs$</span>
         <br></br>
         <span class="header_r1" style="color:	darkcyan">CIS Title</span>
-        <span class="header_r2">$tkn_cis_title$</span>
+        <span class="header_r2">$tkn_control_title$</span>
         <br></br>
         <span class="header_r1" style="color:	darkcyan">CIS Profile Applicability</span>
         <span class="header_r2">$tkn_cis_profile$</span>
         <br></br>
       </html>
     </panel>
+    
+    <panel depends="$tkn_show_dfe_panels$">
+      <html>
+        <span class="header_r0" style="color:	cyan">$tkn_fs$ $tkn_notfs$</span>
+        <br></br>
+        <span class="header_r1" style="color:	yellow">DfE Benchmark</span>
+        <br></br>
+        <span class="header_r1" style="color:	darkcyan">Title</span>
+        <span class="header_r2">$tkn_control_title$</span>
+        <br></br>
+        <span class="header_r1" style="color:	darkcyan">Description</span>
+        <span class="header_r2">$tkn_control_description$</span>
+        <br></br>
+        <span class="header_r1" style="color:	darkcyan">Rationale</span>
+        <span class="header_r2">$tkn_control_rationale$</span>
+        <br></br>
+        <span class="header_r1" style="color:	darkcyan">Impact</span>
+        <span class="header_r2">$tkn_control_impact$</span>
+        <br></br>
+      </html>
+    </panel>    
+    
+    
+    
+    
 
     <panel>
       <html>
@@ -229,11 +263,9 @@ index="ssphp_metrics_summary" ssphp.use_case.id=$tkn_use_case_id$
 
     <panel>
       <html>
-<!--    <span class="header_r1" style="color:	darkcyan">Denominator</span> --> 
         <span class="header_r1" style="color:	darkcyan">Tests in this Control</span>
         <span class="header_r2">$tkn_denominator$</span>
         <br></br>
-<!--    <span class="header_r1" style="color:	darkcyan">Numerator</span> --> 
         <span class="header_r1" style="color:	darkcyan">Tests Failed in this Control</span>
         <span class="header_r2">$tkn_numerator$</span>
         <br></br>
@@ -241,7 +273,6 @@ index="ssphp_metrics_summary" ssphp.use_case.id=$tkn_use_case_id$
         <span class="header_r2">$tkn_ciso_priority$</span>
         <br></br>
         <span class="header_r1" style="color:	darkcyan">Compliance Status</span>
-<!--    <span id="div_header" style="color:$tkn_score_color$;font-weight:bold;font-size:100%">$tkn_compliance_status$</span> -->    
         <span class="header_r2" style="color:$tkn_score_color$">$tkn_compliance_status$</span>   
         <br></br>
       </html>
@@ -265,8 +296,37 @@ index="ssphp_metrics_summary" ssphp.use_case.id=$tkn_use_case_id$
   </row>
 
 
-<!-- ################### CIS Row ################### --> 
-  <row depends="$tkn_show_dashboard$">
+
+<!-- ################### Should this dashboard be showing the DfE Control Panels or the CIS Control Panels? ################### --> 
+  <row depends="$never_show$">
+    <panel>
+      <table>
+        <search>
+          <query>
+  | makeresults
+  | eval ucid=$tkn_use_case_id|s$,
+         show_dfe=if(match(lower('ucid'),"dfe"),"true","false"),
+         show_cis=if(match(lower('ucid'),"cis"),"true","false")
+  | table show_dfe, show_cis
+          </query>
+          <done>
+          <condition match="'result.show_dfe'==&quot;true&quot;">
+            <set token="tkn_show_dfe_panels">true</set>
+            <unset token="tkn_show_cis_panels"></unset>
+          </condition>
+          <condition match="'result.show_cis'==&quot;true&quot;">
+            <set token="tkn_show_cis_panels">true</set>
+            <unset token="tkn_show_dfe_panels"></unset>
+          </condition>
+          </done>
+        </search>
+      </table>
+    </panel>
+  </row>
+
+
+<!-- ########################################################################## CIS Controls Row ########################################################################## --> 
+  <row depends="$tkn_show_dashboard$,$tkn_show_cis_panels$">
     <panel id="panel1">
       <html>
         <style>
@@ -274,16 +334,16 @@ index="ssphp_metrics_summary" ssphp.use_case.id=$tkn_use_case_id$
             width:50% !important;
           }
         </style>
-        <span class="header_r1" style="color:	yellow">CIS M365 Foundations Benchmark</span>
+        <span class="header_r1" style="color:	yellow">CIS Foundations Benchmark</span>
         <br></br>
         <span class="header_r1" style="color:	darkcyan">CIS Description</span>
-        <span class="header_r2">$tkn_cis_description$</span>
+        <span class="header_r2">$tkn_control_description$</span>
         <br></br>
         <span class="header_r1" style="color:	darkcyan">CIS Rationale</span>
-        <span class="header_r2">$tkn_cis_rationale$</span>
+        <span class="header_r2">$tkn_control_rationale$</span>
         <br></br>
         <span class="header_r1" style="color:	darkcyan">CIS Impact</span>
-        <span class="header_r2">$tkn_cis_impact$</span>
+        <span class="header_r2">$tkn_control_impact$</span>
         <br></br>
         <a href="$tkn_doc_link$" target="blank">$tkn_doc_name$</a>
       </html>
@@ -337,32 +397,10 @@ index="ssphp_metrics_summary" ssphp.use_case.id=$tkn_use_case_id$
   </row>
 
 
-    <!-- ## Panel to find the name of the macro that the savedsearch uses to get it's data. Some savedsearches re-use a different macro ##
-  <row depends="$tkn_show_dashboard$">
-    <panel depends="$never_show$">
-      <table>
-        <title>test</title>
-        <search>
-          <query>
-  | makeresults
-  | eval uc_id=$tkn_use_case_id|s$, uc_id="ssphp_use_case_".uc_id
-  | fields uc_id
 
-  | join type=outer uc_id
-    [| rest /servicesNS/-/-/saved/searches splunk_server=local
-      | rename title as uc_id
-      | search eai:acl.app="SSPHP_metrics" AND uc_id="ssphp_use_case_*"
-      | rex field=search "[^`]*`(?&lt;macro&gt;[^`]*)`"
-      | table uc_id, macro, search]
-  | table uc_id, macro
-          </query>
-          <done>
-            <set token="tkn_use_case_macro">$result.macro$</set>
-          </done>
-        </search>
-      </table>
-    </panel>
-## -->
+
+<!-- ########################################################################## SCORING EXPLANATION DATA Row ########################################################################## --> 
+
   <row depends="$tkn_show_dashboard$">
     <panel>
       <html>
@@ -374,10 +412,9 @@ index="ssphp_metrics_summary" ssphp.use_case.id=$tkn_use_case_id$
     </panel>    
   </row>
 
-  <row depends="$tkn_show_dashboard$">
-    <panel depends="$never_show$">
+  <row depends="$never_show$">
+    <panel>
       <table>
-        <title>test</title>
         <search>
           <query>
 | makeresults
@@ -390,7 +427,7 @@ index="ssphp_metrics_summary" ssphp.use_case.id=$tkn_use_case_id$
       | search eai:acl.app="SSPHP_metrics" AND uc_id="ssphp_use_case_*"
       | rex field=search "^(?&lt;search_text&gt;[\s\S]*?)``` ##################### end dashboard query ##################### ```"
       | eval search_text=replace('search_text',"\|\s*fields","| table"),
-             search_text='search_text'."| sort 0 - ssphp.score.score"
+             search_text='search_text'."| sort 0 - ssphp.score.score | fields - temp_total_count"
       | table uc_id, search, search_text]
   | table uc_id, search, search_text
           </query>
@@ -401,8 +438,11 @@ index="ssphp_metrics_summary" ssphp.use_case.id=$tkn_use_case_id$
       </table>
     </panel>
   </row>
+
+
+<!-- ########################################################################## UNDERLYING DATA Row ########################################################################## --> 
     
-  <row depends="$tkn_show_dashboard$">
+  <row depends="$never_show$">
     <html>
       <style>
          .css_for_green{ 
@@ -445,9 +485,12 @@ $tkn_use_case_search_text$
 | foreach z_* 
        [| eval fld_val='&lt;&lt;FIELD&gt;&gt;',
                fld_val=mvjoin('fld_val',"~~"),
-               fld_val=if(isnull('fld_val') OR trim('fld_val')="" OR (len('fld_val')&lt;2 AND NOT match('fld_val',"^[a-zA-Z0-9]+$")),"-",'fld_val'),
+               fld_val=case(isnull('fld_val'),"-",
+                            trim('fld_val')="","-",
+                            len('fld_val')&lt;2 AND !match('fld_val',"[a-zA-Z0-9]+") AND !match('fld_val',"^\*$"),"-",
+                            1==1,'fld_val'),
                fld_name=replace(replace(replace("&lt;&lt;FIELD&gt;&gt;","¬¬","{}"),"__","{}"),"z_",""),
-               "&lt;&lt;FIELD&gt;&gt;"=if('ssphp.score.non_compliant_fields'='fld_name', 'fld_val'."|red", 'fld_val')]
+               "&lt;&lt;FIELD&gt;&gt;"=if('ssphp.score.non_compliant_fields'='fld_name', 'fld_val'."¬red", 'fld_val')]
 
 | foreach * 
   [| eval "&lt;&lt;FIELD&gt;&gt;"=if("&lt;&lt;FIELD&gt;&gt;" == "ssphp.score.non_compliant_fields", 'ssphp.score.non_compliant_fields', split('&lt;&lt;FIELD&gt;&gt;',"~~"))]
@@ -456,9 +499,10 @@ $tkn_use_case_search_text$
 | rename *¬¬ as *{}
 | rename *__* as *{}*
 
-| sort 0 ssphp.score.score
+| eval sort_field=if('state'="*** FOR INFORMATION ONLY ***",1,2)
+| sort 0 sort_field, ssphp.score.score
 
-| fields - ssphp.score.score, ssphp.score.numerator, ssphp.score.denominator, fld_name, fld_val, ssphp.score.non_compliant_fields
+| fields - ssphp.score.score, ssphp.score.numerator, ssphp.score.denominator, fld_name, fld_val, ssphp.score.non_compliant_fields, sort_field
           </query>
           <earliest>0</earliest>
           <latest>now</latest>
