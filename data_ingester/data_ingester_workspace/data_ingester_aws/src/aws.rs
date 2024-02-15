@@ -1322,7 +1322,7 @@ impl AwsClient {
                     }
                 };
 
-                this_set.record_type = Some(record_type.clone());
+                this_set.record_type = Some(record_type);
 
                 let Some(resource_records) = resource_record.resource_records else {
                     this_set.errors.push(Route53LookupErrors {
@@ -1352,6 +1352,11 @@ impl AwsClient {
                         continue;
                     }
 
+                    this_set.dns_answers.push(Rdata {
+                        value: record.clone(),
+                        in_route53: false,
+                    });
+
                     let data = match record.data() {
                         Some(data) => data,
                         None => {
@@ -1364,35 +1369,27 @@ impl AwsClient {
                     };
 
                     let in_route53 = match data {
-                        RData::A(r) => resource_records
+                        RData::A(a) => resource_records
                             .iter()
                             .filter_map(|record| Ipv4Addr::from_str(record.value.as_str()).ok())
-                            .any(|ipv4| ipv4 == r.0),
-                        RData::AAAA(_) => {
-                            todo!()
-                        }
-                        RData::ANAME(_) => todo!(),
-                        RData::CAA(caa) => {
-                            todo!()
-                        }
-                        RData::CNAME(r) => {
-                            todo!()
-                        }
-                        RData::CSYNC(r) => todo!(),
-                        RData::HINFO(_) => todo!(),
-                        RData::HTTPS(_) => todo!(),
-                        RData::MX(_) => {
-                            todo!()
-                        }
-                        RData::NAPTR(_) => todo!(),
-                        RData::NULL(_) => todo!(),
-                        RData::NS(r) => resource_records
+                            .any(|ipv4| ipv4 == a.0),
+                        RData::AAAA(_aaaa) => false,
+                        // RData::ANAME(_) => false,
+                        RData::CAA(_caa) => false,
+                        RData::CNAME(_r) => false,
+                        RData::CSYNC(_r) => false,
+                        // RData::HINFO(_) => todo!(),
+                        // RData::HTTPS(_) => todo!(),
+                        RData::MX(_mx) => false,
+                        // RData::NAPTR(_) => todo!(),
+                        // RData::NULL(_) => todo!(),
+                        RData::NS(ns) => resource_records
                             .iter()
-                            .map(|record| Name::from_str(&record.value).unwrap())
-                            .any(|name| name == r.0),
-                        RData::OPENPGPKEY(_) => todo!(),
-                        RData::OPT(_) => todo!(),
-                        RData::PTR(_) => todo!(),
+                            .map(|record| Name::from_str(&record.value).unwrap_or_default())
+                            .any(|name| name == ns.0),
+                        // RData::OPENPGPKEY(_) => todo!(),
+                        // RData::OPT(_) => todo!(),
+                        // RData::PTR(_) => todo!(),
                         RData::SOA(soa) => {
                             let soa = format!(
                                 "{} {} {} {} {} {} {}",
@@ -1407,24 +1404,21 @@ impl AwsClient {
 
                             resource_records.iter().any(|value| value.value == soa)
                         }
-                        RData::SRV(_) => {
-                            todo!()
-                        }
-                        RData::SSHFP(_) => todo!(),
-                        RData::SVCB(_) => todo!(),
-                        RData::TLSA(_) => todo!(),
-                        RData::TXT(_) => {
-                            todo!()
-                        }
-                        RData::Unknown { code, rdata } => todo!(),
-                        RData::ZERO => todo!(),
-                        &_ => todo!(),
+                        RData::SRV(_srv) => false,
+                        // RData::SSHFP(_) => todo!(),
+                        // RData::SVCB(_) => todo!(),
+                        // RData::TLSA(_) => todo!(),
+                        RData::TXT(_txt) => false,
+                        // RData::Unknown { code, rdata } => todo!(),
+                        // RData::ZERO => todo!(),
+                        &_ => false,
                     };
 
-                    this_set.dns_answers.push(Rdata {
-                        value: record.clone(),
-                        in_route53: in_route53,
-                    });
+                    this_set
+                        .dns_answers
+                        .last_mut()
+                        .expect("Just pushed this element element")
+                        .in_route53 = in_route53;
                 }
             }
         }
