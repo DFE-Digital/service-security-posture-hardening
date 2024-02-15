@@ -1,7 +1,7 @@
 <dashboard theme="dark" version="1.1" script="js/addtags.js, js/table_cell_backcolor_multivalue.js">
 
   <label>Security Posture Continuous Assurance : Control Detail Dashboard</label>
-  <description>v3.0.2</description>
+  <description>v3.0.4</description>
   
   <init>
     <set token="tkn_colour_red">#D32D41</set>
@@ -402,14 +402,30 @@ index="ssphp_metrics_summary" ssphp.use_case.id=$tkn_use_case_id$
 <!-- ########################################################################## SCORING EXPLANATION DATA Row ########################################################################## --> 
 
   <row depends="$tkn_show_dashboard$">
-    <panel>
+    <panel id="panel99a">
       <html>
+        <style>
+          #panel99a{
+            width:75% !important;
+          }
+        </style>
         <!-- ## <span class="header_r1" style="color:	darkcyan">Scoring Narrative</span>## -->
         <span class="header_r1" style="color:	darkcyan">Compliance</span>
         <span class="header_r2" style="white-space:pre-line">$tkn_scoring_narrative$</span>
         <br></br>
       </html>
-    </panel>    
+    </panel>
+
+    <panel id="panel99b">
+      <html>
+        <style>
+          #panel99b{
+            width:25% !important;
+          }
+        </style>
+        <div><span><a href="ssphp_foundational_systems_dashboard_help?tkn_detail=true" class="btn btn-primary" style="color:black;background-color:grey;text-align:center;display:block;float:right;width:30%;" target="_blank">Dashboard Help</a></span></div> 
+      </html>
+    </panel>
   </row>
 
   <row depends="$never_show$">

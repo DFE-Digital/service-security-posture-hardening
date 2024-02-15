@@ -1,7 +1,7 @@
 <dashboard version="1.1" theme="dark" hideFilters="true" script="js/table_cell_color.js">
 
   <label>Security Posture Continuous Assurance : Dashboard Help</label>
-  <description>v1.0.3</description>
+  <description>v1.0.6</description>
 
   <row depends="$never_show$">
     <html>
@@ -26,16 +26,54 @@
         }
       </style>
     </html>
-</row>
+  </row>
 
-  <row>
+  <row depends="$tkn_posture$">
     <html>
-      <div class="help-header">Posture Dashboard</div>
+      <div class="help-header">POSTURE DASHBOARD HELP</div>
       <br></br>
       <div class="help-text">
 This dashboard shows the number of compliant controls vs the total number of DfE Mandated Controls.
 
 The data can either be displayed as an 'absolte' ie X of Y, or as a Percentage.
+      </div>
+    </html>
+  </row>
+
+
+  <row depends="$tkn_service$">
+    <html>
+      <div class="help-header">SERVICE DASHBOARD HELP</div>
+      <br></br>
+      <div class="help-text">
+This dashboard shows the list of compliant and non-compliant controls for the specified service.
+
+The top metric is the number of of DfE Mandated Controls that have passed the tests from the total number of DfE Mandated Controls 
+The data can either be displayed as an 'absolute' ie X of Y, or as a Percentage.
+
+If you want to change to looking at a different service then do this.....
+
+The list of controls.....
+
+
+      </div>
+    </html>
+  </row>
+
+
+  <row depends="$tkn_detail$">
+    <html>
+      <div class="help-header">DETAIL DASHBOARD HELP</div>
+      <br></br>
+      <div class="help-text">
+This dashboard shows the details for the selected control
+<br></br>
+Compliance - These are the rules that were applied
+<br></br>
+Underlying Data - the fields in red are the ones which need remediation
+<br></br>
+Where the field in the Underlying Data is implementationStatus, the data will have come pre-cooked from Microsoft rather than being calculated within this app. So while the conclusions are reliable, there is no detail available about which users, etc.
+<br></br>
       </div>
     </html>
   </row>
