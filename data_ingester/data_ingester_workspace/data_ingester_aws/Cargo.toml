@@ -19,7 +19,9 @@ aws-sdk-kms = "*"
 aws-sdk-s3 = "*"
 aws-sdk-s3control = "*"
 aws-sdk-securityhub = "*"
+aws-sdk-organizations = "*"
 aws-sdk-sts = "*"
+aws-sdk-route53 = "*"
 aws-smithy-types = "*"
 csv = "*"
 data_ingester_splunk = { path = "../data_ingester_splunk" }
@@ -27,6 +29,12 @@ data_ingester_supporting = { path = "../data_ingester_supporting" }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "*"
 urlencoding = "*"
+tracing = "*"
+tracing-subscriber = "*"
+tracing-test = "*"
+hickory-resolver = "*"
+hickory-proto = {version = "*", features = ["serde-config"]}
+
 
 [dev-dependencies]
 tokio = { version = "1.25.0", features = ["full"] }

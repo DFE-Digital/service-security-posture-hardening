@@ -1,6 +1,14 @@
 use std::collections::HashMap;
 use std::iter;
+use std::net::Ipv4Addr;
+use std::str::FromStr;
 use std::sync::Arc;
+
+use hickory_proto::rr::record_type::RecordType;
+use hickory_proto::serialize::binary::BinEncodable;
+use hickory_resolver::config::*;
+use hickory_resolver::Name;
+use hickory_resolver::TokioAsyncResolver;
 
 use anyhow::{bail, Context, Result};
 use aws_config::meta::region::RegionProviderChain;
@@ -17,9 +25,12 @@ use crate::aws_alternate_contact_information::AlternateContact;
 use crate::aws_config::DescribeConfigurationRecordersOutput;
 use crate::aws_ec2::{DescribeFlowLogs, DescribeVpcs, FlowLog, Vpc};
 use crate::aws_entities_for_policy::EntitiesForPolicyOutput;
-use crate::aws_iam::VirtualMfaDevices;
+use crate::aws_iam::Groups;
+use crate::aws_iam::Users;
+use crate::aws_iam::{MfaDevices, VirtualMfaDevices};
 use crate::aws_kms::{KeyMetadata, KeyMetadatas};
 use crate::aws_policy::Policies;
+use crate::aws_route53::{HostedZone, HostedZones};
 use crate::aws_s3::{
     GetBucketAclOutput, GetBucketAclOutputs, GetBucketLoggingOutput, GetBucketLoggingOutputs,
     GetBucketPolicyOutput, GetBucketPolicyOutputs, GetBucketVersioningOutput,
@@ -1112,9 +1123,378 @@ impl AwsClient {
 
         Ok(hubs)
     }
+
+    // TODO: correct usecase ID
+    pub(crate) async fn aws_dfe_1x_(&self) -> Result<MfaDevices> {
+        let config = self.config().await?;
+        let client = aws_sdk_iam::Client::new(&config);
+
+        let user_names: Vec<String> = client
+            .list_users()
+            .into_paginator()
+            .items()
+            .send()
+            .collect::<Result<Vec<aws_sdk_iam::types::User>, _>>()
+            .await
+            .context("Getting Users")?
+            .into_iter()
+            .map(|user| user.user_name)
+            .collect();
+
+        let mut all_mfa_devices = vec![];
+        for user_name in user_names {
+            let mfa_devices = client
+                .list_mfa_devices()
+                .set_user_name(Some(user_name))
+                .into_paginator()
+                .items()
+                .send()
+                .collect::<Result<Vec<aws_sdk_iam::types::MfaDevice>, _>>()
+                .await?
+                .into_iter()
+                .map(|md| md.into());
+            //                .collect::<Vec<crate::aws_iam::MfaDevice>>();
+
+            all_mfa_devices.extend(mfa_devices);
+        }
+
+        Ok(MfaDevices {
+            inner: all_mfa_devices,
+        })
+    }
+
+    pub(crate) async fn aws_dfe_2x(&self) -> Result<Groups> {
+        let config = self.config().await?;
+        let client = aws_sdk_iam::Client::new(&config);
+        let mut groups: Vec<crate::aws_iam::Group> = client
+            .list_groups()
+            .into_paginator()
+            .items()
+            .send()
+            .collect::<Result<Vec<aws_sdk_iam::types::Group>, _>>()
+            .await?
+            .into_iter()
+            .map(|group| group.into())
+            .collect();
+
+        for group in &mut groups {
+            group.users = client
+                .get_group()
+                .group_name(&group.group_name)
+                .send()
+                .await?
+                .users()
+                .iter()
+                .map(|user| user.arn().to_string())
+                .collect();
+
+            group.attached_policies = client
+                .list_attached_group_policies()
+                .group_name(&group.group_name)
+                .send()
+                .await?
+                .attached_policies
+                .map(|policies| policies.into_iter().map(|policy| policy.into()).collect())
+                .unwrap_or_default();
+
+            group.policies = client
+                .list_group_policies()
+                .group_name(&group.group_name)
+                .send()
+                .await?
+                .policy_names;
+        }
+        Ok(Groups { inner: groups })
+    }
+
+    // TODO: correct usecase ID
+    pub(crate) async fn aws_dfe_3x(&self) -> Result<crate::aws_organizations::Organization> {
+        let config = self.config().await?;
+        let client = aws_sdk_organizations::Client::new(&config);
+
+        let mut organization: crate::aws_organizations::Organization = client
+            .describe_organization()
+            .send()
+            .await?
+            .organization
+            .map(|o| o.into())
+            .unwrap_or_default();
+
+        let sts_client = aws_sdk_sts::Client::new(&config);
+        organization.account_id = sts_client.get_caller_identity().send().await?.account;
+        Ok(organization)
+    }
+
+    // TODO: correct usecase ID
+    pub(crate) async fn aws_dfe_4x(&self) -> Result<crate::aws_route53::HostedZones> {
+        let config = self.config().await?;
+        let client = aws_sdk_route53::Client::new(&config);
+        let mut hosted_zones = client
+            .list_hosted_zones()
+            .into_paginator()
+            .items()
+            .send()
+            .collect::<Result<Vec<aws_sdk_route53::types::HostedZone>, _>>()
+            .await?
+            .into_iter()
+            .map(|hz| hz.into())
+            .collect::<Vec<HostedZone>>();
+
+        for zone in hosted_zones.iter_mut() {
+            // TODO: Might want to break zone.resource_record_sets into individual Splunk events
+            zone.resource_record_sets = client
+                .list_resource_record_sets()
+                .set_hosted_zone_id(Some(zone.id.clone()))
+                .send()
+                .await?
+                .resource_record_sets
+                .into_iter()
+                .map(|rrs| Some(rrs.into()))
+                .collect();
+        }
+
+        Ok(HostedZones {
+            inner: hosted_zones,
+        })
+    }
+
+    pub(crate) async fn aws_dfe_5x(&self) -> Result<RecordSets> {
+        let zones = self.aws_dfe_4x().await?;
+
+        // Build resolver
+        let resolver =
+            TokioAsyncResolver::tokio(ResolverConfig::default(), ResolverOpts::default());
+
+        let mut sets = vec![];
+
+        for zone in zones.inner {
+            sets.push(
+                Route53RecordSet::new(&zone.name)
+            );
+            let this_set = sets.last_mut();
+            
+            let Some(resource_record_set) = zone.resource_record_sets else {
+                continue;
+            };
+            
+            for resource_record in resource_record_set {
+
+                let mut record_set = Route53RecordSet {
+                    name: resource_record.name.clone(),
+                    record_type: Some(record_type.clone()),
+                    resource_records: vec![],
+                    hosted_zone_name: zone.name.clone(),
+                };
+                
+                // Convert the record type into `hickory-proto::RecordType` 
+                let record_type = match RecordType::from_str(resource_record.r#type.as_str()) {
+                    Ok(record_type) => record_type,
+                    Err(err) => {
+                        eprintln!(
+                            "failed to get RecordType for {}: {}",
+                            resource_record.r#type.as_str(),
+                            err
+                        );
+                        continue;
+                    }
+                };
+
+                
+                let Some(resource_records) = resource_record.resource_records else {
+                    // should we continue here?
+                    // What does it mean for a `rrs` to not have any resource_records
+                    continue
+                };
+                                
+                // Perform lookup
+                let lookup_name = resource_record.name.as_str();
+                let results = match resolver.lookup(lookup_name, record_type).await
+                {
+                    Ok(results) => results,
+                    Err(err) => {
+                        eprintln!(
+                            "failed to lookup for: {} {}: {}",
+                            lookup_name, record_type,
+                            err
+                        );
+                        continue;
+
+                    }
+                };
+
+
+                for record in results.records() {
+                    dbg!(record);
+                    if record.record_type() != record_type {
+                        continue;
+                    }
+                    let Some(data) = record.data() else {
+                        continue
+                    };
+                        
+                    
+                    let in_route53 = match data {
+                        hickory_proto::rr::RData::A(r) => {
+                            dbg!(r);
+                            let in_route53 = resource_record
+                                .resource_records
+                                .as_ref()
+                                .unwrap()
+                                .iter()
+                                .filter_map(|record| Ipv4Addr::from_str(record.value.as_str()).ok())
+                                .any(|ipv4| ipv4 == r.0);
+                            dbg!(&in_route53);
+                            in_route53
+                        }
+                        hickory_proto::rr::RData::AAAA(_) => {
+                            todo!()
+                        }
+                        hickory_proto::rr::RData::ANAME(_) => todo!(),
+                        hickory_proto::rr::RData::CAA(caa) => {
+                            dbg!(&caa);
+                            todo!()
+                        }
+                        hickory_proto::rr::RData::CNAME(r) => {
+                            todo!()
+                        }
+                        hickory_proto::rr::RData::CSYNC(r) => todo!(),
+                        hickory_proto::rr::RData::HINFO(_) => todo!(),
+                        hickory_proto::rr::RData::HTTPS(_) => todo!(),
+                        hickory_proto::rr::RData::MX(_) => {
+                            todo!()
+                        }
+                        hickory_proto::rr::RData::NAPTR(_) => todo!(),
+                        hickory_proto::rr::RData::NULL(_) => todo!(),
+                        hickory_proto::rr::RData::NS(r) => {
+                            dbg!(r);
+                            let in_route53 = resource_record
+                                .resource_records
+                                .as_ref()
+                                .unwrap()
+                                .iter()
+                                .map(|record| Name::from_str(&record.value).unwrap())
+                                .any(|name| name == r.0);
+                            dbg!(in_route53);
+                            in_route53
+                        }
+                        hickory_proto::rr::RData::OPENPGPKEY(_) => todo!(),
+                        hickory_proto::rr::RData::OPT(_) => todo!(),
+                        hickory_proto::rr::RData::PTR(_) => todo!(),
+                        hickory_proto::rr::RData::SOA(soa) => {
+                            let soa = format!(
+                                "{} {} {} {} {} {} {}",
+                                soa.mname(),
+                                soa.rname(),
+                                soa.serial(),
+                                soa.refresh(),
+                                soa.retry(),
+                                soa.expire(),
+                                soa.minimum(),
+                            );
+
+                            dbg!(&soa);
+
+                            let in_route53 = resource_record
+                                .resource_records
+                                .as_ref()
+                                .unwrap()
+                                .iter()
+                                .any(|value| value.value == soa);
+
+                            dbg!(&in_route53);
+                            in_route53
+                        }
+                        hickory_proto::rr::RData::SRV(_) => {
+                            todo!()
+                        }
+                        hickory_proto::rr::RData::SSHFP(_) => todo!(),
+                        hickory_proto::rr::RData::SVCB(_) => todo!(),
+                        hickory_proto::rr::RData::TLSA(_) => todo!(),
+                        hickory_proto::rr::RData::TXT(_) => {
+                            todo!()
+                        }
+                        hickory_proto::rr::RData::Unknown { code, rdata } => todo!(),
+                        hickory_proto::rr::RData::ZERO => todo!(),
+                        &_ => todo!(),
+                    };
+                    // record.resource_records.and_then(|rr| rr
+
+                    record_set.resource_records.push(Rdata {
+                        value: record.clone(),
+                        in_route53: in_route53,
+                    });
+                }
+                dbg!(&resource_record.resource_records.unwrap().first().unwrap().value);
+                dbg!(&record_set);
+                sets.push(record_set);
+            }
+        }
+
+        Ok(RecordSets { inner: sets })
+    }
 }
 
-#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct RecordSets {
+    inner: Vec<Route53RecordSet>,
+}
+
+impl ToHecEvents for &RecordSets {
+    type Item = Route53RecordSet;
+
+    fn source(&self) -> &str {
+        "route53_zone_checker"
+    }
+
+    fn sourcetype(&self) -> &str {
+        "ssphp:aws:json"
+    }
+
+    fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
+        Box::new(self.inner.iter())
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Route53Answers {}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Route53RecordSet {
+    name: Option<String>,
+    record_type: Option<RecordType>,
+    resource_records: Option<Vec<Rdata>>,
+    hosted_zone_name: String,
+    in_dns: Option<bool>,
+    errors: Option<Vec<Route53LookupErrors>>
+}
+
+impl Route53RecordSet {
+    pub fn new(hosted_zone_name: &str) -> Self {
+        Self {
+                 name: None,
+                 record_type: None,
+                 resource_records: None,
+                 hosted_zone_name: hosted_zone_name.to_string(),
+                 in_dns: None,
+                 errors: None,
+        }
+    }
+}
+
+
+// Maybe rename this??
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub(crate) struct Route53LookupErrors {
+    context: String,
+    error: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Rdata {
+    value: hickory_proto::rr::resource::Record,
+    in_route53: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub(crate) struct AnalyzerSummaries {
     inner: Vec<AnalyzerSummary>,
 }
@@ -1228,79 +1608,6 @@ impl From<aws_sdk_iam::types::ServerCertificateMetadata> for ServerCertificateMe
             server_certificate_id: value.server_certificate_id,
             upload_date: value.upload_date.map(|ud| ud.as_secs_f64()),
             expiration: value.expiration.map(|e| e.as_secs_f64()),
-        }
-    }
-}
-
-#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub(crate) struct Users {
-    inner: Vec<User>,
-}
-
-impl From<Vec<aws_sdk_iam::types::User>> for Users {
-    fn from(value: Vec<aws_sdk_iam::types::User>) -> Self {
-        Self {
-            inner: value.into_iter().map(|u| u.into()).collect(),
-        }
-    }
-}
-
-#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct User {
-    arn: String,
-    path: String,
-    user_name: String,
-    user_id: String,
-    create_date: f64,
-    attached_policies: Vec<AttachedPolicy>,
-    policies: Vec<String>,
-    // password_last_used: Option<f64>,
-    // pub password_last_used: ::std::option::Option<::aws_smithy_types::DateTime>,
-    // pub permissions_boundary: ::std::option::Option<crate::types::AttachedPermissionsBoundary>,
-    // pub tags: ::std::option::Option<::std::vec::Vec<crate::types::Tag>>,
-}
-
-impl ToHecEvents for &Users {
-    type Item = User;
-
-    fn source(&self) -> &str {
-        "iam_ListUsers"
-    }
-
-    fn sourcetype(&self) -> &str {
-        "ssphp:aws:json"
-    }
-
-    fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
-        Box::new(self.inner.iter())
-    }
-}
-
-impl From<aws_sdk_iam::types::User> for User {
-    fn from(value: aws_sdk_iam::types::User) -> Self {
-        Self {
-            arn: value.arn,
-            path: value.path,
-            user_name: value.user_name,
-            user_id: value.user_id,
-            create_date: value.create_date.as_secs_f64(),
-            attached_policies: vec![],
-            policies: vec![],
-        }
-    }
-}
-
-#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub(crate) struct AttachedPolicy {
-    policy_name: Option<String>,
-    policy_arn: Option<String>,
-}
-
-impl From<aws_sdk_iam::types::AttachedPolicy> for AttachedPolicy {
-    fn from(value: aws_sdk_iam::types::AttachedPolicy) -> Self {
-        Self {
-            policy_arn: value.policy_arn,
-            policy_name: value.policy_name,
         }
     }
 }
@@ -1568,14 +1875,14 @@ mod test {
         Ok((splunk, aws))
     }
 
-    #[tokio::test]
-    async fn test_aws_full() -> Result<()> {
-        let secrets = get_keyvault_secrets(&env::var("KEY_VAULT_NAME")?).await?;
-        set_ssphp_run()?;
-        let splunk = Splunk::new(&secrets.splunk_host, &secrets.splunk_token)?;
-        aws(Arc::new(secrets), Arc::new(splunk)).await?;
-        Ok(())
-    }
+    // #[tokio::test]
+    // async fn test_aws_full() -> Result<()> {
+    //     let secrets = get_keyvault_secrets(&env::var("KEY_VAULT_NAME")?).await?;
+    //     set_ssphp_run()?;
+    //     let splunk = Splunk::new(&secrets.splunk_host, &secrets.splunk_token)?;
+    //     aws(Arc::new(secrets), Arc::new(splunk)).await?;
+    //     Ok(())
+    // }
 
     #[tokio::test]
     async fn test_aws_config() -> Result<()> {
@@ -1890,6 +2197,51 @@ mod test {
     async fn test_aws_4_16() -> Result<()> {
         let (splunk, aws) = setup().await?;
         let result = aws.aws_4_16_ensure_aws_security_hub_is_enabled().await?;
+        splunk.send_batch((&result).to_hec_events()?).await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_aws_dfe_1x() -> Result<()> {
+        let (splunk, aws) = setup().await?;
+        let result = aws.aws_dfe_1x_().await?;
+        assert!(!result.inner.is_empty());
+        splunk.send_batch((&result).to_hec_events()?).await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_aws_dfe_2x() -> Result<()> {
+        let (splunk, aws) = setup().await?;
+        let result = aws.aws_dfe_2x().await?;
+        assert!(!result.inner.is_empty());
+        splunk.send_batch((&result).to_hec_events()?).await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_aws_dfe_3x() -> Result<()> {
+        let (splunk, aws) = setup().await?;
+        let result = aws.aws_dfe_3x().await?;
+        assert!(result.account_id.is_some());
+        splunk.send_batch((&result).to_hec_events()?).await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_aws_dfe_4x() -> Result<()> {
+        let (splunk, aws) = setup().await?;
+        let result = aws.aws_dfe_4x().await?;
+        assert!(!result.inner.is_empty());
+        splunk.send_batch((&result).to_hec_events()?).await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_aws_dfe_5x() -> Result<()> {
+        let (splunk, aws) = setup().await?;
+        let result = aws.aws_dfe_5x().await?;
+        assert!(!result.inner.is_empty());
         splunk.send_batch((&result).to_hec_events()?).await?;
         Ok(())
     }
