@@ -1,7 +1,7 @@
 use anyhow::Result;
-use trust_dns_proto::rr::record_type::RecordType;
-use trust_dns_resolver::config::*;
-use trust_dns_resolver::TokioAsyncResolver;
+use hickory_proto::rr::record_type::RecordType;
+use hickory_resolver::config::*;
+use hickory_resolver::TokioAsyncResolver;
 
 pub async fn resolve_txt_record<T: AsRef<str>>(domain: T) -> Result<Vec<String>> {
     // Construct a new Resolver with default configuration options

@@ -22,8 +22,8 @@ serde_json = "*"
 serde_with = "*"
 tokio = { version = "1.25.0", features = ["full"] }
 toml = "*"
-trust-dns-proto = "*"
-trust-dns-resolver = { version = "*", features = ["dns-over-rustls"] }
+hickory-proto = "*"
+hickory-resolver = { version = "*", features = ["dns-over-rustls"] }
 url = "*"
 
 [build-dependencies]

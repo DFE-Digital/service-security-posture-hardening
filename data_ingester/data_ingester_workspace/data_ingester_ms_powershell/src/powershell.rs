@@ -953,6 +953,7 @@ mod test {
     async fn test_run_powershell_get_organization_config() -> Result<()> {
         let (splunk, secrets) = setup().await?;
         let exchange_org_config = run_powershell_get_organization_config(&secrets).await?;
+        assert!(exchange_org_config.0.is_object());
         splunk
             .send_batch((&exchange_org_config).to_hec_events()?)
             .await?;
