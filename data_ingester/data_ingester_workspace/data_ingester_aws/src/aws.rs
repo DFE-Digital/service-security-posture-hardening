@@ -5,7 +5,7 @@ use std::str::FromStr;
 use std::sync::Arc;
 
 use hickory_proto::rr::record_type::RecordType;
-use hickory_proto::serialize::binary::BinEncodable;
+use hickory_proto::rr::RData;
 use hickory_resolver::config::*;
 use hickory_resolver::Name;
 use hickory_resolver::TokioAsyncResolver;
@@ -242,6 +242,16 @@ pub async fn aws(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
         &splunk,
     )
     .await?;
+
+    try_collect_send("aws_dfe_1x", aws_client.aws_dfe_1x(), &splunk).await?;
+
+    try_collect_send("aws_dfe_2x", aws_client.aws_dfe_2x(), &splunk).await?;
+
+    try_collect_send("aws_dfe_3x", aws_client.aws_dfe_3x(), &splunk).await?;
+
+    try_collect_send("aws_dfe_4x", aws_client.aws_dfe_4x(), &splunk).await?;
+
+    try_collect_send("aws_dfe_5x", aws_client.aws_dfe_5x(), &splunk).await?;
 
     splunk.log("AWS Collection Complete").await?;
 
@@ -1125,7 +1135,7 @@ impl AwsClient {
     }
 
     // TODO: correct usecase ID
-    pub(crate) async fn aws_dfe_1x_(&self) -> Result<MfaDevices> {
+    pub(crate) async fn aws_dfe_1x(&self) -> Result<MfaDevices> {
         let config = self.config().await?;
         let client = aws_sdk_iam::Client::new(&config);
 
@@ -1268,28 +1278,41 @@ impl AwsClient {
         let mut sets = vec![];
 
         for zone in zones.inner {
-            sets.push(
-                Route53RecordSet::new(&zone.name)
-            );
-            let this_set = sets.last_mut();
-            
+            sets.push(Route53RecordSet::new(&zone.name));
+
             let Some(resource_record_set) = zone.resource_record_sets else {
+                sets.last_mut()
+                    .expect("just pushed to vec")
+                    .errors
+                    .push(Route53LookupErrors {
+                        context: "zone.resource_record_sets in None".to_string(),
+                        error: "".to_string(),
+                    });
                 continue;
             };
-            
-            for resource_record in resource_record_set {
 
-                let mut record_set = Route53RecordSet {
-                    name: resource_record.name.clone(),
-                    record_type: Some(record_type.clone()),
-                    resource_records: vec![],
-                    hosted_zone_name: zone.name.clone(),
-                };
-                
-                // Convert the record type into `hickory-proto::RecordType` 
+            for resource_record in resource_record_set {
+                let mut this_set = sets.last_mut().expect("Just pushed onto vec");
+
+                // If name is Some then we've already looped once
+                if this_set.name.is_some() {
+                    sets.push(Route53RecordSet::new(&zone.name));
+                    this_set = sets.last_mut().expect("Just pushed onto vec");
+                }
+
+                this_set.name = Some(resource_record.name.clone());
+
+                // Convert the record type into `hickory-proto::RecordType`
                 let record_type = match RecordType::from_str(resource_record.r#type.as_str()) {
                     Ok(record_type) => record_type,
                     Err(err) => {
+                        this_set.errors.push(Route53LookupErrors {
+                            context: format!(
+                                "failed to get RecordType for {}",
+                                resource_record.r#type.as_str()
+                            ),
+                            error: format!("{err:?}"),
+                        });
                         eprintln!(
                             "failed to get RecordType for {}: {}",
                             resource_record.r#type.as_str(),
@@ -1299,88 +1322,81 @@ impl AwsClient {
                     }
                 };
 
-                
+                this_set.record_type = Some(record_type);
+
                 let Some(resource_records) = resource_record.resource_records else {
-                    // should we continue here?
-                    // What does it mean for a `rrs` to not have any resource_records
-                    continue
+                    this_set.errors.push(Route53LookupErrors {
+                        context: "resource_records.resource_records in None".to_string(),
+                        error: "".to_string(),
+                    });
+                    // No records to match against so we raise an error and continue
+                    continue;
                 };
-                                
+                this_set.route53_data = resource_records.clone();
+
                 // Perform lookup
                 let lookup_name = resource_record.name.as_str();
-                let results = match resolver.lookup(lookup_name, record_type).await
-                {
+                let results = match resolver.lookup(lookup_name, record_type).await {
                     Ok(results) => results,
                     Err(err) => {
+                        this_set.errors.push(Route53LookupErrors {
+                            context: format!(
+                            "failed to lookup for: {} {}",
+                            lookup_name, record_type),
+                            error: err.to_string(),
+                        });
                         eprintln!(
                             "failed to lookup for: {} {}: {}",
-                            lookup_name, record_type,
-                            err
+                            lookup_name, record_type, err
                         );
                         continue;
-
                     }
                 };
 
-
                 for record in results.records() {
-                    dbg!(record);
                     if record.record_type() != record_type {
                         continue;
                     }
-                    let Some(data) = record.data() else {
-                        continue
+
+                    this_set.dns_answers.push(Rdata {
+                        value: record.clone(),
+                        in_route53: false,
+                    });
+
+                    let data = match record.data() {
+                        Some(data) => data,
+                        None => {
+                            this_set.errors.push(Route53LookupErrors {
+                                context: "record.data() in None".to_string(),
+                                error: "".to_string(),
+                            });
+                            continue;
+                        }
                     };
-                        
-                    
+
                     let in_route53 = match data {
-                        hickory_proto::rr::RData::A(r) => {
-                            dbg!(r);
-                            let in_route53 = resource_record
-                                .resource_records
-                                .as_ref()
-                                .unwrap()
-                                .iter()
-                                .filter_map(|record| Ipv4Addr::from_str(record.value.as_str()).ok())
-                                .any(|ipv4| ipv4 == r.0);
-                            dbg!(&in_route53);
-                            in_route53
-                        }
-                        hickory_proto::rr::RData::AAAA(_) => {
-                            todo!()
-                        }
-                        hickory_proto::rr::RData::ANAME(_) => todo!(),
-                        hickory_proto::rr::RData::CAA(caa) => {
-                            dbg!(&caa);
-                            todo!()
-                        }
-                        hickory_proto::rr::RData::CNAME(r) => {
-                            todo!()
-                        }
-                        hickory_proto::rr::RData::CSYNC(r) => todo!(),
-                        hickory_proto::rr::RData::HINFO(_) => todo!(),
-                        hickory_proto::rr::RData::HTTPS(_) => todo!(),
-                        hickory_proto::rr::RData::MX(_) => {
-                            todo!()
-                        }
-                        hickory_proto::rr::RData::NAPTR(_) => todo!(),
-                        hickory_proto::rr::RData::NULL(_) => todo!(),
-                        hickory_proto::rr::RData::NS(r) => {
-                            dbg!(r);
-                            let in_route53 = resource_record
-                                .resource_records
-                                .as_ref()
-                                .unwrap()
-                                .iter()
-                                .map(|record| Name::from_str(&record.value).unwrap())
-                                .any(|name| name == r.0);
-                            dbg!(in_route53);
-                            in_route53
-                        }
-                        hickory_proto::rr::RData::OPENPGPKEY(_) => todo!(),
-                        hickory_proto::rr::RData::OPT(_) => todo!(),
-                        hickory_proto::rr::RData::PTR(_) => todo!(),
-                        hickory_proto::rr::RData::SOA(soa) => {
+                        RData::A(a) => resource_records
+                            .iter()
+                            .filter_map(|record| Ipv4Addr::from_str(record.value.as_str()).ok())
+                            .any(|ipv4| ipv4 == a.0),
+                        RData::AAAA(_aaaa) => false,
+                        // RData::ANAME(_) => false,
+                        RData::CAA(_caa) => false,
+                        RData::CNAME(_r) => false,
+                        RData::CSYNC(_r) => false,
+                        // RData::HINFO(_) => todo!(),
+                        // RData::HTTPS(_) => todo!(),
+                        RData::MX(_mx) => false,
+                        // RData::NAPTR(_) => todo!(),
+                        // RData::NULL(_) => todo!(),
+                        RData::NS(ns) => resource_records
+                            .iter()
+                            .map(|record| Name::from_str(&record.value).unwrap_or_default())
+                            .any(|name| name == ns.0),
+                        // RData::OPENPGPKEY(_) => todo!(),
+                        // RData::OPT(_) => todo!(),
+                        // RData::PTR(_) => todo!(),
+                        RData::SOA(soa) => {
                             let soa = format!(
                                 "{} {} {} {} {} {} {}",
                                 soa.mname(),
@@ -1392,48 +1408,37 @@ impl AwsClient {
                                 soa.minimum(),
                             );
 
-                            dbg!(&soa);
-
-                            let in_route53 = resource_record
-                                .resource_records
-                                .as_ref()
-                                .unwrap()
-                                .iter()
-                                .any(|value| value.value == soa);
-
-                            dbg!(&in_route53);
-                            in_route53
+                            resource_records.iter().any(|value| value.value == soa)
                         }
-                        hickory_proto::rr::RData::SRV(_) => {
-                            todo!()
-                        }
-                        hickory_proto::rr::RData::SSHFP(_) => todo!(),
-                        hickory_proto::rr::RData::SVCB(_) => todo!(),
-                        hickory_proto::rr::RData::TLSA(_) => todo!(),
-                        hickory_proto::rr::RData::TXT(_) => {
-                            todo!()
-                        }
-                        hickory_proto::rr::RData::Unknown { code, rdata } => todo!(),
-                        hickory_proto::rr::RData::ZERO => todo!(),
-                        &_ => todo!(),
+                        RData::SRV(_srv) => false,
+                        // RData::SSHFP(_) => todo!(),
+                        // RData::SVCB(_) => todo!(),
+                        // RData::TLSA(_) => todo!(),
+                        RData::TXT(_txt) => false,
+                        // RData::Unknown { code, rdata } => todo!(),
+                        // RData::ZERO => todo!(),
+                        &_ => false,
                     };
-                    // record.resource_records.and_then(|rr| rr
 
-                    record_set.resource_records.push(Rdata {
-                        value: record.clone(),
-                        in_route53: in_route53,
-                    });
+                    this_set
+                        .dns_answers
+                        .last_mut()
+                        .expect("Just pushed this element element")
+                        .in_route53 = in_route53;
                 }
-                dbg!(&resource_record.resource_records.unwrap().first().unwrap().value);
-                dbg!(&record_set);
-                sets.push(record_set);
             }
         }
+
+        sets.iter_mut().for_each(|set| {
+            set.in_dns =
+                set.dns_answers.iter().all(|answer| answer.in_route53) && set.errors.is_empty();
+        });
 
         Ok(RecordSets { inner: sets })
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct RecordSets {
     inner: Vec<Route53RecordSet>,
 }
@@ -1454,47 +1459,48 @@ impl ToHecEvents for &RecordSets {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct Route53Answers {}
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct Route53RecordSet {
     name: Option<String>,
     record_type: Option<RecordType>,
-    resource_records: Option<Vec<Rdata>>,
+    route53_data: Vec<crate::aws_route53::ResourceRecord>,
+    dns_answers: Vec<Rdata>,
     hosted_zone_name: String,
-    in_dns: Option<bool>,
-    errors: Option<Vec<Route53LookupErrors>>
+    in_dns: bool,
+    errors: Vec<Route53LookupErrors>,
 }
 
 impl Route53RecordSet {
     pub fn new(hosted_zone_name: &str) -> Self {
         Self {
-                 name: None,
-                 record_type: None,
-                 resource_records: None,
-                 hosted_zone_name: hosted_zone_name.to_string(),
-                 in_dns: None,
-                 errors: None,
+            name: None,
+            record_type: None,
+            dns_answers: vec![],
+            hosted_zone_name: hosted_zone_name.to_string(),
+            in_dns: false,
+            errors: vec![],
+            route53_data: vec![],
         }
     }
 }
 
-
 // Maybe rename this??
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub(crate) struct Route53LookupErrors {
     context: String,
     error: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct Rdata {
     value: hickory_proto::rr::resource::Record,
     in_route53: bool,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub(crate) struct AnalyzerSummaries {
     inner: Vec<AnalyzerSummary>,
 }
@@ -1875,14 +1881,14 @@ mod test {
         Ok((splunk, aws))
     }
 
-    // #[tokio::test]
-    // async fn test_aws_full() -> Result<()> {
-    //     let secrets = get_keyvault_secrets(&env::var("KEY_VAULT_NAME")?).await?;
-    //     set_ssphp_run()?;
-    //     let splunk = Splunk::new(&secrets.splunk_host, &secrets.splunk_token)?;
-    //     aws(Arc::new(secrets), Arc::new(splunk)).await?;
-    //     Ok(())
-    // }
+    #[tokio::test]
+    async fn test_aws_full() -> Result<()> {
+        let secrets = get_keyvault_secrets(&env::var("KEY_VAULT_NAME")?).await?;
+        set_ssphp_run()?;
+        let splunk = Splunk::new(&secrets.splunk_host, &secrets.splunk_token)?;
+        aws(Arc::new(secrets), Arc::new(splunk)).await?;
+        Ok(())
+    }
 
     #[tokio::test]
     async fn test_aws_config() -> Result<()> {
@@ -2204,7 +2210,7 @@ mod test {
     #[tokio::test]
     async fn test_aws_dfe_1x() -> Result<()> {
         let (splunk, aws) = setup().await?;
-        let result = aws.aws_dfe_1x_().await?;
+        let result = aws.aws_dfe_1x().await?;
         assert!(!result.inner.is_empty());
         splunk.send_batch((&result).to_hec_events()?).await?;
         Ok(())

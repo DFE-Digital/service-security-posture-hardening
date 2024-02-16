@@ -11,8 +11,8 @@ azure_identity = { version = "*", default-features = false, features = ["enable_
 azure_security_keyvault = { version = "*", default-features = false,  features = ["enable_reqwest_rustls"]}
 futures = "*"
 tokio = { version = "1.25.0", features = ["full"] }
-trust-dns-proto = "*"
-trust-dns-resolver = { version = "*", features = ["dns-over-rustls"] }
+hickory-proto = "*"
+hickory-resolver = { version = "*", features = ["dns-over-rustls"] }
 
 [lints]
 workspace = true

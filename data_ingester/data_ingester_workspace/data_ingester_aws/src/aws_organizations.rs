@@ -1,7 +1,7 @@
 use data_ingester_splunk::splunk::ToHecEvents;
 use serde::Serialize;
 
-#[derive(Serialize)]
+#[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Organization {
     /// <p>The unique identifier (ID) of an organization.</p>
@@ -80,7 +80,7 @@ impl ToHecEvents for &Organization {
     }
 }
 
-#[derive(Default, Serialize)]
+#[derive(Debug, Default, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PolicyTypeSummary {
     /// <p>The name of the policy type.</p>
