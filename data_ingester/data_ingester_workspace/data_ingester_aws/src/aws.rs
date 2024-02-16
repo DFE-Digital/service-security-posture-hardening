@@ -1339,6 +1339,12 @@ impl AwsClient {
                 let results = match resolver.lookup(lookup_name, record_type).await {
                     Ok(results) => results,
                     Err(err) => {
+                        this_set.errors.push(Route53LookupErrors {
+                            context: format!(
+                            "failed to lookup for: {} {}",
+                            lookup_name, record_type),
+                            error: err.to_string(),
+                        });
                         eprintln!(
                             "failed to lookup for: {} {}: {}",
                             lookup_name, record_type, err
