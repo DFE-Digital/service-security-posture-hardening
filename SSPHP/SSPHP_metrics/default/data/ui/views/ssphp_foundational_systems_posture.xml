@@ -55,7 +55,7 @@
   <row>
     <html>
       <div id="div_header" style="color:yellow;font-weight:bold;font-size:125%;padding:10;">FOUNDATIONAL SERVICES : COMPLIANT CONTROLS
-        <span><a href="ssphp_foundational_systems_dashboard_help?tkn_posture=true" class="btn btn-primary" style="color:black;background-color:grey;text-align:center;display:block;float:right;width:6%;" target="_blank">Dashboard Help</a></span></div> 
+        <span><a href="ssphp_foundational_systems_dashboard_help?tkn_posture=true" class="btn btn-primary" style="color:black;background-color:grey;text-align:center;display:block;float:right;width:12%;" target="_blank">Dashboard Help</a></span></div> 
     </html>
   </row>
 

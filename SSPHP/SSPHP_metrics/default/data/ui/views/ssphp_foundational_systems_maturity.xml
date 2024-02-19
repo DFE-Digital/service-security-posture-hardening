@@ -92,17 +92,17 @@
     </panel>
     <panel>
       <html>
-        <div id="div_header" style="background:#171d21;color:white;font-weight:bold;font-size:400%;text-align:center;padding:50">$tkn_azure_ig1$</div>
+        <div id="div_header" style="background:#D32D41;color:white;font-weight:bold;font-size:400%;text-align:center;padding:50">$tkn_azure_ig1$</div>
       </html>
     </panel>
     <panel>
       <html>
-        <div id="div_header" style="background:#171d21;color:white;font-weight:bold;font-size:400%;text-align:center;padding:50">$tkn_azure_ig2$</div>
+        <div id="div_header" style="background:#808080;color:black;font-weight:bold;font-size:400%;text-align:center;padding:50">$tkn_azure_ig2$</div>
       </html>
     </panel>
     <panel>
       <html>
-        <div id="div_header" style="background:#171d21;color:white;font-weight:bold;font-size:400%;text-align:center;padding:50">$tkn_azure_ig3$</div>
+        <div id="div_header" style="background:#808080;color:black;font-weight:bold;font-size:400%;text-align:center;padding:50">$tkn_azure_ig3$</div>
       </html>
     </panel>
   </row>
@@ -115,17 +115,17 @@
     </panel>
     <panel>
       <html>
-        <div id="div_header" style="background:#171d21;color:white;font-weight:bold;font-size:400%;text-align:center;padding:50">$tkn_dns_ig1$</div>
+        <div id="div_header" style="background:#D32D41;color:white;font-weight:bold;font-size:400%;text-align:center;padding:50">$tkn_dns_ig1$</div>
       </html>
     </panel>
     <panel>
       <html>
-        <div id="div_header" style="background:#171d21;color:white;font-weight:bold;font-size:400%;text-align:center;padding:50">$tkn_dns_ig2$</div>
+        <div id="div_header" style="background:#808080;color:black;font-weight:bold;font-size:400%;text-align:center;padding:50">$tkn_dns_ig2$</div>
       </html>
     </panel>
     <panel>
       <html>
-        <div id="div_header" style="background:#171d21;color:white;font-weight:bold;font-size:400%;text-align:center;padding:50">$tkn_dns_ig3$</div>
+        <div id="div_header" style="background:#808080;color:black;font-weight:bold;font-size:400%;text-align:center;padding:50">$tkn_dns_ig3$</div>
       </html>
     </panel>
   </row>
@@ -138,17 +138,17 @@
     </panel>
     <panel>
       <html>
-        <div id="div_header" style="background:#171d21;color:white;font-weight:bold;font-size:400%;text-align:center;padding:50">$tkn_aad_ig1$</div>
+        <div id="div_header" style="background:#D32D41;color:white;font-weight:bold;font-size:400%;text-align:center;padding:50">$tkn_aad_ig1$</div>
       </html>
     </panel>
     <panel>
       <html>
-        <div id="div_header" style="background:#171d21;color:white;font-weight:bold;font-size:400%;text-align:center;padding:50">$tkn_aad_ig2$</div>
+        <div id="div_header" style="background:#808080;color:black;font-weight:bold;font-size:400%;text-align:center;padding:50">$tkn_aad_ig2$</div>
       </html>
     </panel>
     <panel>
       <html>
-        <div id="div_header" style="background:#171d21;color:white;font-weight:bold;font-size:400%;text-align:center;padding:50">$tkn_aad_ig3$</div>
+        <div id="div_header" style="background:#808080;color:black;font-weight:bold;font-size:400%;text-align:center;padding:50">$tkn_aad_ig3$</div>
       </html>
     </panel>
   </row>
@@ -161,17 +161,17 @@
     </panel>
     <panel>
       <html>
-        <div id="div_header" style="background:#171d21;color:white;font-weight:bold;font-size:400%;text-align:center;padding:50">$tkn_m365_ig1$</div>
+        <div id="div_header" style="background:#D32D41;color:white;font-weight:bold;font-size:400%;text-align:center;padding:50">$tkn_m365_ig1$</div>
       </html>
     </panel>
     <panel>
       <html>
-        <div id="div_header" style="background:#171d21;color:white;font-weight:bold;font-size:400%;text-align:center;padding:50">$tkn_m365_ig2$</div>
+        <div id="div_header" style="background:#808080;color:black;font-weight:bold;font-size:400%;text-align:center;padding:50">$tkn_m365_ig2$</div>
       </html>
     </panel>
     <panel>
       <html>
-        <div id="div_header" style="background:#171d21;color:white;font-weight:bold;font-size:400%;text-align:center;padding:50">$tkn_m365_ig3$</div>
+        <div id="div_header" style="background:#808080;color:black;font-weight:bold;font-size:400%;text-align:center;padding:50">$tkn_m365_ig3$</div>
       </html>
     </panel>
   </row>
