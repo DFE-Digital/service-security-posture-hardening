@@ -155,7 +155,7 @@
 
     <panel>
       <html>
-        <div><span><a href="ssphp_foundational_systems_dashboard_help?tkn_service=true" class="btn btn-primary" style="color:black;background-color:grey;text-align:center;display:block;float:right;width:20%;" target="_blank">Dashboard Help</a></span></div> 
+        <div><span><a href="ssphp_foundational_systems_dashboard_help?tkn_service=true" class="btn btn-primary" style="color:black;background-color:grey;text-align:center;display:block;float:right;width:30%;" target="_blank">Dashboard Help</a></span></div> 
       </html>
     </panel>
     
