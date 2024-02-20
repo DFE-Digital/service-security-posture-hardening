@@ -4,6 +4,7 @@ use std::net::Ipv4Addr;
 use std::str::FromStr;
 use std::sync::Arc;
 
+use aws_config::Region;
 use hickory_proto::rr::record_type::RecordType;
 use hickory_proto::rr::RData;
 use hickory_resolver::config::*;
@@ -294,10 +295,6 @@ struct AwsClient {
 impl AwsClient {
     async fn config(&self) -> Result<SdkConfig> {
         let region_provider = RegionProviderChain::default_provider().or_else("us-east-1");
-        eprintln!(
-            "AWS Client: region_provider: {:?}",
-            &region_provider.region().await
-        );
 
         let config = aws_config::defaults(BehaviorVersion::latest())
             .credentials_provider(SharedCredentialsProvider::new(AwsSecrets {
@@ -307,6 +304,88 @@ impl AwsClient {
             .load()
             .await;
         Ok(config)
+    }
+
+    /// Generate an AWS config for a specific region
+    async fn config_for_region(&self, region: &str) -> Result<SdkConfig> {
+        let region_provider = RegionProviderChain::first_try(Region::new(region.to_string()));
+
+        let config = aws_config::defaults(BehaviorVersion::latest())
+            .credentials_provider(SharedCredentialsProvider::new(AwsSecrets {
+                secrets: self.secrets.clone(),
+            }))
+            .region(region_provider)
+            .load()
+            .await;
+        Ok(config)
+    }
+
+    /// Get an up to date list of regions from EC2, or use a static list of regions.
+    async fn list_of_regions(&self) -> Result<Vec<String>> {
+        let config = self
+            .config()
+            .await
+            .context("Can't build default AWS config")?;
+        let ec2_client = aws_sdk_ec2::Client::new(&config);
+        let regions = match ec2_client.describe_regions().all_regions(true).send().await {
+            Ok(regions) => regions
+                .regions
+                .unwrap_or_default()
+                .into_iter()
+                .flat_map(|region| region.region_name)
+                .collect(),
+            Err(err) => {
+                eprintln!("Unable to get list of regions from EC2 endpoint: {:?}", err);
+                eprintln!("Using static list of regions");
+                vec![
+                    "af-south-1".to_string(),
+                    "ap-east-1".to_string(),
+                    "ap-northeast-1".to_string(),
+                    "ap-northeast-2".to_string(),
+                    "ap-northeast-3".to_string(),
+                    "ap-south-1".to_string(),
+                    "ap-southeast-1".to_string(),
+                    "ap-southeast-2".to_string(),
+                    "ap-southeast-3".to_string(),
+                    "ca-central-1".to_string(),
+                    "cn-north-1".to_string(),
+                    "cn-northwest-1".to_string(),
+                    "eu-central-1".to_string(),
+                    "eu-north-1".to_string(),
+                    "eu-south-1".to_string(),
+                    "eu-west-1".to_string(),
+                    "eu-west-2".to_string(),
+                    "eu-west-3".to_string(),
+                    "me-south-1".to_string(),
+                    "sa-east-1".to_string(),
+                    "us-east-1".to_string(),
+                    "us-east-2".to_string(),
+                    "us-gov-east-1".to_string(),
+                    "us-gov-west-1".to_string(),
+                    "us-west-1".to_string(),
+                    "us-west-2".to_string(),
+                ]
+            }
+        };
+
+        Ok(regions)
+    }
+
+    /// configs for all regions
+    async fn config_all_regions(&self) -> Result<Vec<SdkConfig>> {
+        let regions = self
+            .list_of_regions()
+            .await
+            .context("Unable to get regions")?;
+        let mut configs = Vec::with_capacity(regions.len());
+        for region in regions {
+            let config = self
+                .config_for_region(&region)
+                .await
+                .context(format!("Failed to get config for: {}", &region))?;
+            configs.push(config);
+        }
+        Ok(configs)
     }
 
     async fn client_for_bucket(
@@ -796,28 +875,45 @@ impl AwsClient {
         let trails = client.describe_trails().send().await?;
 
         let mut trail_wrappers = vec![];
+
         for trail in trails.trail_list.unwrap_or_default().into_iter() {
-            let name = match &trail.name {
+            trail_wrappers.push(TrailWrapper {
+                trail,
+                trail_status: None,
+                event_selectors: None,
+            });
+
+            let mut trail_wrapper = trail_wrappers.last_mut().expect("Just pushed onto vec");
+
+            let region = match &trail_wrapper.trail.home_region() {
+                Some(region) => region.to_string(),
+                None => continue,
+            };
+            let config = self.config_for_region(&region).await?;
+            let client = aws_sdk_cloudtrail::Client::new(&config);
+
+            let name = match &trail_wrapper.trail.name() {
                 Some(name) => Some(name.to_string()),
                 None => continue,
             };
+
             let trail_status = client
                 .get_trail_status()
                 .set_name(name.clone())
                 .send()
-                .await?;
+                .await
+                .ok();
+
+            trail_wrapper.trail_status = trail_status.map(|ts| ts.into());
 
             let event_selectors = client
                 .get_event_selectors()
                 .set_trail_name(name)
                 .send()
-                .await?;
+                .await
+                .ok();
 
-            trail_wrappers.push(TrailWrapper {
-                trail,
-                trail_status,
-                event_selectors: event_selectors.into(),
-            });
+            trail_wrapper.event_selectors = event_selectors.map(|es| es.into());
         }
 
         Ok(TrailWrappers {
@@ -1341,8 +1437,9 @@ impl AwsClient {
                     Err(err) => {
                         this_set.errors.push(Route53LookupErrors {
                             context: format!(
-                            "failed to lookup for: {} {}",
-                            lookup_name, record_type),
+                                "failed to lookup for: {} {}",
+                                lookup_name, record_type
+                            ),
                             error: err.to_string(),
                         });
                         eprintln!(
@@ -1382,7 +1479,7 @@ impl AwsClient {
                         RData::AAAA(_aaaa) => false,
                         // RData::ANAME(_) => false,
                         RData::CAA(_caa) => false,
-                        RData::CNAME(_r) => false,
+                        RData::CNAME(cname) => false,
                         RData::CSYNC(_r) => false,
                         // RData::HINFO(_) => todo!(),
                         // RData::HTTPS(_) => todo!(),

@@ -1,6 +1,3 @@
-// use aws_sdk_cloudtrail::types::AdvancedEventSelector;
-// use aws_sdk_cloudtrail::types::AdvancedFieldSelector;
-use aws_sdk_cloudtrail::operation::get_trail_status::GetTrailStatusOutput;
 use aws_sdk_cloudtrail::types::Trail;
 use serde::Serialize;
 
@@ -33,9 +30,8 @@ pub struct TrailWrapper {
     #[serde(flatten)]
     #[serde(with = "TrailDef")]
     pub trail: Trail,
-    #[serde(with = "GetTrailStatusOutputDef")]
-    pub trail_status: GetTrailStatusOutput,
-    pub event_selectors: GetEventSelectorsOutputSerde,
+    pub trail_status: Option<GetTrailStatusOutput>,
+    pub event_selectors: Option<GetEventSelectorsOutputSerde>,
 }
 
 #[derive(Serialize, Debug)]
@@ -80,10 +76,9 @@ pub struct TrailDef {
     pub is_organization_trail: ::std::option::Option<bool>,
 }
 
-#[derive(Serialize)]
-#[serde(remote = "GetTrailStatusOutput")]
+#[derive(Debug, Serialize)]
 #[serde(rename_all = "PascalCase")]
-pub struct GetTrailStatusOutputDef {
+pub struct GetTrailStatusOutput {
     /// <p>Whether the CloudTrail trail is currently logging Amazon Web Services API calls.</p>
     pub is_logging: ::std::option::Option<bool>,
     /// <p>Displays any Amazon S3 error that CloudTrail encountered when attempting to deliver log files to the designated bucket. For more information, see <a href="https://docs.aws.amazon.com/AmazonS3/latest/API/ErrorResponses.html">Error Responses</a> in the Amazon S3 API Reference.</p><note>
@@ -128,6 +123,32 @@ pub struct GetTrailStatusOutputDef {
     pub time_logging_started: ::std::option::Option<::std::string::String>,
     /// <p>This field is no longer in use.</p>
     pub time_logging_stopped: ::std::option::Option<::std::string::String>,
+}
+
+impl From<aws_sdk_cloudtrail::operation::get_trail_status::GetTrailStatusOutput>
+    for GetTrailStatusOutput
+{
+    fn from(value: aws_sdk_cloudtrail::operation::get_trail_status::GetTrailStatusOutput) -> Self {
+        Self {
+            is_logging: value.is_logging,
+            latest_delivery_error: value.latest_delivery_error,
+            latest_notification_error: value.latest_notification_error,
+            latest_delivery_time: value.latest_delivery_time,
+            latest_notification_time: value.latest_notification_time,
+            start_logging_time: value.start_logging_time,
+            stop_logging_time: value.stop_logging_time,
+            latest_cloud_watch_logs_delivery_error: value.latest_cloud_watch_logs_delivery_error,
+            latest_cloud_watch_logs_delivery_time: value.latest_cloud_watch_logs_delivery_time,
+            latest_digest_delivery_time: value.latest_digest_delivery_time,
+            latest_digest_delivery_error: value.latest_digest_delivery_error,
+            latest_delivery_attempt_time: value.latest_delivery_attempt_time,
+            latest_notification_attempt_time: value.latest_notification_attempt_time,
+            latest_notification_attempt_succeeded: value.latest_notification_attempt_succeeded,
+            latest_delivery_attempt_succeeded: value.latest_delivery_attempt_succeeded,
+            time_logging_started: value.time_logging_started,
+            time_logging_stopped: value.time_logging_stopped,
+        }
+    }
 }
 
 #[derive(Serialize, Debug, Clone)]
