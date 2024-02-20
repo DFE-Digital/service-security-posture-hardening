@@ -10,7 +10,6 @@
 
     <set token="tkn_colour_red">#D32D41</set>
     <set token="tkn_colour_orange">#EA6A47</set>
-    <set token="tkn_colour_green">#B3C100</set>
     <set token="tkn_colour_green">#6AB187</set>
     <set token="tkn_colour_blue">#A5D8DD</set>
   </init>
