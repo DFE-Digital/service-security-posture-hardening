@@ -1,15 +1,9 @@
 <dashboard version="1.1" theme="dark" hideFilters="true">
   
   <label>Security Posture Continuous Assurance : Maturity Dashboard</label>
-  <description>v1.2.5</description>
+  <description>v1.2.6</description>
   
   <init>
-    <set token="tkn_colour_red">#D32D41</set>
-    <set token="tkn_colour_orange">#EA6A47</set>
-    <set token="tkn_colour_green">#B3C100</set>
-    <set token="tkn_colour_green">#6AB187</set>
-    <set token="tkn_colour_blue">#A5D8DD</set>
-  
     <set token="tkn_aad_ig1">-</set>
     <set token="tkn_aad_ig2">-</set>
     <set token="tkn_aad_ig3">-</set>
@@ -55,6 +49,28 @@
         </search>
       </table>
     </panel>
+    
+
+    <panel>
+      <table>
+        <search>
+          <query>
+  | makeresults
+
+  `ssphp_metrics_eval_field_colors`
+
+  | table tkn_*
+          </query>
+          <done>
+            <set token="tkn_colour_splunk_grey">$result.tkn_colour_splunk_grey$</set>
+            <set token="tkn_colour_red">$result.tkn_colour_red$</set>
+            <set token="tkn_colour_orange">$result.tkn_colour_orange$</set>
+            <set token="tkn_colour_green">$result.tkn_colour_green$</set>
+            <set token="tkn_colour_blue">$result.tkn_colour_blue$</set>
+          </done>
+        </search>
+      </table>
+    </panel>
   </row>
 
 
@@ -64,22 +80,22 @@
   <row>
     <panel>
       <html>
-        <div id="div_header" style="background:#171d21;color:white;font-weight:bold;font-size:200%;text-align:center;padding:10">FOUNDATIONAL SERVICE</div>
+        <div id="div_header" style="background:$tkn_colour_splunk_grey$;color:white;font-weight:bold;font-size:200%;text-align:center;padding:10">FOUNDATIONAL SERVICE</div>
       </html>
     </panel>
     <panel>
       <html>
-        <div id="div_header" style="background:#171d21;color:white;font-weight:bold;font-size:200%;text-align:center;padding:10">IG1</div>
+        <div id="div_header" style="background:$tkn_colour_splunk_grey$;color:white;font-weight:bold;font-size:200%;text-align:center;padding:10">IG1</div>
       </html>
     </panel>
     <panel>
       <html>
-        <div id="div_header" style="background:#171d21;color:white;font-weight:bold;font-size:200%;text-align:center;padding:10">IG2</div>
+        <div id="div_header" style="background:$tkn_colour_splunk_grey$;color:white;font-weight:bold;font-size:200%;text-align:center;padding:10">IG2</div>
       </html>
     </panel>
     <panel>
       <html>
-        <div id="div_header" style="background:#171d21;color:white;font-weight:bold;font-size:200%;text-align:center;padding:10">IG3</div>
+        <div id="div_header" style="background:$tkn_colour_splunk_grey$;color:white;font-weight:bold;font-size:200%;text-align:center;padding:10">IG3</div>
       </html>
     </panel>
   </row>
@@ -87,7 +103,7 @@
   <row>
     <panel>
       <html>
-        <div id="div_header" style="background:#171d21;color:white;font-weight:bold;font-size:300%;text-align:left;padding:50">AZURE</div>
+        <div id="div_header" style="background:$tkn_colour_splunk_grey$;color:white;font-weight:bold;font-size:300%;text-align:left;padding:50">AZURE</div>
       </html>
     </panel>
     <panel>
@@ -110,7 +126,7 @@
   <row>
     <panel>
       <html>
-        <div id="div_header" style="background:#171d21;color:white;font-weight:bold;font-size:300%;text-align:left;padding:50">DNS</div>
+        <div id="div_header" style="background:$tkn_colour_splunk_grey$;color:white;font-weight:bold;font-size:300%;text-align:left;padding:50">DNS</div>
       </html>
     </panel>
     <panel>
@@ -133,7 +149,7 @@
   <row>
     <panel>
       <html>
-        <div id="div_header" style="background:#171d21;color:white;font-weight:bold;font-size:300%;text-align:left;padding:50">ENTRA (AAD)</div>
+        <div id="div_header" style="background:$tkn_colour_splunk_grey$;color:white;font-weight:bold;font-size:300%;text-align:left;padding:50">ENTRA (AAD)</div>
       </html>
     </panel>
     <panel>
@@ -156,7 +172,7 @@
   <row>
     <panel>
       <html>
-        <div id="div_header" style="background:#171d21;color:white;font-weight:bold;font-size:300%;text-align:left;padding:50">Office 365</div>
+        <div id="div_header" style="background:$tkn_colour_splunk_grey$;color:white;font-weight:bold;font-size:300%;text-align:left;padding:50">Office 365</div>
       </html>
     </panel>
     <panel>
