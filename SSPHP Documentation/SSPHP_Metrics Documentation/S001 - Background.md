@@ -23,11 +23,23 @@ This focus on 'Protect' is a key tool in preventing compromises by making it dif
 Policies are documented, and owned by..... Many are 
 
 
+## Foundational Services
+
+
+
 
 ## Benchmarks
 Industry Standard Benchmarks are hugely valuable asset for Posture Hardening because it allows DfE to make rely on global expertise while saving the time and resources to develop Policies in-house, meaning that the time to market is much smaller. Also, it is a far better approach to make a single decision around which benchmark to choose than to defend each individual decision for every single policy and implementation.
 
-*CIS - Center for Internet Security* - has a wealth of industry benchmarks for all of the major cloud-based technologies. The documentation can be found [here](https://downloads.cisecurity.org/#/). One of the great positives of the CIS Benchmarks is that they are incredibly detailed and prescriptive in what needs to happen in order to audit and remediate, the priorities and the impacts. Where possible, the CIS Benchmarks have been used; where there is no CIS Benchmark available, a custom set of Policies will have been developed by CISD having Threat Modelled the target system.
+
+## Centre for Internet Security
+*CIS* has a wealth of industry benchmarks for all of the major cloud-based technologies. The documentation can be found [here](https://downloads.cisecurity.org/#/). One of the great positives of the CIS Benchmarks is that they are incredibly detailed and prescriptive in what needs to happen in order to audit and remediate, the priorities and the impacts. Where possible, the CIS Benchmarks have been used; where there is no CIS Benchmark available, a custom set of Policies will have been developed by CISD having Threat Modelled the target system.
+
+CIS Benchmarks have some interesting overlays regarding the priorities and impacts of implementing the recommendations. There are 2 levels - L3 & L5 - which relate to the difficulty level of implementation and the dependency on having available specific Microsoft products. IG1, IG2, and IG3 are CIS 'Implementation Groups'; these are cumulative (ie all in IG1 will also be in IG2 and IG3, and all in IG2 will also be in IG3) and relate to the priorities and importance of adopting them  recommendations. The Benchmark Standard is that every organisation should have at least implemented all IG1 controls as a minimum; so IG1 recommendations are the first phase to be DfE Mandated. Best Practice is to have implemented all the Controls, so that is the CISD longer-term objective.
+
+
+## DfE Policies
+By Threat Modelling some critical systems, CISD has been able to add our own Custom Policies that are not in the Benchmarks.
 
 
 # CONTROLS
@@ -44,7 +56,7 @@ There are 2 types of Controls - those which require a single setting or collecti
 
 
 ## DfE Mandated Controls
-Every Control has been assigned a level of priority within 3 bands - DfE Mandated, Recommended, Desirable. The designation is largely based on that in the Benchmark, but some have been moved depending on CISD's interpretation of risk based on DfE's usage.
+Every Control has been assigned a level of priority within 3 bands - DfE Mandated, Recommended, Desirable. The designation is largely based on the IG categorisation in the Benchmark docs (DfE Mandated being IG1, etc), but some have been moved depending on CISD's interpretation of risk based on DfE's usage.
 
 In the first phase, System and Service Owners are expected to be compliant with all of the DfE Mandated Policies/Controls that relate to their particular technology. Where they are not, they are expected to remediate, or to demonstrate to the satisfaction of the CISO that the associated risk has been mitigated in a different way. It is very much the intent of CISD to work with Service Owners to ensure that risk is mitigated and their service status is Compliant.
 

@@ -1,7 +1,7 @@
 <dashboard theme="dark" version="1.1" script="js/addtags.js, js/table_cell_backcolor_multivalue.js">
 
   <label>Security Posture Continuous Assurance : Control Detail Dashboard</label>
-  <description>v3.0.</description>
+  <description>v3.0.2</description>
   
   <init>
     <unset token="tkn_show_dashboard"></unset>
@@ -75,8 +75,9 @@
         }
       </style>
     </html>
-    
+  </row>
 
+  <row depends="$never_show$">
     <panel>
       <table>
         <search>
