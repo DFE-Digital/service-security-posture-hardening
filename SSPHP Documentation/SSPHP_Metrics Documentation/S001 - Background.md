@@ -2,7 +2,7 @@
 
 
 ## CISD
-
+Martin Sivorn's people.
 
 
 ## ATO
@@ -20,12 +20,21 @@ This focus on 'Protect' is a key tool in preventing compromises by making it dif
 
 
 ## Policies
-Policies are documented, and owned by..... Many are 
+Policies are documented, and owned by CISD. 
+
+By Threat Modelling some critical systems, CISD has been able to add our own Custom Policies that are not in the CIS Benchmarks - these are marked as DfE Policies.
 
 
 ## Foundational Services
+A Foundational Service is a technology or system that, were it to be compromised, the workings of the whole DfE would be critically impaired inside a week.
 
+Using this definition, an initial 4 Services were chosen as being Foundational, inasmuch as if any of them was to be taken out, then none of the other DfE Services would continue to operate. **Azure, Entra Active Directory, DNS, and M365** are the chosen *initial* Foundational Services. This is not to say that other systems and services are not on the critical path for the entire department.
 
+Note - DNS is hosted in AWS, so the actual Controls relate to the department's AWS accounts and configurations.
+
+Note - Applications built by Services inside Microsoft Azure might be extremely important and even critical to the department, but compromise of them could probably not lead to taking down the entire department. So the scope of the Controls is limited to the Azure *platform* itself because if we lost the Azure platform then by extension we would also have lost *all* of the Service Applications that run on the platform, and that would compromise the entire department.
+
+The intention is that the Compliance of all technology Services will be brought into the Continuous Assurance Compliance process.
 
 
 ## Benchmarks
@@ -38,11 +47,7 @@ Industry Standard Benchmarks are hugely valuable asset for Posture Hardening bec
 CIS Benchmarks have some interesting overlays regarding the priorities and impacts of implementing the recommendations. There are 2 levels - L3 & L5 - which relate to the difficulty level of implementation and the dependency on having available specific Microsoft products. IG1, IG2, and IG3 are CIS 'Implementation Groups'; these are cumulative (ie all in IG1 will also be in IG2 and IG3, and all in IG2 will also be in IG3) and relate to the priorities and importance of adopting them  recommendations. The Benchmark Standard is that every organisation should have at least implemented all IG1 controls as a minimum; so IG1 recommendations are the first phase to be DfE Mandated. Best Practice is to have implemented all the Controls, so that is the CISD longer-term objective.
 
 
-## DfE Policies
-By Threat Modelling some critical systems, CISD has been able to add our own Custom Policies that are not in the Benchmarks.
-
-
-# CONTROLS
+## Controls
 
 A 'Control' or 'Use Case' is the manifestation, in Splunk, of a specific Policy against which Compliance is being measured. So Controls, Use Cases, and Policies are effectively all the same thing. For every Control, the output from running the control is either 'Compliant' or 'Non-Compliant'.
 
