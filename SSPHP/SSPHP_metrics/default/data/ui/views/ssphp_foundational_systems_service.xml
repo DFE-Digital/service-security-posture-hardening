@@ -1,18 +1,11 @@
 <dashboard version="1.1" theme="dark" hideFilters="true" script="js/table_cell_color.js">
 
   <label>Security Posture Continuous Assurance : Service Dashboard</label>
-  <description>v2.0.10</description>
+  <description>v2.0.12</description>
   
   <init>
     <set token="tkn_controls_compliant_text"></set>
     <unset token="tkn_ready"></unset>
-
-
-    <set token="tkn_colour_red">#D32D41</set>
-    <set token="tkn_colour_orange">#EA6A47</set>
-    <set token="tkn_colour_green">#B3C100</set>
-    <set token="tkn_colour_green">#6AB187</set>
-    <set token="tkn_colour_blue">#A5D8DD</set>
   </init>
 
   <fieldset submitButton="false">
@@ -79,6 +72,28 @@
         </search>
       </table>
     </panel>
+    
+
+    <panel>
+      <table>
+        <search>
+          <query>
+  | makeresults
+
+  `ssphp_metrics_eval_field_colors`
+
+  | table tkn_*
+          </query>
+          <done>
+            <set token="tkn_colour_splunk_grey">$result.tkn_colour_splunk_grey$</set>
+            <set token="tkn_colour_red">$result.tkn_colour_red$</set>
+            <set token="tkn_colour_orange">$result.tkn_colour_orange$</set>
+            <set token="tkn_colour_green">$result.tkn_colour_green$</set>
+            <set token="tkn_colour_blue">$result.tkn_colour_blue$</set>
+          </done>
+        </search>
+      </table>
+    </panel>
   </row>
   
   
@@ -91,7 +106,7 @@
       <table>
         <search>
           <query>
-| loadjob savedsearch="nobody:$tkn_current_app$:ssphp_create_dashboard_dataset"
+| loadjob savedsearch="nobody:$tkn_current_app$:ssphp_create_dashboard_dataset_posture"
 | where 'line_type'="summary" AND match(lower('ssphp.use_case.foundational_system'),$tkn__service|s$)
 
 | eval ssphp.score.ciso_priority=case('ssphp.score.ciso_priority'=1,"DfE Mandated",
@@ -235,7 +250,7 @@
       <table id="table1">
         <search>
           <query>
-| loadjob savedsearch="nobody:$tkn_current_app$:ssphp_create_dashboard_dataset"
+| loadjob savedsearch="nobody:$tkn_current_app$:ssphp_create_dashboard_dataset_posture"
 | where 'line_type'="detail" AND match(lower('ssphp.use_case.foundational_system'),$tkn__service|s$)
 
 | eval ssphp.score.ciso_priority=case('ssphp.score.ciso_priority'=1,"DfE Mandated",
@@ -287,7 +302,7 @@ $tkn_search_filter$
         <option name="drilldown">row</option>
         <fields>"Foundational Service","Use Case","Control Title","Score","Compliance Status","Control Type","Description"</fields>
         <drilldown>
-          <link target="_blank">/app/$tkn_current_app$/ssphp_foundational_systems_detail_cis?tkn_use_case_id=$row.ssphp.use_case.id$</link>
+          <link target="_blank">/app/$tkn_current_app$/ssphp_foundational_systems_detail?tkn_use_case_id=$row.ssphp.use_case.id$</link>
         </drilldown>
       </table>
     </panel>

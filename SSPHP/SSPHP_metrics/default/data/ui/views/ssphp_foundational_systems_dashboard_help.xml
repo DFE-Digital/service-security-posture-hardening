@@ -1,81 +1,39 @@
-<dashboard version="1.1" theme="dark" hideFilters="true" script="js/table_cell_color.js">
+<dashboard theme="dark" version="1.1">
 
-  <label>Security Posture Continuous Assurance : Dashboard Help</label>
-  <description>v1.0.6</description>
+    <label>Security Posture Continuous Assurance : Help Dashboard</label>
 
-  <row depends="$never_show$">
-    <html>
-      <style>
-        .help-header {
-          color: yellow !important;
-          font-weight: bold !important;
-          font-size: 200% !important;
-          text-align: left !important;
-          padding: 10 !important;
-          line-height: 1.25 !important;
-          background: dark-grey;
-        }
-        .help-text {
-          color: white !important;
-          font-weight: normal !important;
-          font-size: 125% !important;
-          text-align: left !important;
-          padding: 10 !important;
-          line-height: 1.25 !important;
-          background: dark-grey;
-        }
-      </style>
-    </html>
-  </row>
+    <row>
+      <panel>
+        <html>
+<div style="font-size:175%;color:yellow;">BACKGROUND</div><br></br><div style="font-size:125%;color:CornflowerBlue;">CISD</div>Martin Sivorn's people.<br></br>
+<div style="font-size:125%;color:CornflowerBlue;">ATO</div>DfE technology platforms and services have always been given an 'Authority to Operate' certfification based on a period 'Audit' that security and other criteria and standards have been complied with. The ATO 'Audit' process is paper-based and led by an ISO in CISD who acts as the interface to the service owner and SRO. Depending on the importance of the system or service - Gold, Silver, Bronze - the ATO process is repeated every 1 - 3 years. Clearly, it is essential that during the intervening period the ISO is kept abreast of any changes to the service that might potentially have impact on the security of the systems, but implicitly under this scheme confidence in security can only be as good as it was at the time of the most recent audit.<br></br>
+<div style="font-size:125%;color:CornflowerBlue;">Continuous Assurance</div>Continuous Assurance is a DfE CISD initiative aimed at **constant automated** measuring of the Compliance of key technologies against documented Policies. The objective is to minimise the possibility of key infrastructure and services being compromised, by quickly identifying, remediating and mitigating any compliance breaches and divergence from Policies and standards - otherwise known as Security Posture Hardening. <br></br>The route is to check configuration against pre-selected policies, architectures and settings, where possible using industry standards and recognised best practice. This gives Service Owners a daily view of status, and a management to track compliance, risk and progress on mitigation.<br></br>
+<div style="font-size:125%;color:CornflowerBlue;">Security Posture Hardening</div>This focus on 'Protect' is a key tool in preventing compromises by making it difficult for a prospective attacker to find a way into the systems. Other CISD initiatitives concentrate on other phases of the pcess, such 'Detect' (identifying signs that a compromise has occured, which happens in the SOC), 'Respond', and 'Recover'.<br></br>
+<div style="font-size:125%;color:CornflowerBlue;">Policies</div>Policies are documented, and owned by CISD. <br></br>By Threat Modelling some critical systems, CISD has been able to add our own Custom Policies that are not in the CIS Benchmarks - these are marked as DfE Policies.<br></br>
+<div style="font-size:125%;color:CornflowerBlue;">Foundational Services</div>A Foundational Service is a technology or system that, were it to be compromised, the workings of the whole DfE would be critically impaired inside a week.<br></br>Using this definition, an initial 4 Services were chosen as being Foundational, inasmuch as if any of them was to be taken out, then none of the other DfE Services would continue to operate. **Azure, Entra Active Directory, DNS, and M365** are the chosen *initial* Foundational Services. This is not to say that other systems and services are not on the critical path for the entire department.<br></br>Note - DNS is hosted in AWS, so the actual Controls relate to the department's AWS accounts and configurations.<br></br>Note - Applications built by Services inside Microsoft Azure might be extremely important and even critical to the department, but compromise of them could probably not lead to taking down the entire department. So the scope of the Controls is limited to the Azure *platform* itself because if we lost the Azure platform then by extension we would also have lost *all* of the Service Applications that run on the platform, and that would compromise the entire department.<br></br>The intention is that the Compliance of all technology Services will be brought into the Continuous Assurance Compliance process.<br></br>
+<div style="font-size:125%;color:CornflowerBlue;">Benchmarks</div>Industry Standard Benchmarks are hugely valuable asset for Posture Hardening because it allows DfE to make rely on global expertise while saving the time and resources to develop Policies in-house, meaning that the time to market is much smaller. Also, it is a far better approach to make a single decision around which benchmark to choose than to defend each individual decision for every single policy and implementation.<br></br>
+<div style="font-size:125%;color:CornflowerBlue;">Centre for Internet Security</div>*CIS* has a wealth of industry benchmarks for all of the major cloud-based technologies. The documentation can be found [here](https://downloads.cisecurity.org/#/). One of the great positives of the CIS Benchmarks is that they are incredibly detailed and prescriptive in what needs to happen in order to audit and remediate, the priorities and the impacts. Where possible, the CIS Benchmarks have been used; where there is no CIS Benchmark available, a custom set of Policies will have been developed by CISD having Threat Modelled the target system.<br></br>CIS Benchmarks have some interesting overlays regarding the priorities and impacts of implementing the recommendations. There are 2 levels - L3 &amp; L5 - which relate to the difficulty level of implementation and the dependency on having available specific Microsoft products. IG1, IG2, and IG3 are CIS 'Implementation Groups'; these are cumulative (ie all in IG1 will also be in IG2 and IG3, and all in IG2 will also be in IG3) and relate to the priorities and importance of adopting them  recommendations. The Benchmark Standard is that every organisation should have at least implemented all IG1 controls as a minimum; so IG1 recommendations are the first phase to be DfE Mandated. Best Practice is to have implemented all the Controls, so that is the CISD longer-term objective.<br></br>
+<div style="font-size:125%;color:CornflowerBlue;">Controls</div>
+A 'Control' or 'Use Case' is the manifestation, in Splunk, of a specific Policy against which Compliance is being measured. So Controls, Use Cases, and Policies are effectively all the same thing. For every Control, the output from running the control is either 'Compliant' or 'Non-Compliant'.<br></br>
+<div style="font-size:125%;color:CornflowerBlue;">Scores</div>In order to be more useful, the output from a Control is actually a 'Score'; a score being more granular than simply reporting 'Compliant' or Non-Compliant', since it can hint at the degree of non-compliance. Scores will mean different things in different contexts, but throughout SSPHP a score of 100 is perfectly compliant, and a score of 0 is the worst possible where every single test failed. Scores between 0 and 100 are non-compliant, but the closer to 100 the better.<br></br>For each Control, the Score is calculated from a 'Numerator' and a 'Denominator'. The denominator is the number of things tested, and the numerator is the number of those tests which **failed**.<br></br>There are 2 types of Controls - those which require a single setting or collection of settings to be a certain way for the system or service as a whole, and those which require many users or resources to each have the specified settings. For the former, the denominator is the number of fields that were tested and the numerator is the number of fields that failed the tests. For the latter, each line is either a pass or a fail based on whether it contains 1 or more fields which failed a test, the denominator is the total number of lines that were tested, and the numerator is the number of lines that failed one or more tests.<br></br>
+<div style="font-size:125%;color:CornflowerBlue;">DfE Mandated Controls</div>Every Control has been assigned a level of priority within 3 bands - DfE Mandated, Recommended, Desirable. The designation is largely based on the IG categorisation in the Benchmark docs (DfE Mandated being IG1, etc), but some have been moved depending on CISD's interpretation of risk based on DfE's usage.<br></br>In the first phase, System and Service Owners are expected to be compliant with all of the DfE Mandated Policies/Controls that relate to their particular technology. Where they are not, they are expected to remediate, or to demonstrate to the satisfaction of the CISO that the associated risk has been mitigated in a different way. It is very much the intent of CISD to work with Service Owners to ensure that risk is mitigated and their service status is Compliant.<br></br>In later phases and over time, all services will be expected to become compliant with the Controls in all 3 bands.<br></br>
+<div style="font-size:125%;color:CornflowerBlue;">Naming of Controls</div>The name of the Control is based on the source system and the naming in CIS Benchmark v8. <br></br>** NOTE ** Once developed, the Controls will not change name, even if CIS renumber their documents in future versions of the Benchmark. The dashboards will display the equivalent new number for reference, but the Control will retain its original code. For example, the Control named 'M365 001 [CIS 1.1.2]' relates to M365, is in category 1 in the document which relates to "Account / Authentication", and is control 1.1.2.<br></br>
+<div style="font-size:125%;color:CornflowerBlue;">Cadence</div>The configuration data from the underlying systems and services is requested every day at 3am, and sent to Splunk. The Control algorithms run during a period between 4am and 7am.<br></br>So the data in the dashboards is updated on a daily basis.
 
-  <row depends="$tkn_posture$">
-    <html>
-      <div class="help-header">POSTURE DASHBOARD HELP</div>
-      <br></br>
-      <div class="help-text">
-This dashboard shows the number of compliant controls vs the total number of DfE Mandated Controls.
+        </html>
+      </panel>
 
-The data can either be displayed as an 'absolte' ie X of Y, or as a Percentage.
-      </div>
-    </html>
-  </row>
+      <panel>
+        <html>
+<div style="font-size:175%;color:yellow;">DASHBOARDS &amp; MENUS</div><br></br><div style="font-size:125%;color:CornflowerBlue;">MATURITY DASHBOARD</div>This dashboard shows the <br></br><br></br><div style="font-size:125%;color:CornflowerBlue;">POSTURE DASHBOARD</div>This dashboard shows the <br></br><br></br><div style="font-size:125%;color:CornflowerBlue;">SERVICE DASHBOARD</div>This dashboard is for the Service Owners, the technical owners responsible for remediation, and for Risk Managers. It shows the list of all the Controls, their Scores, and their compliance statuses.<br></br>The top row is the overall Compliance situation for the Service as a whole. This will be displayed either be as an 'absolute' (ie X of Y) or a 'percentage' (ie N%). In order to change to/from absolute/percentage - click 'show filters' at the top, and the options will appear. The filters also offer the option to change to view the compliance status of a different Foundational Service.<br></br>The description text below the Service status says "&lt;service&gt; Compliant of # DfE Mandated Controls".... so, when the display is 'absolute', the 2nd number (Y) is the total number of Controls for the Service that are DfE Mandated. The first number (X) is the number of Controls for the Service that are DfE Mandated and the status is 'Compliant'.<br></br>The 2nd row shows the name of the Service,and below, in [], is the total number of Controls that are eing monitored for that Service. This will include CIS Controls, DfE Controls, and any other Controls from any source that are relevant to the Service.<br></br>Also on the 2nd row are the 'Show Only' checkboxes, which are both clear by default. By checking either or both of these boxes, the Controls listed in the table below is reduced to include only Non-Compliant +/- Dfe Mandated Controls. The [] number of Controls to the left will change according the number in the list below ie according to the filter. The numbers in the Service status row will be unaffected by these filters.<br></br>The 3rd row is the list table of the Controls for the Service, filtered as above. The columns 'Score' and 'Compliance Status' are colour coded as follows :
+Compliant = Green
+DfE Mandated &amp; Non-Compliant = Red
+Recommended &amp; Non-Compliant = Orange
+Desirable &amp; Non-Compliant = White<br></br>By default, the rows are sorted so that all the DfE Mandated Controls are at the top, then Recommended, then Desirable. Within each of these categories, the Non-Compliant Controls are at the top.<br></br>Clicking anywhere on a row will open the Detail Dashboard in a new browser tab, and the context will automatically be set to the Control that was clicked.<br></br>
+<div style="font-size:125%;color:CornflowerBlue;">DETAIL DASHBOARD</div>This dashboard is intended for the person responsible for understanding and remediating individual non-compliance issues; it shows the field level details about the tests that were run, the expected results, and what needs to be changed in order to comply.<br></br><br></br><div style="font-size:125%;color:CornflowerBlue;">MENUS</div>This dashboard is for the person re
 
-
-  <row depends="$tkn_service$">
-    <html>
-      <div class="help-header">SERVICE DASHBOARD HELP</div>
-      <br></br>
-      <div class="help-text">
-This dashboard shows the list of compliant and non-compliant controls for the specified service.
-
-The top metric is the number of of DfE Mandated Controls that have passed the tests from the total number of DfE Mandated Controls 
-The data can either be displayed as an 'absolute' ie X of Y, or as a Percentage.
-
-If you want to change to looking at a different service then do this.....
-
-The list of controls.....
-
-
-      </div>
-    </html>
-  </row>
-
-
-  <row depends="$tkn_detail$">
-    <html>
-      <div class="help-header">DETAIL DASHBOARD HELP</div>
-      <br></br>
-      <div class="help-text">
-This dashboard shows the details for the selected control
-<br></br>
-Compliance - These are the rules that were applied
-<br></br>
-Underlying Data - the fields in red are the ones which need remediation
-<br></br>
-Where the field in the Underlying Data is implementationStatus, the data will have come pre-cooked from Microsoft rather than being calculated within this app. So while the conclusions are reliable, there is no detail available about which users, etc.
-<br></br>
-      </div>
-    </html>
-  </row>
-</dashboard>
-  
+        </html>
+      </panel>
+    </row>
+      
+  </dashboard>
