@@ -2,13 +2,19 @@
 
 
 ## MATURITY DASHBOARD
-This dashboard shows the 
+This dashboard is for Senior Management - it provides a view of overall Compliance for each Service, across all of the Foundational Services. The objective is to track progress in Compliance with Policies.
 
+Compliance is broken down by the CIS IG level. Each control is assigned to an 'Implementation Group' by the CIS Benchmark, where those in IG1 are the simplest and least impactful to implement whilst being sufficiently critical that all organisations should comply with them. IG2 and IG3 Controls are more challenging and organisations are recommended to adopt these as they become more mature.
+
+The level of compliance will be displayed either be as an 'absolute' (ie X of Y) or a 'percentage' (ie N%), where Y is the total number of Controls tested for that Service, and X is the number that passed the tests (ie are Compliant). In order to change to/from absolute/percentage - click 'show filters' at the top, and the options will appear. 
 
 
 ## POSTURE DASHBOARD
-This dashboard shows the 
+This dashboard is for Senior Management - it provides a view of overall Compliance **with DfE Mandated Controls**, for each Service, across all of the Foundational Services. The objective is to be a starting point for drilling down to understand specific issues.
 
+The Dashboard shows a single panel for each Foundational Service. The level of compliance will be displayed either be as an 'absolute' (ie X of Y) or a 'percentage' (ie N%), where Y is the total number of Controls tested for that Service, and X is the number that passed the tests (ie are Compliant). In order to change to/from absolute/percentage - click 'show filters' at the top, and the options will appear.
+
+Clicking on any of the Tiles will open the Service Dashboard for the chosen Service in a new browswer tab.
 
 
 ## SERVICE DASHBOARD
@@ -34,9 +40,18 @@ Clicking anywhere on a row will open the Detail Dashboard in a new browser tab, 
 
 
 ## DETAIL DASHBOARD
-This dashboard is intended for the person responsible for understanding and remediating individual non-compliance issues; it shows the field level details about the tests that were run, the expected results, and what needs to be changed in order to comply.
+This dashboard is intended for the person responsible for understanding and remediating individual non-compliance issues; it shows the field level details about the tests that were run for a single Control, the expected results, and what needs to be changed in order to comply.
 
+**NOTE** the dashboard will only work if it is passed the id of a Control, so it can only really be used by a click through from the Service Dashboard. Manually adding the Control ID to the URL is another way of setting the target control for the dashboard (in the format ?tkn_use_case_id=m365_001_cis_1-1-2 or ?tkn_use_case_id=dns_dfe_2-0).
+
+The Dashboard displays different details depending on the source of the Benchmark - for Controls based on the CIS Benchmarks, the detail fields in the dashboard will show description and other metadata taken from the benchmark document. For DfE Custom Controls developed by Threat Modelling, the fields will come from the Control itself and there will be no reference to the CIS fields.
+
+The Score is calculated from the 'numerator' (Tests Failed in this Control) / 'denominator' (Number of Tests in this Control), expressed as a percentage. Depending on the context of the Control, numerator and denominator have different meanings...(a) for a Control where there is only a single setting to be investigated (ie 1 line), numerator and denominator means the number of fields that were investigated in the algorithm. (b) for a Control which has meany lines (for example, where the Control requires us to look at every user to see whether they each have the correct settings), then each use is deemed to be either Compliant or Non-Compliant and the denominator and numerator would be the number of events (in the example, users) and the number that failed the tests.
+
+The 'Underlying Data' panel shows what was returned by the underlying system's API when the posture data was requested. The panel labelled 'Compliance' gives details of exactly what field settings are expected for each line item in the 'Underlying Data' panel. Fields with a red background have been determined to be problematic (Non-Compliant) and need to be remediated. So the dashboard is extremely detailed in explaining what the tests expected and which items of data were deemed to require remediation.
+
+For CIS Benchmark Controls, the dashboard includes details of IG status and which 'CIS Navigator Critical Security Controls' match.
 
 
 ## MENUS
-This dashboard is for the person re
+There is a default Menu for users of the SSPHP_Metrics Splunk App - in the top|left of the browser tab. Each of the Dashboards described can be accessed via the menu.

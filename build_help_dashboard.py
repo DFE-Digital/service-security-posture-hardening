@@ -22,6 +22,16 @@ def ConvertMDtoHTML(inline):
         inline = re.sub(r"\n","",inline)
         inline = inline + "</div>"
 
+    m3 = re.match(r".*\*\*(?P<bold_text>[^\*]*)\*\*",inline)
+    if m3:
+        bold_text = "<b>" + m3["bold_text"].strip() + "</b>"
+        inline = re.sub(r"\*\*[^\*]*\*\*",bold_text,inline)
+
+    m4 = re.match(r".*\*(?P<italic_text>[^\*]*)\*",inline)
+    if m4:
+        italic_text = "<i>" + m4["italic_text"].strip() + "</i>"
+        inline = re.sub(r"\*[^\*]*\*",italic_text,inline)
+        
     return inline
 
 
