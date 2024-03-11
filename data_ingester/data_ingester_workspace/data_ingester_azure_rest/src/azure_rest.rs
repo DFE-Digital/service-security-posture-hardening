@@ -21,10 +21,9 @@ use url::Url;
 
 use data_ingester_splunk::splunk::HecEvent;
 use data_ingester_splunk::splunk::ToHecEvents;
-//use crate::splunk::{HecEvent, ToHecEvents};
 
 pub struct AzureRest {
-    credential: Arc<ClientSecretCredential>,
+    pub(crate) credential: Arc<ClientSecretCredential>,
     subscriptions: Subscriptions,
 }
 
@@ -47,6 +46,7 @@ impl AzureRest {
         Ok(s)
     }
 
+    // TODO Remove pub
     pub async fn azure_subscriptions(&self) -> Result<Subscriptions> {
         let client = ClientSubscription::builder(self.credential.clone()).build()?;
         let mut stream = client.subscriptions_client().list().into_stream();
@@ -59,6 +59,10 @@ impl AzureRest {
         Ok(Subscriptions {
             inner: subscriptions,
         })
+    }
+
+    pub fn subscriptions(&self) -> &Subscriptions {
+        &self.subscriptions
     }
 
     pub async fn get_security_contacts(&self) -> Result<ReturnTypes> {
@@ -127,6 +131,20 @@ impl AzureRest {
         Ok(RoleAssignments { inner: collection })
     }
 
+    // pub async fn azure_resource_graph(&self) -> Result<()> {
+    //     let endpoint = "https://management.azure.com/providers/Microsoft.ResourceGraph/resources?api-version=2021-03-01";
+    //     for sub in self.subscriptions.inner.iter() {
+    //         let sub_id = sub.subscription_id.as_ref().context("no sub id")?;
+
+    //         for table in &crate::resource_graph::RESOURCE_GRAPH_TABLES {
+    //             let request_body = ResourceGraphRequest::new(sub_id, &format!("{}", &table));
+    //             let response: crate::resource_graph::ResourceGraphResponse = self.post_rest_request(&endpoint, &request_body).await?;
+    //             dbg!(&response);
+    //         }
+    //     }
+    //     Ok(response)
+    // }
+
     // pub async fn get_microsoft_authorization_role_assignments(&self) -> Result<Vec<HecEvent>> {
     //     let url_template = "https://management.azure.com/subscriptions/{}/providers/Microsoft.Authorization/roleassignments?api-version=2017-10-01-preview";
     //     let results = self.rest_request_subscription_iter(url_template).await?;
@@ -150,7 +168,7 @@ impl AzureRest {
     /// 1.25
     pub async fn get_microsoft_subscription_policies(&self) -> Result<SubscriptionPolicies> {
         let url = "https://management.azure.com/providers/Microsoft.Subscription/policies/default?api-version=2021-01-01-privatepreview";
-        let results = self.rest_request(url).await?;
+        let results = self.get_rest_request(url).await?;
         Ok(results)
     }
 
@@ -176,7 +194,7 @@ impl AzureRest {
                             let url = format!(
                                 "https://management.azure.com{}/encryptionProtector?api-version=2022-05-01-preview",
                                 server_url);
-                            let result = self.rest_request::<ReturnType>(&url).await?;
+                            let result = self.get_rest_request::<ReturnType>(&url).await?;
                             collection
                                 .collection
                                 .push(result.into_return_type_wrapper(url.as_str().to_string()));
@@ -190,7 +208,7 @@ impl AzureRest {
         Ok(collection)
     }
 
-    pub async fn rest_request<T: DeserializeOwned + std::fmt::Debug>(
+    pub async fn get_rest_request<T: DeserializeOwned + std::fmt::Debug>(
         &self,
         url: &str,
     ) -> Result<T> {
@@ -205,6 +223,35 @@ impl AzureRest {
                 "Authorization",
                 format!("Bearer {}", response.token.secret()),
             )
+            .send()
+            .await?
+            .text()
+            .await?;
+
+        let rt: T = serde_json::from_str(&response)?;
+        Ok(rt)
+    }
+
+    pub async fn post_rest_request<T: DeserializeOwned + std::fmt::Debug, B: Serialize>(
+        &self,
+        url: &str,
+        body: &B,
+    ) -> Result<T> {
+        let response = self
+            .credential
+            .get_token(&["https://management.azure.com/.default"])
+            .await?;
+
+        let body_json = serde_json::to_string(&body)?;
+
+        let response = reqwest::Client::new()
+            .post(url)
+            .header(
+                "Authorization",
+                format!("Bearer {}", response.token.secret()),
+            )
+            .header("Content-Type", "application/json")
+            .body(body_json)
             .send()
             .await?
             .text()
@@ -420,7 +467,7 @@ impl ToHecEvents for &ReturnTypes {
 }
 
 #[cfg(test)]
-mod test {
+pub(crate) mod test {
     use std::env;
 
     use crate::azure_rest::Subscriptions;
@@ -430,7 +477,7 @@ mod test {
 
     use super::AzureRest;
 
-    async fn setup() -> Result<(AzureRest, Splunk)> {
+    pub(crate) async fn setup() -> Result<(AzureRest, Splunk)> {
         let secrets = get_keyvault_secrets(
             &env::var("KEY_VAULT_NAME").expect("Need KEY_VAULT_NAME enviornment variable"),
         )
@@ -473,28 +520,6 @@ mod test {
         splunk.send_batch((&collection).to_hec_events()?).await?;
         Ok(())
     }
-
-    // #[tokio::test]
-    // async fn test_azureclient_get_microsoft_authorization_role_definitions() -> Result<()> {
-    //     let (azure_rest, splunk) = setup().await?;
-    //     let collection = azure_rest
-    //         .get_microsoft_authorization_role_definitions()
-    //         .await?;
-    //     assert!(!collection.is_empty());
-    //     splunk.send_batch(&collection[..]).await?;
-    //     Ok(())
-    // }
-
-    // #[tokio::test]
-    // async fn test_azureclient_get_microsoft_authorization_role_assignments() -> Result<()> {
-    //     let (azure_rest, splunk) = setup().await?;
-    //     let collection = azure_rest
-    //         .get_microsoft_authorization_role_assignments()
-    //         .await?;
-    //     splunk.send_batch(&collection[..]).await?;
-    //     assert!(!collection.is_empty());
-    //     Ok(())
-    // }
 
     // 2.1.15
     #[tokio::test]
@@ -640,7 +665,7 @@ impl ToHecEvents for &RoleDefinitions {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Subscriptions {
-    inner: Vec<Subscription>,
+    pub(crate) inner: Vec<Subscription>,
 }
 
 impl ToHecEvents for &Subscriptions {

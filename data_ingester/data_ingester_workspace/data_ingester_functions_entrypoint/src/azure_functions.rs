@@ -13,6 +13,7 @@ use data_ingester_supporting::keyvault::get_keyvault_secrets;
 //use data_ingester_ms_graph::ms_graph::azure_users;
 use anyhow::Result;
 use data_ingester_azure::azure_users;
+use data_ingester_azure_rest::resource_graph::azure_resource_graph;
 use data_ingester_ms_graph::ms_graph::m365;
 use data_ingester_ms_powershell::powershell::install_powershell;
 use data_ingester_splunk::splunk::set_ssphp_run;
@@ -365,7 +366,75 @@ pub(crate) async fn start_server(tx: Sender<()>) -> Result<()> {
         }
     });
 
-    let routes = warp::post().and(azure).or(m365).or(powershell).or(aws);
+    let azure_resource_graph_in_progress = Arc::new(Mutex::new(()));
+    let azure_resource_graph = warp::post().and(warp::path("azure_resource_graph")).then({
+        let arg_in_progress = azure_resource_graph_in_progress.clone();
+        let arg_splunk = splunk.clone();
+        let arg_secrets = secrets.clone();
+
+        move || {
+            let in_progress = arg_in_progress.clone();
+            let arg_splunk = arg_splunk.clone();
+            let arg_secrets = arg_secrets.clone();
+
+            async move {
+                eprintln!("GIT_HASH: {}", env!("GIT_HASH"));
+
+                let mut response = AzureInvokeResponse {
+                    outputs: None,
+                    logs: vec![format!("GIT_HASH: {}", env!("GIT_HASH"))],
+                    return_value: None,
+                };
+                let lock = match in_progress.try_lock() {
+                    Ok(lock) => {
+                        arg_splunk
+                            .log("Aquired lock, starting")
+                            .await
+                            .expect("Splunk should be available for logging");
+                        lock
+                    }
+                    Err(_) => {
+                        arg_splunk
+                            .log("Azure Resource Graph collection is already in progress. NOT starting.")
+                            .await
+                            .expect("Splunk should be available for logging");
+                        response.logs.push(
+                            "Azure Resource Graph collection is already in progress. NOT starting.".to_owned(),
+                        );
+                        return response;
+                    }
+                };
+
+                let result = match azure_resource_graph(arg_secrets, arg_splunk).await {
+                    Ok(_) => "Success".to_owned(),
+                    Err(e) => format!("{:?}", e),
+                };
+
+                response.logs.push(result);
+                if let Some(usage) = memory_stats() {
+                    println!(
+                        "Current physical memory usage: {}",
+                        usage.physical_mem / 1_000_000
+                    );
+                    println!(
+                        "Current virtual memory usage: {}",
+                        usage.virtual_mem / 1_000_000
+                    );
+                } else {
+                    println!("Couldn't get the current memory usage :(");
+                }
+                drop(lock);
+                response
+            }
+        }
+    });
+
+    let routes = warp::post()
+        .and(azure)
+        .or(m365)
+        .or(powershell)
+        .or(aws)
+        .or(azure_resource_graph);
 
     let port_key = "FUNCTIONS_CUSTOMHANDLER_PORT";
     let port: u16 = match env::var(port_key) {
