@@ -51,7 +51,7 @@ async fn resource_graph_all(az_client: AzureRest, splunk: &Splunk) -> Result<()>
                 ResourceGraphRequest::new(sub_id, &format!("{} | order by name asc", &table));
 
             if *table == "guestconfigurationresources" {
-                request_body.options.top = Some(1);
+                request_body.options.top = Some(10);
             }
 
             let mut response = make_request(&az_client, endpoint, &request_body, &mut rate_limit)
