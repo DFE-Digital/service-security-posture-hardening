@@ -242,7 +242,8 @@ impl AzureRest {
             .get_token(&["https://management.azure.com/.default"])
             .await?;
 
-        let body_json = serde_json::to_string(&body)?;
+        let body_json =
+            serde_json::to_string(&body).context("Serialize HTTP request body to json")?;
 
         let response = reqwest::Client::new()
             .post(url)
@@ -253,11 +254,20 @@ impl AzureRest {
             .header("Content-Type", "application/json")
             .body(body_json)
             .send()
-            .await?
+            .await
+            .context("make HTTP request")?
             .text()
-            .await?;
+            .await
+            .context("Get body from HTTP response")?;
 
-        let rt: T = serde_json::from_str(&response)?;
+        let rt: T = match serde_json::from_str(&response) {
+            Ok(obj) => obj,
+            Err(err) => {
+                dbg!(&err);
+                dbg!(&response);
+                anyhow::bail!("Failed to deserialize HTTP response");
+            }
+        };
         Ok(rt)
     }
 
