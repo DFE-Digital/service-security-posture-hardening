@@ -20,7 +20,7 @@ serde_json = "*"
 url = "*"
 tokio = { version = "1.25.0", features = ["full"] }
 data_ingester_supporting = { path = "../data_ingester_supporting" }
-
+async-recursion = "*"
 
 [lints]
 workspace = true

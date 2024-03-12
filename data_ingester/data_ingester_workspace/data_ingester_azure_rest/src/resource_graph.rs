@@ -1,5 +1,5 @@
 use anyhow::{Context, Result};
-
+use async_recursion::async_recursion;
 use azure_core::auth::TokenCredential;
 use data_ingester_splunk::splunk::{set_ssphp_run, Splunk, ToHecEvents};
 use data_ingester_supporting::keyvault::Secrets;
@@ -38,6 +38,12 @@ async fn resource_graph_all(az_client: AzureRest, splunk: &Splunk) -> Result<()>
     let mut rate_limit = RateLimit::default();
     for sub in az_client.subscriptions().inner.iter() {
         let sub_id = sub.subscription_id.as_ref().context("no subscription_id")?;
+
+        // REMOVE ME!
+        // FOR DEBUGGING ONLY
+        if !sub_id.starts_with("6187da35") {
+            continue;
+        }
 
         for table in &crate::resource_graph::RESOURCE_GRAPH_TABLES {
             println!("{}: {}", sub_id, table);
@@ -83,6 +89,7 @@ async fn resource_graph_all(az_client: AzureRest, splunk: &Splunk) -> Result<()>
     Ok(())
 }
 
+#[async_recursion]
 async fn make_request(
     az_client: &AzureRest,
     endpoint: &str,
@@ -96,17 +103,54 @@ async fn make_request(
             .await
             .context("Sending initial Resource Graph Request")?
         {
+            // Happy path
             ResourceGraphResponse::Query(response) => break response,
+
+            // Known errors
             ResourceGraphResponse::Error(error) => match error.error.code {
                 QueryErrorErrorCode::RateLimiting => {
                     eprintln!("Rate limited!:\n {:?}", error);
                     tokio::time::sleep(rate_limit.interval).await;
                     continue;
                 }
-                _ => {
-                    anyhow::bail!("Resource Graph API Error: {:?}", error)
+                QueryErrorErrorCode::BadRequest => {
+                    match &error
+                        .error
+                        .details
+                        .first()
+                        .context("No error details")?
+                        .code
+                    {
+                        QueryErrorErrorDetailsCode::ResponsePayloadTooLarge => {
+                            println!("ResponsePayloadTooLarge error!");
+                            let mut new_request_body = request_body.clone();
+                            new_request_body.options.top =
+                                Some(request_body.options.top.unwrap_or(1000) / 2);
+                            break make_request(az_client, endpoint, request_body, rate_limit)
+                                .await
+                                .context("ResonsePayloadTooLarge recovery")?;
+                        }
+
+                        QueryErrorErrorDetailsCode::RateLimiting => {
+                            eprintln!("Rate limited!:\n {:?}", error);
+                            tokio::time::sleep(rate_limit.interval).await;
+                            continue;
+                        }
+
+                        // Unknown Errors and responses
+                        QueryErrorErrorDetailsCode::Other(other) => {
+                            dbg!(&other);
+                            anyhow::bail!("Unknown Error Type : {:?}", other);
+                        }
+                    }
+                }
+                // Unknown Errors and responses
+                QueryErrorErrorCode::Other(other) => {
+                    dbg!(&other);
+                    anyhow::bail!("Unknown Error Type : {:?}", other);
                 }
             },
+            // Unknown Errors and responses
             ResourceGraphResponse::Other(other) => {
                 dbg!(&other);
                 anyhow::bail!("Unknown response Error: {:?}", other);
@@ -148,12 +192,12 @@ pub(crate) static RESOURCE_GRAPH_TABLES: [&str; 28] = [
     "spotresources",
 ];
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub(crate) struct ResourceGraphRequest {
     subscriptions: Vec<String>,
     query: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    options: Option<ResourceGraphRequestOptions>,
+    //  #[serde(skip_serializing_if = "Option::is_none")]
+    options: ResourceGraphRequestOptions,
 }
 
 impl ResourceGraphRequest {
@@ -161,34 +205,25 @@ impl ResourceGraphRequest {
         Self {
             subscriptions: vec![subscription_id.to_string()],
             query: query.to_string(),
-            options: Some(ResourceGraphRequestOptions {
+            options: ResourceGraphRequestOptions {
                 skip: None,
                 skip_token: None,
-                top: None,
+                top: Some(1000),
                 allow_partial_scopes: None,
-            }),
+            },
         }
     }
 
     pub(crate) fn add_options(&mut self, options: ResourceGraphRequestOptions) {
-        self.options = Some(options)
+        self.options = options
     }
 
     fn add_skip_token(&mut self, skip_token: &str) {
-        if let Some(ref mut options) = self.options {
-            options.skip_token = Some(skip_token.to_string());
-        } else {
-            self.options = Some(ResourceGraphRequestOptions {
-                skip: None,
-                skip_token: Some(skip_token.to_string()),
-                top: None,
-                allow_partial_scopes: None,
-            })
-        }
+        self.options.skip_token = Some(skip_token.to_string());
     }
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct ResourceGraphRequestOptions {
     #[serde(rename = "$skip")]
@@ -236,13 +271,23 @@ struct QueryErrorError {
 #[non_exhaustive]
 enum QueryErrorErrorCode {
     RateLimiting,
-    Other,
+    BadRequest,
+    Other(Value),
 }
+
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 struct QueryErrorErrorDetails {
-    code: String,
+    code: QueryErrorErrorDetailsCode,
     message: String,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+enum QueryErrorErrorDetailsCode {
+    RateLimiting,
+    ResponsePayloadTooLarge,
+    Other(Value),
 }
 
 #[derive(Serialize, Deserialize, Debug)]
