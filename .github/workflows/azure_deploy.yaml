@@ -38,11 +38,8 @@ jobs:
         uses: actions/cache@v3
         with:
           path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            data_ingester/data_ingester_rust/target
+            ~/.cargo/registry
+            ~/.cargo/git
             data_ingester/data_ingester_workspace/target
           key: cache-rust-target-${{ hashFiles('data_ingester/data_ingester_workspace/Cargo.lock') }}
 
