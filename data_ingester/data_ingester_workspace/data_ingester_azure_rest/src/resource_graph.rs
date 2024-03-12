@@ -39,12 +39,6 @@ async fn resource_graph_all(az_client: AzureRest, splunk: &Splunk) -> Result<()>
     for sub in az_client.subscriptions().inner.iter() {
         let sub_id = sub.subscription_id.as_ref().context("no subscription_id")?;
 
-        // REMOVE ME!
-        // FOR DEBUGGING ONLY
-        if !sub_id.starts_with("6187da35") {
-            continue;
-        }
-
         for table in &crate::resource_graph::RESOURCE_GRAPH_TABLES {
             println!("{}: {}", sub_id, table);
             let mut request_body =
@@ -105,7 +99,7 @@ async fn make_request(
         match az_client
             .post_rest_request(endpoint, &request_body)
             .await
-            .context("Sending initial Resource Graph Request")?
+            .context("Sending Resource Graph Post Request")?
         {
             // Happy path
             ResourceGraphResponse::Query(response) => break response,
@@ -128,9 +122,8 @@ async fn make_request(
                         QueryErrorErrorDetailsCode::ResponsePayloadTooLarge => {
                             println!("ResponsePayloadTooLarge error!");
                             let mut new_request_body = request_body.clone();
-                            new_request_body.options.top =
-                                Some(request_body.options.top.unwrap_or(1000) / 2);
-                            break make_request(az_client, endpoint, request_body, rate_limit)
+                            new_request_body.options.top = Some(10);
+                            break make_request(az_client, endpoint, &new_request_body, rate_limit)
                                 .await
                                 .context("ResonsePayloadTooLarge recovery")?;
                         }
