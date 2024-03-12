@@ -8,6 +8,114 @@ use serde_json::Value;
 use std::{collections::VecDeque, sync::Arc};
 use tokio::time::{Duration, Instant};
 
+pub async fn azure_resource_graph(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
+    set_ssphp_run()?;
+
+    splunk
+        .log("Starting Azure Resource Graph collection")
+        .await?;
+    splunk
+        .log(&format!("GIT_HASH: {}", env!("GIT_HASH")))
+        .await
+        .context("Failed logging to Splunk")?;
+
+    let azure_rest = AzureRest::new(
+        &secrets.azure_client_id,
+        &secrets.azure_client_secret,
+        &secrets.azure_tenant_id,
+    )
+    .await
+    .context("Can't build rest client")?;
+    resource_graph_all(azure_rest, &splunk)
+        .await
+        .context("Running azure_resource_graph")?;
+
+    Ok(())
+}
+
+async fn resource_graph_all(az_client: AzureRest, splunk: &Splunk) -> Result<()> {
+    let endpoint = "https://management.azure.com/providers/Microsoft.ResourceGraph/resources?api-version=2021-03-01";
+    let mut rate_limit = RateLimit::default();
+    for sub in az_client.subscriptions().inner.iter() {
+        let sub_id = sub.subscription_id.as_ref().context("no subscription_id")?;
+
+        for table in &crate::resource_graph::RESOURCE_GRAPH_TABLES {
+            println!("{}: {}", sub_id, table);
+            let mut request_body =
+                ResourceGraphRequest::new(sub_id, &format!("{} | order by name asc", &table));
+
+            let mut response = make_request(&az_client, endpoint, &request_body, &mut rate_limit)
+                .await
+                .context("Failed making Resource Graph API request")?;
+
+            let events = (&response.data)
+                .to_hec_events()
+                .context("Serialize ResourceGraphResponse.data events")?;
+            splunk
+                .send_batch(events)
+                .await
+                .context("Sending events to Splunk")?;
+            let mut batch = 0;
+            while let Some(ref skip_token) = response.skip_token {
+                batch += 1;
+                println!("{}: {}: batch {}", sub_id, table, batch);
+                request_body.add_skip_token(skip_token);
+
+                response = make_request(&az_client, endpoint, &request_body, &mut rate_limit)
+                    .await
+                    .context("Failed making Resource Graph API request")?;
+
+                let events = (&response.data)
+                    .to_hec_events()
+                    .context("Serialize ResourceGraphResponse.data events")?;
+                splunk
+                    .send_batch(events)
+                    .await
+                    .context("Sending events to Splunk")?;
+            }
+        }
+        az_client
+            .credential
+            .clear_cache()
+            .await
+            .context("Clear AZ credential cache")?;
+    }
+    Ok(())
+}
+
+async fn make_request(
+    az_client: &AzureRest,
+    endpoint: &str,
+    request_body: &ResourceGraphRequest,
+    rate_limit: &mut RateLimit,
+) -> Result<QueryResponse> {
+    let response = loop {
+        rate_limit.wait().await?;
+        match az_client
+            .post_rest_request(endpoint, &request_body)
+            .await
+            .context("Sending initial Resource Graph Request")?
+        {
+            ResourceGraphResponse::Query(response) => break response,
+            ResourceGraphResponse::Error(error) => match error.error.code {
+                QueryErrorErrorCode::RateLimiting => {
+                    eprintln!("Rate limited!:\n {:?}", error);
+                    tokio::time::sleep(rate_limit.interval).await;
+                    continue;
+                }
+                _ => {
+                    anyhow::bail!("Resource Graph API Error: {:?}", error)
+                }
+            },
+            ResourceGraphResponse::Other(other) => {
+                dbg!(&other);
+                anyhow::bail!("Unknown response Error: {:?}", other);
+            }
+        };
+    };
+    Ok(response)
+}
+
 use crate::azure_rest::AzureRest;
 pub(crate) static RESOURCE_GRAPH_TABLES: [&str; 28] = [
     "advisorresources",
@@ -142,6 +250,7 @@ struct QueryErrorErrorDetails {
 enum ResourceGraphResponse {
     Query(QueryResponse),
     Error(QueryError),
+    Other(Value),
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -196,113 +305,10 @@ impl RateLimit {
     }
 }
 
-async fn make_request(
-    az_client: &AzureRest,
-    endpoint: &str,
-    request_body: &ResourceGraphRequest,
-    rate_limit: &mut RateLimit,
-) -> Result<QueryResponse> {
-    let response = loop {
-        rate_limit.wait().await?;
-        match az_client
-            .post_rest_request(endpoint, &request_body)
-            .await
-            .context("Sending initial Resource Graph Request")?
-        {
-            ResourceGraphResponse::Query(response) => break response,
-            ResourceGraphResponse::Error(error) => match error.error.code {
-                QueryErrorErrorCode::RateLimiting => {
-                    eprintln!("Rate limited!:\n {:?}", error);
-                    tokio::time::sleep(rate_limit.interval).await;
-                    continue;
-                }
-                _ => anyhow::bail!("Resource Graph API Error: {:?}", error),
-            },
-        };
-    };
-    Ok(response)
-}
-
-async fn resource_graph_all(az_client: AzureRest, splunk: &Splunk) -> Result<()> {
-    let endpoint = "https://management.azure.com/providers/Microsoft.ResourceGraph/resources?api-version=2021-03-01";
-    let mut rate_limit = RateLimit::default();
-    for sub in az_client.subscriptions().inner.iter() {
-        let sub_id = sub.subscription_id.as_ref().context("no subscription_id")?;
-
-        for table in &crate::resource_graph::RESOURCE_GRAPH_TABLES {
-            println!("{}: {}", sub_id, table);
-            let mut request_body =
-                ResourceGraphRequest::new(sub_id, &format!("{} | order by name asc", &table));
-
-            let mut response = make_request(&az_client, endpoint, &request_body, &mut rate_limit)
-                .await
-                .context("Failed making Resource Graph API request")?;
-
-            let events = (&response.data)
-                .to_hec_events()
-                .context("Serialize ResourceGraphResponse.data events")?;
-            splunk
-                .send_batch(events)
-                .await
-                .context("Sending events to Splunk")?;
-            let mut batch = 0;
-            while let Some(ref skip_token) = response.skip_token {
-                batch += 1;
-                println!("{}: {}: batch {}", sub_id, table, batch);
-                request_body.add_skip_token(skip_token);
-
-                response = make_request(&az_client, endpoint, &request_body, &mut rate_limit)
-                    .await
-                    .context("Failed making Resource Graph API request")?;
-
-                let events = (&response.data)
-                    .to_hec_events()
-                    .context("Serialize ResourceGraphResponse.data events")?;
-                splunk
-                    .send_batch(events)
-                    .await
-                    .context("Sending events to Splunk")?;
-            }
-        }
-        az_client
-            .credential
-            .clear_cache()
-            .await
-            .context("Clear AZ credential cache")?;
-    }
-    Ok(())
-}
-
-pub async fn azure_resource_graph(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
-    set_ssphp_run()?;
-
-    splunk
-        .log("Starting Azure Resource Graph collection")
-        .await?;
-    splunk
-        .log(&format!("GIT_HASH: {}", env!("GIT_HASH")))
-        .await
-        .context("Failed logging to Splunk")?;
-
-    let azure_rest = AzureRest::new(
-        &secrets.azure_client_id,
-        &secrets.azure_client_secret,
-        &secrets.azure_tenant_id,
-    )
-    .await
-    .context("Can't build rest client")?;
-    resource_graph_all(azure_rest, &splunk)
-        .await
-        .context("Running azure_resource_graph")?;
-
-    Ok(())
-}
-
 #[cfg(test)]
 #[tokio::test]
 async fn test_azure_resource_graph() -> Result<()> {
     let (azure_rest, splunk) = crate::azure_rest::test::setup().await?;
     resource_graph_all(azure_rest, &splunk).await?;
-    assert!(false);
     Ok(())
 }
