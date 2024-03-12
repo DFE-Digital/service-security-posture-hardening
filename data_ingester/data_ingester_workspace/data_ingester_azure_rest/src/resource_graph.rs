@@ -5,7 +5,8 @@ use data_ingester_splunk::splunk::{set_ssphp_run, Splunk, ToHecEvents};
 use data_ingester_supporting::keyvault::Secrets;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use std::sync::Arc;
+use std::{collections::VecDeque, sync::Arc};
+use tokio::time::{Duration, Instant};
 
 use crate::azure_rest::AzureRest;
 pub(crate) static RESOURCE_GRAPH_TABLES: [&str; 28] = [
@@ -36,7 +37,7 @@ pub(crate) static RESOURCE_GRAPH_TABLES: [&str; 28] = [
     "resources",
     "securityresources",
     "servicehealthresources",
-    "spotresources ",
+    "spotresources",
 ];
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -99,7 +100,7 @@ pub(crate) struct ResourceGraphRequestOptions {
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
-pub(crate) struct ResourceGraphResponse {
+struct QueryResponse {
     #[serde(rename = "$skipToken")]
     skip_token: Option<String>,
     count: usize,
@@ -107,6 +108,40 @@ pub(crate) struct ResourceGraphResponse {
     facets: Value,
     result_truncated: String,
     total_records: usize,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+struct QueryError {
+    error: QueryErrorError,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+struct QueryErrorError {
+    code: QueryErrorErrorCode,
+    details: Vec<QueryErrorErrorDetails>,
+    message: String,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+#[non_exhaustive]
+enum QueryErrorErrorCode {
+    RateLimiting,
+    Other,
+}
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+struct QueryErrorErrorDetails {
+    code: String,
+    message: String,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(untagged)]
+enum ResourceGraphResponse {
+    Query(QueryResponse),
+    Error(QueryError),
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -129,23 +164,79 @@ impl ToHecEvents for &ResourceGraphData {
     }
 }
 
+#[derive(Debug, Default)]
+struct RateLimit {
+    requests: VecDeque<Instant>,
+    max_requests: usize,
+    interval: Duration,
+}
+
+impl RateLimit {
+    fn default() -> Self {
+        Self {
+            requests: VecDeque::new(),
+            max_requests: 14,
+            interval: Duration::from_millis(5100),
+        }
+    }
+
+    async fn wait(&mut self) -> Result<()> {
+        self.requests.push_back(Instant::now());
+        if self.requests.len() > self.max_requests {
+            let oldest = self
+                .requests
+                .pop_front()
+                .expect("Checked len() for elements");
+            let deadline = oldest
+                .checked_add(self.interval)
+                .expect("time to add correctly");
+            tokio::time::sleep_until(deadline).await;
+        }
+        Ok(())
+    }
+}
+
+async fn make_request(
+    az_client: &AzureRest,
+    endpoint: &str,
+    request_body: &ResourceGraphRequest,
+    rate_limit: &mut RateLimit,
+) -> Result<QueryResponse> {
+    let response = loop {
+        rate_limit.wait().await?;
+        match az_client
+            .post_rest_request(endpoint, &request_body)
+            .await
+            .context("Sending initial Resource Graph Request")?
+        {
+            ResourceGraphResponse::Query(response) => break response,
+            ResourceGraphResponse::Error(error) => match error.error.code {
+                QueryErrorErrorCode::RateLimiting => {
+                    eprintln!("Rate limited!:\n {:?}", error);
+                    tokio::time::sleep(rate_limit.interval).await;
+                    continue;
+                }
+                _ => anyhow::bail!("Resource Graph API Error: {:?}", error),
+            },
+        };
+    };
+    Ok(response)
+}
+
 async fn resource_graph_all(az_client: AzureRest, splunk: &Splunk) -> Result<()> {
     let endpoint = "https://management.azure.com/providers/Microsoft.ResourceGraph/resources?api-version=2021-03-01";
-
-    // 15 requests per 5 seconds = 0.3 per sec
-    let sleep = tokio::time::Duration::from_millis(400);
+    let mut rate_limit = RateLimit::default();
     for sub in az_client.subscriptions().inner.iter() {
         let sub_id = sub.subscription_id.as_ref().context("no subscription_id")?;
-        dbg!(&sub_id);
+
         for table in &crate::resource_graph::RESOURCE_GRAPH_TABLES {
-            dbg!(&table);
+            println!("{}: {}", sub_id, table);
             let mut request_body =
                 ResourceGraphRequest::new(sub_id, &format!("{} | order by name asc", &table));
 
-            let mut response: crate::resource_graph::ResourceGraphResponse = az_client
-                .post_rest_request(endpoint, &request_body)
+            let mut response = make_request(&az_client, endpoint, &request_body, &mut rate_limit)
                 .await
-                .context("Sending initial Resource Graph Request")?;
+                .context("Failed making Resource Graph API request")?;
 
             let events = (&response.data)
                 .to_hec_events()
@@ -154,16 +245,15 @@ async fn resource_graph_all(az_client: AzureRest, splunk: &Splunk) -> Result<()>
                 .send_batch(events)
                 .await
                 .context("Sending events to Splunk")?;
-
-            tokio::time::sleep(sleep).await;
-
+            let mut batch = 0;
             while let Some(ref skip_token) = response.skip_token {
-                dbg!("loop");
-                request_body.add_skip_token(dbg!(skip_token));
-                response = az_client
-                    .post_rest_request(endpoint, &request_body)
+                batch += 1;
+                println!("{}: {}: batch {}", sub_id, table, batch);
+                request_body.add_skip_token(skip_token);
+
+                response = make_request(&az_client, endpoint, &request_body, &mut rate_limit)
                     .await
-                    .context("Sending Resource Graph Request with skip_token")?;
+                    .context("Failed making Resource Graph API request")?;
 
                 let events = (&response.data)
                     .to_hec_events()
@@ -172,7 +262,6 @@ async fn resource_graph_all(az_client: AzureRest, splunk: &Splunk) -> Result<()>
                     .send_batch(events)
                     .await
                     .context("Sending events to Splunk")?;
-                tokio::time::sleep(sleep).await;
             }
         }
         az_client
