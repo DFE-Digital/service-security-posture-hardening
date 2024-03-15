@@ -5,6 +5,7 @@ Each Use Case is driven by a single Splunk SaveSearch. The data comes from Azure
 The Use Case Saved Searches are scheduled - using a cron - to each run once every day. Given that theere are a reasonably large number of Use Case savedsearches, it seems sensible to stagger running them over time. The chosen period is after the Azure Functions will have completed and before users are likely to be working ie 4am to 7am. The schedules are as follows : 
 
 **Hours**
+3:30am = Defender Assessments
 4am = M365
 5am = DNS (AWS)
 6am = Azure
