@@ -9,6 +9,7 @@ edition = "2021"
 anyhow = { version = "*", features=["backtrace"]}
 data_ingester_aws = { path = "../data_ingester_aws" }
 data_ingester_azure = { path = "../data_ingester_azure" }
+data_ingester_azure_rest = { path = "../data_ingester_azure_rest" }
 data_ingester_ms_graph = { path = "../data_ingester_ms_graph" }
 data_ingester_ms_powershell = { path = "../data_ingester_ms_powershell" }
 data_ingester_splunk = { path = "../data_ingester_splunk" }

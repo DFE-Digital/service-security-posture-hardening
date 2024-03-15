@@ -18,10 +18,9 @@ reqwest = {version = "*", features = ["rustls-tls"], default-features = false}
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "*"
 url = "*"
-
-[dev-dependencies]
-data_ingester_supporting = { path = "../data_ingester_supporting" }
 tokio = { version = "1.25.0", features = ["full"] }
+data_ingester_supporting = { path = "../data_ingester_supporting" }
+async-recursion = "*"
 
 [lints]
 workspace = true
