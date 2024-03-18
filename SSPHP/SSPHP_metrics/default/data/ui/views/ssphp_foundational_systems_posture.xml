@@ -252,8 +252,8 @@
             width:25% !important;
           }
         </style>
-        <div class="absolute" style="background:$tkn_s194_color$;"><a href="ssphp_foundational_systems_service?form.tkn__service=s194" target="_blank">$tkn_s194_score_abs$</a></div>
-        <div class="undervalue" style="background:$tkn_s194_color$;"><a href="ssphp_foundational_systems_service?form.tkn__service=s194" target="_blank">$tkn_s194_service_name$</a></div>
+        <div class="absolute" style="background:$tkn_s194_color$;"><a href="ssphp_dfe_service?form.tkn__service=s194" target="_blank">$tkn_s194_score_abs$</a></div>
+        <div class="undervalue" style="background:$tkn_s194_color$;"><a href="ssphp_dfe_service?form.tkn__service=s194" target="_blank">$tkn_s194_service_name$</a></div>
       </html>
     </panel>
   </row>
@@ -267,8 +267,8 @@
             width:25% !important;
           }
         </style>
-        <div class="absolute" style="background:$tkn_s194_color$;"><a href="ssphp_foundational_systems_service?form.tkn__service=s194" target="_blank">$tkn_s194_score_perc$</a></div>
-        <div class="undervalue" style="background:$tkn_AAD_color$;"><a href="ssphp_foundational_systems_service?form.tkn__service=s194" target="_blank">$tkn_s194_service_name$</a></div>
+        <div class="absolute" style="background:$tkn_s194_color$;"><a href="ssphp_dfe_service?form.tkn__service=s194" target="_blank">$tkn_s194_score_perc$</a></div>
+        <div class="undervalue" style="background:$tkn_s194_color$;"><a href="ssphp_dfe_service?form.tkn__service=s194" target="_blank">$tkn_s194_service_name$</a></div>
       </html>
     </panel>
   </row>
