@@ -11,7 +11,7 @@
         <a href="ssphp_foundational_systems_service?form.tkn__service=m365">M365</a>
       </collection>
       <collection label="DfE Services" >
-        <a href="ssphp_foundational_systems_service?form.tkn__service=azure">S194 - CISO Continuous Assurance</a>
+        <a href="ssphp_dfe_service?form.tkn__service=s194">S194 - CISO Continuous Assurance</a>
       </collection>
     </collection>
     <a href="ssphp_foundational_systems_dashboard_help">Dashboard Help</a>

@@ -1,0 +1,330 @@
+<dashboard version="1.1" theme="dark" hideFilters="true" script="js/table_cell_color.js">
+
+  <label>Security Posture Continuous Assurance : DfE Service Dashboard</label>
+  <description>v1.0.0</description>
+  
+  <init>
+    <set token="tkn_controls_compliant_text"></set>
+    <unset token="tkn_ready"></unset>
+  </init>
+
+  <fieldset submitButton="false">
+    <input type="radio" token="tkn_view" searchWhenChanged="true">
+      <label>View</label>
+      <choice value="a">Absolute</choice>
+      <choice value="p">Percentage</choice>
+      <default>a</default>
+      <initialValue>a</initialValue>
+      <change>
+        <condition value="a">
+          <set token="tkn_show_abs">true</set>
+          <unset token="tkn_show_perc"></unset>
+        </condition>
+        <condition value="p">
+          <unset token="tkn_show_abs"></unset>
+          <set token="tkn_show_perc">true</set>
+        </condition>
+      </change>
+    </input>
+  </fieldset>
+
+
+<!-- ################### Set Target Service and other Tokens ################### --> 
+
+  <row depends="$never_show$">
+    <panel>
+      <table>
+        <search>
+          <query>
+  | makeresults
+  | eval app=$env:app|s$
+  | table app
+          </query>
+          <done>
+            <set token="tkn_current_app">$result.app$</set>
+          </done>
+        </search>
+      </table>
+    </panel>
+
+    <panel>
+      <table>
+        <search>
+          <query>
+  | makeresults
+  | eval s=$tkn__service|s$,
+         service_name=if('s'=".*","ALL",upper('s'))
+  | table service_name
+          </query>
+          <done>
+            <set token="tkn_current_service">$result.service_name$</set>
+          </done>
+        </search>
+      </table>
+    </panel>
+    
+
+    <panel>
+      <table>
+        <search>
+          <query>
+  | makeresults
+
+  `ssphp_metrics_eval_field_colors`
+
+  | table tkn_*
+          </query>
+          <done>
+            <set token="tkn_colour_splunk_grey">$result.tkn_colour_splunk_grey$</set>
+            <set token="tkn_colour_red">$result.tkn_colour_red$</set>
+            <set token="tkn_colour_orange">$result.tkn_colour_orange$</set>
+            <set token="tkn_colour_green">$result.tkn_colour_green$</set>
+            <set token="tkn_colour_blue">$result.tkn_colour_blue$</set>
+          </done>
+        </search>
+      </table>
+    </panel>
+  </row>
+  
+  
+
+<!-- ################### Summary Row ################### --> 
+
+
+  <row depends="$tkn_ready$,$never_show$">
+    <panel>
+      <table>
+        <search>
+          <query>
+index="ssphp_metrics_summary" earliest=-2d@d latest=now
+       ssphp.use_case.foundational_system="s194"
+       ```ssphp.score.ciso_priority=1```
+
+      [| search index="ssphp_metrics_summary" earliest=-2d@d latest=now 
+          ssphp.use_case.foundational_system="s194"
+          ```ssphp.score.ciso_priority=1```
+          
+        | stats max(SSPHP_RUN) as SSPHP_RUN by ssphp.use_case.id
+        | eval search_text="(\"ssphp.use_case.id\"=\"".'ssphp.use_case.id'."\" AND SSPHP_RUN=\"".SSPHP_RUN."\")"
+        | stats values(search_text) as search_text
+        | eval search_text="(".mvjoin(search_text," OR ").")"
+        | return $search_text]
+
+| eval ssphp.use_case.foundational_system_name=upper('ssphp.use_case.foundational_system')." - ".'ssphp.use_case.foundational_system_name'
+        
+| stats values(ssphp.use_case.foundational_system_name) as ssphp.use_case.foundational_system_name, count as ssphp.score.denominator, sum(eval(if('ssphp.score.score'="100",1,0))) as ssphp.score.numerator
+
+`ssphp_metrics_eval_field_colors`
+
+| eval s194_compliant_perc=floor('ssphp.score.numerator'*100/'ssphp.score.denominator'),
+       s194_compliant_abs='ssphp.score.numerator'." of ". 'ssphp.score.denominator',
+       s194_compliant_perc='s194_compliant_perc'."%",
+       s194_compliant_color=case(isnull('s194_compliant_perc') OR 's194_compliant_perc'="",'tkn_colour_splunk_grey',
+                                 's194_compliant_perc'=100,'tkn_colour_green',
+                                 1==1,'tkn_colour_red')
+          </query>
+          <done>
+            <set token="tkn_s194_service_name">$result.ssphp.use_case.foundational_system_name$</set>
+            <set token="tkn_current_service">$result.ssphp.use_case.foundational_system_name$</set>
+            <set token="tkn_s194_color">$result.s194_compliant_color$</set>
+            <set token="tkn_s194_score_abs">$result.s194_compliant_abs$</set>
+            <set token="tkn_s194_score_perc">$result.s194_compliant_perc$</set>
+
+            <set token="tkn_s194_ready">true</set>
+          </done>
+        </search>
+      </table>
+    </panel>
+  </row>
+
+  <row>
+    <panel depends="$tkn_s194_ready$,$tkn_show_abs$">
+      <html>
+        <div id="div_header" style="background:$tkn_s194_color$;color:white;font-weight:bold;font-size:800%;text-align:center;padding:50">$tkn_s194_score_abs$</div> 
+        <div id="div_header" style="background:$tkn_s194_color$;color:white;font-size:100%;text-align:center">$tkn_s194_service_name$ Compliant of # DfE Mandated Controls</div> 
+      </html>
+    </panel>
+
+    <panel depends="$tkn_show_perc$">
+      <html>
+        <div id="div_header" style="background:$tkn_s194_color$;color:white;font-weight:bold;font-size:800%;text-align:center;padding:50">$tkn_s194_score_perc$</div> 
+        <div id="div_header" style="background:$tkn_s194_color$;color:white;font-size:100%;text-align:center">Percentage $tkn_s194_service_name$ Compliant of DfE Mandated Controls</div> 
+      </html>
+    </panel>
+  </row>
+
+
+
+<!-- ################### Main Data Table Filters ################### --> 
+
+  <row depends="$tkn_ready$">
+    <panel>
+      <html>
+        <div id="div_header" style="font-size:175%;color:yellow;">$tkn_current_service$</div> 
+        <div id="div_header" style="font-size:120%">Control Details &amp; Scores [$tkn_controls_total$]</div> 
+      </html>
+    </panel>
+
+
+    <panel>
+      <input type="checkbox" token="tkn_fields" searchWhenChanged="true">
+        <label>Show Only</label>
+        <choice value="N">Non-Compliant</choice>
+        <choice value="C">DfE Mandated</choice>
+        <initialValue>N,C</initialValue>
+        <default>*</default>
+      </input>
+    </panel>
+
+    <panel>
+      <html>
+        <div><span><a href="ssphp_foundational_systems_dashboard_help?tkn_service=true" class="btn btn-primary" style="color:black;background-color:grey;text-align:center;display:block;float:right;width:30%;" target="_blank">Dashboard Help</a></span></div> 
+      </html>
+    </panel>
+    
+<!-- Search to build filter text --> 
+    <panel depends="$never_show$">
+      <table>
+        <search>
+          <query>
+| makeresults
+| eval txt1="| where match('ssphp.score.compliance_status',\"^Non-Compliant.*\")",
+       txt2="| where 'ssphp.score.ciso_priority'=\"DfE Mandated\"",
+       infield=$tkn_fields|s$,
+       
+       C=if(like(infield,"%C%"),'txt2'," "),
+       N=if(like(infield,"%N%"),'txt1'," "),
+       search='C'.'N'
+
+| table txt1, txt2, search, C, N, infield
+          </query>
+          <done>
+            <set token="tkn_search_filter">$result.search$</set>
+          </done>
+        </search>
+      </table>
+    </panel>
+  </row>
+  
+
+<!-- ################### Main Data Table ################### --> 
+
+  <row depends="$never_show$">
+    <html>
+      <style>
+         .css_for_green{ 
+         background-color: $tkn_colour_green$ !important;
+         color:#000000 !important;
+         font-size: 100% !important;
+         }
+         .css_for_orange{ 
+         background-color: $tkn_colour_orange$ !important;
+         color:#000000 !important;
+         font-size: 100% !important;
+         }
+         .css_for_red{
+         background-color: $tkn_colour_red$ !important;
+         color:#000000 !important;
+         font-size: 100% !important;
+         }
+         .css_for_blue{
+         background-color: $tkn_colour_blue$ !important;
+         font-size: 100% !important;
+         }
+      </style>
+    </html>
+    <html>
+      <style>
+        #table1 th:nth-child(2) {
+          width: 150px;
+        }
+        #table1 th:nth-child(4) {
+          width: 50px;
+        }
+        #table1 th:nth-child(5) {
+          width: 100px;
+        }
+        #table1 th:nth-child(6) {
+          width: 50px;
+        }
+      </style>
+    </html>
+  </row>
+
+
+
+  <row depends="$tkn_ready$">
+    <panel>
+      <table id="table1">
+        <search>
+          <query>
+index="ssphp_metrics_summary" earliest=-2d@d latest=now
+       ssphp.use_case.foundational_system="s194"
+       ```ssphp.score.ciso_priority=1```
+
+      [| search index="ssphp_metrics_summary" earliest=-2d@d latest=now 
+          ssphp.use_case.foundational_system="s194"
+          ```ssphp.score.ciso_priority=1```
+          
+        | stats max(SSPHP_RUN) as SSPHP_RUN by ssphp.use_case.id
+        | eval search_text="(\"ssphp.use_case.id\"=\"".'ssphp.use_case.id'."\" AND SSPHP_RUN=\"".SSPHP_RUN."\")"
+        | stats values(search_text) as search_text
+        | eval search_text="(".mvjoin(search_text," OR ").")"
+        | return $search_text]
+
+| eval ssphp.score.compliance_status=if('ssphp.score.score'="100","Compliant","Non-Compliant"),
+       ssphp.score.ciso_priority=case('ssphp.score.ciso_priority'=1,"DfE Mandated",
+                                      'ssphp.score.ciso_priority'=2,"Recommended",
+                                      1==1,"Desirable"),
+       ssphp.score.score='ssphp.score.score'."|".'ssphp.score.color',
+       ssphp.score.compliance_status='ssphp.score.compliance_status'."|".'ssphp.score.color',
+       ssphp.use_case.foundational_system=upper('ssphp.use_case.foundational_system'),
+       ssphp.use_case.foundational_system_name='ssphp.use_case.foundational_system'." - ".'ssphp.use_case.foundational_system_name',
+       ssphp.defender_assessments.control.rationale=mvappend('ssphp.defender_assessments.control.rationale','ssphp.defender_assessments.control.rationale{}')
+| fields - ssphp.defender_assessments.control.rationale{}
+
+``` sort the lines properly ```
+
+| fillnull value=0 n3
+| eval n4=case('ssphp.score.ciso_priority'="DfE Mandated",1,'ssphp.score.ciso_priority'="Recommended",2,'ssphp.score.ciso_priority'="Desirable",3,1==1,4),
+        n5=case(match('ssphp.score.compliance_status',"^Non-Compliant.*"),1,match('ssphp.score.compliance_status',"^Compliant.*"),2,1==1,3),
+        sort_field='n4'.'n5'
+| sort 0 sort_field, ssphp.use_case.id
+
+| fields ssphp.use_case.foundational_system, ssphp.use_case.id, ssphp.use_case.title, ssphp.defender_assessments.control.title, ssphp.score.score, ssphp.score.compliance_status, ssphp.score.ciso_priority, ssphp.defender_assessments.control.description, ssphp.score.color
+
+$tkn_search_filter$
+
+| rename ssphp.use_case.foundational_system as "DfE Service",
+         ssphp.use_case.title as "Use Case",
+         ssphp.defender_assessments.control.title  as "Control Title", 
+         ssphp.score.score as "Score",
+         ssphp.score.compliance_status as "Compliance Status",
+         ssphp.score.ciso_priority as "Control Type",
+         ssphp.defender_assessments.control.description as "Description"
+         
+| eventstats count as number_controls_total
+          </query>
+          <latest>now</latest>
+          <earliest>0</earliest>
+          <sampleRatio>1</sampleRatio>
+          <done>
+            <set token="tkn_ready">true</set>
+            <set token="tkn_controls_total">$result.number_controls_total$</set>
+          </done>
+        </search>
+        <option name="count">100</option>
+        <option name="dataOverlayMode">none</option>
+        <option name="percentagesRow">false</option>
+        <option name="rowNumbers">false</option>
+        <option name="totalsRow">false</option>
+        <option name="wrap">true</option>
+        <option name="drilldown">row</option>
+        <fields>"DfE Service","Use Case","Control Title","Score","Compliance Status","Control Type","Description"</fields>
+        <drilldown>
+          <link target="_blank">/app/$tkn_current_app$/ssphp_foundational_systems_detail?tkn_use_case_id=$row.ssphp.use_case.id$</link>
+        </drilldown>
+      </table>
+    </panel>
+  </row>
+</dashboard>
