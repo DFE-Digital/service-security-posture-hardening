@@ -429,12 +429,16 @@ pub(crate) async fn start_server(tx: Sender<()>) -> Result<()> {
         }
     });
 
-    let routes = warp::post()
+    let health_check = warp::get().and(warp::path::end()).map(|| "Healthy!");
+
+    let function_routes = warp::post()
         .and(azure)
         .or(m365)
         .or(powershell)
         .or(aws)
         .or(azure_resource_graph);
+
+    let routes = health_check.or(function_routes);
 
     let port_key = "FUNCTIONS_CUSTOMHANDLER_PORT";
     let port: u16 = match env::var(port_key) {
