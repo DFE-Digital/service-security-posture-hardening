@@ -10,6 +10,8 @@ require([
         canRender: function (cell) {
             //return true;
             return _(['state',
+                      'properties.resourceDetails.ResourceName',
+                      'properties.status.code',
                       'expiration',
                       'hub_arn',
                       'surname',

@@ -1,7 +1,7 @@
-<dashboard theme="dark" version="1.1" script="js/addtags.js, js/table_cell_backcolor_multivalue.js">
+<dashboard theme="dark" version="1.1" script="js/addtags.js, js/table_cell_color.js">
 
   <label>Security Posture Continuous Assurance : Azure Defender Assessment Control Detail Dashboard</label>
-  <description>v1.0.0</description>
+  <description>v1.0.4</description>
   
   <init>
     <unset token="tkn_show_dashboard"></unset>
@@ -123,13 +123,15 @@ index="ssphp_metrics_summary" ssphp.use_case.id=$tkn_use_case_id|s$
        compliance_status=if('ssphp.score.score'=100,"Compliant","Non-Compliant"),
        nl="
 ",
-       ssphp.score.scoring_narrative=replace('ssphp.score.scoring_narrative',"~~",'nl')
+       ssphp.score.scoring_narrative=replace('ssphp.score.scoring_narrative',"~~",'nl'),
+       ssphp.score.scoring_narrative=replace('ssphp.score.scoring_narrative',"xxxxxxxxxx",'ssphp.defender_assessments.control.title')
 
 | eval ssphp.score.ciso_priority=case('ssphp.score.ciso_priority'=1,"DfE Mandated",
        'ssphp.score.ciso_priority'=2,"Recommended",
        1==1,"Desirable")
 
 | eval ssphp.defender_assessments.control.rationale=mvappend('ssphp.defender_assessments.control.rationale','ssphp.defender_assessments.control.rationale{}')
+
        
 | fields - ssphp.defender_assessments.control.rationale{}
 
@@ -455,41 +457,17 @@ index="ssphp_metrics_summary" ssphp.use_case.id=$tkn_use_case_id|s$
   <row depends="$tkn_show_dashboard$">
     <panel>
       <title>Underlying Data</title>
-      <table id="table3">
+      <table id="table1">
         <search>
           <query>
 $tkn_use_case_search_text$
 
 | search ssphp.use_case.id=$tkn_notfs|s$
 
-| table azure.tenant_id, azure.subscription_id, azure.resource_group_id, properties.resourceDetails.ResourceName, properties.status.code
-
-
-```| rename *{} as *¬¬
-| rename *{}* as *__*
-| rename * as z_*
-| rename z_ssphp* as ssphp*
-| foreach z_* 
-       [| eval fld_val='&lt;&lt;FIELD&gt;&gt;',
-               fld_val=mvjoin('fld_val',"~~"),
-               fld_val=case(isnull('fld_val'),"-",
-                            trim('fld_val')="","-",
-                            len('fld_val')&lt;2 AND !match('fld_val',"[a-zA-Z0-9]+") AND !match('fld_val',"^\*$"),"-",
-                            1==1,'fld_val'),
-               fld_name=replace(replace(replace("&lt;&lt;FIELD&gt;&gt;","¬¬","{}"),"__","{}"),"z_",""),
-               "&lt;&lt;FIELD&gt;&gt;"=if('ssphp.score.non_compliant_fields'='fld_name', 'fld_val'."¬red", 'fld_val')]
-
-| foreach * 
-  [| eval "&lt;&lt;FIELD&gt;&gt;"=if("&lt;&lt;FIELD&gt;&gt;" == "ssphp.score.non_compliant_fields", 'ssphp.score.non_compliant_fields', split('&lt;&lt;FIELD&gt;&gt;',"~~"))]
-               
-| rename z_* as *
-| rename *¬¬ as *{}
-| rename *__* as *{}*
-
-| eval sort_field=if('state'="*** FOR INFORMATION ONLY ***",1,2)
-| sort 0 sort_field, ssphp.score.score
-
-| fields - ssphp.score.score, ssphp.score.numerator, ssphp.score.denominator, fld_name, fld_val, ssphp.score.non_compliant_fields, sort_field```
+| eval properties.resourceDetails.ResourceName=if('properties.status.code'="Unhealthy",'properties.resourceDetails.ResourceName'."|red",'properties.resourceDetails.ResourceName'),
+       properties.status.code=if('properties.status.code'="Unhealthy",'properties.status.code'."|red",'properties.status.code')
+       
+| table azure.tenant_id, azure.subscription_id, azure.resource_group_id, properties.resourceDetails.ResourceType, properties.resourceDetails.ResourceName, properties.status.code
           </query>
           <earliest>0</earliest>
           <latest>now</latest>
