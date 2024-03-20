@@ -1,0 +1,19 @@
+[package]
+name = "data_ingester_github"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow = "1.0"
+data_ingester_splunk = { path = "../data_ingester_splunk" }
+data_ingester_supporting = { path = "../data_ingester_supporting" }
+octocrab = "*"
+serde = {version = "*", features = ["derive"]}
+serde_json = "*"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "std", "alloc", "fmt", "registry", "ansi"], default-features = false }
+tokio = { version = "1.25.0", features = ["full"] }
+http = "1.0.0"
+
+[lints]
+workspace = true
