@@ -1,13 +1,18 @@
 <nav search_view="search">
   <view name="search" default='true' />
-  <collection label="Foundational Services" >
+  <collection label="Continuous Assurance" >
     <a href="ssphp_foundational_systems_posture">Posture Dashboard</a>
     <a href="ssphp_foundational_systems_maturity">Maturity Dashboard</a>
     <collection label="Service Dashboards" >
-      <a href="ssphp_foundational_systems_service?form.tkn__service=azure">Azure</a>
-      <a href="ssphp_foundational_systems_service?form.tkn__service=dns">DNS</a>
-      <a href="ssphp_foundational_systems_service?form.tkn__service=aad">Entra AAD</a>
-      <a href="ssphp_foundational_systems_service?form.tkn__service=m365">M365</a>
+      <collection label="Foundational Services" >
+        <a href="ssphp_foundational_systems_service?form.tkn__service=azure">Azure</a>
+        <a href="ssphp_foundational_systems_service?form.tkn__service=dns">DNS</a>
+        <a href="ssphp_foundational_systems_service?form.tkn__service=aad">Entra AAD</a>
+        <a href="ssphp_foundational_systems_service?form.tkn__service=m365">M365</a>
+      </collection>
+      <collection label="DfE Services" >
+        <a href="ssphp_dfe_service?form.tkn__service=s194">S194 - CISO Continuous Assurance</a>
+      </collection>
     </collection>
     <a href="ssphp_foundational_systems_dashboard_help">Dashboard Help</a>
   </collection>

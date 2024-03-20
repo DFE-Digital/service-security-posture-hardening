@@ -1,7 +1,7 @@
 <dashboard version="1.1" theme="dark" hideFilters="true" script="js/table_cell_color.js">
 
   <label>Security Posture Continuous Assurance : Posture Dashboard</label>
-  <description>v4.0.0</description>
+  <description>v3.0.1</description>
 
   <init>
     <unset token="tkn_ready"></unset>
@@ -72,7 +72,17 @@
 
 
 
-<!-- ################### STYLE ROW ################### -->   
+<!-- ################### Header Row ################### --> 
+
+  <row>
+    <html>
+      <div id="div_header" style="color:yellow;font-weight:bold;font-size:125%;padding:10;">FOUNDATIONAL SERVICES : COMPLIANT CONTROLS
+        <span><a href="ssphp_foundational_systems_dashboard_help?tkn_posture=true" class="btn btn-primary" style="color:black;background-color:grey;text-align:center;display:block;float:right;width:12%;" target="_blank">Dashboard Help</a></span></div> 
+    </html>
+  </row>
+
+
+<!-- ################### DISPLAY ROWS ################### -->   
 
   <row depends="$never_show$">
       <html>
@@ -116,28 +126,7 @@
         </style>
       </html>
   </row>
-
-
-
-<!-- ############################################################################################################################################################# -->   
-<!-- ################################################################### Foundational Services ################################################################### -->   
-<!-- ############################################################################################################################################################# -->   
-
-
-<!-- ################### Header Row - Foundational Services ################### --> 
-
-  <row>
-    <html>
-      <div id="div_header" style="color:yellow;font-weight:bold;font-size:125%;padding:10;">FOUNDATIONAL SERVICES : COMPLIANT CONTROLS
-        <span><a href="ssphp_foundational_systems_dashboard_help?tkn_posture=true" class="btn btn-primary" style="color:black;background-color:grey;text-align:center;display:block;float:right;width:12%;" target="_blank">Dashboard Help</a></span></div> 
-    </html>
-  </row>
-
-
-
-<!-- ################### DISPLAY ROWS - Foundational Services ################### -->   
-
-
+  
   <row depends="$tkn_ready$,$tkn_show_abs$">
       <html>
         <div class="absolute" style="background:$tkn_AAD_color$;"><a href="ssphp_foundational_systems_service?form.tkn__service=aad" target="_blank">$tkn_AAD_score_abs$</a></div>
@@ -183,10 +172,7 @@
       </html>
   </row>
   
-
-
-<!-- ################### DATA ROW - Foundational Services ################### -->   
-
+  
   <row depends="$never_show$">
     <panel>
       <table>
@@ -223,101 +209,5 @@
       </table>
     </panel>
   </row>
-
-
-<!-- #################################################################################################################################################### -->   
-<!-- ################################################################### DfE Services ################################################################### -->   
-<!-- #################################################################################################################################################### -->   
-
-
-<!-- ################### Header Row - DfE Services ################### --> 
-
-  <row>
-    <html>
-      <div id="div_header" style="color:yellow;font-weight:bold;font-size:125%;padding:10;">DfE SERVICES : COMPLIANT CONTROLS
-        <span><a href="ssphp_foundational_systems_dashboard_help?tkn_posture=true" class="btn btn-primary" style="color:black;background-color:grey;text-align:center;display:block;float:right;width:12%;" target="_blank">Dashboard Help</a></span></div> 
-    </html>
-  </row>
-
-
-
-<!-- ################### DISPLAY ROWS - DfE Services ################### -->   
-
-
-  <row depends="$tkn_s194_ready$,$tkn_show_abs$">
-    <panel id="panel_s194a">
-      <html>
-        <style>
-          #panel_s194a{
-            width:25% !important;
-          }
-        </style>
-        <div class="absolute" style="background:$tkn_s194_color$;"><a href="ssphp_dfe_service?form.tkn__service=s194" target="_blank">$tkn_s194_score_abs$</a></div>
-        <div class="undervalue" style="background:$tkn_s194_color$;"><a href="ssphp_dfe_service?form.tkn__service=s194" target="_blank">$tkn_s194_service_name$</a></div>
-      </html>
-    </panel>
-  </row>
   
-  
-  <row depends="$tkn_s194_ready$,$tkn_show_perc$">
-    <panel id="panel_s194p">
-      <html>
-        <style>
-          #panel_s194p{
-            width:25% !important;
-          }
-        </style>
-        <div class="absolute" style="background:$tkn_s194_color$;"><a href="ssphp_dfe_service?form.tkn__service=s194" target="_blank">$tkn_s194_score_perc$</a></div>
-        <div class="undervalue" style="background:$tkn_s194_color$;"><a href="ssphp_dfe_service?form.tkn__service=s194" target="_blank">$tkn_s194_service_name$</a></div>
-      </html>
-    </panel>
-  </row>
-
-
-<!-- ################### DATA ROW - Regular Services ################### -->   
-
-  <row depends="$never_show$">
-    <panel>
-      <table>
-        <search>
-          <query>
-index="ssphp_metrics_summary" earliest=-2d@d latest=now
-       ssphp.use_case.foundational_system="s194"
-       ```ssphp.score.ciso_priority=1```
-
-      [| search index="ssphp_metrics_summary" earliest=-2d@d latest=now 
-          ssphp.use_case.foundational_system="s194"
-          ```ssphp.score.ciso_priority=1```
-          
-        | stats max(SSPHP_RUN) as SSPHP_RUN by ssphp.use_case.id
-        | eval search_text="(\"ssphp.use_case.id\"=\"".'ssphp.use_case.id'."\" AND SSPHP_RUN=\"".SSPHP_RUN."\")"
-        | stats values(search_text) as search_text
-        | eval search_text="(".mvjoin(search_text," OR ").")"
-        | return $search_text]
-
-| eval ssphp.use_case.foundational_system_name=upper('ssphp.use_case.foundational_system')." - ".'ssphp.use_case.foundational_system_name'
-        
-| stats values(ssphp.use_case.foundational_system_name) as ssphp.use_case.foundational_system_name, count as ssphp.score.denominator, sum(eval(if('ssphp.score.score'="100",1,0))) as ssphp.score.numerator
-
-`ssphp_metrics_eval_field_colors`
-
-| eval s194_compliant_perc=floor('ssphp.score.numerator'*100/'ssphp.score.denominator'),
-       s194_compliant_abs='ssphp.score.numerator'." of ". 'ssphp.score.denominator',
-       s194_compliant_perc='s194_compliant_perc'."%",
-       s194_compliant_color=case(isnull('s194_compliant_perc') OR 's194_compliant_perc'="",'tkn_colour_splunk_grey',
-                                 's194_compliant_perc'=100,'tkn_colour_green',
-                                 1==1,'tkn_colour_red')
-          </query>
-          <done>
-            <set token="tkn_s194_service_name">$result.ssphp.use_case.foundational_system_name$</set>
-            <set token="tkn_s194_color">$result.s194_compliant_color$</set>
-            <set token="tkn_s194_score_abs">$result.s194_compliant_abs$</set>
-            <set token="tkn_s194_score_perc">$result.s194_compliant_perc$</set>
-
-            <set token="tkn_s194_ready">true</set>
-          </done>
-        </search>
-      </table>
-    </panel>
-  </row>
 </dashboard>
