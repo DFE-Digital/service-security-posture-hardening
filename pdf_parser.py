@@ -7,7 +7,7 @@ import sys
 
 
 
-foundational_system = "AZURE"
+foundational_system = "GITHUB"
 sections = []
 
 #
@@ -111,6 +111,7 @@ def Parse_IG(ig_text):
 
 
 def Parse_Control(control_text):
+    #print(control_text)
 
     ig_parse_out = {}
 
@@ -193,8 +194,10 @@ def Parse_Control(control_text):
 
     # Section Header
     id_section = re.match(r"(?P<match_sect>\d+)",id)
+
     if id_section:
         section = id_section["match_sect"]
+
         section_header = sections[int(section) - 1]["name"]
     else:
         section_header = "-"   
@@ -244,7 +247,7 @@ def Parse_Control(control_text):
         "ig2": ig_parse_out["ig2"],
         "ig3": ig_parse_out["ig3"]
     }
-    #print(control_data)
+    
     return control_data
 
 
@@ -360,6 +363,8 @@ def main():
 
     if foundational_system == "DNS":
         filename = "SSPHP Documentation\CIS_Amazon_Web_Services_Foundations_Benchmark_v2.0.0.pdf"
+    elif foundational_system == "GITHUB":
+        filename = "SSPHP Documentation\CIS GitHub Benchmark v1.0.0 PDF.pdf"
     else:
         filename = f'SSPHP Documentation\CIS_Microsoft_{foundational_system.upper()[0]}{foundational_system.lower()[1:]}_Foundations_Benchmark_v2.0.0.pdf'
 
@@ -394,25 +399,27 @@ def main():
 
 
     ########################### Process the TOC ###############################################################################################
+
+    if foundational_system == "GITHUB":
+        toc_text = re.sub(r"\.\.\.\s*(\d{1,3})",r" \1\n",toc_text)
+
     for line in toc_text.splitlines():
         #print(f'**{line}$$')
         if foundational_system == "DNS":
             match_line = re.match(r"1\.1\s[\s\S\.]*\s(?P<pno>\d+)\s*$", line)
         else:
-            match_line = re.match(r"1\.1\.1\s[\s\S\.]*\s(?P<pno>\d+)\s*$", line)
-
+            match_line = re.match(r"\s*1\.1\.1\s[\s\S\.]*\s(?P<pno>\d+)\s*$", line)
         if match_line:
             #print(line)
             start_page = int(match_line["pno"])
 
-        #print(line)
-        match_line = re.match(r"(?P<section_no>\d+)\s+(?P<section_name>[^\.]*)[\s\.]*(?P<pno>\d*)\s*$", line)
+        match_line = re.match(r"\s*(?P<section_no>\d+)\s+(?P<section_name>[^\.]*)[\s\.]*(?P<pno>\d*)\s*$", line)
         
         if match_line:
             name = match_line['section_name'].rstrip()
             sections.append({"no": match_line['section_no'], "name": name})
 
-        match_line = re.match(r"A\s*p\s*p\s*e\s*n\s*d\s*i\s*x[\s\S\.]*\s(?P<pno>\d+)\s*$", line)
+        match_line = re.match(r"\s*A\s*p\s*p\s*e\s*n\s*d\s*i\s*x[\s\S\.]*\s(?P<pno>\d+)\s*$", line)
         if match_line:
             end_page = int(match_line["pno"])
             break
@@ -436,6 +443,7 @@ def main():
 
             # Is this page that starts a new control?
             match_start_page = re.match(r"\s*P\s*a\s*g\s*e\s+\d+\s+(?P<use_case_id>\d\d?\.\d\d?\.?\d?\d?)\s(?P<title>[\s\S]*)P\s*r\s*o\s*f\s*i\s*l\s*e\s+A\s*p\s*p\s*l\s*i\s*c\s*a\s*b\s*i\s*l\s*i\s*t\s*y\s*:", page.extract_text())
+
             if match_start_page:
 
                 if not first_time_thru:
