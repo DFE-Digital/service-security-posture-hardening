@@ -20,7 +20,7 @@ pub struct OctocrabGit {
 impl OctocrabGit {
     pub fn new_from_pat(github_pat: &GitHubPat) -> Result<Self> {
         let octocrab = Octocrab::builder()
-            .personal_token(dbg!(github_pat.pat.to_string()))
+            .personal_token(github_pat.pat.to_string())
             .build()?;
         //        anyhow::bail!("test");
         Ok(Self { client: octocrab })
@@ -75,10 +75,7 @@ impl OctocrabGit {
             .send()
             .await?;
         let repos = self.client.all_pages(page).await?;
-        dbg!(&repos);
         let user = self.client.current().user().await?;
-        dbg!(&user);
-        dbg!(&user.login);
         Ok(Repos::new(repos, &user.login))
     }
 }

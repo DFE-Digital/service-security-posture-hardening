@@ -430,7 +430,7 @@ pub(crate) async fn start_server(tx: Sender<()>) -> Result<()> {
     });
 
     let github_in_progress = Arc::new(Mutex::new(()));
-    let github = warp::post().and(warp::path("azure_resource_graph")).then({
+    let github = warp::post().and(warp::path("github")).then({
         let gh_in_progress = github_in_progress.clone();
         let gh_splunk = splunk.clone();
         let gh_secrets = secrets.clone();

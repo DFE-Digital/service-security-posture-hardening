@@ -123,10 +123,11 @@ pub async fn get_keyvault_secrets(keyvault_name: &str) -> Result<Secrets> {
     let github_app = if let (Ok(github_app_id_1), Ok(github_private_key_1)) =
         (github_app_id_1, github_private_key_1)
     {
-        Some(
-            GitHubApp::new(github_app_id_1.value, github_private_key_1.value)
-                .context("Build Github App Credentials")?,
-        )
+        // Some(
+        //     GitHubApp::new(github_app_id_1.value, github_private_key_1.value)
+        //         .context("Build Github App Credentials")?,
+        // )
+        None
     } else {
         None
     };
