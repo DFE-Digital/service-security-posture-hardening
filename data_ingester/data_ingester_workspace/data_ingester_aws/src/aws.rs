@@ -272,14 +272,15 @@ impl ProvideCredentials for AwsSecrets {
 
 #[derive(Debug)]
 struct AwsSecrets {
-    secrets: Arc<Secrets>,
+    aws_access_key_id: String,
+    aws_secret_access_key: String,
 }
 
 impl AwsSecrets {
     async fn load_credentials(&self) -> aws_credential_types::provider::Result {
         Ok(Credentials::new(
-            self.secrets.aws_access_key_id.clone(),
-            self.secrets.aws_secret_access_key.clone(),
+            self.aws_access_key_id.clone(),
+            self.aws_secret_access_key.clone(),
             None,
             None,
             "StaticCredentials",
@@ -287,7 +288,6 @@ impl AwsSecrets {
     }
 }
 
-#[derive(Debug)]
 struct AwsClient {
     secrets: Arc<Secrets>,
 }
@@ -298,7 +298,8 @@ impl AwsClient {
 
         let config = aws_config::defaults(BehaviorVersion::latest())
             .credentials_provider(SharedCredentialsProvider::new(AwsSecrets {
-                secrets: self.secrets.clone(),
+                aws_access_key_id: self.secrets.aws_access_key_id.clone(),
+                aws_secret_access_key: self.secrets.aws_access_key_id.clone(),
             }))
             .region(region_provider)
             .load()
@@ -312,7 +313,8 @@ impl AwsClient {
 
         let config = aws_config::defaults(BehaviorVersion::latest())
             .credentials_provider(SharedCredentialsProvider::new(AwsSecrets {
-                secrets: self.secrets.clone(),
+                aws_access_key_id: self.secrets.aws_access_key_id.clone(),
+                aws_secret_access_key: self.secrets.aws_access_key_id.clone(),
             }))
             .region(region_provider)
             .load()
@@ -412,7 +414,8 @@ impl AwsClient {
 
         let bucket_client_config = aws_config::defaults(BehaviorVersion::latest())
             .credentials_provider(SharedCredentialsProvider::new(AwsSecrets {
-                secrets: self.secrets.clone(),
+                aws_access_key_id: self.secrets.aws_access_key_id.clone(),
+                aws_secret_access_key: self.secrets.aws_access_key_id.clone(),
             }))
             .region(region_provider)
             .load()

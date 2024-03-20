@@ -429,6 +429,74 @@ pub(crate) async fn start_server(tx: Sender<()>) -> Result<()> {
         }
     });
 
+    let github_in_progress = Arc::new(Mutex::new(()));
+    let github = warp::post().and(warp::path("azure_resource_graph")).then({
+        let gh_in_progress = github_in_progress.clone();
+        let gh_splunk = splunk.clone();
+        let gh_secrets = secrets.clone();
+
+        move || {
+            let in_progress = gh_in_progress.clone();
+            let arg_splunk = gh_splunk.clone();
+            let arg_secrets = gh_secrets.clone();
+
+            async move {
+                eprintln!("GIT_HASH: {}", env!("GIT_HASH"));
+
+                let mut response = AzureInvokeResponse {
+                    outputs: None,
+                    logs: vec![format!("GIT_HASH: {}", env!("GIT_HASH"))],
+                    return_value: None,
+                };
+                let lock = match in_progress.try_lock() {
+                    Ok(lock) => {
+                        arg_splunk
+                            .log("Aquired lock, starting")
+                            .await
+                            .expect("Splunk should be available for logging");
+                        lock
+                    }
+                    Err(_) => {
+                        arg_splunk
+                            .log("GitHub collection already in progress. NOT starting.")
+                            .await
+                            .expect("Splunk should be available for logging");
+                        response.logs.push(
+                            "GitHub collection is already in progress. NOT starting.".to_owned(),
+                        );
+                        return response;
+                    }
+                };
+
+                let result = match data_ingester_github::entrypoint::github_octocrab(
+                    arg_secrets,
+                    arg_splunk,
+                )
+                .await
+                {
+                    Ok(_) => "Success".to_owned(),
+                    Err(e) => format!("{:?}", e),
+                };
+
+                response.logs.push(result);
+                if let Some(usage) = memory_stats() {
+                    println!(
+                        "Current physical memory usage: {}",
+                        usage.physical_mem / 1_000_000
+                    );
+                    println!(
+                        "Current virtual memory usage: {}",
+                        usage.virtual_mem / 1_000_000
+                    );
+                } else {
+                    println!("Couldn't get the current memory usage :(");
+                }
+                drop(lock);
+                response
+            }
+        }
+    });
+
     let health_check = warp::get().and(warp::path::end()).map(|| "Healthy!");
 
     let function_routes = warp::post()
@@ -436,7 +504,8 @@ pub(crate) async fn start_server(tx: Sender<()>) -> Result<()> {
         .or(m365)
         .or(powershell)
         .or(aws)
-        .or(azure_resource_graph);
+        .or(azure_resource_graph)
+        .or(github);
 
     let routes = health_check.or(function_routes);
 
