@@ -299,7 +299,7 @@ impl AwsClient {
         let config = aws_config::defaults(BehaviorVersion::latest())
             .credentials_provider(SharedCredentialsProvider::new(AwsSecrets {
                 aws_access_key_id: self.secrets.aws_access_key_id.clone(),
-                aws_secret_access_key: self.secrets.aws_access_key_id.clone(),
+                aws_secret_access_key: self.secrets.aws_secret_access_key.clone(),
             }))
             .region(region_provider)
             .load()
@@ -415,7 +415,7 @@ impl AwsClient {
         let bucket_client_config = aws_config::defaults(BehaviorVersion::latest())
             .credentials_provider(SharedCredentialsProvider::new(AwsSecrets {
                 aws_access_key_id: self.secrets.aws_access_key_id.clone(),
-                aws_secret_access_key: self.secrets.aws_access_key_id.clone(),
+                aws_secret_access_key: self.secrets.aws_secret_access_key.clone(),
             }))
             .region(region_provider)
             .load()
