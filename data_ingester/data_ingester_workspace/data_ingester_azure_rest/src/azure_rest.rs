@@ -307,7 +307,6 @@ impl AzureRest {
             .credential
             .get_token(&["https://management.azure.com/.default"])
             .await?;
-
         let mut collection = ReturnTypes::default();
         for sub in self.subscriptions.inner.iter() {
             let sub_id = sub.subscription_id.as_ref().context("no sub id")?;

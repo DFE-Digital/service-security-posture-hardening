@@ -18,14 +18,14 @@ use data_ingester_splunk::splunk::{set_ssphp_run, Splunk};
 use futures::StreamExt;
 use graph_http::api_impl::RequestComponents;
 use graph_http::api_impl::RequestHandler;
+use graph_rs_sdk::header::HeaderMap;
+use graph_rs_sdk::header::HeaderValue;
+use graph_rs_sdk::header::CONTENT_TYPE;
+use graph_rs_sdk::http::Method;
 use graph_rs_sdk::oauth::AccessToken;
 use graph_rs_sdk::oauth::OAuth;
 use graph_rs_sdk::Graph;
 use graph_rs_sdk::ODataQuery;
-use reqwest::header::HeaderMap;
-use reqwest::header::HeaderValue;
-use reqwest::header::CONTENT_TYPE;
-use reqwest::Method;
 use serde::Deserialize;
 use serde::Serialize;
 use serde_json::Value;
@@ -54,8 +54,14 @@ pub async fn login(client_id: &str, client_secret: &str, tenant_id: &str) -> Res
         oauth.access_token(access_token);
     } else {
         // See if Microsoft Graph returned an error in the Response body
-        let result: reqwest::Result<serde_json::Value> = response.json().await;
-        println!("{result:#?}");
+        match response.json::<serde_json::Value>().await {
+            Ok(response) => {
+                println!("response{:?}", response)
+            }
+            Err(_) => {
+                println!("no response!");
+            }
+        }
     }
 
     let client = Graph::new(

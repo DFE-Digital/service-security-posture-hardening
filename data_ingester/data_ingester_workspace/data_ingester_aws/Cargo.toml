@@ -7,14 +7,14 @@ edition = "2021"
 
 [dependencies]
 anyhow = "*"
-aws-config = { version = "1.1.1", features = ["behavior-version-latest"] }
+aws-config = { version = "*", features = ["behavior-version-latest"] }
 aws-credential-types = "*"
 aws-sdk-accessanalyzer = "*"
-aws-sdk-account = "1.7.0"
+aws-sdk-account = "*" #"1.7.0"
 aws-sdk-cloudtrail = "*"
 aws-sdk-config = "*"
 aws-sdk-ec2 = "*"
-aws-sdk-iam = "1.7.0"
+aws-sdk-iam = "*"
 aws-sdk-kms = "*"
 aws-sdk-s3 = "*"
 aws-sdk-s3control = "*"
@@ -37,7 +37,7 @@ hickory-proto = {version = "*", features = ["serde-config"]}
 
 
 [dev-dependencies]
-tokio = { version = "1.25.0", features = ["full"] }
+tokio = { version = "1", features = ["full"] }
 
 [lints]
 workspace = true

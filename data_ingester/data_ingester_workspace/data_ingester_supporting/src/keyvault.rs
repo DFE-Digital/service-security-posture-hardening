@@ -21,6 +21,7 @@ pub struct Secrets {
 }
 
 /// openssl rsa -in private-key.pem -outform DER -traditional -out private-key.der
+
 pub struct GitHubApp {
     pub app_id: String,
     pub private_key: Vec<u8>,
