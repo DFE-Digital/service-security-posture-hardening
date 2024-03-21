@@ -291,17 +291,20 @@ index="ssphp_metrics_summary" earliest=-2d@d latest=now
         sort_field='n4'.'n5'
 | sort 0 sort_field, ssphp.use_case.id
 
-| fields ssphp.use_case.foundational_system, ssphp.use_case.id, ssphp.use_case.title, ssphp.defender_assessments.control.title, ssphp.score.score, ssphp.score.compliance_status, ssphp.score.ciso_priority, ssphp.defender_assessments.control.description, ssphp.score.color
+| eval display_control_title=coalesce('ssphp.defender_assessments.control.title','ssphp.dfe_benchmark.control.title'),
+       display_control_description=coalesce('ssphp.defender_assessments.control.description','ssphp.dfe_benchmark.control.description')
+
+| fields ssphp.use_case.foundational_system, ssphp.use_case.id, ssphp.use_case.title, display_control_title, ssphp.score.score, ssphp.score.compliance_status, ssphp.score.ciso_priority, display_control_description, ssphp.score.color
 
 $tkn_search_filter$
 
 | rename ssphp.use_case.foundational_system as "DfE Service",
          ssphp.use_case.title as "Use Case",
-         ssphp.defender_assessments.control.title  as "Control Title", 
+         display_control_title  as "Control Title", 
          ssphp.score.score as "Score",
          ssphp.score.compliance_status as "Compliance Status",
          ssphp.score.ciso_priority as "Control Type",
-         ssphp.defender_assessments.control.description as "Description"
+         display_control_description as "Description"
          
 | eventstats count as number_controls_total
           </query>
