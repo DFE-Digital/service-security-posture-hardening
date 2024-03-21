@@ -13,7 +13,6 @@ sections = []
 #
 
 def Parse_IG(ig_text):
-
     cis_controls=list()
     cis_controls_ig1=list()
     cis_controls_ig2=list()
@@ -28,9 +27,13 @@ def Parse_IG(ig_text):
     #ig_text = ig_text.replace(" v7","\nv7")
     #ig_text = ig_text.replace("   ","|")
 
-
-    ig_text = ig_text.replace("\n ","|")
-    ig_text = re.sub(r" *\|","|",ig_text)
+    if foundational_system == "GITHUB":
+        ig_text = re.sub(r"([a-zA-Z0-9]+) {2,99}([a-zA-Z0-9]+)",r"\1|\2",ig_text)
+    else:
+        ig_text = ig_text.replace("\n ","|")
+        ig_text = re.sub(r" *\|","|",ig_text)
+    ig_text = ig_text.replace(" v7","~~~v7")
+    ig_text = ig_text.replace(" v8","~~~v8")
     ig_text = ig_text.replace("\nv7","~~~v7")
     ig_text = ig_text.replace("\nv8","~~~v8")
     ig_text = ig_text.replace("\n","")
@@ -39,7 +42,7 @@ def Parse_IG(ig_text):
 
     for line in ig_text.splitlines():
 
-        ctl = re.match(r"(?P<s_v>v[7|8])\s(?P<s_stl>\d+\.\d+)\s(?P<s_txt>[^|]*)\|",line)
+        ctl = re.match(r"\s*(?P<s_v>v[7|8])\s(?P<s_stl>\d+\.\d+)\s(?P<s_txt>[^|]*)\|",line)
         if ctl:
             if ctl["s_v"]=="v8":
                 ig_count = line.count("\u25cf")
@@ -247,7 +250,7 @@ def Parse_Control(control_text):
         "ig2": ig_parse_out["ig2"],
         "ig3": ig_parse_out["ig3"]
     }
-    
+
     return control_data
 
 
@@ -298,10 +301,20 @@ def WriteControls(controls):
             # Put together the line to write
             if foundational_system == "AZURE":
                 benchmark_date = "2023-02-14"
+                benchmark_file_description = "CIS Microsoft Azure Foundations Benchmark"
+                benchmark_file_date = "2.0.0"
             elif foundational_system == "M365":
                 benchmark_date = "2023-03-31"
+                benchmark_file_description = "CIS Microsoft 365 Foundations Benchmark"
+                benchmark_file_date = "2.0.0"
             elif foundational_system == "DNS":
                 benchmark_date = "2023-06-28"
+                benchmark_file_description = "CIS Amazon Web Services Foundations Benchmark"
+                benchmark_file_date = "2.0.0"
+            elif foundational_system == "GITHUB":
+                benchmark_date = "2022-12-28"
+                benchmark_file_description = "CIS GitHub Benchmark"
+                benchmark_file_date = "1.0.0"
             else:
                 benchmark_date = "-"
 
@@ -325,8 +338,8 @@ def WriteControls(controls):
 "{control["cis_controls_ig1"]}", \
 "{control["cis_controls_ig2"]}", \
 "{control["cis_controls_ig3"]}", \
-"CIS Microsoft {foundational_system.upper()[0:1]}{foundational_system.lower()[1:]} Foundations Benchmark", \
-"2.0.0", \
+"{benchmark_file_description}", \
+"{benchmark_file_date}", \
 "{benchmark_date}", \
 "CIS v8", \
 "Auto Document Extraction Script", \
