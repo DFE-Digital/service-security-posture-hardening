@@ -2,21 +2,26 @@ version: 2
 updates:
 
   - package-ecosystem: "github-actions"
-    directory: ".github/workflows"
+    directory: "/"
     schedule:
       interval: "weekly"
 
   - package-ecosystem: "cargo"
-    directory: "TA_github_reader"
+    directory: "/TA_github_reader"
+    schedule:
+      interval: "daily"
+
+  - package-ecosystem: "cargo"
+    directory: "/data_ingester/data_ingester_workspace"
     schedule:
       interval: "daily"
 
   - package-ecosystem: "pip"
-    directory: "TA_SSPHP/TA_SSPHP"
+    directory: "/TA_SSPHP/TA_SSPHP"
     schedule:
       interval: "daily"
 
   - package-ecosystem: "pip"
-    directory: "./"
+    directory: "/"
     schedule:
       interval: "daily"

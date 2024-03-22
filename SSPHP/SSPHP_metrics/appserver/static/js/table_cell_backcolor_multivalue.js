@@ -10,6 +10,9 @@ require([
         canRender: function (cell) {
             //return true;
             return _(['state',
+                      'security_advisory.severity',
+                      'created_at_age',
+                      'created_at',
                       'properties.resourceDetails.ResourceName',
                       'properties.status.code',
                       'expiration',
