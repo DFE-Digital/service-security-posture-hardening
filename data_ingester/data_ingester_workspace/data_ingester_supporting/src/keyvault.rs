@@ -23,7 +23,7 @@ pub struct Secrets {
 /// openssl rsa -in private-key.pem -outform DER -traditional -out private-key.der
 
 pub struct GitHubApp {
-    pub app_id: String,
+    pub app_id: u64,
     pub private_key: Vec<u8>,
 }
 
@@ -41,28 +41,27 @@ impl GitHubPat {
     }
 }
 
-pub enum GitHub {
-    App(GitHubApp),
-    Pat(GitHubPat),
-    None,
+pub struct GitHub {
+    pub app: Option<GitHubApp>,
+    pub pat: Option<GitHubPat>,
 }
 
 impl GitHub {
-    fn new(github_app: Option<GitHubApp>, github_pat: Option<GitHubPat>) -> GitHub {
-        if let Some(github_app) = github_app {
-            return Self::App(github_app);
-        }
-        if let Some(github_pat) = github_pat {
-            return Self::Pat(github_pat);
-        }
-        Self::None
-    }
+    // fn new(github_app: Option<GitHubApp>, github_pat: Option<GitHubPat>) -> GitHub {
+    //     if let Some(github_app) = github_app {
+    //         return Self::App(github_app);
+    //     }
+    //     if let Some(github_pat) = github_pat {
+    //         return Self::Pat(github_pat);
+    //     }
+    //     Self::None
+    // }
 }
 
 impl GitHubApp {
     fn new(app_id: String, private_key: String) -> Result<Self> {
         Ok(Self {
-            app_id,
+            app_id: app_id.parse().context("Parse app ID as u64")?,
             private_key: BASE64_STANDARD
                 .decode(private_key)
                 .context("Base64 decode GitHub private key")?,
@@ -124,11 +123,10 @@ pub async fn get_keyvault_secrets(keyvault_name: &str) -> Result<Secrets> {
     let github_app = if let (Ok(github_app_id_1), Ok(github_private_key_1)) =
         (github_app_id_1, github_private_key_1)
     {
-        // Some(
-        //     GitHubApp::new(github_app_id_1.value, github_private_key_1.value)
-        //         .context("Build Github App Credentials")?,
-        // )
-        None
+        Some(
+            GitHubApp::new(github_app_id_1.value, github_private_key_1.value)
+                .context("Build Github App Credentials")?,
+        )
     } else {
         None
     };
@@ -154,6 +152,9 @@ pub async fn get_keyvault_secrets(keyvault_name: &str) -> Result<Secrets> {
         azure_tenant_id: azure_tenant_id.map(|s| s.value).unwrap_or_default(),
         aws_access_key_id: aws_access_key_id.map(|s| s.value).unwrap_or_default(),
         aws_secret_access_key: aws_secret_access_key.map(|s| s.value).unwrap_or_default(),
-        github: GitHub::new(github_app, github_pat),
+        github: GitHub {
+            app: github_app,
+            pat: github_pat,
+        },
     })
 }
