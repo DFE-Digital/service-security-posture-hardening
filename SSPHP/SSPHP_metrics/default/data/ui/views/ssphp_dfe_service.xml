@@ -1,11 +1,12 @@
 <dashboard version="1.1" theme="dark" hideFilters="true" script="js/table_cell_color.js">
 
   <label>Security Posture Continuous Assurance : DfE Service Dashboard</label>
-  <description>v1.0.0</description>
+  <description>v2.0.0</description>
   
   <init>
     <set token="tkn_controls_compliant_text"></set>
     <unset token="tkn_ready"></unset>
+    <!--<set token="tkn__service">s194</set>--> 
   </init>
 
   <fieldset submitButton="false">
@@ -47,23 +48,7 @@
       </table>
     </panel>
 
-    <panel>
-      <table>
-        <search>
-          <query>
-  | makeresults
-  | eval s=$tkn__service|s$,
-         service_name=if('s'=".*","ALL",upper('s'))
-  | table service_name
-          </query>
-          <done>
-            <set token="tkn_current_service">$result.service_name$</set>
-          </done>
-        </search>
-      </table>
-    </panel>
     
-
     <panel>
       <table>
         <search>
@@ -91,17 +76,17 @@
 <!-- ################### Summary Row ################### --> 
 
 
-  <row depends="$tkn_ready$,$never_show$">
+  <row depends="$tkn_ready1$,$never_show$">
     <panel>
       <table>
         <search>
           <query>
 index="ssphp_metrics_summary" earliest=-2d@d latest=now
-       ssphp.use_case.foundational_system="s194"
+       ssphp.use_case.foundational_system=$tkn__service|s$
        ```ssphp.score.ciso_priority=1```
 
       [| search index="ssphp_metrics_summary" earliest=-2d@d latest=now 
-          ssphp.use_case.foundational_system="s194"
+          ssphp.use_case.foundational_system=$tkn__service|s$
           ```ssphp.score.ciso_priority=1```
           
         | stats max(SSPHP_RUN) as SSPHP_RUN by ssphp.use_case.id
@@ -124,13 +109,13 @@ index="ssphp_metrics_summary" earliest=-2d@d latest=now
                                  1==1,'tkn_colour_red')
           </query>
           <done>
-            <set token="tkn_s194_service_name">$result.ssphp.use_case.foundational_system_name$</set>
+            <set token="tkn_service_name">$result.ssphp.use_case.foundational_system_name$</set>
             <set token="tkn_current_service">$result.ssphp.use_case.foundational_system_name$</set>
-            <set token="tkn_s194_color">$result.s194_compliant_color$</set>
-            <set token="tkn_s194_score_abs">$result.s194_compliant_abs$</set>
-            <set token="tkn_s194_score_perc">$result.s194_compliant_perc$</set>
+            <set token="tkn_color">$result.s194_compliant_color$</set>
+            <set token="tkn_score_abs">$result.s194_compliant_abs$</set>
+            <set token="tkn_score_perc">$result.s194_compliant_perc$</set>
 
-            <set token="tkn_s194_ready">true</set>
+            <set token="tkn_ready1">true</set>
           </done>
         </search>
       </table>
@@ -138,17 +123,17 @@ index="ssphp_metrics_summary" earliest=-2d@d latest=now
   </row>
 
   <row>
-    <panel depends="$tkn_s194_ready$,$tkn_show_abs$">
+    <panel depends="$tkn_ready1$,$tkn_show_abs$">
       <html>
-        <div id="div_header" style="background:$tkn_s194_color$;color:white;font-weight:bold;font-size:800%;text-align:center;padding:50">$tkn_s194_score_abs$</div> 
-        <div id="div_header" style="background:$tkn_s194_color$;color:white;font-size:100%;text-align:center">$tkn_s194_service_name$ Compliant of # DfE Mandated Controls</div> 
+        <div id="div_header" style="background:$tkn_color$;color:white;font-weight:bold;font-size:800%;text-align:center;padding:50">$tkn_score_abs$</div> 
+        <div id="div_header" style="background:$tkn_color$;color:white;font-size:100%;text-align:center">$tkn_service_name$ Compliant of # DfE Mandated Controls</div> 
       </html>
     </panel>
 
-    <panel depends="$tkn_show_perc$">
+    <panel depends="$tkn_ready1$,$tkn_show_perc$">
       <html>
-        <div id="div_header" style="background:$tkn_s194_color$;color:white;font-weight:bold;font-size:800%;text-align:center;padding:50">$tkn_s194_score_perc$</div> 
-        <div id="div_header" style="background:$tkn_s194_color$;color:white;font-size:100%;text-align:center">Percentage $tkn_s194_service_name$ Compliant of DfE Mandated Controls</div> 
+        <div id="div_header" style="background:$tkn_color$;color:white;font-weight:bold;font-size:800%;text-align:center;padding:50">$tkn_score_perc$</div> 
+        <div id="div_header" style="background:$tkn_color$;color:white;font-size:100%;text-align:center">Percentage $tkn_service_name$ Compliant of DfE Mandated Controls</div> 
       </html>
     </panel>
   </row>
@@ -157,7 +142,7 @@ index="ssphp_metrics_summary" earliest=-2d@d latest=now
 
 <!-- ################### Main Data Table Filters ################### --> 
 
-  <row depends="$tkn_ready$">
+  <row depends="$tkn_ready1$">
     <panel>
       <html>
         <div id="div_header" style="font-size:175%;color:yellow;">$tkn_current_service$</div> 
@@ -253,17 +238,17 @@ index="ssphp_metrics_summary" earliest=-2d@d latest=now
 
 
 
-  <row depends="$tkn_ready$">
+  <row depends="$tkn_ready2$">
     <panel>
       <table id="table1">
         <search>
           <query>
 index="ssphp_metrics_summary" earliest=-2d@d latest=now
-       ssphp.use_case.foundational_system="s194"
+       ssphp.use_case.foundational_system=$tkn__service|s$
        ```ssphp.score.ciso_priority=1```
 
       [| search index="ssphp_metrics_summary" earliest=-2d@d latest=now 
-          ssphp.use_case.foundational_system="s194"
+          ssphp.use_case.foundational_system=$tkn__service|s$
           ```ssphp.score.ciso_priority=1```
           
         | stats max(SSPHP_RUN) as SSPHP_RUN by ssphp.use_case.id
@@ -291,8 +276,11 @@ index="ssphp_metrics_summary" earliest=-2d@d latest=now
         sort_field='n4'.'n5'
 | sort 0 sort_field, ssphp.use_case.id
 
-| eval display_control_title=coalesce('ssphp.defender_assessments.control.title','ssphp.dfe_benchmark.control.title'),
-       display_control_description=coalesce('ssphp.defender_assessments.control.description','ssphp.dfe_benchmark.control.description')
+
+```| eval display_control_title=coalesce('ssphp.defender_assessments.control.title','ssphp.dfe_benchmark.control.title'),
+       display_control_description=coalesce('ssphp.defender_assessments.control.description','ssphp.dfe_benchmark.control.description')```
+| foreach *.control.title [| eval display_control_title=mvappend('display_control_title','&lt;&lt;FIELD&gt;&gt;')]
+| foreach *.control.description [| eval display_control_description=mvappend('display_control_description','&lt;&lt;FIELD&gt;&gt;')]
 
 | fields ssphp.use_case.foundational_system, ssphp.use_case.id, ssphp.use_case.title, display_control_title, ssphp.score.score, ssphp.score.compliance_status, ssphp.score.ciso_priority, display_control_description, ssphp.score.color
 
@@ -312,7 +300,7 @@ $tkn_search_filter$
           <earliest>0</earliest>
           <sampleRatio>1</sampleRatio>
           <done>
-            <set token="tkn_ready">true</set>
+            <set token="tkn_ready2">true</set>
             <set token="tkn_controls_total">$result.number_controls_total$</set>
           </done>
         </search>
