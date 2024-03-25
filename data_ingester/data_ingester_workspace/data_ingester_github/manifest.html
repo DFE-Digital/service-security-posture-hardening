@@ -1,0 +1,71 @@
+<!-- https://htmlpreview.github.io/?https://github.com/403ind/first/blob/main/manifest.html -->
+<html>
+  <h1> Github App Registation</h1>
+  Follow the link and create the GitHub application. You will be redirected to a non existant page. Please copy the URL you are redirected to and send it to us.
+  <br><br>
+  Example redirect URL: https://127.0.0.1:32546/send_us_this_full_address?code=0123456789012345678901234567890123456789
+  <br>
+  <h2>App manifest</h2>
+  This is the app manifest sent to GitHub. Please double check the default_permissions.
+  <pre id="show_manifest"></pre>  
+  <br>
+  <h2>Register</h2>
+  <form action="https://github.com/settings/apps/new" method="post">
+    Register this GitHub App Manifest: <input type="hidden" name="manifest" id="manifest"><br>
+    <input type="submit" value="Register Github App">
+  </form>
+</html>
+
+<script>
+  const manifest = {
+      "name": "DFE-GithubSecurityAuditing",
+      "url": "https://github.com/DFE-Digital",
+      "redirect_url": "https://127.0.0.1:32546/send_us_this_full_address",
+      "public": false,
+      "default_permissions": {
+          "actions": "read",
+          "administration": "read",
+          "checks": "read",
+          "security_events": "read",
+          "codespaces": "read",
+          "codespaces_lifecycle_admin": "read",
+          "codespaces_metadata": "read",
+          "statuses": "read",
+          "contents": "read",
+          "repository_custom_properties": "read",
+          "vulnerability_alerts": "read",
+          "dependabot_secrets": "read",
+          "deployments": "read",
+          "merge_queues": "read",
+          "metadata": "read",
+          "packages": "read",
+          "pages": "read",
+          "pull_requests": "read",
+          "repository_advisories": "read",
+          "secret_scanning_alerts": "read",
+          "repository_hooks": "read",
+          "organization_administration": "read",
+          "organization_user_blocking": "read",
+          "organization_custom_org_roles": "read",
+          "organization_custom_roles": "read",
+          "organization_events": "read",
+          "organization_copilot_seat_management": "read",
+          "members": "read",
+          "organization_announcement_banners": "read",
+          "organization_codespaces": "read",
+          "organization_codespaces_settings": "read",
+          "organization_personal_access_token_requests": "read",
+          "organization_personal_access_tokens": "read",
+          "organization_plan": "read",
+          "organization_self_hosted_runners": "read",
+          "organization_actions_variables": "read",
+          "organization_hooks": "read",
+      }
+  };
+
+  input = document.getElementById("manifest").value = JSON.stringify(manifest);
+
+  document.getElementById("show_manifest").innerHTML = JSON.stringify(manifest, null, 4);
+
+</script>
+
