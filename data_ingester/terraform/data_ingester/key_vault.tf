@@ -49,26 +49,26 @@ resource "azurerm_key_vault" "SSPHP" {
     }
   }
 
-  access_policy {
-    tenant_id = azurerm_linux_function_app.SSPHP.identity[0].tenant_id
-    object_id = azurerm_linux_function_app.SSPHP.identity[0].principal_id
+  # access_policy {
+  #   tenant_id = azurerm_linux_function_app.SSPHP.identity[0].tenant_id
+  #   object_id = azurerm_linux_function_app.SSPHP.identity[0].principal_id
 
-    key_permissions = [
-      "Get",
-      "List"
-    ]
+  #   key_permissions = [
+  #     "Get",
+  #     "List"
+  #   ]
 
-    secret_permissions = [
-      "Get",
-      "List",
-    ]
+  #   secret_permissions = [
+  #     "Get",
+  #     "List",
+  #   ]
 
-    storage_permissions = [
-      "Get",
-      "List",
-    ]
+  #   storage_permissions = [
+  #     "Get",
+  #     "List",
+  #   ]
 
-  }
+  # }
 
   access_policy {
     tenant_id = azurerm_linux_function_app.SSPHP_rust.identity[0].tenant_id
