@@ -313,7 +313,7 @@ $tkn_search_filter$
         <option name="drilldown">row</option>
         <fields>"DfE Service","Use Case","Control Title","Score","Compliance Status","Control Type","Description"</fields>
         <drilldown>
-          <link target="_blank">/app/$tkn_current_app$/ssphp_defender_assessment_detail?tkn_use_case_id=$row.ssphp.use_case.id$</link>
+          <link target="_blank">/app/$tkn_current_app$/ssphp_service_detail?tkn_use_case_id=$row.ssphp.use_case.id$</link>
         </drilldown>
       </table>
     </panel>
