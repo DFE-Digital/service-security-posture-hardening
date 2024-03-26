@@ -1,5 +1,0 @@
-{
-    "version": "2.0",
-    "functions": [ "ms_graph", "aws" ],
-    "functionTimeout": "00:10:00"
-}

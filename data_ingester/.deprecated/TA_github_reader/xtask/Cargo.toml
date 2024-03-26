@@ -1,0 +1,20 @@
+[package]
+name = "xtask"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+axum = { version = "*", optional = true }
+reqwest = { version ="*", features = ["rustls-tls", "blocking"], default-features = false, optional = true}
+tokio = { version = "1.0", features = ["full"] }
+tower = { version = "0.4", features = ["util"] , optional = true}
+tower-http = { version = "0.4.0", features = ["fs", "trace"] , optional = true}
+tracing = {version = "*", optional = true}
+tracing-subscriber = {version = "*", optional = true}
+xshell = "*"
+zip = "*"
+
+[features]
+deploy = ["dep:axum", "dep:axum", "dep:reqwest", "dep:tower", "dep:tower-http", "dep:tracing", "dep:tracing-subscriber"]

@@ -6,9 +6,9 @@ variable "tags" {
   type = map(string)
 }
 
-variable "sku_name_python" {
-  type = string
-}
+# variable "sku_name_python" {
+#   type = string
+# }
 
 variable "sku_name_rust" {
   type = string

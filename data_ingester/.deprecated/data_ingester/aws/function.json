@@ -1,0 +1,12 @@
+{
+    "scriptFile": "aws_data_ingester.py",
+    "entryPoint": "main",
+    "bindings": [
+        {
+            "name": "timer",
+            "schedule": "* */10 * * * *",
+            "direction": "in",
+            "type": "timerTrigger"
+        }
+    ]
+}

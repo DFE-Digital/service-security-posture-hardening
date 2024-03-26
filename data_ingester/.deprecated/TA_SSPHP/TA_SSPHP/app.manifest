@@ -1,0 +1,28 @@
+{
+    "schemaVersion": "2.0.0",
+    "info": {
+        "title": "TA for SSPHP",
+        "id": {
+            "name": "TA_SSPHP",
+            "version": "0.1"
+        },
+        "author": [
+            {
+                "name": "Alex Kinnane & Ian Pearl",
+                "email": "foo@bar.com"
+            }
+        ],
+        "license": {
+            "name": ""
+        },
+        "description": "Collect Azure Cloud Defender data",
+        "releaseNotes": {
+        }
+    },
+    "supportedDeployments": [
+        "_standalone"
+    ],
+    "targetWorkloads": [
+        "*"
+    ]
+}

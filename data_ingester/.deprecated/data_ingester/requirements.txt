@@ -1,0 +1,8 @@
+boto3
+requests
+dnspython
+msgraph-beta-sdk
+microsoft-kiota-serialization-json
+microsoft-kiota-abstractions
+azure-identity
+azure-keyvault-secrets
