@@ -500,9 +500,9 @@ dependencies = [
 
 [[package]]
 name = "aws-sdk-securityhub"
-version = "1.18.0"
+version = "1.19.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "274a766ed8352c4b45df4b2fbd6bd131a9eb2bac36c4ac87c97e8effef94e1bd"
+checksum = "c083206f31dda11584fbdc167cd27d8c32c2d85fe0c4db5e50977e1ff622d3e0"
 dependencies = [
  "aws-credential-types",
  "aws-runtime",
