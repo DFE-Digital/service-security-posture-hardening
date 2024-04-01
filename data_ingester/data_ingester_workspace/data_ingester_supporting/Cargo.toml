@@ -11,7 +11,7 @@ azure_identity = { version = "*", default-features = false, features = ["enable_
 azure_security_keyvault = { version = "*", default-features = false,  features = ["enable_reqwest_rustls"]}
 base64 = "0.22"
 futures = "*"
-tokio = { version = "1.25.0", features = ["full"] }
+tokio = { version = "1.37.0", features = ["full"] }
 hickory-proto = "*"
 hickory-resolver = { version = "*", features = ["dns-over-rustls"] }
 

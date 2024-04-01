@@ -14,7 +14,7 @@ serde_json = "*"
 
 [dev-dependencies]
 data_ingester_supporting = { path = "../data_ingester_supporting" }
-tokio = { version = "1.25.0", features = ["full"] }
+tokio = { version = "1.37.0", features = ["full"] }
 
 [lints]
 workspace = true

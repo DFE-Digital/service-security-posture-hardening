@@ -11,7 +11,7 @@ data_ingester_azure_rest = { path = "../data_ingester_azure_rest" }
 data_ingester_ms_graph = { path = "../data_ingester_ms_graph" }
 data_ingester_splunk = { path = "../data_ingester_splunk" }
 data_ingester_supporting = { path = "../data_ingester_supporting" }
-tokio = { version = "1.25.0", features = ["full"] }
+tokio = { version = "1.37.0", features = ["full"] }
 
 [lints]
 workspace = true
