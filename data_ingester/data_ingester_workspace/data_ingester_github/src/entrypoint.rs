@@ -1,13 +1,13 @@
+//! Entrypoint for running the collection
 use std::sync::Arc;
 
 use crate::OctocrabGit;
 use anyhow::{Context, Result};
 use data_ingester_splunk::splunk::{set_ssphp_run, try_collect_send, Splunk, ToHecEvents};
 use data_ingester_supporting::keyvault::{GitHubApp, GitHubPat, Secrets};
-use octocrab::{models::InstallationToken, params::apps::CreateInstallationAccessToken};
-use secrecy::{CloneableSecret, DebugSecret, ExposeSecret, Secret, Zeroize};
 
-pub async fn github_octocrab(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
+/// Public entry point
+pub async fn github_octocrab_entrypoint(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
     set_ssphp_run()?;
 
     splunk
@@ -20,29 +20,22 @@ pub async fn github_octocrab(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Resu
         .context("Failed logging to Splunk")
         .context("Failed logging to Splunk")?;
 
-    // if let Some(app) = secrets.github.app.as_ref() {
-    //     github_app(app, &splunk).await?;
-    // }
+    if let Some(app) = secrets.github.app.as_ref() {
+        github_app(app, &splunk).await?;
+    }
 
     if let Some(pat) = secrets.github.pat.as_ref() {
         github_pat(pat, &splunk).await?;
     }
 
-    // match &secrets.github {
-    //     data_ingester_supporting::keyvault::GitHub::App(app) => github_app(app, &splunk).await?,
-    //     data_ingester_supporting::keyvault::GitHub::Pat(pat) => github_pat(pat, &splunk).await?,
-    //     data_ingester_supporting::keyvault::GitHub::None => {
-    //         splunk
-    //             .log("No GitHub Secrets")
-    //             .await
-    //             .context("Failed logging to Splunk")?;
-    //         anyhow::bail!("No github application secrets");
-    //     }
-    // }
-
     Ok(())
 }
 
+/// Collect the data for a GitHub app.
+///
+/// Will iterate through all available Organization installations,
+/// build a client for that installation and collect the posture data
+/// for it.
 async fn github_app(github_app: &GitHubApp, splunk: &Arc<Splunk>) -> Result<()> {
     let client = OctocrabGit::new_from_app(github_app).context("Build OctocrabGit")?;
     let installations = client
@@ -57,11 +50,11 @@ async fn github_app(github_app: &GitHubApp, splunk: &Arc<Splunk>) -> Result<()> 
             continue;
         }
         let installation_client = client
-            .from_installation_id(installation.id)
+            .for_installation_id(installation.id)
             .await
             .context("build octocrabgit client")?;
         let org_name = &installation.account.login.to_string();
-        github_collect_installation_org(&installation_client, &org_name, splunk)
+        github_collect_installation_org(&installation_client, org_name, splunk)
             .await
             .context("Collect data for installation")?;
     }
@@ -101,15 +94,36 @@ async fn github_collect_installation_org(
         );
 
         try_collect_send(
+            &format!("Code scanning for {repo_name}"),
+            github_client.repo_code_scanning_default_setup(&repo_name),
+            splunk,
+        )
+        .await?;
+
+        try_collect_send(
+            &format!("Secret Scanning Alerts for {repo_name}"),
+            github_client.repo_secret_scanning_alerts(&repo_name),
+            splunk,
+        )
+        .await?;
+
+        try_collect_send(
             &format!("Security txt {repo_name}"),
-            github_client.security_txt(&repo_name),
+            github_client.repo_security_txt(&repo_name),
             splunk,
         )
         .await?;
 
         try_collect_send(
             &format!("Codeowners for {repo_name}"),
-            github_client.codeowners(&repo_name),
+            github_client.repo_codeowners(&repo_name),
+            splunk,
+        )
+        .await?;
+
+        try_collect_send(
+            &format!("Deploy keys {repo_name}"),
+            github_client.repo_deploy_keys(&repo_name),
             splunk,
         )
         .await?;
@@ -125,7 +139,7 @@ async fn github_collect_installation_org(
         .await?;
 
         let dependabot_status = github_client
-            .check_dependabot_status(&repo_name)
+            .repo_dependabot_status(&repo_name)
             .await
             .context("getting dependabot status")?;
 
@@ -136,10 +150,6 @@ async fn github_collect_installation_org(
             .send_batch(events)
             .await
             .context("Sending events to Splunk")?;
-
-        if !dependabot_status.enabled {
-            continue;
-        }
 
         try_collect_send(
             &format!("Dependabot Alerts for {repo_name}"),
@@ -206,15 +216,22 @@ async fn github_collect_pat_org(
         );
 
         try_collect_send(
+            &format!("Deploy keys {repo_name}"),
+            github_client.repo_deploy_keys(&repo_name),
+            splunk,
+        )
+        .await?;
+
+        try_collect_send(
             &format!("Security txt {repo_name}"),
-            github_client.security_txt(&repo_name),
+            github_client.repo_security_txt(&repo_name),
             splunk,
         )
         .await?;
 
         try_collect_send(
             &format!("Codeowners for {repo_name}"),
-            github_client.codeowners(&repo_name),
+            github_client.repo_codeowners(&repo_name),
             splunk,
         )
         .await?;
@@ -230,7 +247,7 @@ async fn github_collect_pat_org(
         .await?;
 
         let dependabot_status = github_client
-            .check_dependabot_status(&repo_name)
+            .repo_dependabot_status(&repo_name)
             .await
             .context("getting dependabot status")?;
         let events = (&dependabot_status)
@@ -241,14 +258,12 @@ async fn github_collect_pat_org(
             .await
             .context("Sending events to Splunk")?;
 
-        if dependabot_status.enabled {
-            try_collect_send(
-                &format!("Dependabot Alerts for {repo_name}"),
-                github_client.repo_dependabot_alerts(&repo_name),
-                splunk,
-            )
-            .await?;
-        }
+        try_collect_send(
+            &format!("Dependabot Alerts for {repo_name}"),
+            github_client.repo_dependabot_alerts(&repo_name),
+            splunk,
+        )
+        .await?;
     }
     Ok(())
 }
@@ -261,11 +276,10 @@ mod test {
     use data_ingester_splunk::splunk::Splunk;
     use data_ingester_supporting::keyvault::get_keyvault_secrets;
 
-    use crate::entrypoint::github_octocrab;
+    use crate::entrypoint::github_octocrab_entrypoint;
 
-    //    use super::github;
     #[tokio::test]
-    async fn test_github() -> Result<()> {
+    async fn test_all_github() -> Result<()> {
         let secrets = get_keyvault_secrets(
             &env::var("KEY_VAULT_NAME").expect("Need KEY_VAULT_NAME enviornment variable"),
         )
@@ -274,24 +288,9 @@ mod test {
         let splunk = Splunk::new(&secrets.splunk_host, &secrets.splunk_token)
             .context("building Splunk client")?;
 
-        github_octocrab(Arc::new(secrets), Arc::new(splunk))
+        github_octocrab_entrypoint(Arc::new(secrets), Arc::new(splunk))
             .await
             .context("Running ocotcrab full test")?;
         Ok(())
     }
 }
-
-// async fn github_app(github_app: &GitHubApp, splunk: &Arc<Splunk>) -> Result<()> {
-//     let app = GitHub::new_from_app(&github_app)?;
-//     let installations = app.client.apps().list_all_installations(None, "").await?.body;
-//     for installation in &installations {
-//         if installation.target_type != "Organization" {
-//             continue
-//         }
-
-//         let github_client = GitHub::new_from_installation(installation.id, &github_app)?;
-//         let org_name = &installation.account.simple_user.login;
-//         github_collect(&github_client, org_name, splunk).await?;
-//     }
-//     Ok(())
-// }

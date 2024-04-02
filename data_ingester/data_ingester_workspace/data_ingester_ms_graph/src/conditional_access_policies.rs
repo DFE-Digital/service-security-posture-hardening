@@ -24,7 +24,7 @@ impl ConditionalAccessPolicy {
         let condition_users = &self.conditions.users;
         let result = {
             // Users
-            if condition_users.include_users.contains(&"All".to_owned()) {
+            if condition_users.include_users.contains("All") {
                 return true;
             }
             if condition_users.include_users.contains(&user.id) {
@@ -32,7 +32,7 @@ impl ConditionalAccessPolicy {
             }
 
             // Groups
-            if condition_users.include_groups.contains(&"All".to_owned()) {
+            if condition_users.include_groups.contains("All") {
                 return true;
             }
             for group_id in user.groups().ids() {
@@ -45,11 +45,11 @@ impl ConditionalAccessPolicy {
             }
 
             // Roles
-            if condition_users.include_roles.contains(&"All".to_owned()) {
+            if condition_users.include_roles.contains("All") {
                 return true;
             }
             for role_id in user.roles().ids() {
-                if condition_users.include_roles.contains(&role_id.to_owned()) {
+                if condition_users.include_roles.contains(role_id) {
                     return true;
                 }
             }
@@ -64,7 +64,7 @@ impl ConditionalAccessPolicy {
         // Check excludes
         {
             // Users
-            if condition_users.exclude_users.contains(&"All".to_owned()) {
+            if condition_users.exclude_users.contains("All") {
                 return false;
             }
             if condition_users.exclude_users.contains(&user.id) {
@@ -72,7 +72,7 @@ impl ConditionalAccessPolicy {
             }
 
             // Groups
-            if condition_users.exclude_groups.contains(&"All".to_owned()) {
+            if condition_users.exclude_groups.contains("All") {
                 return false;
             }
             for group_id in user.groups().ids() {
@@ -85,11 +85,11 @@ impl ConditionalAccessPolicy {
             }
 
             // Roles
-            if condition_users.exclude_roles.contains(&"All".to_owned()) {
+            if condition_users.exclude_roles.contains("All") {
                 return false;
             }
             for role_id in user.roles().ids() {
-                if condition_users.exclude_roles.contains(&role_id.to_owned()) {
+                if condition_users.exclude_roles.contains(role_id) {
                     return false;
                 }
             }
@@ -167,7 +167,7 @@ pub struct UserConditionalAccessPolicy<'a> {
     state: Option<&'a str>,
 }
 
-impl<'a> UserConditionalAccessPolicy<'a> {}
+impl UserConditionalAccessPolicy<'_> {}
 
 impl ConditionalAccessPolicies {
     pub fn new() -> Self {
@@ -217,7 +217,8 @@ mod conditional_access_policy {
     #[test]
     fn affected_user_by_user_id() {
         let (user, mut cap) = setup();
-        cap.conditions
+        _ = cap
+            .conditions
             .users
             .include_users
             .insert(user.id.to_owned());
@@ -227,20 +228,21 @@ mod conditional_access_policy {
     #[test]
     fn affected_user_by_user_all() {
         let (user, mut cap) = setup();
-        cap.conditions.users.include_users.insert("All".to_owned());
+        _ = cap.conditions.users.include_users.insert("All".to_owned());
         assert!(cap.affects_user(&user));
     }
 
     #[test]
     fn affected_user_by_group_all() {
         let (user, mut cap) = setup();
-        cap.conditions.users.include_groups.insert("All".to_owned());
+        _ = cap.conditions.users.include_groups.insert("All".to_owned());
         assert!(cap.affects_user(&user));
     }
     #[test]
     fn affected_user_by_group_id() {
         let (user, mut cap) = setup();
-        cap.conditions
+        _ = cap
+            .conditions
             .users
             .include_groups
             .insert("group1".to_owned());
@@ -249,13 +251,14 @@ mod conditional_access_policy {
     #[test]
     fn affected_user_by_role_all() {
         let (user, mut cap) = setup();
-        cap.conditions.users.include_roles.insert("All".to_owned());
+        _ = cap.conditions.users.include_roles.insert("All".to_owned());
         assert!(cap.affects_user(&user));
     }
     #[test]
     fn affected_user_by_role_id() {
         let (user, mut cap) = setup();
-        cap.conditions
+        _ = cap
+            .conditions
             .users
             .include_roles
             .insert("role1".to_owned());
@@ -265,11 +268,13 @@ mod conditional_access_policy {
     #[test]
     fn affected_user_excluded_by_user_id() {
         let (user, mut cap) = setup();
-        cap.conditions
+        _ = cap
+            .conditions
             .users
             .include_users
             .insert(user.id.to_owned());
-        cap.conditions
+        _ = cap
+            .conditions
             .users
             .exclude_users
             .insert(user.id.to_owned());
@@ -279,32 +284,36 @@ mod conditional_access_policy {
     #[test]
     fn affected_user_excluded_by_user_all() {
         let (user, mut cap) = setup();
-        cap.conditions
+        _ = cap
+            .conditions
             .users
             .include_users
             .insert(user.id.to_owned());
-        cap.conditions.users.exclude_users.insert("All".to_owned());
+        _ = cap.conditions.users.exclude_users.insert("All".to_owned());
         assert!(cap.affects_user(&user));
     }
 
     #[test]
     fn affected_user_excluded_by_group_all() {
         let (user, mut cap) = setup();
-        cap.conditions
+        _ = cap
+            .conditions
             .users
             .include_users
             .insert(user.id.to_owned());
-        cap.conditions.users.exclude_groups.insert("All".to_owned());
+        _ = cap.conditions.users.exclude_groups.insert("All".to_owned());
         assert!(cap.affects_user(&user));
     }
     #[test]
     fn affected_user_excluded_by_group_id() {
         let (user, mut cap) = setup();
-        cap.conditions
+        _ = cap
+            .conditions
             .users
             .include_users
             .insert(user.id.to_owned());
-        cap.conditions
+        _ = cap
+            .conditions
             .users
             .exclude_groups
             .insert("group1".to_owned());
@@ -313,21 +322,24 @@ mod conditional_access_policy {
     #[test]
     fn affected_user_excluded_by_role_all() {
         let (user, mut cap) = setup();
-        cap.conditions
+        _ = cap
+            .conditions
             .users
             .include_users
             .insert(user.id.to_owned());
-        cap.conditions.users.exclude_roles.insert("All".to_owned());
+        _ = cap.conditions.users.exclude_roles.insert("All".to_owned());
         assert!(cap.affects_user(&user));
     }
     #[test]
     fn affected_user_excluded_by_role_id() {
         let (user, mut cap) = setup();
-        cap.conditions
+        _ = cap
+            .conditions
             .users
             .include_users
             .insert(user.id.to_owned());
-        cap.conditions
+        _ = cap
+            .conditions
             .users
             .exclude_roles
             .insert("role1".to_owned());

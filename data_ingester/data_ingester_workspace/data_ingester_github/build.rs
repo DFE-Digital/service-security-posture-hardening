@@ -1,4 +1,6 @@
-// build.rs
+//! build.rs
+//!
+//! Set an environment variable with the current git commit hash. Used in logging
 use std::process::Command;
 
 fn main() {

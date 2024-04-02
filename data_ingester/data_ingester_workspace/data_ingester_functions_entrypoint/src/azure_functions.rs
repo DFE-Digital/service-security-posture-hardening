@@ -468,7 +468,7 @@ pub(crate) async fn start_server(tx: Sender<()>) -> Result<()> {
                     }
                 };
 
-                let result = match data_ingester_github::entrypoint::github_octocrab(
+                let result = match data_ingester_github::entrypoint::github_octocrab_entrypoint(
                     arg_secrets,
                     arg_splunk,
                 )
@@ -531,7 +531,7 @@ mod test {
     #[tokio::test]
     async fn test_azure_route() -> Result<()> {
         let (tx, rx) = channel::<()>();
-        tokio::spawn(start_server(tx));
+        let _server = tokio::spawn(start_server(tx));
         let _ = rx.await;
         let client = reqwest::Client::new();
         let response = client

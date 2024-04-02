@@ -323,6 +323,7 @@ impl AwsClient {
     }
 
     /// Get an up to date list of regions from EC2, or use a static list of regions.
+    #[allow(dead_code)]
     async fn list_of_regions(&self) -> Result<Vec<String>> {
         let config = self
             .config()
@@ -374,6 +375,7 @@ impl AwsClient {
     }
 
     /// configs for all regions
+    #[allow(dead_code)]
     async fn config_all_regions(&self) -> Result<Vec<SdkConfig>> {
         let regions = self
             .list_of_regions()
@@ -776,7 +778,7 @@ impl AwsClient {
             {
                 Ok(versioning) => {
                     let mut versioning: GetBucketVersioningOutput = versioning.into();
-                    versioning.bucket_name = bucket_name.clone();
+                    versioning.bucket_name.clone_from(&bucket_name);
                     versionings.push(versioning);
                 }
                 Err(e) => {
@@ -886,7 +888,7 @@ impl AwsClient {
                 event_selectors: None,
             });
 
-            let mut trail_wrapper = trail_wrappers.last_mut().expect("Just pushed onto vec");
+            let trail_wrapper = trail_wrappers.last_mut().expect("Just pushed onto vec");
 
             let region = match &trail_wrapper.trail.home_region() {
                 Some(region) => region.to_string(),
@@ -964,7 +966,7 @@ impl AwsClient {
                 Ok(acl) => {
                     let mut bucket_acl: GetBucketAclOutput = acl.into();
                     bucket_acl.trail_arn = trail.trail_arn;
-                    bucket_acl.bucket_name = bucket_name.clone();
+                    bucket_acl.bucket_name.clone_from(&bucket_name);
                     acls.push(bucket_acl);
                 }
 
@@ -1015,7 +1017,7 @@ impl AwsClient {
             {
                 Ok(policy) => {
                     let mut policy: GetBucketPolicyOutput = policy.into();
-                    policy.bucket_name = bucket_name.clone();
+                    policy.bucket_name.clone_from(&bucket_name);
                     policy.trail_arn = trail.trail_arn;
                     policies.push(policy);
                 }
@@ -1070,7 +1072,7 @@ impl AwsClient {
             {
                 Ok(logging) => {
                     let mut logging: GetBucketLoggingOutput = logging.into();
-                    logging.bucket_name = bucket_name.clone();
+                    logging.bucket_name.clone_from(&bucket_name);
                     logging.trail_arn = trail.trail_arn;
                     logging_policies.push(logging);
                 }
@@ -1431,7 +1433,7 @@ impl AwsClient {
                     // No records to match against so we raise an error and continue
                     continue;
                 };
-                this_set.route53_data = resource_records.clone();
+                this_set.route53_data.clone_from(&resource_records);
 
                 // Perform lookup
                 let lookup_name = resource_record.name.as_str();
@@ -1482,7 +1484,8 @@ impl AwsClient {
                         RData::AAAA(_aaaa) => false,
                         // RData::ANAME(_) => false,
                         RData::CAA(_caa) => false,
-                        RData::CNAME(cname) => false,
+                        // TODO
+                        RData::CNAME(_cname) => false,
                         RData::CSYNC(_r) => false,
                         // RData::HINFO(_) => todo!(),
                         // RData::HTTPS(_) => todo!(),
