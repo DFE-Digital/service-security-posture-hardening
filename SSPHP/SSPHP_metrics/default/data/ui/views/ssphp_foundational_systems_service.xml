@@ -1,7 +1,7 @@
 <dashboard version="1.1" theme="dark" hideFilters="true" script="js/table_cell_color.js">
 
   <label>Security Posture Continuous Assurance : Service Dashboard</label>
-  <description>v2.0.12</description>
+  <description>v2.0.14</description>
   
   <init>
     <set token="tkn_controls_compliant_text"></set>
@@ -107,13 +107,13 @@
         <search>
           <query>
 | loadjob savedsearch="nobody:$tkn_current_app$:ssphp_create_dashboard_dataset_posture"
-| where 'line_type'="summary" AND match(lower('ssphp.use_case.foundational_system'),$tkn__service|s$)
+| where 'line_type'="summary" AND match(lower('ssphp.source.foundational_system'),$tkn__service|s$)
 
 | eval ssphp.score.ciso_priority=case('ssphp.score.ciso_priority'=1,"DfE Mandated",
                                       'ssphp.score.ciso_priority'=2,"Recommended",
                                       1==1,"Desirable"),
        ssphp.score.score='ssphp.score.score'."|".'ssphp.score.color'
-| table ssphp.use_case.foundational_system, compliant_abs, compliant_perc, compliant_color
+| table ssphp.source.foundational_system, compliant_abs, compliant_perc, compliant_color
           </query>
           <latest>now</latest>
           <earliest>0</earliest>
@@ -251,7 +251,7 @@
         <search>
           <query>
 | loadjob savedsearch="nobody:$tkn_current_app$:ssphp_create_dashboard_dataset_posture"
-| where 'line_type'="detail" AND match(lower('ssphp.use_case.foundational_system'),$tkn__service|s$)
+| where 'line_type'="detail" AND match(lower('ssphp.source.foundational_system'),$tkn__service|s$)
 
 | eval ssphp.score.ciso_priority=case('ssphp.score.ciso_priority'=1,"DfE Mandated",
                                       'ssphp.score.ciso_priority'=2,"Recommended",
@@ -271,17 +271,17 @@
         sort_field='n4'.'n5'.'n1'.'n2'.'n3'
 | sort 0 sort_field
 
-| table ssphp.use_case.foundational_system, ssphp.use_case.id, ssphp.use_case.title, ssphp_control_title, ssphp.score.score, ssphp.score.compliance_status, ssphp.score.ciso_priority, ssphp_control_description, ssphp.score.color
+| table ssphp.source.foundational_system, ssphp.use_case.id, ssphp.use_case.title, ssphp.benchmark.control.title, ssphp.score.score, ssphp.score.compliance_status, ssphp.score.ciso_priority, ssphp.benchmark.control.description, ssphp.score.color
 
 $tkn_search_filter$
 
-| rename ssphp.use_case.foundational_system as "Foundational Service",
+| rename ssphp.source.foundational_system as "Foundational Service",
          ssphp.use_case.title as "Use Case",
-         ssphp_control_title  as "Control Title", 
+         ssphp.benchmark.control.title  as "Control Title", 
          ssphp.score.score as "Score",
          ssphp.score.compliance_status as "Compliance Status",
          ssphp.score.ciso_priority as "Control Type",
-         ssphp_control_description as "Description"
+         ssphp.benchmark.control.description as "Description"
          
 | eventstats count as number_controls_total
           </query>
