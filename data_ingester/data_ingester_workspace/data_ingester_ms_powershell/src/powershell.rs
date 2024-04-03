@@ -318,9 +318,13 @@ pub async fn run_powershell_get_mailbox(secrets: &Secrets) -> Result<Mailboxes> 
     Ok(result)
 }
 
-#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct Mailboxes(Vec<Mailbox>);
+#[serde(untagged)]
+pub enum Mailboxes {
+    Collection(Vec<Mailbox>),
+    Single(Mailbox),
+}
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "PascalCase")]
@@ -341,7 +345,10 @@ impl ToHecEvents for &Mailboxes {
     }
 
     fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
-        Box::new(self.0.iter())
+        match self {
+            Mailboxes::Collection(collection) => Box::new(collection.iter()),
+            Mailboxes::Single(single) => Box::new(iter::once(single)),
+        }
     }
 }
 
@@ -849,12 +856,13 @@ Connect-ExchangeOnline -ShowBanner:$false -Certificate $pfx -AppID "{}" -Organiz
     match serde_json::from_slice::<T>(&output.stdout[..]) {
         Ok(out) => Ok(out),
         Err(error) => {
-            eprintln!(
-                "Error while serializing data from: {}, {}",
-                &command, &error
-            );
-            eprintln!("output: {}", String::from_utf8(output.stdout)?);
-            Err(error.into())
+            anyhow::bail!(format!(
+                "Error while serializing data:\nCommand: {}\nError: {}\nOutput length: {}\nOutput: \"{}\"",
+                &command,
+                &error,
+                output.stdout.len(),
+                String::from_utf8(output.stdout)?,
+            ));
         }
     }
 }
@@ -879,8 +887,18 @@ Connect-IPPSSession -ShowBanner:$false -Certificate $pfx -AppID "{}" -Organizati
             )
         ]).output()?;
 
-    let out = serde_json::from_slice::<T>(&output.stdout[..])?;
-    Ok(out)
+    match serde_json::from_slice::<T>(&output.stdout[..]) {
+        Ok(out) => Ok(out),
+        Err(error) => {
+            anyhow::bail!(format!(
+                "Error while serializing data:\nCommand: {}\nError: {}\nOutput length: {}\nOutput: \"{}\"",
+                &command,
+                &error,
+                output.stdout.len(),
+                String::from_utf8(output.stdout)?,
+            ));
+        }
+    }
 }
 
 pub async fn run_microsoft_teams_powershell<T: DeserializeOwned>(
@@ -903,9 +921,18 @@ Connect-MicrosoftTeams -Certificate $pfx -ApplicationId "{}" -TenantId "{}" | Ou
             )
         ]).output()?;
 
-    let out = serde_json::from_slice::<T>(&output.stdout[..])?;
-
-    Ok(out)
+    match serde_json::from_slice::<T>(&output.stdout[..]) {
+        Ok(out) => Ok(out),
+        Err(error) => {
+            anyhow::bail!(format!(
+                "Error while serializing data:\nCommand: {}\nError: {}\nOutput length: {}\nOutput: \"{}\"",
+                &command,
+                &error,
+                output.stdout.len(),
+                String::from_utf8(output.stdout)?,
+            ));
+        }
+    }
 }
 
 #[cfg(test)]
@@ -1102,8 +1129,6 @@ mod test {
         Ok(())
     }
 
-    // Breaks on JSON parsing due to nested objects
-    #[ignore]
     #[tokio::test]
     async fn test_run_powershell_get_mailbox() -> Result<()> {
         let (splunk, secrets) = setup().await?;
