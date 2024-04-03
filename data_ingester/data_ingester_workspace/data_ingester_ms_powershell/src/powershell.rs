@@ -857,11 +857,11 @@ Connect-ExchangeOnline -ShowBanner:$false -Certificate $pfx -AppID "{}" -Organiz
         Ok(out) => Ok(out),
         Err(error) => {
             anyhow::bail!(format!(
-                "Error while serializing data:\nCommand: {}\nError: {}\nOutput length: {}\nOutput: \"{}\"",
+                "Error while serializing data:\nCommand: {}\nError: {}\nOutput length: {}\nOutput[..1000]: \"{}\"",
                 &command,
                 &error,
                 output.stdout.len(),
-                String::from_utf8(output.stdout)?,
+                String::from_utf8(output.stdout[..1000])?,
             ));
         }
     }
@@ -891,11 +891,11 @@ Connect-IPPSSession -ShowBanner:$false -Certificate $pfx -AppID "{}" -Organizati
         Ok(out) => Ok(out),
         Err(error) => {
             anyhow::bail!(format!(
-                "Error while serializing data:\nCommand: {}\nError: {}\nOutput length: {}\nOutput: \"{}\"",
+                "Error while serializing data:\nCommand: {}\nError: {}\nOutput length: {}\nOutput[..1000]: \"{}\"",
                 &command,
                 &error,
                 output.stdout.len(),
-                String::from_utf8(output.stdout)?,
+                String::from_utf8(output.stdout[..1000])?,
             ));
         }
     }
@@ -925,16 +925,16 @@ Connect-MicrosoftTeams -Certificate $pfx -ApplicationId "{}" -TenantId "{}" | Ou
         Ok(out) => Ok(out),
         Err(error) => {
             anyhow::bail!(format!(
-                "Error while serializing data:\nCommand: {}\nError: {}\nOutput length: {}\nOutput: \"{}\"",
+                "Error while serializing data:\nCommand: {}\nError: {}\nOutput length: {}\nOutput[..1000]: \"{}\"",
                 &command,
                 &error,
                 output.stdout.len(),
-                String::from_utf8(output.stdout)?,
+                String::from_utf8(output.stdout[..1000])?,
             ));
         }
     }
-}
 
+}
 #[cfg(test)]
 mod test {
 
