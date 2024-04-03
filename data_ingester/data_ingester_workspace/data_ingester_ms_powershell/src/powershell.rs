@@ -872,7 +872,7 @@ async fn run_microsoft_teams_powershell<T: DeserializeOwned>(
         r#"Import-Module MicrosoftTeams;
 Connect-MicrosoftTeams -Certificate $pfx -ApplicationId "{}" -TenantId "{}" | Out-Null;
 {} "#,
-        secrets.azure_client_id, secrets.azure_client_organization, command,
+        secrets.azure_client_id, secrets.azure_tenant_id, command,
     );
     run_powershell(secrets, &cmd).await
 }
