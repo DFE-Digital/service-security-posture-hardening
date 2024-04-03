@@ -883,11 +883,9 @@ Connect-MicrosoftTeams -Certificate $pfx -ApplicationId "{}" -TenantId "{}" | Ou
 /// this variable when connecting to the target powershell service.
 async fn run_powershell<T: DeserializeOwned>(secrets: &Secrets, cmd: &str) -> Result<T> {
     let command = format!(
-        r#" [Byte[]]$pfxBytes
-    = [Convert]::FromBase64String('{}'); $pfx = New-Object
-    System.Security.Cryptography.X509Certificates.X509Certificate2
-    -ArgumentList (,$pfxBytes); {} | ConvertTo-Json -Compress -Depth
-    20;"#,
+        r#" [Byte[]]$pfxBytes = [Convert]::FromBase64String('{}');
+$pfx = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2 -ArgumentList (,$pfxBytes);
+{} | ConvertTo-Json -Compress -Depth 20;"#,
         secrets.azure_client_certificate, cmd,
     );
     let output = Command::new("pwsh").args(["-Command", &command]).output()?;
@@ -895,12 +893,14 @@ async fn run_powershell<T: DeserializeOwned>(secrets: &Secrets, cmd: &str) -> Re
     match serde_json::from_slice::<T>(&output.stdout[..]) {
         Ok(out) => Ok(out),
         Err(error) => {
+            let outlen = std::cmp::min(1000, output.stdout.len());
             let message = format!(
-                "Error while serializing data:\nCommand: {}\nError: {}\nOutput length: {}\nOutput[..1000]: \"{}\"",
+                "Error while serializing data:\nCommand: {}\nError: {}\nOutput length: {}\nOutput[..{}]: \"{}\"",
                 &cmd,
                 &error,
                 output.stdout.len(),
-                String::from_utf8_lossy(&output.stdout[..1000]),
+                outlen,
+                String::from_utf8_lossy(&output.stdout[..outlen]),
             );
             anyhow::bail!(message);
         }
