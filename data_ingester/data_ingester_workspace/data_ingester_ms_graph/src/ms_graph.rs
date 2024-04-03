@@ -40,7 +40,7 @@ use url::Url;
 
 pub async fn login(client_id: &str, client_secret: &str, tenant_id: &str) -> Result<MsGraph> {
     let mut oauth = OAuth::new();
-    oauth
+    _ = oauth
         .client_id(client_id)
         .client_secret(client_secret)
         .add_scope("https://graph.microsoft.com/.default")
@@ -111,7 +111,7 @@ impl MsGraph {
 
         let mut header_map = HeaderMap::new();
 
-        header_map
+        _ = header_map
             .entry(CONTENT_TYPE)
             .or_insert(HeaderValue::from_static("application/json"));
 
@@ -152,7 +152,7 @@ impl MsGraph {
 
         let mut header_map = HeaderMap::new();
 
-        header_map
+        _ = header_map
             .entry(CONTENT_TYPE)
             .or_insert(HeaderValue::from_static("application/json"));
 

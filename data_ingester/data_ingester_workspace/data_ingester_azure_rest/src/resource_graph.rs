@@ -211,10 +211,6 @@ impl ResourceGraphRequest {
         }
     }
 
-    pub(crate) fn add_options(&mut self, options: ResourceGraphRequestOptions) {
-        self.options = options
-    }
-
     fn add_skip_token(&mut self, skip_token: &str) {
         self.options.skip_token = Some(skip_token.to_string());
     }

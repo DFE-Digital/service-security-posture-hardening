@@ -158,9 +158,9 @@ impl Splunk {
         let mut headers = HeaderMap::new();
         let mut auth = HeaderValue::from_str(&format!("Splunk {}", token))?;
         auth.set_sensitive(true);
-        headers.insert("Authorization", auth);
+        _ = headers.insert("Authorization", auth);
         let channel = Uuid::new_v4().to_string();
-        headers.insert("X-Splunk-Request-Channel", channel.parse()?);
+        _ = headers.insert("X-Splunk-Request-Channel", channel.parse()?);
         Ok(headers)
     }
 
@@ -296,6 +296,9 @@ impl ToHecEvents for &HecDynamic {
     }
 }
 
+/// Run a future to completion and send the results to Splunk.
+///
+/// Logs the start / end / error messages of the collection to Splunk.
 pub async fn try_collect_send<T>(
     name: &str,
     future: impl Future<Output = Result<T>>,

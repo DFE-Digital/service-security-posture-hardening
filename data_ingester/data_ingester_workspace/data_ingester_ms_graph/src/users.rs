@@ -104,7 +104,7 @@ pub(crate) enum GroupOrRole {
     Role(DirectoryRole),
 }
 
-impl<'a> User<'a> {
+impl User<'_> {
     #[cfg(test)]
     pub fn new(id: String, display_name: String) -> Self {
         Self {
@@ -219,7 +219,7 @@ impl<'a> UsersMap<'a> {
 
     pub fn extend_from_users(&mut self, users: Users<'a>) -> Result<()> {
         for user in users.value.into_iter() {
-            self.inner.insert(user.id.to_string(), user);
+            _ = self.inner.insert(user.id.to_string(), user);
         }
         Ok(())
     }

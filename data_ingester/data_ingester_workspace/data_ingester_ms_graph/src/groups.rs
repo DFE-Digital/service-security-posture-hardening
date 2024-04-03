@@ -75,7 +75,7 @@ pub struct Groups<'a> {
     pub inner: Vec<Cow<'a, Group>>,
 }
 
-impl<'a> Groups<'a> {
+impl Groups<'_> {
     pub fn ids(&self) -> Vec<&'_ String> {
         self.inner.iter().map(|group| &group.id).collect()
     }

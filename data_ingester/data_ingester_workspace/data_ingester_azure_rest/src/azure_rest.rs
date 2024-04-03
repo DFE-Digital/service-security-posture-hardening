@@ -93,7 +93,7 @@ impl AzureRest {
             let mut stream = client.role_definitions_client().list(scope).into_stream();
             while let Some(results) = stream.next().await {
                 for item in results?.value {
-                    collection.insert(
+                    _ = collection.insert(
                         item.id
                             .as_ref()
                             .context("No ID on role definition")?
@@ -118,7 +118,7 @@ impl AzureRest {
                 .into_stream();
             while let Some(results) = stream.next().await {
                 for item in results?.value {
-                    collection.insert(
+                    _ = collection.insert(
                         item.id
                             .as_ref()
                             .context("No ID on role assignment")?
