@@ -1,7 +1,7 @@
 <dashboard theme="dark" version="1.1" script="js/addtags.js, js/table_cell_backcolor_multivalue.js">
 
   <label>Security Posture Continuous Assurance : Control Detail Dashboard</label>
-  <description>v3.0.2</description>
+  <description>v3.0.4</description>
   
   <init>
     <unset token="tkn_show_dashboard"></unset>
@@ -188,14 +188,14 @@ index="ssphp_metrics_summary" ssphp.use_case.id=$tkn_use_case_id$
             <set token="tkn_ms_description">$result.ssphp.microsoft.desciption$</set>
             <set token="tkn_ms_implementation_status">$result.ssphp.microsoft.implementation_status$</set>
 
-            <set token="tkn_control_title">$result.ssphp_control_title$</set>
-            <set token="tkn_control_description">$result.ssphp_control_description$</set>
-            <set token="tkn_control_rationale">$result.ssphp_control_rationale$</set>
-            <set token="tkn_control_impact">$result.ssphp_control_impact$</set>
+            <set token="tkn_control_title">$result.ssphp.benchmark.control.title$</set>
+            <set token="tkn_control_description">$result.ssphp.benchmark.control.description$</set>
+            <set token="tkn_control_rationale">$result.ssphp.benchmark.control.rationale$</set>
+            <set token="tkn_control_impact">$result.ssphp.benchmark.control.impact$</set>
+            <set token="tkn_cis_profile">$result.ssphp.benchmark.control.profile_applicability$</set>
             
             <set token="tkn_cis_benchmark">$result.ssphp.cis_benchmark.document.name$ : $result.ssphp.cis_benchmark.document.version$ $result.ssphp.cis_benchmark.version$</set>
             <set token="tkn_cis_controls">$result.ssphp.cis_benchmark.controls.v8$</set>
-            <set token="tkn_cis_profile">$result.ssphp.cis_benchmark.control.profile_applicability$</set>
             <set token="tkn_cis_v3_control">$result.ssphp.cis_benchmark.document.v3.number$</set>
             
             <set token="tkn_cis_ig1">$result.ssphp.use_case.framework.ig_1$</set>
