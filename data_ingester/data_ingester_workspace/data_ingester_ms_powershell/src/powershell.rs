@@ -833,108 +833,80 @@ impl ToHecEvents for &LoginTest {
     }
 }
 
+/// Run a powershell command after connecting to ExchangeOnline
 pub async fn run_exchange_online_powershell<T: DeserializeOwned>(
     secrets: &Secrets,
     command: &str,
 ) -> Result<T> {
-    let output = Command::new("pwsh")
-        .args([
-            "-Command",
-            &format!(r#"
-[Byte[]]$pfxBytes = [Convert]::FromBase64String('{}');
-$pfx = New-Object System.Security.Cryptography.X509Certificates.X509Certificate -ArgumentList (,$pfxBytes);
-Import-Module ExchangeOnlineManagement;
+    let cmd = format!(
+        r#"Import-Module ExchangeOnlineManagement;
 Connect-ExchangeOnline -ShowBanner:$false -Certificate $pfx -AppID "{}" -Organization "{}";
-{} | ConvertTo-Json -Compress -Depth 100;"#,
-                     secrets.azure_client_certificate,
-                     secrets.azure_client_id,
-                     secrets.azure_client_organization,
-                     &command,
-            )
-        ]).output()?;
+{} "#,
+        secrets.azure_client_id, secrets.azure_client_organization, command
+    );
 
-    match serde_json::from_slice::<T>(&output.stdout[..]) {
-        Ok(out) => Ok(out),
-        Err(error) => {
-            anyhow::bail!(format!(
-                "Error while serializing data:\nCommand: {}\nError: {}\nOutput length: {}\nOutput[..1000]: \"{}\"",
-                &command,
-                &error,
-                output.stdout.len(),
-                String::from_utf8(output.stdout[..1000])?,
-            ));
-        }
-    }
+    run_powershell(secrets, &cmd).await
 }
 
-pub async fn run_exchange_online_ipps_powershell<T: DeserializeOwned>(
+/// Run a powershell command after connecting to IPPSSession
+async fn run_exchange_online_ipps_powershell<T: DeserializeOwned>(
     secrets: &Secrets,
     command: &str,
 ) -> Result<T> {
-    let output = Command::new("pwsh")
-        .args([
-            "-Command",
-            &format!(r#"
-[Byte[]]$pfxBytes = [Convert]::FromBase64String('{}');
-$pfx = New-Object System.Security.Cryptography.X509Certificates.X509Certificate -ArgumentList (,$pfxBytes);
-Import-Module ExchangeOnlineManagement;
+    let cmd = format!(
+        r#"Import-Module ExchangeOnlineManagement;
 Connect-IPPSSession -ShowBanner:$false -Certificate $pfx -AppID "{}" -Organization "{}";
-{} | ConvertTo-Json -Compress -Depth 20;"#,
-                     secrets.azure_client_certificate,
-                     secrets.azure_client_id,
-                     secrets.azure_client_organization,
-                     command,
-            )
-        ]).output()?;
+{}"#,
+        secrets.azure_client_id, secrets.azure_client_organization, command,
+    );
 
-    match serde_json::from_slice::<T>(&output.stdout[..]) {
-        Ok(out) => Ok(out),
-        Err(error) => {
-            anyhow::bail!(format!(
-                "Error while serializing data:\nCommand: {}\nError: {}\nOutput length: {}\nOutput[..1000]: \"{}\"",
-                &command,
-                &error,
-                output.stdout.len(),
-                String::from_utf8(output.stdout[..1000])?,
-            ));
-        }
-    }
+    run_powershell(secrets, &cmd).await
 }
 
-pub async fn run_microsoft_teams_powershell<T: DeserializeOwned>(
+/// Run a powershell command after connecting to Microsoft Teams
+async fn run_microsoft_teams_powershell<T: DeserializeOwned>(
     secrets: &Secrets,
     command: &str,
 ) -> Result<T> {
-    let output = Command::new("pwsh")
-        .args([
-            "-Command",
-            &format!(r#"
-[Byte[]]$pfxBytes = [Convert]::FromBase64String('{}');
-$pfx = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2 -ArgumentList (,$pfxBytes);
-Import-Module MicrosoftTeams;
+    let cmd = format!(
+        r#"Import-Module MicrosoftTeams;
 Connect-MicrosoftTeams -Certificate $pfx -ApplicationId "{}" -TenantId "{}" | Out-Null;
+{} "#,
+        secrets.azure_client_id, secrets.azure_tenant_id, command,
+    );
+    run_powershell(secrets, &cmd).await
+}
+
+/// Run a powershell command and deserialize the output.
+///
+/// Sets a certificate object to '$pfx'. You will probably need to use
+/// this variable when connecting to the target powershell service.
+async fn run_powershell<T: DeserializeOwned>(secrets: &Secrets, cmd: &str) -> Result<T> {
+    let command = format!(
+        r#" [Byte[]]$pfxBytes = [Convert]::FromBase64String('{}');
+$pfx = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2 -ArgumentList (,$pfxBytes);
 {} | ConvertTo-Json -Compress -Depth 20;"#,
-                     secrets.azure_client_certificate,
-                     secrets.azure_client_id,
-                     secrets.azure_client_organization,
-                     command,
-            )
-        ]).output()?;
+        secrets.azure_client_certificate, cmd,
+    );
+    let output = Command::new("pwsh").args(["-Command", &command]).output()?;
 
     match serde_json::from_slice::<T>(&output.stdout[..]) {
         Ok(out) => Ok(out),
         Err(error) => {
-            anyhow::bail!(format!(
-                "Error while serializing data:\nCommand: {}\nError: {}\nOutput length: {}\nOutput[..1000]: \"{}\"",
-                &command,
+            let outlen = std::cmp::min(1000, output.stdout.len());
+            let message = format!(
+                "Error while serializing data:\nCommand: {}\nError: {}\nOutput length: {}\nOutput[..{}]: \"{}\"",
+                &cmd,
                 &error,
                 output.stdout.len(),
-                String::from_utf8(output.stdout[..1000])?,
-            ));
+                outlen,
+                String::from_utf8_lossy(&output.stdout[..outlen]),
+            );
+            anyhow::bail!(message);
         }
     }
-
 }
+
 #[cfg(test)]
 mod test {
 
