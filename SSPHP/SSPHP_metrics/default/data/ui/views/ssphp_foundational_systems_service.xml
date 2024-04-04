@@ -1,9 +1,10 @@
 <dashboard version="1.1" theme="dark" hideFilters="true" script="js/table_cell_color.js">
 
   <label>Security Posture Continuous Assurance : Service Dashboard</label>
-  <description>v2.0.14</description>
+  <description>v2.0.21</description>
   
   <init>
+    <set token="form.tkn_fields">C</set>
     <set token="tkn_controls_compliant_text"></set>
     <unset token="tkn_ready"></unset>
   </init>
@@ -163,8 +164,9 @@
         <label>Show Only</label>
         <choice value="N">Non-Compliant</choice>
         <choice value="C">DfE Mandated</choice>
-        <initialValue>N,C</initialValue>
-        <default>*</default>
+        <change>
+          <eval token="tkn_fields">if(isnull($tkn_fields$), &quot; &quot;, $tkn_fields$)</eval>
+        </change>
       </input>
     </panel>
 
