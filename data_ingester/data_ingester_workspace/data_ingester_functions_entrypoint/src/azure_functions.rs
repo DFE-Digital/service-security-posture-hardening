@@ -1,4 +1,5 @@
 use data_ingester_ms_powershell::runner::powershell;
+use data_ingester_splunk::start_splunk_tracing;
 use serde::Deserialize;
 use serde::Serialize;
 use std::env;
@@ -6,6 +7,9 @@ use std::net::Ipv4Addr;
 use std::sync::Arc;
 use tokio::sync::oneshot::Sender;
 use tokio::sync::Mutex;
+use tracing::debug;
+use tracing::info;
+use tracing::warn;
 use warp::{http::Response, Filter};
 
 use data_ingester_aws::aws::aws;
@@ -92,16 +96,17 @@ impl warp::Reply for AzureInvokeResponse {
 }
 
 pub(crate) async fn start_server(tx: Sender<()>) -> Result<()> {
-    eprintln!("Starting server for Azure Functions");
-    eprintln!("Getting KeyVault secrets");
+    info!("Starting server for Azure Functions");
+    info!("Getting KeyVault secrets");
     let secrets = Arc::new(get_keyvault_secrets(&env::var("KEY_VAULT_NAME")?).await?);
-    eprintln!("Creating Splunk client");
-    let splunk = Arc::new(Splunk::new(&secrets.splunk_host, &secrets.splunk_token)?);
-    splunk
-        .log("Starting server / Splunk Client created")
-        .await?;
-    set_ssphp_run()?;
+    info!("Creating Splunk client");
 
+    let splunk = Splunk::new(&secrets.splunk_host, &secrets.splunk_token)?;
+    info!("Starting server / Splunk Client created");
+    set_ssphp_run()?;
+    let _ = start_splunk_tracing(splunk.clone());
+
+    let splunk = Arc::new(splunk);
     let azure_in_progress = Arc::new(Mutex::new(()));
 
     let azure = warp::post().and(warp::path("azure")).then({
@@ -139,16 +144,16 @@ pub(crate) async fn start_server(tx: Sender<()>) -> Result<()> {
                 };
                 response.logs.push(result);
                 if let Some(usage) = memory_stats() {
-                    println!(
+                    debug!(
                         "Current physical memory usage: {}",
                         usage.physical_mem / 1_000_000
                     );
-                    println!(
+                    debug!(
                         "Current virtual memory usage: {}",
                         usage.virtual_mem / 1_000_000
                     );
                 } else {
-                    println!("Couldn't get the current memory usage :(");
+                    warn!("Couldn't get the current memory usage :(");
                 }
                 drop(lock);
                 response
@@ -171,7 +176,7 @@ pub(crate) async fn start_server(tx: Sender<()>) -> Result<()> {
                 let m365_secrets = m365_secrets.clone();
 
                 async move {
-                    eprintln!("GIT_HASH: {}", env!("GIT_HASH"));
+                    info!("GIT_HASH: {}", env!("GIT_HASH"));
 
                     let mut response = AzureInvokeResponse {
                         outputs: None,
@@ -204,16 +209,16 @@ pub(crate) async fn start_server(tx: Sender<()>) -> Result<()> {
                     };
                     response.logs.push(result);
                     if let Some(usage) = memory_stats() {
-                        println!(
+                        debug!(
                             "Current physical memory usage: {}",
                             usage.physical_mem / 1_000_000
                         );
-                        println!(
+                        debug!(
                             "Current virtual memory usage: {}",
                             usage.virtual_mem / 1_000_000
                         );
                     } else {
-                        println!("Couldn't get the current memory usage :(");
+                        warn!("Couldn't get the current memory usage :(");
                     }
                     drop(lock);
                     response
@@ -236,7 +241,7 @@ pub(crate) async fn start_server(tx: Sender<()>) -> Result<()> {
             let powershell_secrets = powershell_secrets.clone();
 
             async move {
-                eprintln!("GIT_HASH: {}", env!("GIT_HASH"));
+                info!("GIT_HASH: {}", env!("GIT_HASH"));
 
                 let mut response = AzureInvokeResponse {
                     outputs: None,
@@ -286,16 +291,16 @@ pub(crate) async fn start_server(tx: Sender<()>) -> Result<()> {
                 };
                 response.logs.push(result);
                 if let Some(usage) = memory_stats() {
-                    println!(
+                    debug!(
                         "Current physical memory usage: {}",
                         usage.physical_mem / 1_000_000
                     );
-                    println!(
+                    debug!(
                         "Current virtual memory usage: {}",
                         usage.virtual_mem / 1_000_000
                     );
                 } else {
-                    println!("Couldn't get the current memory usage :(");
+                    debug!("Couldn't get the current memory usage :(");
                 }
                 drop(lock);
                 response
@@ -315,7 +320,7 @@ pub(crate) async fn start_server(tx: Sender<()>) -> Result<()> {
             let aws_secrets = aws_secrets.clone();
 
             async move {
-                eprintln!("GIT_HASH: {}", env!("GIT_HASH"));
+                info!("GIT_HASH: {}", env!("GIT_HASH"));
 
                 let mut response = AzureInvokeResponse {
                     outputs: None,
@@ -349,16 +354,16 @@ pub(crate) async fn start_server(tx: Sender<()>) -> Result<()> {
 
                 response.logs.push(result);
                 if let Some(usage) = memory_stats() {
-                    println!(
+                    debug!(
                         "Current physical memory usage: {}",
                         usage.physical_mem / 1_000_000
                     );
-                    println!(
+                    debug!(
                         "Current virtual memory usage: {}",
                         usage.virtual_mem / 1_000_000
                     );
                 } else {
-                    println!("Couldn't get the current memory usage :(");
+                    warn!("Couldn't get the current memory usage :(");
                 }
                 drop(lock);
                 response
@@ -378,7 +383,7 @@ pub(crate) async fn start_server(tx: Sender<()>) -> Result<()> {
             let arg_secrets = arg_secrets.clone();
 
             async move {
-                eprintln!("GIT_HASH: {}", env!("GIT_HASH"));
+                info!("GIT_HASH: {}", env!("GIT_HASH"));
 
                 let mut response = AzureInvokeResponse {
                     outputs: None,
@@ -412,7 +417,7 @@ pub(crate) async fn start_server(tx: Sender<()>) -> Result<()> {
 
                 response.logs.push(result);
                 if let Some(usage) = memory_stats() {
-                    println!(
+                    debug!(
                         "Current physical memory usage: {}",
                         usage.physical_mem / 1_000_000
                     );
@@ -421,7 +426,7 @@ pub(crate) async fn start_server(tx: Sender<()>) -> Result<()> {
                         usage.virtual_mem / 1_000_000
                     );
                 } else {
-                    println!("Couldn't get the current memory usage :(");
+                    warn!("Couldn't get the current memory usage :(");
                 }
                 drop(lock);
                 response
@@ -441,7 +446,7 @@ pub(crate) async fn start_server(tx: Sender<()>) -> Result<()> {
             let arg_secrets = gh_secrets.clone();
 
             async move {
-                eprintln!("GIT_HASH: {}", env!("GIT_HASH"));
+                info!("GIT_HASH: {}", env!("GIT_HASH"));
 
                 let mut response = AzureInvokeResponse {
                     outputs: None,
@@ -480,16 +485,16 @@ pub(crate) async fn start_server(tx: Sender<()>) -> Result<()> {
 
                 response.logs.push(result);
                 if let Some(usage) = memory_stats() {
-                    println!(
+                    debug!(
                         "Current physical memory usage: {}",
                         usage.physical_mem / 1_000_000
                     );
-                    println!(
+                    debug!(
                         "Current virtual memory usage: {}",
                         usage.virtual_mem / 1_000_000
                     );
                 } else {
-                    println!("Couldn't get the current memory usage :(");
+                    warn!("Couldn't get the current memory usage :(");
                 }
                 drop(lock);
                 response
@@ -497,7 +502,10 @@ pub(crate) async fn start_server(tx: Sender<()>) -> Result<()> {
         }
     });
 
-    let health_check = warp::get().and(warp::path::end()).map(|| "Healthy!");
+    let health_check = warp::get().and(warp::path::end()).map(|| {
+        info!("Health check");
+        "Healthy!"
+    });
 
     let function_routes = warp::post()
         .and(azure)

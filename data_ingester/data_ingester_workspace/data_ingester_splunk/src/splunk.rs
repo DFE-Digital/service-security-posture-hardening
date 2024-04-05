@@ -66,22 +66,6 @@ pub fn set_ssphp_run() -> Result<()> {
     Ok(())
 }
 
-// #[derive(Debug, Serialize, Deserialize, Default)]
-// struct Dummy {
-// }
-
-// pub trait ToHecEvents {
-//     fn source() -> &'static str;
-//     fn sourcetype() -> &'static str;
-//     fn to_hec_events(&self) -> Result<HecEvent, Box<dyn Error + Send + Sync>> {
-//         let d = Dummy {};
-//         HecEvent::new(&d, "a", "b")
-//     }
-// }
-// struct Logs {}
-
-// fn logger() {}
-
 pub fn to_hec_events<T: Serialize>(
     collection: &[T],
     source: &str,
@@ -122,18 +106,11 @@ pub trait ToHecEvents {
     fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i>;
 }
 
-// pub trait ToHecEvent: Serialize + Sized {
-//     fn to_hec_event(&self) -> Result<HecEvent> {
-//         HecEvent::new(self, Self::source(), Self::sourcetype())
-//     }
-//     fn source() -> &'static str;
-//     fn sourcetype() -> &'static str;
-// }
-
 #[derive(Debug, Clone)]
 pub struct Splunk {
     client: Client,
     url: String,
+    //    client_creation_time: u64,
 }
 
 unsafe impl Send for Splunk {}
@@ -151,6 +128,8 @@ impl Splunk {
             .danger_accept_invalid_certs(true)
             .default_headers(Splunk::headers(token)?)
             .build()?;
+        // let start = SystemTime::now();
+        // let client_creation_time = start.duration_since(UNIX_EPOCH)?;
         Ok(Self { client, url })
     }
 
@@ -176,8 +155,17 @@ impl Splunk {
         events: impl IntoIterator<Item = impl Borrow<HecEvent> + Serialize>,
     ) -> Result<()> {
         for batch in events.into_iter().batching(batch_lines) {
-            let request = self.client.post(&self.url).body(batch).build()?;
-            let _response = self.client.execute(request).await?;
+            let request = self
+                .client
+                .post(&self.url)
+                .body(batch)
+                .build()
+                .context("building request")?;
+            let _response = self
+                .client
+                .execute(request)
+                .await
+                .context("sending to splunk")?;
         }
         Ok(())
     }

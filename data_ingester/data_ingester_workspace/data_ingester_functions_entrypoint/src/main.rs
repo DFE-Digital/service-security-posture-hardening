@@ -3,42 +3,51 @@ use anyhow::Result;
 use azure_functions::start_server;
 use memory_stats::memory_stats;
 use tokio::sync::oneshot;
+use tracing::{debug, info, instrument, warn};
+use tracing_subscriber::{layer::SubscriberExt, Registry};
 
-#[tokio::main]
+#[tokio::main(flavor = "multi_thread")]
+#[instrument]
 async fn main() -> Result<()> {
-    eprintln!("Starting Data Ingester...");
-    eprintln!(
+    println!("Starting ...");
+    println!("Starting tracing ...");
+    let stdout_log = tracing_subscriber::fmt::layer().pretty();
+    let subscriber = Registry::default().with(stdout_log);
+    let _tracing_before_splunk = tracing::subscriber::set_default(subscriber);
+
+    info!("Starting Data Ingester...");
+    info!(
         "RUST_BACKTRACE={}",
         &std::env::var("RUST_BACKTRACE").unwrap_or_else(|_| "NO VALUE SET".to_string())
     );
     let (tx, rx) = oneshot::channel::<()>();
     let server = tokio::spawn(start_server(tx));
     let _ = rx.await;
-    eprintln!("Warp server started...");
+    info!("Warp server started...");
     if let Some(usage) = memory_stats() {
-        println!(
+        debug!(
             "Current physical memory usage: {}",
             usage.physical_mem / 1_000_000
         );
-        println!(
+        debug!(
             "Current virtual memory usage: {}",
             usage.virtual_mem / 1_000_000
         );
     } else {
-        println!("Couldn't get the current memory usage :(");
+        warn!("Couldn't get the current memory usage :(");
     }
     server.await??;
     if let Some(usage) = memory_stats() {
-        println!(
+        debug!(
             "Current physical memory usage: {}",
             usage.physical_mem / 1_000_000
         );
-        println!(
+        debug!(
             "Current virtual memory usage: {}",
             usage.virtual_mem / 1_000_000
         );
     } else {
-        println!("Couldn't get the current memory usage :(");
+        warn!("Couldn't get the current memory usage :(");
     }
     Ok(())
 }
