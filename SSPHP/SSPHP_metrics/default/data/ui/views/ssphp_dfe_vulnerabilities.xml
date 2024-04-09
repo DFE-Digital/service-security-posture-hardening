@@ -1,0 +1,122 @@
+<dashboard version="1.1" theme="dark">
+  
+  <label>Vulnerability Management</label>
+  <description>v1.0.0</description>
+  <search id="bs_1">
+    <query>
+| loadjob savedsearch="sam.pritchard@education.gov.uk:search:ssphp_vulnerability_dev"
+| table *
+    </query>
+  </search>
+  <row>
+    <panel>
+      <title>Vulnerabilities older than 400 days and severity 5 [$tkn_event_count$]</title>
+      <table>
+        <search base="bs_1">
+          <query>
+
+| eval sortval=mvcount('TITLE')
+| sort 0 - sortval
+| eventstats count as event_count
+          </query>
+          <done>
+            <set token="tkn_event_count">$result.event_count$</set>
+          </done>
+        </search>
+        <option name="count">5</option>
+        <option name="dataOverlayMode">none</option>
+        <option name="drilldown">cell</option>
+        <option name="percentagesRow">false</option>
+        <option name="rowNumbers">false</option>
+        <option name="totalsRow">false</option>
+        <option name="wrap">true</option>
+        <fields>["HOST_ID","ownership","TITLE","VULNERABILITY_AGE"]</fields>
+        <drilldown>
+          <set token="tkn_hostname">$row.HOST_ID$</set>
+        </drilldown>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>CVEs for HOST_ID=$tkn_hostname$</title>
+      <table>
+        <search base="bs_1">
+          <query>
+| search HOST_ID=$tkn_hostname$
+| table TITLE
+| mvexpand TITLE
+          </query>
+          <done>
+            <set token="tkn_event_count">$result.event_count$</set>
+          </done>
+        </search>
+        <option name="count">10</option>
+        <option name="dataOverlayMode">none</option>
+        <option name="drilldown">cell</option>
+        <option name="percentagesRow">false</option>
+        <option name="rowNumbers">false</option>
+        <option name="totalsRow">false</option>
+        <option name="wrap">true</option>
+        <drilldown>
+          <set token="tkn_title">$click.value$</set>
+        </drilldown>
+      </table>
+    </panel>
+    <panel>
+      <title>Details for CVE=$tkn_title$ </title>
+      <table>
+        <search base="bs_1">
+          <query>
+| search HOST_ID=$tkn_hostname$
+| eval searchtext=replace($tkn_title|s$, "\(", "\\("),
+       searchtext=replace('searchtext', "\)", "\\)"),
+       pointer=mvfind('TITLE', 'searchtext')
+| eval TITLE=mvindex('TITLE', 'pointer'),
+       SOLUTION=mvindex('SOLUTION', 'pointer'),
+       CONSEQUENCE=mvindex('CONSEQUENCE', 'pointer'),
+       DIAGNOSIS=mvindex('DIAGNOSIS', 'pointer')
+| table TITLE, SOLUTION, CONSEQUENCE, DIAGNOSIS
+| transpose
+| rename column as FIELD, "row 1" as DESCRIPTION
+
+          </query>
+          <done>
+            <set token="tkn_event_count">$result.event_count$</set>
+          </done>
+        </search>
+        <option name="count">10</option>
+        <option name="dataOverlayMode">none</option>
+        <option name="drilldown">none</option>
+        <option name="percentagesRow">false</option>
+        <option name="rowNumbers">false</option>
+        <option name="totalsRow">false</option>
+        <option name="wrap">true</option>
+      </table>
+    </panel>
+    <panel>
+      <title>Ownership for HOST_ID=$tkn_hostname$</title>
+      <table>
+        <search base="bs_1">
+          <query>
+| search HOST_ID=$tkn_hostname$
+| table tags.* 
+| rename tags.* as *
+| transpose 
+| rename column as TAG, "row 1" as VALUE
+          </query>
+          <done>
+            <set token="tkn_event_count">$result.event_count$</set>
+          </done>
+        </search>
+        <option name="count">10</option>
+        <option name="dataOverlayMode">none</option>
+        <option name="drilldown">none</option>
+        <option name="percentagesRow">false</option>
+        <option name="rowNumbers">false</option>
+        <option name="totalsRow">false</option>
+        <option name="wrap">true</option>
+      </table>
+    </panel>
+  </row>
+</dashboard>

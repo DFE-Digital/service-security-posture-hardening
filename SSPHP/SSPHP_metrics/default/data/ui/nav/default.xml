@@ -16,4 +16,7 @@
     </collection>
     <a href="ssphp_foundational_systems_dashboard_help">Dashboard Help</a>
   </collection>
+  <collection label="Vulnerabilities" >
+    <a href="ssphp_dfe_vulnerabilities">Critical Risk Vulnerabilities Dashboard</a>
+  </collection>
 </nav>
