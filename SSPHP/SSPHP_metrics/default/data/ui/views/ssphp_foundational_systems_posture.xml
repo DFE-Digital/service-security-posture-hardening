@@ -12,8 +12,8 @@
       <label>View</label>
       <choice value="a">Absolute</choice>
       <choice value="p">Percentage</choice>
-      <default>p</default>
-      <initialValue>p</initialValue>
+      <default>a</default>
+      <initialValue>a</initialValue>
       <change>
         <condition value="a">
           <set token="tkn_show_abs">true</set>
