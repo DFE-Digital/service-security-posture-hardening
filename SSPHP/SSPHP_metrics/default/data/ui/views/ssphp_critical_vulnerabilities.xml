@@ -1,19 +1,35 @@
-<dashboard version="1.1" theme="dark">
-  
+<form version="1.1" theme="dark">
   <label>Vulnerability Management</label>
-  <description>v1.0.0</description>
+  <description>v1.1.0</description>
+  
+  
   <search id="bs_1">
     <query>
-| loadjob savedsearch="sam.pritchard@education.gov.uk:search:ssphp_vulnerability_dev"
+| loadjob savedsearch="nobody:SSPHP_metrics:ssphp_vulnerabilities_create_data"
 | table *
     </query>
   </search>
+  
+  
+  <fieldset submitButton="false">
+    <input type="text" token="tkn_search_text" searchWhenChanged="true">
+      <label>Ownership Search Text (Regex)</label>
+      <default>.*</default>
+      <initialValue>.*</initialValue>
+    </input>
+  </fieldset>
+  
+  
   <row>
     <panel>
       <title>Vulnerabilities older than 400 days and severity 5 [$tkn_event_count$]</title>
       <table>
         <search base="bs_1">
           <query>
+| eval search_text=$tkn_search_text|s$,
+       search_text=lower('search_text'),
+       search_text=".*".'search_text'.".*"
+| where match('ownership','search_text')
 
 | eval sortval=mvcount('TITLE')
 | sort 0 - sortval
@@ -32,39 +48,23 @@
         <option name="wrap">true</option>
         <fields>["HOST_ID","ownership","TITLE","VULNERABILITY_AGE"]</fields>
         <drilldown>
-          <set token="tkn_hostname">$row.HOST_ID$</set>
+          <condition field="TITLE">
+            <set token="tkn_hostname">$row.HOST_ID$</set>
+            <set token="tkn_title">$click.value2$</set>
+          </condition>
+          <condition>
+            <set token="tkn_title">$row.HOST_ID$</set>
+          </condition>
         </drilldown>
       </table>
     </panel>
   </row>
+  
+  
+  
   <row>
     <panel>
-      <title>CVEs for HOST_ID=$tkn_hostname$</title>
-      <table>
-        <search base="bs_1">
-          <query>
-| search HOST_ID=$tkn_hostname$
-| table TITLE
-| mvexpand TITLE
-          </query>
-          <done>
-            <set token="tkn_event_count">$result.event_count$</set>
-          </done>
-        </search>
-        <option name="count">10</option>
-        <option name="dataOverlayMode">none</option>
-        <option name="drilldown">cell</option>
-        <option name="percentagesRow">false</option>
-        <option name="rowNumbers">false</option>
-        <option name="totalsRow">false</option>
-        <option name="wrap">true</option>
-        <drilldown>
-          <set token="tkn_title">$click.value$</set>
-        </drilldown>
-      </table>
-    </panel>
-    <panel>
-      <title>Details for CVE=$tkn_title$ </title>
+      <title>Details for CVE=$tkn_title$</title>
       <table>
         <search base="bs_1">
           <query>
@@ -94,16 +94,22 @@
         <option name="wrap">true</option>
       </table>
     </panel>
+    
     <panel>
       <title>Ownership for HOST_ID=$tkn_hostname$</title>
       <table>
         <search base="bs_1">
           <query>
 | search HOST_ID=$tkn_hostname$
-| table tags.* 
+
+| fields shortname, tags.* 
+
+| lookup ssphp_business_service_index.csv "Service ID" as shortname
 | rename tags.* as *
 | transpose 
 | rename column as TAG, "row 1" as VALUE
+| eval VALUE=split('VALUE',"~~~")
+| where isnotnull('VALUE')
           </query>
           <done>
             <set token="tkn_event_count">$result.event_count$</set>
@@ -119,4 +125,4 @@
       </table>
     </panel>
   </row>
-</dashboard>
+</form>
