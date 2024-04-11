@@ -1,6 +1,6 @@
 <form version="1.1" theme="dark">
   <label>Vulnerability Management</label>
-  <description>v1.1.0</description>
+  <description>v1.2.0</description>
   
   
   <search id="bs_1">
@@ -17,20 +17,58 @@
       <default>.*</default>
       <initialValue>.*</initialValue>
     </input>
+    
+    <input type="dropdown" token="tkn_severity" searchWhenChanged="true">
+      <label>Severity</label>
+      <choice value="5">5</choice>
+      <choice value="4">4</choice>
+      <choice value="3">3</choice>
+      <choice value="2">2</choice>
+      <choice value="1">1</choice>
+      <default>5</default>
+      <initialValue>5</initialValue>
+    </input>
+    
+    <input type="dropdown" token="tkn_age" searchWhenChanged="true">
+      <label>Vulnerability Age</label>
+      <fieldForLabel>count</fieldForLabel>
+      <fieldForValue>count</fieldForValue>
+      <search>
+        <query>| makeresults count=800
+| streamstats count
+| fields - _time
+| sort - count
+| where substr('count',3)="0"</query>
+        <earliest>-24h@h</earliest>
+        <latest>now</latest>
+      </search>
+      <default>400</default>
+      <initialValue>400</initialValue>
+    </input>
   </fieldset>
+  
   
   
   <row>
     <panel>
-      <title>Vulnerabilities older than 400 days and severity 5 [$tkn_event_count$]</title>
+      <title>Vulnerabilities older than $tkn_age$ days and severity $tkn_severity$ -  [$tkn_event_count$]</title>
       <table>
         <search base="bs_1">
           <query>
+| where SEVERITY&gt;=$tkn_severity$ AND VULNERABILITY_AGE&gt;=$tkn_age$
+
+| lookup qualys_kb_lookup QID OUTPUT TITLE, DIAGNOSIS, SOLUTION, CONSEQUENCE, CVE
+
 | eval search_text=$tkn_search_text|s$,
        search_text=lower('search_text'),
        search_text=".*".'search_text'.".*"
-| where match('ownership','search_text')
+| where match(lower('TITLE'),'search_text') OR match(lower('ownership'),'search_text')
 
+| stats list(*) as *, values(ownership) as ownership by HOST_ID
+| eval OWNERSHIP=split('ownership',", ")
+| table HOST_ID, QID, OWNERSHIP, TITLE, SEVERITY, VULNERABILITY_AGE
+
+| rename VULNERABILITY_AGE as "VULNERABILITY AGE (days)"
 | eval sortval=mvcount('TITLE')
 | sort 0 - sortval
 | eventstats count as event_count
@@ -46,14 +84,14 @@
         <option name="rowNumbers">false</option>
         <option name="totalsRow">false</option>
         <option name="wrap">true</option>
-        <fields>["HOST_ID","ownership","TITLE","VULNERABILITY_AGE"]</fields>
+        <fields>OWNERSHIP, QID, TITLE, SEVERITY, "VULNERABILITY AGE (days)"</fields>
         <drilldown>
-          <condition field="TITLE">
-            <set token="tkn_hostname">$row.HOST_ID$</set>
-            <set token="tkn_title">$click.value2$</set>
+          <condition field="QID">
+            <set token="tkn_hostid">$row.HOST_ID$</set>
+            <set token="tkn_qid">$click.value2$</set>
           </condition>
           <condition>
-            <set token="tkn_title">$row.HOST_ID$</set>
+            <set token="tkn_qid">$row.HOST_ID$</set>
           </condition>
         </drilldown>
       </table>
@@ -64,28 +102,31 @@
   
   <row>
     <panel>
-      <title>Details for CVE=$tkn_title$</title>
+      <title>Ownership for HOST_ID=$tkn_hostid$</title>
       <table>
         <search base="bs_1">
           <query>
-| search HOST_ID=$tkn_hostname$
-| eval searchtext=replace($tkn_title|s$, "\(", "\\("),
-       searchtext=replace('searchtext', "\)", "\\)"),
-       pointer=mvfind('TITLE', 'searchtext')
-| eval TITLE=mvindex('TITLE', 'pointer'),
-       SOLUTION=mvindex('SOLUTION', 'pointer'),
-       CONSEQUENCE=mvindex('CONSEQUENCE', 'pointer'),
-       DIAGNOSIS=mvindex('DIAGNOSIS', 'pointer')
-| table TITLE, SOLUTION, CONSEQUENCE, DIAGNOSIS
-| transpose
-| rename column as FIELD, "row 1" as DESCRIPTION
+| search HOST_ID=$tkn_hostid$
 
+| eval shortname=lower(substr(replace(mvindex('ownership',mvfind('ownership',"HOSTNAME = ")),"HOSTNAME = ",""),0,4))
+| lookup ssphp_azure_tag_lookup.csv shortname4 as shortname OUTPUTNEW shortname4 as shortname, Parent_Business, Portfolio, Product, Service, Service_Line, Service_Offering
+
+| table shortname, Parent_Business, Portfolio, Product, Service, Service_Line, Service_Offering
+
+| stats values(*) as * by shortname
+
+| lookup ssphp_business_service_index.csv "Service ID" as shortname
+
+| table shortname, Parent_Business, Portfolio, Product, Service, Service_Line, Service_Offering, *
+| transpose
+| rename column as FIELD, "row 1" as VALUE
+| where FIELD!="shortname" AND isnotnull('VALUE')
           </query>
           <done>
             <set token="tkn_event_count">$result.event_count$</set>
           </done>
         </search>
-        <option name="count">10</option>
+        <option name="count">20</option>
         <option name="dataOverlayMode">none</option>
         <option name="drilldown">none</option>
         <option name="percentagesRow">false</option>
@@ -95,27 +136,25 @@
       </table>
     </panel>
     
+    
     <panel>
-      <title>Ownership for HOST_ID=$tkn_hostname$</title>
+      <title>Details for Qualys QID = $tkn_qid$</title>
       <table>
         <search base="bs_1">
           <query>
-| search HOST_ID=$tkn_hostname$
+| search QID=$tkn_qid$ AND HOST_ID=$tkn_hostid$
 
-| fields shortname, tags.* 
-
-| lookup ssphp_business_service_index.csv "Service ID" as shortname
-| rename tags.* as *
-| transpose 
-| rename column as TAG, "row 1" as VALUE
-| eval VALUE=split('VALUE',"~~~")
-| where isnotnull('VALUE')
+| lookup qualys_kb_lookup QID OUTPUT TITLE, CONSEQUENCE, DIAGNOSIS, SOLUTION, CVE
+| eval CVE=split('CVE',", ")
+| table TITLE, CONSEQUENCE, DIAGNOSIS, SOLUTION, CVE
+| transpose
+| rename column as FIELD, "row 1" as VALUE
           </query>
           <done>
             <set token="tkn_event_count">$result.event_count$</set>
           </done>
         </search>
-        <option name="count">10</option>
+        <option name="count">20</option>
         <option name="dataOverlayMode">none</option>
         <option name="drilldown">none</option>
         <option name="percentagesRow">false</option>
@@ -124,5 +163,7 @@
         <option name="wrap">true</option>
       </table>
     </panel>
+    
+    
   </row>
 </form>
