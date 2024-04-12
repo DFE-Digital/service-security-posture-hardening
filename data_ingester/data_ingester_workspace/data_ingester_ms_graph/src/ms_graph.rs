@@ -355,6 +355,7 @@ impl MsGraph {
                 "displayName",
                 "givenName",
                 "surname",
+                "description",
                 "userPrincipalName",
                 "transitiveMemberOf",
                 "assignedPlans",
