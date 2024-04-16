@@ -1,4 +1,5 @@
 #![feature(async_closure)]
+mod acs;
 pub mod splunk;
 mod thread;
 mod tracing;

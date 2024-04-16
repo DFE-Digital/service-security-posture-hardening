@@ -79,7 +79,11 @@ mod test {
         let stdout_log = tracing_subscriber::fmt::layer().pretty();
         let subscriber = Registry::default().with(stdout_log);
 
-        let subscriber = subscriber.with(SplunkLayer::new(splunk, "data_ingester_test", "data_ingester_test"));
+        let subscriber = subscriber.with(SplunkLayer::new(
+            splunk,
+            "data_ingester_test",
+            "data_ingester_test",
+        ));
         let _tracing_guard = tracing::subscriber::set_default(subscriber);
 
         info!("This will be logged to stdout SPLUNK");

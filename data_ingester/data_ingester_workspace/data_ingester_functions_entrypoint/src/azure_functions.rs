@@ -1,3 +1,4 @@
+use anyhow::Context;
 use data_ingester_ms_powershell::runner::powershell;
 use data_ingester_splunk::start_splunk_tracing;
 use serde::Deserialize;
@@ -8,6 +9,7 @@ use std::sync::Arc;
 use tokio::sync::oneshot::Sender;
 use tokio::sync::Mutex;
 use tracing::debug;
+use tracing::error;
 use tracing::info;
 use tracing::warn;
 use warp::{http::Response, Filter};
@@ -98,10 +100,18 @@ impl warp::Reply for AzureInvokeResponse {
 pub(crate) async fn start_server(tx: Sender<()>) -> Result<()> {
     info!("Starting server for Azure Functions");
     info!("Getting KeyVault secrets");
-    let secrets = Arc::new(get_keyvault_secrets(&env::var("KEY_VAULT_NAME")?).await?);
+    let secrets = Arc::new(
+        get_keyvault_secrets(
+            &env::var("KEY_VAULT_NAME")
+                .context("Getting key vault name from env:KEY_VAULT_NAME")?,
+        )
+        .await
+        .context("Getting keyvault secrets")?,
+    );
     info!("Creating Splunk client");
 
-    let splunk = Splunk::new(&secrets.splunk_host, &secrets.splunk_token)?;
+    let splunk =
+        Splunk::new(&secrets.splunk_host, &secrets.splunk_token).context("Create Splunk Client")?;
     info!("Starting server / Splunk Client created");
     set_ssphp_run()?;
     let _ = start_splunk_tracing(splunk.clone(), "data_ingester_rust", "data_ingester_rust");
@@ -442,8 +452,8 @@ pub(crate) async fn start_server(tx: Sender<()>) -> Result<()> {
 
         move || {
             let in_progress = gh_in_progress.clone();
-            let arg_splunk = gh_splunk.clone();
-            let arg_secrets = gh_secrets.clone();
+            let gh_splunk = gh_splunk.clone();
+            let gh_secrets = gh_secrets.clone();
 
             async move {
                 info!("GIT_HASH: {}", env!("GIT_HASH"));
@@ -455,17 +465,11 @@ pub(crate) async fn start_server(tx: Sender<()>) -> Result<()> {
                 };
                 let lock = match in_progress.try_lock() {
                     Ok(lock) => {
-                        arg_splunk
-                            .log("Aquired lock, starting")
-                            .await
-                            .expect("Splunk should be available for logging");
+                        info!("GitHub: Got lock");
                         lock
                     }
                     Err(_) => {
-                        arg_splunk
-                            .log("GitHub collection already in progress. NOT starting.")
-                            .await
-                            .expect("Splunk should be available for logging");
+                        error!("GitHub collection already in progress. NOT starting.");
                         response.logs.push(
                             "GitHub collection is already in progress. NOT starting.".to_owned(),
                         );
@@ -474,8 +478,7 @@ pub(crate) async fn start_server(tx: Sender<()>) -> Result<()> {
                 };
 
                 let result = match data_ingester_github::entrypoint::github_octocrab_entrypoint(
-                    arg_secrets,
-                    arg_splunk,
+                    gh_secrets, gh_splunk,
                 )
                 .await
                 {

@@ -10,6 +10,7 @@ use futures::join;
 pub struct Secrets {
     pub splunk_host: String,
     pub splunk_token: String,
+    pub splunk_acs_token: String,
     pub azure_client_id: String,
     pub azure_client_secret: String,
     pub azure_client_certificate: String,
@@ -46,18 +47,6 @@ pub struct GitHub {
     pub pat: Option<GitHubPat>,
 }
 
-impl GitHub {
-    // fn new(github_app: Option<GitHubApp>, github_pat: Option<GitHubPat>) -> GitHub {
-    //     if let Some(github_app) = github_app {
-    //         return Self::App(github_app);
-    //     }
-    //     if let Some(github_pat) = github_pat {
-    //         return Self::Pat(github_pat);
-    //     }
-    //     Self::None
-    // }
-}
-
 impl GitHubApp {
     fn new(app_id: String, private_key: String) -> Result<Self> {
         Ok(Self {
@@ -73,10 +62,11 @@ pub async fn get_keyvault_secrets(keyvault_name: &str) -> Result<Secrets> {
     let keyvault_url = format!("https://{keyvault_name}.vault.azure.net");
     let credential = Arc::new(DefaultAzureCredential::default());
     eprintln!("KeyVault Secret Client created");
-    let secret_client = KeyvaultClient::new(&keyvault_url, credential.clone())?.secret_client();
+    let secret_client = KeyvaultClient::new(&keyvault_url, credential.clone()).context("Creating key vault client")?.secret_client();
 
     let splunk_host = secret_client.get("splunk-host").into_future();
     let splunk_token = secret_client.get("splunk-token").into_future();
+    let splunk_acs_token = secret_client.get("splunk-acs-token").into_future();    
     let azure_client_id = secret_client.get("ad-client-id").into_future();
     let azure_client_secret = secret_client.get("ad-client-secret").into_future();
     // Secret is automatically created when generating a certificate in KeyVault
@@ -93,6 +83,7 @@ pub async fn get_keyvault_secrets(keyvault_name: &str) -> Result<Secrets> {
     let (
         splunk_host,
         splunk_token,
+        splunk_acs_token,
         azure_client_id,
         azure_client_secret,
         azure_client_certificate,
@@ -107,6 +98,7 @@ pub async fn get_keyvault_secrets(keyvault_name: &str) -> Result<Secrets> {
     ) = join!(
         splunk_host,
         splunk_token,
+        splunk_acs_token,
         azure_client_id,
         azure_client_secret,
         azure_client_certificate,
@@ -125,7 +117,7 @@ pub async fn get_keyvault_secrets(keyvault_name: &str) -> Result<Secrets> {
     {
         Some(
             GitHubApp::new(github_app_id_1.value, github_private_key_1.value)
-                .context("Build Github App Credentials")?,
+                .context("Building Github App Credentials")?,
         )
     } else {
         None
@@ -141,6 +133,7 @@ pub async fn get_keyvault_secrets(keyvault_name: &str) -> Result<Secrets> {
     Ok(Secrets {
         splunk_host: splunk_host.map(|s| s.value).unwrap_or_default(),
         splunk_token: splunk_token.map(|s| s.value).unwrap_or_default(),
+        splunk_acs_token: splunk_acs_token.map(|s| s.value).unwrap_or_default(),
         azure_client_id: azure_client_id.map(|s| s.value).unwrap_or_default(),
         azure_client_secret: azure_client_secret.map(|s| s.value).unwrap_or_default(),
         azure_client_certificate: azure_client_certificate
