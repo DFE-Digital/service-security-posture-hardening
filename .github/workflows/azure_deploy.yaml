@@ -2,9 +2,9 @@
 name: Data Ingester Azure Terraform
 
 on:
-  push:
-    paths:
-      - data_ingester/**
+  # push:
+  #   paths:
+  #     - data_ingester/**
   workflow_dispatch:
 
 jobs:
