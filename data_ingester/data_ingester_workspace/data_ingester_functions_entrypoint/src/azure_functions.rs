@@ -104,7 +104,7 @@ pub(crate) async fn start_server(tx: Sender<()>) -> Result<()> {
     let splunk = Splunk::new(&secrets.splunk_host, &secrets.splunk_token)?;
     info!("Starting server / Splunk Client created");
     set_ssphp_run()?;
-    let _ = start_splunk_tracing(splunk.clone());
+    let _ = start_splunk_tracing(splunk.clone(), "data_ingester_rust", "data_ingester_rust");
 
     let splunk = Arc::new(splunk);
     let azure_in_progress = Arc::new(Mutex::new(()));
