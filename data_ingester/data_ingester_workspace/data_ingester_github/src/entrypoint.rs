@@ -16,7 +16,9 @@ pub async fn github_octocrab_entrypoint(secrets: Arc<Secrets>, splunk: Arc<Splun
     info!("GIT_HASH: {}", env!("GIT_HASH"));
 
     if let Some(app) = secrets.github_app.as_ref() {
-        github_app(app, &splunk).await?;
+        github_app(app, &splunk)
+            .await
+            .context("Running Collection for GitHub App")?;
     }
 
     Ok(())
@@ -29,6 +31,7 @@ pub async fn github_octocrab_entrypoint(secrets: Arc<Secrets>, splunk: Arc<Splun
 /// for it.
 async fn github_app(github_app: &GitHubApp, splunk: &Arc<Splunk>) -> Result<()> {
     let client = OctocrabGit::new_from_app(github_app).context("Build OctocrabGit")?;
+    info!("Getting installations");
     let installations = client
         .client
         .apps()
@@ -37,6 +40,7 @@ async fn github_app(github_app: &GitHubApp, splunk: &Arc<Splunk>) -> Result<()> 
         .await
         .context("Getting installations for github app")?;
     for installation in installations {
+        info!("Installation ID: {}", installation.id);
         if installation.account.r#type != "Organization" {
             continue;
         }
@@ -45,6 +49,7 @@ async fn github_app(github_app: &GitHubApp, splunk: &Arc<Splunk>) -> Result<()> 
             .await
             .context("build octocrabgit client")?;
         let org_name = &installation.account.login.to_string();
+        info!("Installation org name: {}", &org_name);
         github_collect_installation_org(&installation_client, org_name, splunk)
             .await
             .context("Collect data for installation")?;
@@ -57,6 +62,7 @@ async fn github_collect_installation_org(
     org_name: &str,
     splunk: &Arc<Splunk>,
 ) -> Result<()> {
+    info!("Starting collection for {}", org_name);
     try_collect_send(
         &format!("Org Settings for {org_name}"),
         github_client.org_settings(org_name),
