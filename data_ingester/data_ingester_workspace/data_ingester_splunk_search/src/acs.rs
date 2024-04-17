@@ -45,7 +45,7 @@ impl Acs {
 
     fn headers(token: &str) -> Result<HeaderMap> {
         let mut headers = HeaderMap::new();
-        let mut auth = HeaderValue::from_str(&format!("Splunk {}", token))?;
+        let mut auth = HeaderValue::from_str(&format!("Bearer {}", token))?;
         auth.set_sensitive(true);
         _ = headers.insert("Authorization", auth);
         let content_type = HeaderValue::from_str("application/json")?;
