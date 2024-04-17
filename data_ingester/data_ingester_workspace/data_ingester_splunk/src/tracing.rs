@@ -11,7 +11,7 @@ use tracing_subscriber::{EnvFilter, Registry};
 pub fn start_splunk_tracing(splunk: Splunk, source: &str, sourcetype: &str) -> Result<()> {
     let stdout_log = tracing_subscriber::fmt::layer().pretty();
 
-    let splunk_filter: EnvFilter = EnvFilter::try_from_default_env()?
+    let splunk_filter: EnvFilter = EnvFilter::from_default_env()
         .add_directive("data_ingester_splunk::thread=OFF".parse()?);
 
     let splunk_layer = SplunkLayer::new(splunk, source, sourcetype);
