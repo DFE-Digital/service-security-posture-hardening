@@ -1,35 +1,35 @@
 use crate::splunk::{HecEvent, Splunk};
 use crate::thread::SplunkTask;
-use anyhow::Result;
+use anyhow::{Context, Result};
 use tracing_core::subscriber::Subscriber;
 use tracing_core::Event;
 use tracing_serde::AsSerde;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::Layer;
 use tracing_subscriber::{EnvFilter, Registry};
-struct SplunkLayer {
-    splunk_task: SplunkTask,
-    source: String,
-    sourcetype: String,
-}
+
 
 pub fn start_splunk_tracing(splunk: Splunk, source: &str, sourcetype: &str) -> Result<()> {
     let stdout_log = tracing_subscriber::fmt::layer().pretty();
 
+    let splunk_filter: EnvFilter = EnvFilter::try_from_default_env()?
+        .add_directive("data_ingester_splunk::thread=OFF".parse()?);
+    
     let splunk_layer = SplunkLayer::new(splunk, source, sourcetype);
-    let splunk_filter: EnvFilter = "data_ingester_splunk::thread[process_events]=OFF"
-        .parse()
-        .expect("filter should parse");
 
-    let env_filter = EnvFilter::from_default_env();
+//    let env_filter = EnvFilter::from_default_env();
     let subscriber = Registry::default()
         .with(stdout_log)
         .with(splunk_layer)
-        .with(env_filter)
         .with(splunk_filter);
 
-    tracing::subscriber::set_global_default(subscriber)?;
-    Ok(())
+    tracing::subscriber::set_global_default(subscriber).context("Setting global tracing subscriber to Splunk")
+}
+
+struct SplunkLayer {
+    splunk_task: SplunkTask,
+    source: String,
+    sourcetype: String,
 }
 
 impl SplunkLayer {
@@ -50,7 +50,7 @@ impl<S: Subscriber> Layer<S> for SplunkLayer {
             self.source.as_str(),
             self.sourcetype.as_str(),
         )
-        .expect("Serialization should complete");
+            .expect("Serialization should complete");
         _ = self.splunk_task.send(hec_event);
     }
 }

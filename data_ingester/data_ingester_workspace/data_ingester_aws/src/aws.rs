@@ -298,8 +298,18 @@ impl AwsClient {
 
         let config = aws_config::defaults(BehaviorVersion::latest())
             .credentials_provider(SharedCredentialsProvider::new(AwsSecrets {
-                aws_access_key_id: self.secrets.aws_access_key_id.clone(),
-                aws_secret_access_key: self.secrets.aws_secret_access_key.clone(),
+                aws_access_key_id: self
+                    .secrets
+                    .aws_access_key_id
+                    .as_ref()
+                    .context("Expect aws_access_key_id secret")?
+                    .clone(),
+                aws_secret_access_key: self
+                    .secrets
+                    .aws_secret_access_key
+                    .as_ref()
+                    .context("Expect aws_secret_access_key secret")?
+                    .clone(),
             }))
             .region(region_provider)
             .load()
@@ -313,8 +323,18 @@ impl AwsClient {
 
         let config = aws_config::defaults(BehaviorVersion::latest())
             .credentials_provider(SharedCredentialsProvider::new(AwsSecrets {
-                aws_access_key_id: self.secrets.aws_access_key_id.clone(),
-                aws_secret_access_key: self.secrets.aws_access_key_id.clone(),
+                aws_access_key_id: self
+                    .secrets
+                    .aws_access_key_id
+                    .as_ref()
+                    .context("Expect aws_access_key_id secret")?
+                    .clone(),
+                aws_secret_access_key: self
+                    .secrets
+                    .aws_secret_access_key
+                    .as_ref()
+                    .context("Expect aws_secret_access_key secret")?
+                    .clone(),
             }))
             .region(region_provider)
             .load()
@@ -416,8 +436,18 @@ impl AwsClient {
 
         let bucket_client_config = aws_config::defaults(BehaviorVersion::latest())
             .credentials_provider(SharedCredentialsProvider::new(AwsSecrets {
-                aws_access_key_id: self.secrets.aws_access_key_id.clone(),
-                aws_secret_access_key: self.secrets.aws_secret_access_key.clone(),
+                aws_access_key_id: self
+                    .secrets
+                    .aws_access_key_id
+                    .as_ref()
+                    .context("Expect aws_access_key_id secret")?
+                    .clone(),
+                aws_secret_access_key: self
+                    .secrets
+                    .aws_secret_access_key
+                    .as_ref()
+                    .context("Expect aws_secret_access_key secret")?
+                    .clone(),
             }))
             .region(region_provider)
             .load()

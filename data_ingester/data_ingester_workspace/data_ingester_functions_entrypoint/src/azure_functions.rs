@@ -3,6 +3,8 @@ use data_ingester_ms_powershell::runner::powershell;
 use data_ingester_splunk::start_splunk_tracing;
 use serde::Deserialize;
 use serde::Serialize;
+use tracing_subscriber::EnvFilter;
+use tracing_subscriber::Registry;
 use std::env;
 use std::net::Ipv4Addr;
 use std::sync::Arc;
@@ -25,6 +27,10 @@ use data_ingester_ms_powershell::powershell::install_powershell;
 use data_ingester_splunk::splunk::set_ssphp_run;
 use data_ingester_splunk::splunk::Splunk;
 use memory_stats::memory_stats;
+use tracing_subscriber::layer::SubscriberExt;
+
+use crate::start_local_tracing;
+
 
 // Request headers
 // {
@@ -98,23 +104,39 @@ impl warp::Reply for AzureInvokeResponse {
 }
 
 pub(crate) async fn start_server(tx: Sender<()>) -> Result<()> {
+    let tracing_guard = start_local_tracing();    
+    
     info!("Starting server for Azure Functions");
     info!("Getting KeyVault secrets");
+    let key_vault_name =
+        env::var("KEY_VAULT_NAME").context("Getting key vault name from env:KEY_VAULT_NAME")?;
     let secrets = Arc::new(
-        get_keyvault_secrets(
-            &env::var("KEY_VAULT_NAME")
-                .context("Getting key vault name from env:KEY_VAULT_NAME")?,
-        )
-        .await
-        .context("Getting keyvault secrets")?,
+        get_keyvault_secrets(&key_vault_name)
+            .await
+            .context("Getting KeyVault secrets")?,
     );
+    
     info!("Creating Splunk client");
 
-    let splunk =
-        Splunk::new(&secrets.splunk_host, &secrets.splunk_token).context("Create Splunk Client")?;
-    info!("Starting server / Splunk Client created");
+    let splunk = Splunk::new(
+        secrets
+            .splunk_host
+            .as_ref()
+            .context("Expect splunk_host secret")?,
+        secrets
+            .splunk_token
+            .as_ref()
+            .context("Expect splunk_token secret")?,
+    )
+        .context("Create Splunk Client")?;
+    
+    info!("Splunk Client created");
+    
     set_ssphp_run()?;
-    let _ = start_splunk_tracing(splunk.clone(), "data_ingester_rust", "data_ingester_rust");
+    start_splunk_tracing(splunk.clone(), "data_ingester_rust", "data_ingester_rust").context("Start Splunk Tracing")?;
+
+    drop(tracing_guard);
+    info!("Splunk tracing started");
 
     let splunk = Arc::new(splunk);
     let azure_in_progress = Arc::new(Mutex::new(()));

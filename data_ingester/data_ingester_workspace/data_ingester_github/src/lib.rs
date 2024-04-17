@@ -3,7 +3,7 @@
 pub mod entrypoint;
 use anyhow::{Context, Result};
 use data_ingester_splunk::splunk::ToHecEvents;
-use data_ingester_supporting::keyvault::{GitHubApp, GitHubPat};
+use data_ingester_supporting::keyvault::GitHubApp;
 use http_body_util::BodyExt;
 use itertools::Itertools;
 use octocrab::models::{InstallationId, Repository};
@@ -20,12 +20,12 @@ pub(crate) struct OctocrabGit {
 
 impl OctocrabGit {
     /// Build an Octocrab client from a [data_ingester_supporting::keyvault::GitHubPat]
-    pub fn new_from_pat(github_pat: &GitHubPat) -> Result<Self> {
-        let octocrab = Octocrab::builder()
-            .personal_token(github_pat.pat.to_string())
-            .build()?;
-        Ok(Self { client: octocrab })
-    }
+    // pub fn new_from_pat(github_pat: &GitHubPat) -> Result<Self> {
+    //     let octocrab = Octocrab::builder()
+    //         .personal_token(github_pat.pat.to_string())
+    //         .build()?;
+    //     Ok(Self { client: octocrab })
+    // }
 
     pub async fn for_installation_id(&self, installation_id: InstallationId) -> Result<Self> {
         let (installation_client, _secret) =

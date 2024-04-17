@@ -20,9 +20,18 @@ pub async fn azure_resource_graph(secrets: Arc<Secrets>, splunk: Arc<Splunk>) ->
         .context("Failed logging to Splunk")?;
 
     let azure_rest = AzureRest::new(
-        &secrets.azure_client_id,
-        &secrets.azure_client_secret,
-        &secrets.azure_tenant_id,
+        secrets
+            .azure_client_id
+            .as_ref()
+            .context("Expect azure_client_id secret")?,
+        secrets
+            .azure_client_secret
+            .as_ref()
+            .context("Expect azure_client_secret secret")?,
+        secrets
+            .azure_tenant_id
+            .as_ref()
+            .context("Expect client_tenant_id secret")?,
     )
     .await
     .context("Can't build rest client")?;

@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{Context, Result};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use serde_json::Value;
 use std::iter;
@@ -789,9 +789,9 @@ pub async fn run_powershell_exchange_login_test(secrets: &Secrets) -> Result<Log
 $pfx = New-Object System.Security.Cryptography.X509Certificates.X509Certificate -ArgumentList (,$pfxBytes);
 Import-Module ExchangeOnlineManagement;
 Connect-ExchangeOnline -Certificate $pfx -AppID "{}" -Organization "{}";"#,
-                     secrets.azure_client_certificate,
-                     secrets.azure_client_id,
-                     secrets.azure_client_organization,
+                     secrets.azure_client_certificate.as_ref().context("Expect azure_client_certificate secret")?,
+                     secrets.azure_client_id.as_ref().context("Expect azure_client_id secret")?,
+                     secrets.azure_client_organization.as_ref().context("Expect azure_client_organization secret")?,
             )
         ]).output()?;
 
@@ -842,7 +842,15 @@ pub async fn run_exchange_online_powershell<T: DeserializeOwned>(
         r#"Import-Module ExchangeOnlineManagement;
 Connect-ExchangeOnline -ShowBanner:$false -Certificate $pfx -AppID "{}" -Organization "{}";
 {} "#,
-        secrets.azure_client_id, secrets.azure_client_organization, command
+        secrets
+            .azure_client_id
+            .as_ref()
+            .context("Expect azure_client_id secret")?,
+        secrets
+            .azure_client_organization
+            .as_ref()
+            .context("Expect azure_client_organization secret")?,
+        command,
     );
 
     run_powershell(secrets, &cmd).await
@@ -857,7 +865,15 @@ async fn run_exchange_online_ipps_powershell<T: DeserializeOwned>(
         r#"Import-Module ExchangeOnlineManagement;
 Connect-IPPSSession -ShowBanner:$false -Certificate $pfx -AppID "{}" -Organization "{}";
 {}"#,
-        secrets.azure_client_id, secrets.azure_client_organization, command,
+        secrets
+            .azure_client_id
+            .as_ref()
+            .context("Expect azure_client_id secret")?,
+        secrets
+            .azure_client_organization
+            .as_ref()
+            .context("Expect azure_client_organization secret")?,
+        command,
     );
 
     run_powershell(secrets, &cmd).await
@@ -872,7 +888,15 @@ async fn run_microsoft_teams_powershell<T: DeserializeOwned>(
         r#"Import-Module MicrosoftTeams;
 Connect-MicrosoftTeams -Certificate $pfx -ApplicationId "{}" -TenantId "{}" | Out-Null;
 {} "#,
-        secrets.azure_client_id, secrets.azure_tenant_id, command,
+        secrets
+            .azure_client_id
+            .as_ref()
+            .context("Expect azure_client_id secret")?,
+        secrets
+            .azure_tenant_id
+            .as_ref()
+            .context("Expect azure_tenant_id secret")?,
+        command,
     );
     run_powershell(secrets, &cmd).await
 }
@@ -886,7 +910,11 @@ async fn run_powershell<T: DeserializeOwned>(secrets: &Secrets, cmd: &str) -> Re
         r#" [Byte[]]$pfxBytes = [Convert]::FromBase64String('{}');
 $pfx = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2 -ArgumentList (,$pfxBytes);
 {} | ConvertTo-Json -Compress -Depth 20;"#,
-        secrets.azure_client_certificate, cmd,
+        secrets
+            .azure_client_certificate
+            .as_ref()
+            .context("Expect azure_client_certificate secret")?,
+        cmd,
     );
     let output = Command::new("pwsh").args(["-Command", &command]).output()?;
 

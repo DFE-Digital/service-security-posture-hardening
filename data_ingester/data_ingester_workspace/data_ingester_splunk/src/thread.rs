@@ -29,7 +29,6 @@ impl SplunkTask {
         Ok(())
     }
 
-    #[instrument]
     async fn process_events(
         splunk: Splunk,
         mut rx: tokio::sync::mpsc::UnboundedReceiver<HecEvent>,
@@ -37,7 +36,7 @@ impl SplunkTask {
         const AVG_EVENT_SIZE: usize = 341;
         const LIMIT_SPLUNK_HEC_BYTES: usize = 1_000_000;
         const LIMIT_EVENTS: usize = LIMIT_SPLUNK_HEC_BYTES / AVG_EVENT_SIZE;
-        dbg!(LIMIT_EVENTS);
+
         let mut events = Vec::with_capacity(LIMIT_EVENTS);
         loop {
             let count = rx.recv_many(&mut events, LIMIT_EVENTS).await;

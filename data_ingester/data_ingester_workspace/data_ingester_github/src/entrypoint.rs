@@ -4,28 +4,19 @@ use std::sync::Arc;
 use crate::OctocrabGit;
 use anyhow::{Context, Result};
 use data_ingester_splunk::splunk::{set_ssphp_run, try_collect_send, Splunk, ToHecEvents};
-use data_ingester_supporting::keyvault::{GitHubApp, GitHubPat, Secrets};
+use data_ingester_supporting::keyvault::{GitHubApp, Secrets};
+use tracing::info;
 
 /// Public entry point
 pub async fn github_octocrab_entrypoint(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
     set_ssphp_run()?;
 
-    splunk
-        .log("Starting GitHub collection")
-        .await
-        .context("Failed logging to Splunk")?;
-    splunk
-        .log(&format!("GIT_HASH: {}", env!("GIT_HASH")))
-        .await
-        .context("Failed logging to Splunk")
-        .context("Failed logging to Splunk")?;
+    info!("Starting GitHub collection");
 
-    if let Some(app) = secrets.github.app.as_ref() {
+    info!("GIT_HASH: {}", env!("GIT_HASH"));
+
+    if let Some(app) = secrets.github_app.as_ref() {
         github_app(app, &splunk).await?;
-    }
-
-    if let Some(pat) = secrets.github.pat.as_ref() {
-        github_pat(pat, &splunk).await?;
     }
 
     Ok(())
@@ -161,112 +152,112 @@ async fn github_collect_installation_org(
     Ok(())
 }
 
-async fn github_pat(github_pat: &GitHubPat, splunk: &Arc<Splunk>) -> Result<()> {
-    let client =
-        OctocrabGit::new_from_pat(github_pat).context("Building OctocabGit client from pat")?;
-    dbg!(client
-        .client
-        .ratelimit()
-        .get()
-        .await
-        .context("Getting rate limit")?);
-    for org_name in &github_pat.orgs {
-        github_collect_pat_org(&client, org_name, splunk)
-            .await
-            .context("Github collection for pat/org")?;
-    }
-    Ok(())
-}
+// async fn github_pat(github_pat: &GitHubPat, splunk: &Arc<Splunk>) -> Result<()> {
+//     let client =
+//         OctocrabGit::new_from_pat(github_pat).context("Building OctocabGit client from pat")?;
+//     dbg!(client
+//         .client
+//         .ratelimit()
+//         .get()
+//         .await
+//         .context("Getting rate limit")?);
+//     for org_name in &github_pat.orgs {
+//         github_collect_pat_org(&client, org_name, splunk)
+//             .await
+//             .context("Github collection for pat/org")?;
+//     }
+//     Ok(())
+// }
 
-async fn github_collect_pat_org(
-    github_client: &OctocrabGit,
-    org_name: &str,
-    splunk: &Arc<Splunk>,
-) -> Result<()> {
-    let org_repos = github_client
-        .org_repos(org_name)
-        .await
-        .context("Getting repos for org")?;
+// async fn github_collect_pat_org(
+//     github_client: &OctocrabGit,
+//     org_name: &str,
+//     splunk: &Arc<Splunk>,
+// ) -> Result<()> {
+//     let org_repos = github_client
+//         .org_repos(org_name)
+//         .await
+//         .context("Getting repos for org")?;
 
-    let events = (&org_repos)
-        .to_hec_events()
-        .context("Serialize ResourceGraphResponse.data events")?;
-    splunk
-        .send_batch(events)
-        .await
-        .context("Sending events to Splunk")?;
+//     let events = (&org_repos)
+//         .to_hec_events()
+//         .context("Serialize ResourceGraphResponse.data events")?;
+//     splunk
+//         .send_batch(events)
+//         .await
+//         .context("Sending events to Splunk")?;
 
-    for repo in org_repos.inner {
-        // Ignore repos with no owner
-        if repo.owner.is_none() {
-            continue;
-        }
+//     for repo in org_repos.inner {
+//         // Ignore repos with no owner
+//         if repo.owner.is_none() {
+//             continue;
+//         }
 
-        // Skip repos we can't access
-        if let Some(permissions) = repo.permissions.as_ref() {
-            if !permissions.admin || !permissions.maintain || !permissions.push {
-                continue;
-            }
-        }
+//         // Skip repos we can't access
+//         if let Some(permissions) = repo.permissions.as_ref() {
+//             if !permissions.admin || !permissions.maintain || !permissions.push {
+//                 continue;
+//             }
+//         }
 
-        let repo_name = format!(
-            "{}/{}",
-            &repo.owner.as_ref().expect("checked owner").login,
-            &repo.name
-        );
+//         let repo_name = format!(
+//             "{}/{}",
+//             &repo.owner.as_ref().expect("checked owner").login,
+//             &repo.name
+//         );
 
-        try_collect_send(
-            &format!("Deploy keys {repo_name}"),
-            github_client.repo_deploy_keys(&repo_name),
-            splunk,
-        )
-        .await?;
+//         try_collect_send(
+//             &format!("Deploy keys {repo_name}"),
+//             github_client.repo_deploy_keys(&repo_name),
+//             splunk,
+//         )
+//         .await?;
 
-        try_collect_send(
-            &format!("Security txt {repo_name}"),
-            github_client.repo_security_txt(&repo_name),
-            splunk,
-        )
-        .await?;
+//         try_collect_send(
+//             &format!("Security txt {repo_name}"),
+//             github_client.repo_security_txt(&repo_name),
+//             splunk,
+//         )
+//         .await?;
 
-        try_collect_send(
-            &format!("Codeowners for {repo_name}"),
-            github_client.repo_codeowners(&repo_name),
-            splunk,
-        )
-        .await?;
+//         try_collect_send(
+//             &format!("Codeowners for {repo_name}"),
+//             github_client.repo_codeowners(&repo_name),
+//             splunk,
+//         )
+//         .await?;
 
-        try_collect_send(
-            &format!("Branch Protection for {repo_name}"),
-            github_client.repo_branch_protection(
-                &repo_name,
-                &repo.default_branch.unwrap_or_else(|| "main".to_string()),
-            ),
-            splunk,
-        )
-        .await?;
+//         try_collect_send(
+//             &format!("Branch Protection for {repo_name}"),
+//             github_client.repo_branch_protection(
+//                 &repo_name,
+//                 &repo.default_branch.unwrap_or_else(|| "main".to_string()),
+//             ),
+//             splunk,
+//         )
+//         .await?;
 
-        let dependabot_status = github_client
-            .repo_dependabot_status(&repo_name)
-            .await
-            .context("getting dependabot status")?;
-        let events = (&dependabot_status)
-            .to_hec_events()
-            .context("Serialize dependabot status events")?;
-        splunk
-            .send_batch(events)
-            .await
-            .context("Sending events to Splunk")?;
+//         let dependabot_status = github_client
+//             .repo_dependabot_status(&repo_name)
+//             .await
+//             .context("getting dependabot status")?;
+//         let events = (&dependabot_status)
+//             .to_hec_events()
+//             .context("Serialize dependabot status events")?;
+//         splunk
+//             .send_batch(events)
+//             .await
+//             .context("Sending events to Splunk")?;
 
-        try_collect_send(
-            &format!("Dependabot Alerts for {repo_name}"),
-            github_client.repo_dependabot_alerts(&repo_name),
-            splunk,
-        )
-        .await?;
-    }
-    Ok(())
-}
+//         try_collect_send(
+//             &format!("Dependabot Alerts for {repo_name}"),
+//             github_client.repo_dependabot_alerts(&repo_name),
+//             splunk,
+//         )
+//         .await?;
+//     }
+//     Ok(())
+// }
 
 #[cfg(test)]
 mod test {

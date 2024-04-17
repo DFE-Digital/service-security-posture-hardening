@@ -29,7 +29,6 @@ pub struct AzureRest {
 
 impl AzureRest {
     pub async fn new(client_id: &str, client_secret: &str, tenant_id: &str) -> Result<Self> {
-        //let credential = Arc::new(DefaultAzureCredential::default());
         let http_client = azure_core::new_http_client();
         let credential = Arc::new(ClientSecretCredential::new(
             http_client,

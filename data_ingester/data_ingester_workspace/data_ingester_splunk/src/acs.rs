@@ -219,7 +219,9 @@ impl Acs {
         )
         .await
         .context("Add 'current_ip' to search_api IP allow list")?;
-        self.wait_for_ip_allow_list_update().await.context("Waiting for ip allow list to update")?;
+        self.wait_for_ip_allow_list_update()
+            .await
+            .context("Waiting for ip allow list to update")?;
         Ok(())
     }
 }
