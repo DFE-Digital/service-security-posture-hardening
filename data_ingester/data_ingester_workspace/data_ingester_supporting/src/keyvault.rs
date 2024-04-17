@@ -10,6 +10,7 @@ pub struct Secrets {
     pub splunk_host: Option<String>,
     pub splunk_token: Option<String>,
     pub splunk_acs_token: Option<String>,
+    pub splunk_search_token: Option<String>,
     pub azure_client_id: Option<String>,
     pub azure_client_secret: Option<String>,
     pub azure_client_certificate: Option<String>,
@@ -75,6 +76,7 @@ pub async fn get_keyvault_secrets(keyvault_name: &str) -> Result<Secrets> {
     let splunk_host = get_secret(&client, "splunk-host");
     let splunk_token = get_secret(&client, "splunk-token");
     let splunk_acs_token = get_secret(&client, "splunk-acs-token");
+    let splunk_search_token = get_secret(&client, "splunk-search-token");
     let azure_client_id = get_secret(&client, "ad-client-id");
     let azure_client_secret = get_secret(&client, "ad-client-secret");
     // Secret is automatically created when generating a certificate in KeyVault
@@ -101,6 +103,7 @@ pub async fn get_keyvault_secrets(keyvault_name: &str) -> Result<Secrets> {
         splunk_host: splunk_host.await?,
         splunk_token: splunk_token.await?,
         splunk_acs_token: splunk_acs_token.await?,
+        splunk_search_token: splunk_search_token.await?,
         azure_client_id: azure_client_id.await?,
         azure_client_secret: azure_client_secret.await?,
         azure_client_certificate: azure_client_certificate.await?,

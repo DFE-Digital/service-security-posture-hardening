@@ -501,7 +501,76 @@ pub(crate) async fn start_server(tx: Sender<()>) -> Result<()> {
                 .await
                 {
                     Ok(_) => "Success".to_owned(),
-                    Err(e) => format!("{:?}", e),
+                    Err(e) => {
+                        let err = format!("GitHub Error {:?}", e);
+                        error!(err);
+                        err
+                    },
+                };
+
+                response.logs.push(result);
+                if let Some(usage) = memory_stats() {
+                    debug!(
+                        "Current physical memory usage: {}",
+                        usage.physical_mem / 1_000_000
+                    );
+                    debug!(
+                        "Current virtual memory usage: {}",
+                        usage.virtual_mem / 1_000_000
+                    );
+                } else {
+                    warn!("Couldn't get the current memory usage :(");
+                }
+                drop(lock);
+                response
+            }
+        }
+    });
+
+    let splunk_test_in_progress = Arc::new(Mutex::new(()));
+    let splunk_test = warp::post().and(warp::path("splunk_test")).then({
+        let st_in_progress = splunk_test_in_progress.clone();
+        let st_splunk = splunk.clone();
+        let st_secrets = secrets.clone();
+
+        move || {
+            let in_progress = st_in_progress.clone();
+            let st_splunk = st_splunk.clone();
+            let st_secrets = st_secrets.clone();
+
+            async move {
+                info!("GIT_HASH: {}", env!("GIT_HASH"));
+
+                let mut response = AzureInvokeResponse {
+                    outputs: None,
+                    logs: vec![format!("GIT_HASH: {}", env!("GIT_HASH"))],
+                    return_value: None,
+                };
+                let lock = match in_progress.try_lock() {
+                    Ok(lock) => {
+                        info!("GitHub: Got lock");
+                        lock
+                    }
+                    Err(_) => {
+                        error!("GitHub collection already in progress. NOT starting.");
+                        response.logs.push(
+                            "GitHub collection is already in progress. NOT starting.".to_owned(),
+                        );
+                        return response;
+                    }
+                };
+
+                let result = match data_ingester_splunk_search::entrypoint::splunk_acs_test(
+                    st_secrets, st_splunk,
+                )
+                .await
+                {
+                    Ok(_) => "Success".to_owned(),
+                    Err(e) => {
+                        let error = format!("{:?}", e);
+                        error!("splunk test error: {}", error);
+                        error
+                    },
                 };
 
                 response.logs.push(result);
@@ -534,7 +603,8 @@ pub(crate) async fn start_server(tx: Sender<()>) -> Result<()> {
         .or(powershell)
         .or(aws)
         .or(azure_resource_graph)
-        .or(github);
+        .or(github)
+        .or(splunk_test);
 
     let routes = health_check.or(function_routes);
 

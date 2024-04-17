@@ -10,7 +10,7 @@ use tracing::{debug, info};
 /// A simple client for Splunk ACS
 /// https://docs.splunk.com/Documentation/SplunkCloud/9.1.2312/Config/ACSIntro
 #[derive(Debug, Default)]
-struct Acs {
+pub(crate) struct Acs {
     client: Client,
     stack: String,
     current_ip: Option<String>,
@@ -18,7 +18,7 @@ struct Acs {
 
 /// Represents an ACS IpAllowList
 #[derive(Debug, Serialize, Deserialize, Default)]
-struct IpAllowList {
+pub(crate) struct IpAllowList {
     subnets: Vec<String>,
 }
 
@@ -183,7 +183,7 @@ impl Acs {
     pub async fn wait_for_ip_allow_list_update(&self) -> Result<()> {
         info!("ACS Waiting for ip allow list to update...");
         let now = tokio::time::Instant::now();
-        let url = format!("https://{}.arstarstcccz.com:8089/", self.stack);
+        let url = format!("https://{}.splunkcloud.com:8089/", self.stack);
         const MAX_WAIT_TIME: u64 = 60 * 30;
         loop {
             match reqwest::Client::new()

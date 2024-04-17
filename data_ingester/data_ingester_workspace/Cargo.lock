@@ -1283,6 +1283,7 @@ dependencies = [
  "data_ingester_ms_graph",
  "data_ingester_ms_powershell",
  "data_ingester_splunk",
+ "data_ingester_splunk_search",
  "data_ingester_supporting",
  "memory-stats",
  "reqwest 0.12.3",
@@ -1372,6 +1373,20 @@ dependencies = [
  "tracing-serde",
  "tracing-subscriber",
  "uuid",
+]
+
+[[package]]
+name = "data_ingester_splunk_search"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "data_ingester_splunk",
+ "data_ingester_supporting",
+ "reqwest 0.11.27",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tracing",
 ]
 
 [[package]]
