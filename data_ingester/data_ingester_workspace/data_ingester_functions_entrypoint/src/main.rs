@@ -55,7 +55,10 @@ async fn main() -> Result<()> {
 }
 
 pub(crate) fn start_local_tracing() -> DefaultGuard {
-    let stdout_log = tracing_subscriber::fmt::layer().pretty();
+    let stdout_log = tracing_subscriber::fmt::layer()
+        .with_ansi(false)
+        .compact()
+        .with_writer(std::io::stderr);
     let subscriber = Registry::default()
         .with(stdout_log)
         .with(EnvFilter::from_default_env());

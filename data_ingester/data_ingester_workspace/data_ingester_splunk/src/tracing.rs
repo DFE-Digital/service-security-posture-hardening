@@ -9,10 +9,13 @@ use tracing_subscriber::Layer;
 use tracing_subscriber::{EnvFilter, Registry};
 
 pub fn start_splunk_tracing(splunk: Splunk, source: &str, sourcetype: &str) -> Result<()> {
-    let stdout_log = tracing_subscriber::fmt::layer().pretty();
+    let stdout_log = tracing_subscriber::fmt::layer()
+        .with_ansi(false)
+        .compact()
+        .with_writer(std::io::stderr);
 
-    let splunk_filter: EnvFilter = EnvFilter::from_default_env()
-        .add_directive("data_ingester_splunk::thread=OFF".parse()?);
+    let splunk_filter: EnvFilter =
+        EnvFilter::from_default_env().add_directive("data_ingester_splunk::thread=OFF".parse()?);
 
     let splunk_layer = SplunkLayer::new(splunk, source, sourcetype);
 
