@@ -221,12 +221,13 @@ mod test {
             )
             .await
             .unwrap();
-            let splunk = Splunk::new(&secrets.splunk_host, &secrets.splunk_token)?;
-            set_ssphp_run()?;
+            let splunk = Splunk::new(
+                &secrets.splunk_host.as_ref().context("No value")?,
+                &secrets.splunk_token.as_ref().context("No value")?,
+            )?;
 
             let github_app = secrets
-                .github
-                .app
+                .github_app
                 .as_ref()
                 .expect("Github App should be configured");
             let client = OctocrabGit::new_from_app(github_app).context("Build OctocrabGit")?;

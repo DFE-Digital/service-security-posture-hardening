@@ -1,11 +1,9 @@
 mod azure_functions;
-use std::thread::available_parallelism;
-
-use anyhow::{Context, Result};
+use anyhow::Result;
 use azure_functions::start_server;
 use memory_stats::memory_stats;
 use tokio::sync::oneshot;
-use tracing::{debug, info, instrument, warn};
+use tracing::{debug, info, instrument, subscriber::DefaultGuard, warn};
 use tracing_subscriber::{layer::SubscriberExt, EnvFilter, Registry};
 
 #[tokio::main(flavor = "multi_thread")]
@@ -22,10 +20,10 @@ async fn main() -> Result<()> {
     info!(
         "RUST_LOG={}",
         &std::env::var("RUST_LOG").unwrap_or_else(|_| "NO VALUE SET".to_string())
-    );    
+    );
     let (tx, rx) = oneshot::channel::<()>();
     let server = tokio::spawn(start_server(tx));
-//    drop(_tracing_before_splunk);
+    drop(tracing_guard);
     let _ = rx.await;
     info!("Warp server started...");
     if let Some(usage) = memory_stats() {
@@ -56,8 +54,10 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
-pub(crate) fn start_local_tracing() -> () {
+pub(crate) fn start_local_tracing() -> DefaultGuard {
     let stdout_log = tracing_subscriber::fmt::layer().pretty();
-    let subscriber = Registry::default().with(stdout_log).with(EnvFilter::from_default_env());
+    let subscriber = Registry::default()
+        .with(stdout_log)
+        .with(EnvFilter::from_default_env());
     tracing::subscriber::set_default(subscriber)
 }

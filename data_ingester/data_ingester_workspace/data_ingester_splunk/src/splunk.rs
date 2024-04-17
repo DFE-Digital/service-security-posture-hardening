@@ -6,9 +6,9 @@ use reqwest::Client;
 use serde::{Deserialize, Serialize};
 // #[cfg(test)]
 use serde_json::Value;
+use std::borrow::Borrow;
 use tracing::info;
 use tracing::warn;
-use std::borrow::Borrow;
 // #[cfg(test)]
 use std::iter;
 use std::sync::RwLock;
@@ -320,9 +320,9 @@ where
                     warn!("Failed Sending to Splunk: {e}");
                 }
             };
-        },
-    Err(err) => {
-        warn!("Failed to get {name}: {err:?}")
+        }
+        Err(err) => {
+            warn!("Failed to get {name}: {err:?}")
         }
     };
     Ok(())

@@ -3,8 +3,6 @@ use data_ingester_ms_powershell::runner::powershell;
 use data_ingester_splunk::start_splunk_tracing;
 use serde::Deserialize;
 use serde::Serialize;
-use tracing_subscriber::EnvFilter;
-use tracing_subscriber::Registry;
 use std::env;
 use std::net::Ipv4Addr;
 use std::sync::Arc;
@@ -16,21 +14,18 @@ use tracing::info;
 use tracing::warn;
 use warp::{http::Response, Filter};
 
-use data_ingester_aws::aws::aws;
-use data_ingester_supporting::keyvault::get_keyvault_secrets;
-//use data_ingester_ms_graph::ms_graph::azure_users;
 use anyhow::Result;
+use data_ingester_aws::aws::aws;
 use data_ingester_azure::azure_users;
 use data_ingester_azure_rest::resource_graph::azure_resource_graph;
 use data_ingester_ms_graph::ms_graph::m365;
 use data_ingester_ms_powershell::powershell::install_powershell;
 use data_ingester_splunk::splunk::set_ssphp_run;
 use data_ingester_splunk::splunk::Splunk;
+use data_ingester_supporting::keyvault::get_keyvault_secrets;
 use memory_stats::memory_stats;
-use tracing_subscriber::layer::SubscriberExt;
 
 use crate::start_local_tracing;
-
 
 // Request headers
 // {
@@ -104,8 +99,8 @@ impl warp::Reply for AzureInvokeResponse {
 }
 
 pub(crate) async fn start_server(tx: Sender<()>) -> Result<()> {
-    let tracing_guard = start_local_tracing();    
-    
+    let tracing_guard = start_local_tracing();
+
     info!("Starting server for Azure Functions");
     info!("Getting KeyVault secrets");
     let key_vault_name =
@@ -115,7 +110,7 @@ pub(crate) async fn start_server(tx: Sender<()>) -> Result<()> {
             .await
             .context("Getting KeyVault secrets")?,
     );
-    
+
     info!("Creating Splunk client");
 
     let splunk = Splunk::new(
@@ -128,12 +123,13 @@ pub(crate) async fn start_server(tx: Sender<()>) -> Result<()> {
             .as_ref()
             .context("Expect splunk_token secret")?,
     )
-        .context("Create Splunk Client")?;
-    
+    .context("Create Splunk Client")?;
+
     info!("Splunk Client created");
-    
+
     set_ssphp_run()?;
-    start_splunk_tracing(splunk.clone(), "data_ingester_rust", "data_ingester_rust").context("Start Splunk Tracing")?;
+    start_splunk_tracing(splunk.clone(), "data_ingester_rust", "data_ingester_rust")
+        .context("Start Splunk Tracing")?;
 
     drop(tracing_guard);
     info!("Splunk tracing started");

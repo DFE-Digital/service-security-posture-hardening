@@ -955,7 +955,7 @@ mod test {
         run_powershell_get_spoof_intelligence_insight, run_powershell_get_transport_rule,
         run_powershell_get_user_vip,
     };
-    use anyhow::Result;
+    use anyhow::{Context, Result};
     use data_ingester_splunk::splunk::{set_ssphp_run, Splunk, ToHecEvents};
     use data_ingester_supporting::keyvault::{get_keyvault_secrets, Secrets};
     use std::env;
@@ -965,7 +965,10 @@ mod test {
 
         set_ssphp_run()?;
 
-        let splunk = Splunk::new(&secrets.splunk_host, &secrets.splunk_token)?;
+        let splunk = Splunk::new(
+            &secrets.splunk_host.as_ref().context("No value")?,
+            &secrets.splunk_token.as_ref().context("No value")?,
+        )?;
         Ok((splunk, secrets))
     }
 

@@ -1,8 +1,8 @@
-use std::sync::Arc;
 use anyhow::{Context, Result};
 use azure_identity::DefaultAzureCredential;
 use azure_security_keyvault::{KeyvaultClient, SecretClient};
 use base64::prelude::*;
+use std::sync::Arc;
 use tokio::task::JoinHandle;
 use tracing::{info, warn};
 

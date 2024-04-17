@@ -8,22 +8,22 @@ use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::Layer;
 use tracing_subscriber::{EnvFilter, Registry};
 
-
 pub fn start_splunk_tracing(splunk: Splunk, source: &str, sourcetype: &str) -> Result<()> {
     let stdout_log = tracing_subscriber::fmt::layer().pretty();
 
     let splunk_filter: EnvFilter = EnvFilter::try_from_default_env()?
         .add_directive("data_ingester_splunk::thread=OFF".parse()?);
-    
+
     let splunk_layer = SplunkLayer::new(splunk, source, sourcetype);
 
-//    let env_filter = EnvFilter::from_default_env();
+    //    let env_filter = EnvFilter::from_default_env();
     let subscriber = Registry::default()
         .with(stdout_log)
         .with(splunk_layer)
         .with(splunk_filter);
 
-    tracing::subscriber::set_global_default(subscriber).context("Setting global tracing subscriber to Splunk")
+    tracing::subscriber::set_global_default(subscriber)
+        .context("Setting global tracing subscriber to Splunk")
 }
 
 struct SplunkLayer {
@@ -50,7 +50,7 @@ impl<S: Subscriber> Layer<S> for SplunkLayer {
             self.source.as_str(),
             self.sourcetype.as_str(),
         )
-            .expect("Serialization should complete");
+        .expect("Serialization should complete");
         _ = self.splunk_task.send(hec_event);
     }
 }
@@ -73,8 +73,10 @@ mod test {
         .await
         .unwrap();
 
-        let splunk = Splunk::new(&secrets.splunk_host, &secrets.splunk_token)
-            .context("building Splunk client")?;
+        let splunk = Splunk::new(
+            &secrets.splunk_host.as_ref().context("No value")?,
+            &secrets.splunk_token.as_ref().context("No value")?,
+        )?;
 
         let stdout_log = tracing_subscriber::fmt::layer().pretty();
         let subscriber = Registry::default().with(stdout_log);

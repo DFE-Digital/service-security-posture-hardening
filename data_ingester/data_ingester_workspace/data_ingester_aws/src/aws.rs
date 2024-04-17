@@ -2002,12 +2002,15 @@ mod test {
     use data_ingester_splunk::splunk::{set_ssphp_run, Splunk, ToHecEvents};
     use data_ingester_supporting::keyvault::get_keyvault_secrets;
 
-    use anyhow::Result;
+    use anyhow::{Context, Result};
 
     pub async fn setup() -> Result<(Splunk, AwsClient)> {
         let secrets = get_keyvault_secrets(&env::var("KEY_VAULT_NAME")?).await?;
         set_ssphp_run()?;
-        let splunk = Splunk::new(&secrets.splunk_host, &secrets.splunk_token)?;
+        let splunk = Splunk::new(
+            &secrets.splunk_host.as_ref().context("No value")?,
+            &secrets.splunk_token.as_ref().context("No value")?,
+        )?;
         let aws = AwsClient {
             secrets: Arc::new(secrets),
         };
@@ -2018,7 +2021,10 @@ mod test {
     async fn test_aws_full() -> Result<()> {
         let secrets = get_keyvault_secrets(&env::var("KEY_VAULT_NAME")?).await?;
         set_ssphp_run()?;
-        let splunk = Splunk::new(&secrets.splunk_host, &secrets.splunk_token)?;
+        let splunk = Splunk::new(
+            &secrets.splunk_host.as_ref().context("No value")?,
+            &secrets.splunk_token.as_ref().context("No value")?,
+        )?;
         aws(Arc::new(secrets), Arc::new(splunk)).await?;
         Ok(())
     }

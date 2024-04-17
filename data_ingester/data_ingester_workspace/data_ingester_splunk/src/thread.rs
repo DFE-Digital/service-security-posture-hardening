@@ -2,7 +2,6 @@ use crate::splunk::{HecEvent, Splunk};
 use anyhow::Result;
 use tokio::sync::mpsc::unbounded_channel;
 use tokio::task::JoinHandle;
-use tracing::instrument;
 
 pub struct SplunkTask {
     tx: Option<tokio::sync::mpsc::UnboundedSender<HecEvent>>,
@@ -92,8 +91,10 @@ mod test {
         .await
         .unwrap();
 
-        let splunk = Splunk::new(&secrets.splunk_host, &secrets.splunk_token)
-            .context("building Splunk client")?;
+        let splunk = Splunk::new(
+            &secrets.splunk_host.as_ref().context("No value")?,
+            &secrets.splunk_token.as_ref().context("No value")?,
+        )?;
 
         let splunk_task = SplunkTask::new(splunk);
 

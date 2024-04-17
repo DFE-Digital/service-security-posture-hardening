@@ -130,7 +130,7 @@ mod test {
     use std::{env, sync::Arc};
 
     use crate::{ms_graph::login, msgraph_data::load_m365_toml};
-    use anyhow::Result;
+    use anyhow::{Context, Result};
     use data_ingester_splunk::splunk::Splunk;
     use data_ingester_supporting::keyvault::get_keyvault_secrets;
 
@@ -147,13 +147,25 @@ mod test {
 
         let secrets = get_keyvault_secrets(&env::var("KEY_VAULT_NAME")?).await?;
         let ms_graph = login(
-            &secrets.azure_client_id,
-            &secrets.azure_client_secret,
-            &secrets.azure_tenant_id,
+            secrets
+                .azure_client_id
+                .as_ref()
+                .context("Expect azure_client_id secret")?,
+            secrets
+                .azure_client_secret
+                .as_ref()
+                .context("Expect azure_client_secret secret")?,
+            secrets
+                .azure_tenant_id
+                .as_ref()
+                .context("Expect azure_tenant_id secret")?,
         )
         .await?;
 
-        let splunk = Arc::new(Splunk::new(&secrets.splunk_host, &secrets.splunk_token)?);
+        let splunk = Arc::new(Splunk::new(
+            &secrets.splunk_host.as_ref().context("No value")?,
+            &secrets.splunk_token.as_ref().context("No value")?,
+        )?);
 
         sources.process_sources(&ms_graph, &splunk).await?;
 
