@@ -13,13 +13,19 @@ use tracing::{debug, info};
 pub(crate) struct Acs {
     client: Client,
     stack: String,
-    current_ip: Option<String>,
+    current_cidr: Option<String>,
 }
 
 /// Represents an ACS IpAllowList
 #[derive(Debug, Serialize, Deserialize, Default)]
 pub(crate) struct IpAllowList {
     subnets: Vec<String>,
+}
+
+impl IpAllowList {
+    fn format_cidr(ip: &str, range: usize) -> String {
+        format!("{}/{}", ip, range)
+    }
 }
 
 /// IP response from Ipify
@@ -36,14 +42,15 @@ impl Acs {
             .default_headers(Acs::headers(token)?)
             .build()?;
         debug!("ACS Client: {:?}", &client);
-        debug!("Splunk ACS Stack: {}", stack);
+        debug!("Splunk ACS Stack: {:?}", stack);
         Ok(Self {
             stack: stack.to_string(),
             client,
-            current_ip: None,
+            current_cidr: None,
         })
     }
 
+    /// Default headers for all ACS requests
     fn headers(token: &str) -> Result<HeaderMap> {
         let mut headers = HeaderMap::new();
 
@@ -60,6 +67,7 @@ impl Acs {
         Ok(headers)
     }
 
+    /// List CIDRs allowed to access the search-api REST endpoint
     pub async fn list_search_api_ip_allow_list(&self) -> Result<IpAllowList> {
         info!("ACS: Getting 'search-api' ip_allow_list");
         let url = format!(
@@ -83,14 +91,15 @@ impl Acs {
         Ok(ip_allow_list)
     }
 
-    pub async fn add_search_api_ip_allow_list(&self, ip: &str) -> Result<()> {
-        info!("ACS: Adding IP:'{}' to 'search-api' ip_allow_list", ip);
+    /// Add a CIDR to the search-api IP allow list
+    pub async fn add_search_api_ip_allow_list(&self, cidr: &str) -> Result<()> {
+        info!("ACS: Adding IP:'{}' to 'search-api' ip_allow_list", cidr);
         let url = format!(
             "https://admin.splunk.com/{}/adminconfig/v2/access/{}/ipallowlists",
             self.stack, "search-api"
         );
         let ip_allow_list = IpAllowList {
-            subnets: vec![format!("{}/32", ip)],
+            subnets: vec![cidr.to_string()],
         };
         let request = self
             .client
@@ -112,7 +121,7 @@ impl Acs {
                 .context("Failed to get failed response body")?;
             anyhow::bail!(
                 "Failed to add '{}' to ACS search-api ip allow list\n{:?}\n{:?}",
-                ip,
+                cidr,
                 headers,
                 body
             );
@@ -120,8 +129,8 @@ impl Acs {
         Ok(())
     }
 
-    pub async fn remove_current_ip(&self) -> Result<()> {
-        if let Some(ip) = self.current_ip.as_ref() {
+    pub async fn remove_current_cidr(&self) -> Result<()> {
+        if let Some(ip) = self.current_cidr.as_ref() {
             self.delete_search_api_ip_allow_list(ip)
                 .await
                 .context("ACS: Removing current_ip from search-api ip_allow_list")?;
@@ -129,15 +138,18 @@ impl Acs {
         Ok(())
     }
 
-    pub async fn delete_search_api_ip_allow_list(&self, ip: &str) -> Result<()> {
-        info!("ACS: Deleting IP:'{}' from 'search-api' ip_allow_list", ip);
+    pub async fn delete_search_api_ip_allow_list(&self, cidr: &str) -> Result<()> {
+        info!(
+            "ACS: Deleting IP:'{}' from 'search-api' ip_allow_list",
+            cidr
+        );
         let url = format!(
             "https://admin.splunk.com/{}/adminconfig/v2/access/{}/ipallowlists",
             self.stack, "search-api"
         );
         debug!(url);
         let ip_allow_list = IpAllowList {
-            subnets: vec![format!("{}/32", ip)],
+            subnets: vec![cidr.to_string()],
         };
         let request = self
             .client
@@ -158,7 +170,7 @@ impl Acs {
                 .context("Failed to get failed response body")?;
             anyhow::bail!(
                 "Failed to delete '{}' to ACS search-api ip allow list\n{:?}\n{:?}",
-                ip,
+                cidr,
                 headers,
                 body
             );
@@ -203,6 +215,7 @@ impl Acs {
             {
                 Ok(_) => break,
                 Err(_) => {
+                    info!("Waiting for port update");
                     tokio::time::sleep(Duration::from_secs(20)).await;
                 }
             }
@@ -214,7 +227,7 @@ impl Acs {
         let elapsed = now.elapsed().as_secs_f32();
         info!(
             "ACS ip:'{:?}' added to search-api ip allow list in {} seconds",
-            &self.current_ip,
+            &self.current_cidr,
             elapsed.to_string()
         );
         Ok(())
@@ -222,12 +235,27 @@ impl Acs {
 
     pub async fn grant_access_for_current_ip(&mut self) -> Result<()> {
         let current_ip = self.get_current_ip().await.context("Get current IP")?;
-        self.current_ip = Some(current_ip);
+        let allow_list = self
+            .list_search_api_ip_allow_list()
+            .await
+            .context("Listing Allowed IPs")?;
+
+        let current_cidr = IpAllowList::format_cidr(&current_ip, 32);
+        self.current_cidr = Some(current_cidr.to_string());
+
+        if allow_list.subnets.contains(&current_cidr) {
+            info!("Current Cidr already in IP allow list");
+            return Ok(());
+        }
+
         self.add_search_api_ip_allow_list(
-            self.current_ip.as_ref().expect("just set self.current_ip"),
+            self.current_cidr
+                .as_ref()
+                .expect("just set self.current_ip"),
         )
         .await
         .context("Add 'current_ip' to search_api IP allow list")?;
+
         self.wait_for_ip_allow_list_update()
             .await
             .context("Waiting for ip allow list to update")?;

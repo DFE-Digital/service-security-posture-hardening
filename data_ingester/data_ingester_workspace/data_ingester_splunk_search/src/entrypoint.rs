@@ -27,9 +27,11 @@ pub async fn splunk_acs_test(secrets: Arc<Secrets>, _splunk: Arc<Splunk>) -> Res
         .context("Getting splunk_acs_token secret")?;
     let mut acs = Acs::new(&stack, acs_token).context("Building Acs Client")?;
 
-    let ip_allow_list = acs.list_search_api_ip_allow_list().await.context("Getting IP allow list")?;
+    let ip_allow_list = acs
+        .list_search_api_ip_allow_list()
+        .await
+        .context("Getting IP allow list")?;
     info!("Splunk IP Allow list before add: {:?}", ip_allow_list);
-
 
     info!("Granting access for current IP");
     acs.grant_access_for_current_ip()
@@ -42,9 +44,11 @@ pub async fn splunk_acs_test(secrets: Arc<Secrets>, _splunk: Arc<Splunk>) -> Res
     let search =
         SplunkApiClient::new(&stack, search_token).context("Creating Splunk search client")?;
 
-    let ip_allow_list = acs.list_search_api_ip_allow_list().await.context("Getting IP allow list")?;
+    let ip_allow_list = acs
+        .list_search_api_ip_allow_list()
+        .await
+        .context("Getting IP allow list")?;
     info!("Splunk IP Allow list after add: {:?}", ip_allow_list);
-
 
     info!("Running search");
     let results = search
@@ -57,11 +61,14 @@ pub async fn splunk_acs_test(secrets: Arc<Secrets>, _splunk: Arc<Splunk>) -> Res
     );
 
     info!("Removing current IP from Splunk Allow list");
-    acs.remove_current_ip()
+    acs.remove_current_cidr()
         .await
         .context("Removing current IP from Splunk")?;
 
-    let ip_allow_list = acs.list_search_api_ip_allow_list().await.context("Getting IP allow list")?;
+    let ip_allow_list = acs
+        .list_search_api_ip_allow_list()
+        .await
+        .context("Getting IP allow list")?;
     info!("Splunk IP Allow list after remove: {:?}", ip_allow_list);
 
     info!("Done");
@@ -73,11 +80,13 @@ fn test_foo() {
     let stack = "http-inputs-dfe.splunkcloud.com"
         .split('.')
         .next()
-        .context("Get host url ").unwrap()
+        .context("Get host url ")
+        .unwrap()
         .split('-')
         .map(|s| s.to_string())
         .last()
-        .context("Get stack from url").unwrap();
+        .context("Get stack from url")
+        .unwrap();
     dbg!(stack);
     assert!(false);
 }
