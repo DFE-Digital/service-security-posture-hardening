@@ -22,7 +22,7 @@ pub async fn splunk_acs_test(secrets: Arc<Secrets>, _splunk: Arc<Splunk>) -> Res
 
     info!("Building ACS");
     let acs_token = secrets
-        .splunk_acs_tokenu
+        .splunk_acs_token
         .as_ref()
         .context("Getting splunk_acs_token secret")?;
     let mut acs = Acs::new(&stack, acs_token).context("Building Acs Client")?;
