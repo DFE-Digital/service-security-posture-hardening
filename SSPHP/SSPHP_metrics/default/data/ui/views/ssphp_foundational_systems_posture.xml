@@ -283,11 +283,11 @@
           <query>
 index="ssphp_metrics_summary" earliest=-2d@d latest=now
       ssphp.source.service="s194"
-       ```ssphp.score.ciso_priority=1```
+      ssphp.score.ciso_priority=1
 
       [| search index="ssphp_metrics_summary" earliest=-2d@d latest=now 
-      ssphp.source.service="s194"
-          ```ssphp.score.ciso_priority=1```
+                ssphp.source.service="s194"
+                ssphp.score.ciso_priority=1
           
         | stats max(SSPHP_RUN) as SSPHP_RUN by ssphp.use_case.id
         | eval search_text="(\"ssphp.use_case.id\"=\"".'ssphp.use_case.id'."\" AND SSPHP_RUN=\"".SSPHP_RUN."\")"

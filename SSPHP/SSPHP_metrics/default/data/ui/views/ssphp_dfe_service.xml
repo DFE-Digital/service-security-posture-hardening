@@ -1,13 +1,12 @@
 <dashboard version="1.1" theme="dark" hideFilters="true" script="js/table_cell_color.js">
 
   <label>Security Posture Continuous Assurance : DfE Service Dashboard</label>
-  <description>v2.0.8</description>
+  <description>v2.2.2</description>
   
   <init>
     <set token="form.tkn_fields">C</set>
     <set token="tkn_controls_compliant_text"></set>
     <unset token="tkn_ready"></unset>
-    <!--<set token="tkn__service">s194</set>--> 
   </init>
 
   <fieldset submitButton="false">
@@ -30,6 +29,36 @@
     </input>
   </fieldset>
 
+
+<!-- ################### GET THE BASE DATA FOR THE OTHER QUERIES ################### --> 
+  <row depends="$never_show$">
+    <panel>
+      <table>
+        <search id="bs_1">
+          <query>
+index="ssphp_metrics_summary" earliest=-2d@d latest=now
+    ssphp.source.service=$tkn__service|s$
+    ```ssphp.score.ciso_priority=1```
+
+    [| search index="ssphp_metrics_summary" earliest=-2d@d latest=now 
+    ssphp.source.service=$tkn__service|s$
+        ```ssphp.score.ciso_priority=1```
+        
+      | stats max(SSPHP_RUN) as SSPHP_RUN by ssphp.use_case.id
+      | eval search_text="(\"ssphp.use_case.id\"=\"".'ssphp.use_case.id'."\" AND SSPHP_RUN=\"".SSPHP_RUN."\")"
+      | stats values(search_text) as search_text
+      | eval search_text="(".mvjoin(search_text," OR ").")"
+      | return $search_text]
+      
+| table ssphp.*
+            </query>
+          <done>
+            <set token="tkn_ready">true</set>
+          </done>
+        </search>
+      </table>
+    </panel>
+  </row>
 
 <!-- ################### Set Target Service and other Tokens ################### --> 
 
@@ -74,27 +103,16 @@
   
   
 
-<!-- ################### Summary Row ################### --> 
+<!-- ################### TOP Overall Score Row ################### --> 
 
 
-  <row depends="$tkn_ready1$,$never_show$">
+  <row depends="$tkn_ready$,$never_show$">
     <panel>
       <table>
-        <search>
+        <search base="bs_1">
           <query>
-index="ssphp_metrics_summary" earliest=-2d@d latest=now
-ssphp.source.service=$tkn__service|s$
-  ```ssphp.score.ciso_priority=1```
 
-    [| search index="ssphp_metrics_summary" earliest=-2d@d latest=now 
-    ssphp.source.service=$tkn__service|s$
-        ```ssphp.score.ciso_priority=1```
-        
-      | stats max(SSPHP_RUN) as SSPHP_RUN by ssphp.use_case.id
-      | eval search_text="(\"ssphp.use_case.id\"=\"".'ssphp.use_case.id'."\" AND SSPHP_RUN=\"".SSPHP_RUN."\")"
-      | stats values(search_text) as search_text
-      | eval search_text="(".mvjoin(search_text," OR ").")"
-      | return $search_text]
+| search ssphp.score.ciso_priority=1
 
 | eval ssphp.source.service_name=upper('ssphp.source.service')." - ".'ssphp.source.service_name'
         
@@ -115,8 +133,6 @@ ssphp.source.service=$tkn__service|s$
             <set token="tkn_color">$result.s194_compliant_color$</set>
             <set token="tkn_score_abs">$result.s194_compliant_abs$</set>
             <set token="tkn_score_perc">$result.s194_compliant_perc$</set>
-
-            <set token="tkn_ready1">true</set>
           </done>
         </search>
       </table>
@@ -124,17 +140,141 @@ ssphp.source.service=$tkn__service|s$
   </row>
 
   <row>
-    <panel depends="$tkn_ready1$,$tkn_show_abs$">
+    <panel depends="$tkn_ready$,$tkn_show_abs$">
       <html>
         <div id="div_header" style="background:$tkn_color$;color:white;font-weight:bold;font-size:800%;text-align:center;padding:50">$tkn_score_abs$</div> 
         <div id="div_header" style="background:$tkn_color$;color:white;font-size:100%;text-align:center">$tkn_service_name$ Compliant of # DfE Mandated Controls</div> 
       </html>
     </panel>
 
-    <panel depends="$tkn_ready1$,$tkn_show_perc$">
+    <panel depends="$tkn_ready$,$tkn_show_perc$">
       <html>
         <div id="div_header" style="background:$tkn_color$;color:white;font-weight:bold;font-size:800%;text-align:center;padding:50">$tkn_score_perc$</div> 
         <div id="div_header" style="background:$tkn_color$;color:white;font-size:100%;text-align:center">Percentage $tkn_service_name$ Compliant of DfE Mandated Controls</div> 
+      </html>
+    </panel>
+  </row>
+  
+  
+
+<!-- ################### Middle by Category Score Row ################### --> 
+
+
+  <row depends="$tkn_ready$,$never_show$">
+    <panel>
+      <table>
+        <search base="bs_1">
+          <query>
+
+| search ssphp.score.ciso_priority=1
+
+| eval ssphp.source.service_name=upper('ssphp.source.service')." - ".'ssphp.source.service_name'
+        
+| stats values(ssphp.source.service_name) as ssphp.source.service_name, count as ssphp.score.denominator, sum(eval(if('ssphp.score.score'="100",1,0))) as ssphp.score.numerator by ssphp.use_case.category
+
+`ssphp_metrics_eval_field_colors`
+
+| eval s194_compliant_perc=floor('ssphp.score.numerator'*100/'ssphp.score.denominator'),
+       s194_compliant_abs='ssphp.score.numerator'." of ". 'ssphp.score.denominator',
+       s194_compliant_perc='s194_compliant_perc'."%",
+       s194_compliant_color=case(isnull('s194_compliant_perc') OR 's194_compliant_perc'="",'tkn_colour_splunk_grey',
+                                  's194_compliant_perc'=100,'tkn_colour_green',
+                                  1==1,'tkn_colour_red')
+
+```==== Get the fields into a tokenable format ===```
+| rename ssphp.* as yy_ssphp.*, s194_* as yy_s194_*, yy_ssphp.use_case.category as zz_ssphp.use_case.category, yy_ssphp.source.service_name as zz_ssphp.source.service_name
+| foreach yy_* 
+    [| eval fn="xx_".'zz_ssphp.use_case.category'."_"."&lt;&lt;FIELD&gt;&gt;",
+            fn=replace('fn',"yy_",""),
+            {fn}=&lt;&lt;FIELD&gt;&gt;]
+| table xx_*
+| rename xx_* as *
+| stats values(*) as *
+
+`ssphp_metrics_eval_field_colors`
+
+| fillnull value="0" POSTURE_s194_compliant_perc, DETECT_s194_compliant_perc, VULN_s194_compliant_perc, SDLC_s194_compliant_perc 
+| fillnull value="0 / 0" POSTURE_s194_compliant_abs, DETECT_s194_compliant_abs, VULN_s194_compliant_abs, SDLC_s194_compliant_abs
+| eval POSTURE_s194_compliant_color=coalesce(POSTURE_s194_compliant_color,'tkn_colour_splunk_grey'), 
+       DETECT_s194_compliant_color=coalesce(DETECT_s194_compliant_color, 'tkn_colour_splunk_grey'), 
+       VULN_s194_compliant_color=coalesce(VULN_s194_compliant_color, 'tkn_colour_splunk_grey'), 
+       SDLC_s194_compliant_color=coalesce(SDLC_s194_compliant_color, 'tkn_colour_splunk_grey')
+          </query>
+          <done>
+            <set token="tkn_color_posture">$result.POSTURE_s194_compliant_color$</set>
+            <set token="tkn_score_abs_posture">$result.POSTURE_s194_compliant_abs$</set>
+            <set token="tkn_score_perc_posture">$result.POSTURE_s194_compliant_perc$</set>
+            
+            <set token="tkn_color_detect">$result.DETECT_s194_compliant_color$</set>
+            <set token="tkn_score_abs_detect">$result.DETECT_s194_compliant_abs$</set>
+            <set token="tkn_score_perc_detect">$result.DETECT_s194_compliant_perc$</set>
+            
+            <set token="tkn_color_vuln">$result.VULN_s194_compliant_color$</set>
+            <set token="tkn_score_abs_vuln">$result.VULN_s194_compliant_abs$</set>
+            <set token="tkn_score_perc_vuln">$result.VULN_s194_compliant_perc$</set>
+            
+            <set token="tkn_color_sdlc">$result.SDLC_s194_compliant_color$</set>
+            <set token="tkn_score_abs_sdlc">$result.SDLC_s194_compliant_abs$</set>
+            <set token="tkn_score_perc_sdlc">$result.SDLC_s194_compliant_perc$</set>
+          </done>
+        </search>
+      </table>
+    </panel>
+  </row>
+
+  <row>
+    <panel depends="$tkn_ready$,$tkn_show_abs$">
+      <html>
+        <div id="div_header" style="background:$tkn_color_posture$;color:white;font-weight:bold;font-size:600%;text-align:center;padding:50">$tkn_score_abs_posture$</div> 
+        <div id="div_header" style="background:$tkn_color_posture$;color:white;font-size:100%;text-align:center">POSTURE</div> 
+      </html>
+    </panel>
+    <panel depends="$tkn_ready$,$tkn_show_perc$">
+      <html>
+        <div id="div_header" style="background:$tkn_color_posture$;color:white;font-weight:bold;font-size:600%;text-align:center;padding:50">$tkn_score_perc_posture$</div> 
+        <div id="div_header" style="background:$tkn_color_posture$;color:white;font-size:100%;text-align:center">POSTURE</div> 
+      </html>
+    </panel>
+    
+
+    <panel depends="$tkn_ready$,$tkn_show_abs$">
+      <html>
+        <div id="div_header" style="background:$tkn_color_detect$;color:white;font-weight:bold;font-size:600%;text-align:center;padding:50">$tkn_score_abs_detect$</div> 
+        <div id="div_header" style="background:$tkn_color_detect$;color:white;font-size:100%;text-align:center">DETECT</div> 
+      </html>
+    </panel>
+    <panel depends="$tkn_ready$,$tkn_show_perc$">
+      <html>
+        <div id="div_header" style="background:$tkn_color_detect$;color:white;font-weight:bold;font-size:600%;text-align:center;padding:50">$tkn_score_perc_detect$</div> 
+        <div id="div_header" style="background:$tkn_color_detect$;color:white;font-size:100%;text-align:center">DETECT</div> 
+      </html>
+    </panel>
+    
+
+    <panel depends="$tkn_ready$,$tkn_show_abs$">
+      <html>
+        <div id="div_header" style="background:$tkn_color_vuln$;color:white;font-weight:bold;font-size:600%;text-align:center;padding:50">$tkn_score_abs_vuln$</div> 
+        <div id="div_header" style="background:$tkn_color_vuln$;color:white;font-size:100%;text-align:center">VULNERABILITY</div> 
+      </html>
+    </panel>
+    <panel depends="$tkn_ready$,$tkn_show_perc$">
+      <html>
+        <div id="div_header" style="background:$tkn_color_vuln$;color:white;font-weight:bold;font-size:600%;text-align:center;padding:50">$tkn_score_perc_vuln$</div> 
+        <div id="div_header" style="background:$tkn_color_vuln$;color:white;font-size:100%;text-align:center">VULNERABILITY</div> 
+      </html>
+    </panel>
+    
+
+    <panel depends="$tkn_ready$,$tkn_show_abs$">
+      <html>
+        <div id="div_header" style="background:$tkn_color_sdlc$;color:white;font-weight:bold;font-size:600%;text-align:center;padding:50">$tkn_score_abs_sdlc$</div> 
+        <div id="div_header" style="background:$tkn_color_sdlc$;color:white;font-size:100%;text-align:center">SDLC</div> 
+      </html>
+    </panel>
+    <panel depends="$tkn_ready$,$tkn_show_perc$">
+      <html>
+        <div id="div_header" style="background:$tkn_color_sdlc$;color:white;font-weight:bold;font-size:600%;text-align:center;padding:50">$tkn_score_perc_sdlc$</div> 
+        <div id="div_header" style="background:$tkn_color_sdlc$;color:white;font-size:100%;text-align:center">SDLC</div> 
       </html>
     </panel>
   </row>
@@ -143,7 +283,7 @@ ssphp.source.service=$tkn__service|s$
 
 <!-- ################### Main Data Table Filters ################### --> 
 
-  <row depends="$tkn_ready1$">
+  <row depends="$tkn_ready$">
     <panel>
       <html>
         <div id="div_header" style="font-size:175%;color:yellow;">$tkn_current_service$</div> 
@@ -240,24 +380,11 @@ ssphp.source.service=$tkn__service|s$
 
 
 
-  <row depends="$tkn_ready2$">
+  <row depends="$tkn_ready$">
     <panel>
       <table id="table1">
-        <search>
+        <search base="bs_1">
           <query>
-index="ssphp_metrics_summary" earliest=-2d@d latest=now
-ssphp.source.service=$tkn__service|s$
-  ```ssphp.score.ciso_priority=1```
-
-    [| search index="ssphp_metrics_summary" earliest=-2d@d latest=now 
-    ssphp.source.service=$tkn__service|s$
-        ```ssphp.score.ciso_priority=1```
-        
-      | stats max(SSPHP_RUN) as SSPHP_RUN by ssphp.use_case.id
-      | eval search_text="(\"ssphp.use_case.id\"=\"".'ssphp.use_case.id'."\" AND SSPHP_RUN=\"".SSPHP_RUN."\")"
-      | stats values(search_text) as search_text
-      | eval search_text="(".mvjoin(search_text," OR ").")"
-      | return $search_text]
 
 | eval ssphp.score.compliance_status=if('ssphp.score.score'="100","Compliant","Non-Compliant"),
        ssphp.score.ciso_priority=case('ssphp.score.ciso_priority'=1,"DfE Mandated",
@@ -284,7 +411,7 @@ ssphp.source.service=$tkn__service|s$
 ```| foreach *.control.title [| eval display_control_title=mvappend('display_control_title','&lt;&lt;FIELD&gt;&gt;')]
 | foreach *.control.description [| eval display_control_description=mvappend('display_control_description','&lt;&lt;FIELD&gt;&gt;')]```
 
-| fields ssphp.source.service, ssphp.use_case.id, ssphp.use_case.title, ssphp.benchmark.control.title, ssphp.score.score, ssphp.score.compliance_status, ssphp.score.ciso_priority, ssphp.benchmark.control.description, ssphp.score.color
+| table ssphp.source.service, ssphp.use_case.id, ssphp.use_case.title, ssphp.benchmark.control.title, ssphp.score.score, ssphp.score.compliance_status, ssphp.score.ciso_priority, ssphp.benchmark.control.description, ssphp.score.color
 
 $tkn_search_filter$
 
@@ -298,11 +425,7 @@ $tkn_search_filter$
          
 | eventstats count as number_controls_total
           </query>
-          <latest>now</latest>
-          <earliest>0</earliest>
-          <sampleRatio>1</sampleRatio>
           <done>
-            <set token="tkn_ready2">true</set>
             <set token="tkn_controls_total">$result.number_controls_total$</set>
           </done>
         </search>
