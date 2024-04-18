@@ -298,8 +298,18 @@ impl AwsClient {
 
         let config = aws_config::defaults(BehaviorVersion::latest())
             .credentials_provider(SharedCredentialsProvider::new(AwsSecrets {
-                aws_access_key_id: self.secrets.aws_access_key_id.clone(),
-                aws_secret_access_key: self.secrets.aws_secret_access_key.clone(),
+                aws_access_key_id: self
+                    .secrets
+                    .aws_access_key_id
+                    .as_ref()
+                    .context("Expect aws_access_key_id secret")?
+                    .clone(),
+                aws_secret_access_key: self
+                    .secrets
+                    .aws_secret_access_key
+                    .as_ref()
+                    .context("Expect aws_secret_access_key secret")?
+                    .clone(),
             }))
             .region(region_provider)
             .load()
@@ -313,8 +323,18 @@ impl AwsClient {
 
         let config = aws_config::defaults(BehaviorVersion::latest())
             .credentials_provider(SharedCredentialsProvider::new(AwsSecrets {
-                aws_access_key_id: self.secrets.aws_access_key_id.clone(),
-                aws_secret_access_key: self.secrets.aws_access_key_id.clone(),
+                aws_access_key_id: self
+                    .secrets
+                    .aws_access_key_id
+                    .as_ref()
+                    .context("Expect aws_access_key_id secret")?
+                    .clone(),
+                aws_secret_access_key: self
+                    .secrets
+                    .aws_secret_access_key
+                    .as_ref()
+                    .context("Expect aws_secret_access_key secret")?
+                    .clone(),
             }))
             .region(region_provider)
             .load()
@@ -416,8 +436,18 @@ impl AwsClient {
 
         let bucket_client_config = aws_config::defaults(BehaviorVersion::latest())
             .credentials_provider(SharedCredentialsProvider::new(AwsSecrets {
-                aws_access_key_id: self.secrets.aws_access_key_id.clone(),
-                aws_secret_access_key: self.secrets.aws_secret_access_key.clone(),
+                aws_access_key_id: self
+                    .secrets
+                    .aws_access_key_id
+                    .as_ref()
+                    .context("Expect aws_access_key_id secret")?
+                    .clone(),
+                aws_secret_access_key: self
+                    .secrets
+                    .aws_secret_access_key
+                    .as_ref()
+                    .context("Expect aws_secret_access_key secret")?
+                    .clone(),
             }))
             .region(region_provider)
             .load()
@@ -1972,12 +2002,15 @@ mod test {
     use data_ingester_splunk::splunk::{set_ssphp_run, Splunk, ToHecEvents};
     use data_ingester_supporting::keyvault::get_keyvault_secrets;
 
-    use anyhow::Result;
+    use anyhow::{Context, Result};
 
     pub async fn setup() -> Result<(Splunk, AwsClient)> {
         let secrets = get_keyvault_secrets(&env::var("KEY_VAULT_NAME")?).await?;
         set_ssphp_run()?;
-        let splunk = Splunk::new(&secrets.splunk_host, &secrets.splunk_token)?;
+        let splunk = Splunk::new(
+            &secrets.splunk_host.as_ref().context("No value")?,
+            &secrets.splunk_token.as_ref().context("No value")?,
+        )?;
         let aws = AwsClient {
             secrets: Arc::new(secrets),
         };
@@ -1988,7 +2021,10 @@ mod test {
     async fn test_aws_full() -> Result<()> {
         let secrets = get_keyvault_secrets(&env::var("KEY_VAULT_NAME")?).await?;
         set_ssphp_run()?;
-        let splunk = Splunk::new(&secrets.splunk_host, &secrets.splunk_token)?;
+        let splunk = Splunk::new(
+            &secrets.splunk_host.as_ref().context("No value")?,
+            &secrets.splunk_token.as_ref().context("No value")?,
+        )?;
         aws(Arc::new(secrets), Arc::new(splunk)).await?;
         Ok(())
     }

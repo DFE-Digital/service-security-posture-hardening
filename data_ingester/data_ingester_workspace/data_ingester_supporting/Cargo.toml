@@ -14,6 +14,7 @@ futures = "*"
 tokio = { version = "1.25.0", features = ["full"] }
 hickory-proto = "*"
 hickory-resolver = { version = "*", features = ["dns-over-rustls"] }
+tracing = "*"
 
 [lints]
 workspace = true

@@ -16,16 +16,34 @@ pub async fn azure_users(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<(
         .await?;
 
     let ms_graph = login(
-        &secrets.azure_client_id,
-        &secrets.azure_client_secret,
-        &secrets.azure_tenant_id,
+        secrets
+            .azure_client_id
+            .as_ref()
+            .context("Expect azure_client_id secret")?,
+        secrets
+            .azure_client_secret
+            .as_ref()
+            .context("Expect azure_secret_id secret")?,
+        secrets
+            .azure_tenant_id
+            .as_ref()
+            .context("Expect azure_tenant_id secret")?,
     )
     .await?;
 
     let azure_rest = AzureRest::new(
-        &secrets.azure_client_id,
-        &secrets.azure_client_secret,
-        &secrets.azure_tenant_id,
+        secrets
+            .azure_client_id
+            .as_ref()
+            .context("Expect azure_client_id secret")?,
+        secrets
+            .azure_client_secret
+            .as_ref()
+            .context("Expect azure_secret_id secret")?,
+        secrets
+            .azure_tenant_id
+            .as_ref()
+            .context("Expect azure_tenant_id secret")?,
     )
     .await?;
 

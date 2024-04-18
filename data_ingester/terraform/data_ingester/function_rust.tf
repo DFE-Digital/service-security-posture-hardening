@@ -44,5 +44,6 @@ resource "azurerm_linux_function_app" "SSPHP_rust" {
     APPINSIGHTS_INSTRUMENTATIONKEY = azurerm_application_insights.SSPHP.instrumentation_key
     KEY_VAULT_NAME                 = var.key_vault_name
     RUST_BACKTRACE                 = "1"
+    RUST_LOG                       = "info"
   }
 }

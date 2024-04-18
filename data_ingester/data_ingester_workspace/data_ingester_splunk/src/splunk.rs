@@ -7,6 +7,8 @@ use serde::{Deserialize, Serialize};
 // #[cfg(test)]
 use serde_json::Value;
 use std::borrow::Borrow;
+use tracing::info;
+use tracing::warn;
 // #[cfg(test)]
 use std::iter;
 use std::sync::RwLock;
@@ -295,17 +297,13 @@ pub async fn try_collect_send<T>(
 where
     for<'a> &'a T: ToHecEvents + Debug,
 {
-    splunk
-        .log(&format!("Getting {}", &name))
-        .await
-        .context("Unable log to send to Splunk")?;
+    info!("Getting {}", &name);
     match future.await {
         Ok(ref result) => {
             let hec_events = match result.to_hec_events() {
                 Ok(hec_events) => hec_events,
                 Err(e) => {
-                    eprintln!("Failed converting to HecEvents: {e}");
-                    dbg!(&result);
+                    warn!("Failed converting to HecEvents: {e}");
                     vec![HecEvent::new(
                         &Message {
                             event: format!("Failed converting to HecEvents: {e:?}"),
@@ -317,17 +315,14 @@ where
             };
 
             match splunk.send_batch(&hec_events).await {
-                Ok(()) => eprintln!("Sent to Splunk"),
+                Ok(()) => info!("Sent {}", &name),
                 Err(e) => {
-                    eprintln!("Failed Sending to Splunk: {e}");
+                    warn!("Failed Sending to Splunk: {e}");
                 }
             };
         }
         Err(err) => {
-            splunk
-                .log(&format!("Failed to get {name}: {err:?}"))
-                .await
-                .context("Unable log to send to Splunk")?;
+            warn!("Failed to get {name}: {err:?}")
         }
     };
     Ok(())

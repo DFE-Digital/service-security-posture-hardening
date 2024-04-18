@@ -355,6 +355,7 @@ impl MsGraph {
                 "displayName",
                 "givenName",
                 "surname",
+                "description",
                 "userPrincipalName",
                 "transitiveMemberOf",
                 "assignedPlans",
@@ -895,18 +896,20 @@ pub async fn m365(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
         .await?;
 
     let ms_graph = login(
-        &secrets.azure_client_id,
-        &secrets.azure_client_secret,
-        &secrets.azure_tenant_id,
+        secrets
+            .azure_client_id
+            .as_ref()
+            .context("Expect azure_client_id secret")?,
+        secrets
+            .azure_client_secret
+            .as_ref()
+            .context("Expect azure_client_secret secret")?,
+        secrets
+            .azure_tenant_id
+            .as_ref()
+            .context("Expect azure_tenant_id secret")?,
     )
     .await?;
-
-    // let azure_rest = AzureRest::new(
-    //     &secrets.azure_client_id,
-    //     &secrets.azure_client_secret,
-    //     &secrets.azure_tenant_id,
-    // )
-    // .await?;
 
     splunk.log("MS Graph logged in").await?;
 
@@ -918,7 +921,7 @@ pub async fn m365(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
     sources.process_sources(&ms_graph, &splunk).await?;
 
     // TODO move this into another function
-    splunk.log("Getting SecurityScores").await?;
+    // splunk.log("Getting SecurityScores").await?;
 
     // match ms_graph.get_security_secure_scores().await {
     //     Ok(mut security_scores) => {
@@ -1058,7 +1061,7 @@ pub(crate) mod test {
     use super::{login, MsGraph};
     use crate::users::UsersMap;
 
-    use anyhow::Result;
+    use anyhow::{Context, Result};
     use data_ingester_splunk::splunk::{set_ssphp_run, HecDynamic, Splunk, ToHecEvents};
     use data_ingester_supporting::keyvault::get_keyvault_secrets;
 
@@ -1067,12 +1070,24 @@ pub(crate) mod test {
 
         set_ssphp_run()?;
         let ms_graph = login(
-            &secrets.azure_client_id,
-            &secrets.azure_client_secret,
-            &secrets.azure_tenant_id,
+            secrets
+                .azure_client_id
+                .as_ref()
+                .context("Expect azure_client_id secret")?,
+            secrets
+                .azure_client_secret
+                .as_ref()
+                .context("Expect azure_client_secret secret")?,
+            secrets
+                .azure_tenant_id
+                .as_ref()
+                .context("Expect azure_tenant_id secret")?,
         )
         .await?;
-        let splunk = Splunk::new(&secrets.splunk_host, &secrets.splunk_token)?;
+        let splunk = Splunk::new(
+            &secrets.splunk_host.as_ref().context("No value")?,
+            &secrets.splunk_token.as_ref().context("No value")?,
+        )?;
         Ok((splunk, ms_graph))
     }
 

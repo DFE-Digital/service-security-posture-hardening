@@ -6,12 +6,12 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-anyhow = { version = "*", features=["backtrace"]}
+anyhow = { version = "1", features=["backtrace"]}
 data_ingester_azure_rest = { path = "../data_ingester_azure_rest" }
 data_ingester_ms_graph = { path = "../data_ingester_ms_graph" }
 data_ingester_splunk = { path = "../data_ingester_splunk" }
 data_ingester_supporting = { path = "../data_ingester_supporting" }
-tokio = { version = "1.25.0", features = ["full"] }
+tokio = { version = "1", features = ["full"] }
 
 [lints]
 workspace = true
