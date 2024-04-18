@@ -4,13 +4,13 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-anyhow = { version = "*", features=["backtrace"]}
+anyhow = { version = "1", features=["backtrace"]}
 data_ingester_splunk = { path = "../data_ingester_splunk" }
 data_ingester_supporting = { path = "../data_ingester_supporting" }
 octocrab = "*"
-serde = {version = "*", features = ["derive"]}
-serde_json = "*"
-tracing = "0.1"
+serde = {version = "1", features = ["derive"]}
+serde_json = "1"
+tracing = "0"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "std", "alloc", "fmt", "registry", "ansi"], default-features = false }
 tokio = { version = "1.25.0", features = ["full"] }
 http = "1.0.0"
