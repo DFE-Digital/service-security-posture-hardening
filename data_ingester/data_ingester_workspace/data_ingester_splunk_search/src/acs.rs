@@ -35,6 +35,7 @@ impl Acs {
             .danger_accept_invalid_certs(false)
             .default_headers(Acs::headers(token)?)
             .build()?;
+        debug!("ACS Client: {:?}", &client);
         debug!("Splunk ACS Stack: {}", stack);
         Ok(Self {
             stack: stack.to_string(),
@@ -45,9 +46,15 @@ impl Acs {
 
     fn headers(token: &str) -> Result<HeaderMap> {
         let mut headers = HeaderMap::new();
+
         let mut auth = HeaderValue::from_str(&format!("Bearer {}", token))?;
         auth.set_sensitive(true);
         _ = headers.insert("Authorization", auth);
+
+        // ACS rejects requests without a user agent
+        let user_agent = HeaderValue::from_str("curl/8.4.0")?;
+        _ = headers.insert("User-Agent", user_agent);
+
         let content_type = HeaderValue::from_str("application/json")?;
         _ = headers.insert("Content-Type", content_type);
         Ok(headers)
@@ -59,12 +66,12 @@ impl Acs {
             "https://admin.splunk.com/{}/adminconfig/v2/access/{}/ipallowlists",
             self.stack, "search-api"
         );
-        debug!(url);
         let request = self
             .client
             .get(url)
             .build()
             .context("Build request for ACS list IP Allow list")?;
+        debug!("Acs request: {:?}", &request);
         let ip_allow_list = self
             .client
             .execute(request)
@@ -82,7 +89,6 @@ impl Acs {
             "https://admin.splunk.com/{}/adminconfig/v2/access/{}/ipallowlists",
             self.stack, "search-api"
         );
-        debug!(url);
         let ip_allow_list = IpAllowList {
             subnets: vec![format!("{}/32", ip)],
         };
@@ -92,6 +98,7 @@ impl Acs {
             .json(&ip_allow_list)
             .build()
             .context("Build request for ACS set IP Allow list")?;
+        debug!("request: {:?}", &request);
         let response = self
             .client
             .execute(request)
@@ -180,6 +187,8 @@ impl Acs {
         Ok(ipify.ip)
     }
 
+    /// TODO: Poll for status https://admin.splunk.com/{stack}/adminconfig/v2/status
+    /// https://docs.splunk.com/Documentation/SplunkCloud/9.1.2312/Config/ConfigureIPAllowList
     pub async fn wait_for_ip_allow_list_update(&self) -> Result<()> {
         info!("ACS Waiting for ip allow list to update...");
         let now = tokio::time::Instant::now();
