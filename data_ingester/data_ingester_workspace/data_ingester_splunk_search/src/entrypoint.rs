@@ -52,12 +52,12 @@ pub async fn splunk_acs_test(secrets: Arc<Secrets>, _splunk: Arc<Splunk>) -> Res
 
     info!("Running search");
     let results = search
-        .run_search("savedsearch ssphp_get_list_qualys_cve")
+        .run_search("| savedsearch ssphp_get_list_qualys_cve")
         .await
         .context("Running Splunk Search")?;
     info!(
         "Search results ... {}",
-        &results.chars().take(100).collect::<String>()
+        &results.chars().take(200).collect::<String>()
     );
 
     info!("Removing current IP from Splunk Allow list");
