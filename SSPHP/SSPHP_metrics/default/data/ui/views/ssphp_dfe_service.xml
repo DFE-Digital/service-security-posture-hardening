@@ -1,11 +1,15 @@
 <dashboard version="1.1" theme="dark" hideFilters="true" script="js/table_cell_color.js">
 
   <label>Security Posture Continuous Assurance : DfE Service Dashboard</label>
-  <description>v2.2.2</description>
+  <description>v2.2.10</description>
   
   <init>
     <set token="form.tkn_fields">C</set>
     <set token="tkn_controls_compliant_text"></set>
+    <set token="tkn_font_size_1">900</set>
+    <set token="tkn_font_size_2">400</set>
+    <set token="tkn_padding_1">60</set>
+    <set token="tkn_padding_2">30</set>
     <unset token="tkn_ready"></unset>
   </init>
 
@@ -142,14 +146,14 @@ index="ssphp_metrics_summary" earliest=-2d@d latest=now
   <row>
     <panel depends="$tkn_ready$,$tkn_show_abs$">
       <html>
-        <div id="div_header" style="background:$tkn_color$;color:white;font-weight:bold;font-size:800%;text-align:center;padding:50">$tkn_score_abs$</div> 
+        <div id="div_header" style="background:$tkn_color$;color:white;font-weight:bold;font-size:$tkn_font_size_1$%;text-align:center;padding:$tkn_padding_1$">$tkn_score_abs$</div> 
         <div id="div_header" style="background:$tkn_color$;color:white;font-size:100%;text-align:center">$tkn_service_name$ Compliant of # DfE Mandated Controls</div> 
       </html>
     </panel>
 
     <panel depends="$tkn_ready$,$tkn_show_perc$">
       <html>
-        <div id="div_header" style="background:$tkn_color$;color:white;font-weight:bold;font-size:800%;text-align:center;padding:50">$tkn_score_perc$</div> 
+        <div id="div_header" style="background:$tkn_color$;color:white;font-weight:bold;font-size:$tkn_font_size_1$%;text-align:center;padding:$tkn_padding_1$">$tkn_score_perc$</div> 
         <div id="div_header" style="background:$tkn_color$;color:white;font-size:100%;text-align:center">Percentage $tkn_service_name$ Compliant of DfE Mandated Controls</div> 
       </html>
     </panel>
@@ -225,13 +229,13 @@ index="ssphp_metrics_summary" earliest=-2d@d latest=now
   <row>
     <panel depends="$tkn_ready$,$tkn_show_abs$">
       <html>
-        <div id="div_header" style="background:$tkn_color_posture$;color:white;font-weight:bold;font-size:600%;text-align:center;padding:50">$tkn_score_abs_posture$</div> 
+        <div id="div_header" style="background:$tkn_color_posture$;color:white;font-weight:bold;font-size:$tkn_font_size_2$%;text-align:center;padding:$tkn_padding_2$">$tkn_score_abs_posture$</div> 
         <div id="div_header" style="background:$tkn_color_posture$;color:white;font-size:100%;text-align:center">POSTURE</div> 
       </html>
     </panel>
     <panel depends="$tkn_ready$,$tkn_show_perc$">
       <html>
-        <div id="div_header" style="background:$tkn_color_posture$;color:white;font-weight:bold;font-size:600%;text-align:center;padding:50">$tkn_score_perc_posture$</div> 
+        <div id="div_header" style="background:$tkn_color_posture$;color:white;font-weight:bold;font-size:$tkn_font_size_2$%;text-align:center;padding:$tkn_padding_2$">$tkn_score_perc_posture$</div> 
         <div id="div_header" style="background:$tkn_color_posture$;color:white;font-size:100%;text-align:center">POSTURE</div> 
       </html>
     </panel>
@@ -239,13 +243,13 @@ index="ssphp_metrics_summary" earliest=-2d@d latest=now
 
     <panel depends="$tkn_ready$,$tkn_show_abs$">
       <html>
-        <div id="div_header" style="background:$tkn_color_detect$;color:white;font-weight:bold;font-size:600%;text-align:center;padding:50">$tkn_score_abs_detect$</div> 
+        <div id="div_header" style="background:$tkn_color_detect$;color:white;font-weight:bold;font-size:$tkn_font_size_2$%;text-align:center;padding:$tkn_padding_2$">$tkn_score_abs_detect$</div> 
         <div id="div_header" style="background:$tkn_color_detect$;color:white;font-size:100%;text-align:center">DETECT</div> 
       </html>
     </panel>
     <panel depends="$tkn_ready$,$tkn_show_perc$">
       <html>
-        <div id="div_header" style="background:$tkn_color_detect$;color:white;font-weight:bold;font-size:600%;text-align:center;padding:50">$tkn_score_perc_detect$</div> 
+        <div id="div_header" style="background:$tkn_color_detect$;color:white;font-weight:bold;font-size:$tkn_font_size_2$%;text-align:center;padding:$tkn_padding_2$">$tkn_score_perc_detect$</div> 
         <div id="div_header" style="background:$tkn_color_detect$;color:white;font-size:100%;text-align:center">DETECT</div> 
       </html>
     </panel>
@@ -253,13 +257,13 @@ index="ssphp_metrics_summary" earliest=-2d@d latest=now
 
     <panel depends="$tkn_ready$,$tkn_show_abs$">
       <html>
-        <div id="div_header" style="background:$tkn_color_vuln$;color:white;font-weight:bold;font-size:600%;text-align:center;padding:50">$tkn_score_abs_vuln$</div> 
+        <div id="div_header" style="background:$tkn_color_vuln$;color:white;font-weight:bold;font-size:$tkn_font_size_2$%;text-align:center;padding:$tkn_padding_2$">$tkn_score_abs_vuln$</div> 
         <div id="div_header" style="background:$tkn_color_vuln$;color:white;font-size:100%;text-align:center">VULNERABILITY</div> 
       </html>
     </panel>
     <panel depends="$tkn_ready$,$tkn_show_perc$">
       <html>
-        <div id="div_header" style="background:$tkn_color_vuln$;color:white;font-weight:bold;font-size:600%;text-align:center;padding:50">$tkn_score_perc_vuln$</div> 
+        <div id="div_header" style="background:$tkn_color_vuln$;color:white;font-weight:bold;font-size:$tkn_font_size_2$%;text-align:center;padding:$tkn_padding_2$">$tkn_score_perc_vuln$</div> 
         <div id="div_header" style="background:$tkn_color_vuln$;color:white;font-size:100%;text-align:center">VULNERABILITY</div> 
       </html>
     </panel>
@@ -267,13 +271,13 @@ index="ssphp_metrics_summary" earliest=-2d@d latest=now
 
     <panel depends="$tkn_ready$,$tkn_show_abs$">
       <html>
-        <div id="div_header" style="background:$tkn_color_sdlc$;color:white;font-weight:bold;font-size:600%;text-align:center;padding:50">$tkn_score_abs_sdlc$</div> 
+        <div id="div_header" style="background:$tkn_color_sdlc$;color:white;font-weight:bold;font-size:$tkn_font_size_2$%;text-align:center;padding:$tkn_padding_2$">$tkn_score_abs_sdlc$</div> 
         <div id="div_header" style="background:$tkn_color_sdlc$;color:white;font-size:100%;text-align:center">SDLC</div> 
       </html>
     </panel>
     <panel depends="$tkn_ready$,$tkn_show_perc$">
       <html>
-        <div id="div_header" style="background:$tkn_color_sdlc$;color:white;font-weight:bold;font-size:600%;text-align:center;padding:50">$tkn_score_perc_sdlc$</div> 
+        <div id="div_header" style="background:$tkn_color_sdlc$;color:white;font-weight:bold;font-size:$tkn_font_size_2$%;text-align:center;padding:$tkn_padding_2$">$tkn_score_perc_sdlc$</div> 
         <div id="div_header" style="background:$tkn_color_sdlc$;color:white;font-size:100%;text-align:center">SDLC</div> 
       </html>
     </panel>
@@ -300,6 +304,21 @@ index="ssphp_metrics_summary" earliest=-2d@d latest=now
         <change>
           <eval token="tkn_fields">if(isnull($tkn_fields$), &quot; &quot;, $tkn_fields$)</eval>
         </change>
+      </input>
+
+      <input type="multiselect" token="tkn_category" searchWhenChanged="true">
+        <label>Show</label>
+        <choice value="POSTURE">Posture</choice>
+        <choice value="DETECT">Detect</choice>
+        <choice value="VULN">Vulnerabilities</choice>
+        <choice value="SDLC">SDLC</choice>
+        <default>POSTURE,DETECT,VULN,SDLC</default>
+        <initialValue>POSTURE,DETECT,VULN,SDLC</initialValue>
+        <delimiter> OR </delimiter>
+        <prefix>| search (</prefix>
+        <suffix>)</suffix>
+        <valuePrefix>ssphp.use_case.category="</valuePrefix>
+        <valueSuffix>"</valueSuffix>
       </input>
     </panel>
 
@@ -360,6 +379,7 @@ index="ssphp_metrics_summary" earliest=-2d@d latest=now
          }
       </style>
     </html>
+    
     <html>
       <style>
         #table1 th:nth-child(2) {
@@ -385,6 +405,7 @@ index="ssphp_metrics_summary" earliest=-2d@d latest=now
       <table id="table1">
         <search base="bs_1">
           <query>
+$tkn_category$
 
 | eval ssphp.score.compliance_status=if('ssphp.score.score'="100","Compliant","Non-Compliant"),
        ssphp.score.ciso_priority=case('ssphp.score.ciso_priority'=1,"DfE Mandated",
