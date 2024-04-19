@@ -1,7 +1,7 @@
 <dashboard theme="dark" version="1.1" script="js/addtags.js, js/table_cell_backcolor_multivalue.js">
 
   <label>Security Posture Continuous Assurance : Service Control Detail Dashboard</label>
-  <description>v3.0.3</description>
+  <description>v3.0.6</description>
   
   <init>
     <unset token="tkn_show_dashboard"></unset>
@@ -466,6 +466,18 @@ index="ssphp_metrics_summary" ssphp.use_case.id=$tkn_use_case_id|s$
 | rename title as uc_id
 | search eai:acl.app="SSPHP_metrics" AND uc_id=$tkn_savedsearch|s$
 | rex field=search "^(?&lt;search_text&gt;[\s\S]*?)``` ##################### end dashboard query ##################### ```"
+
+| eval defender_table="| fields - _raw, _time
+| eval created_at_age='created_at_age'.\" days ago\"
+| search ssphp.use_case.id=\"$tkn_notfs$\"
+| eval properties.resourceDetails.ResourceName=if('properties.status.code'=\"Unhealthy\",'properties.resourceDetails.ResourceName'.\"¬red\",'properties.resourceDetails.ResourceName'),
+       properties.status.code=if('properties.status.code'=\"Unhealthy\",'properties.status.code'.\"¬red\",'properties.status.code')
+| table azure.tenant_id, azure.subscription_id, azure.resource_group_id, properties.resourceDetails.ResourceType, properties.resourceDetails.ResourceName, properties.status.code"
+
+| eval search_text=if(uc_id="ssphp_use_case_defender_assessments",'search_text'.'defender_table','search_text')
+       
+| table uc_id, search, search_text
+
 | table uc_id, search, search_text
           </query>
           <done>
@@ -514,7 +526,7 @@ index="ssphp_metrics_summary" ssphp.use_case.id=$tkn_use_case_id|s$
           <query>
 $tkn_use_case_search_text$
 
-| fields - _raw, _time
+```| fields - _raw, _time
 | eval created_at_age='created_at_age'." days ago"
 
 | search ssphp.use_case.id=$tkn_notfs|s$
@@ -523,7 +535,7 @@ $tkn_use_case_search_text$
        properties.status.code=if('properties.status.code'="Unhealthy",'properties.status.code'."¬red",'properties.status.code')
        
 | table azure.tenant_id, azure.subscription_id, azure.resource_group_id, properties.resourceDetails.ResourceType, properties.resourceDetails.ResourceName, properties.status.code
-
+```
 
 ```
 | rename *{} as *¬¬
