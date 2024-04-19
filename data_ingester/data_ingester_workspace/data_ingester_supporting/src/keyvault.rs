@@ -19,6 +19,8 @@ pub struct Secrets {
     pub aws_access_key_id: Option<String>,
     pub aws_secret_access_key: Option<String>,
     pub github_app: Option<GitHubApp>,
+    pub qualys_username: Option<String>,
+    pub qualys_password: Option<String>,
 }
 
 /// Store a Github App token
@@ -87,6 +89,8 @@ pub async fn get_keyvault_secrets(keyvault_name: &str) -> Result<Secrets> {
     let aws_secret_access_key = get_secret(&client, "aws-secret-access-key");
     let github_private_key_1 = get_secret(&client, "github-private-key-1");
     let github_app_id_1 = get_secret(&client, "github-app-id-1");
+    let qualys_username = get_secret(&client, "qualys-username");
+    let qualys_password = get_secret(&client, "qualys-password");
 
     let github_app = if let (Some(github_app_id_1), Some(github_private_key_1)) =
         (github_app_id_1.await?, github_private_key_1.await?)
@@ -112,5 +116,7 @@ pub async fn get_keyvault_secrets(keyvault_name: &str) -> Result<Secrets> {
         aws_access_key_id: aws_access_key_id.await?,
         aws_secret_access_key: aws_secret_access_key.await?,
         github_app,
+        qualys_username: qualys_username.await?,
+        qualys_password: qualys_password.await?,
     })
 }

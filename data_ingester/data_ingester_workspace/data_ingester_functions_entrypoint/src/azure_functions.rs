@@ -505,7 +505,7 @@ pub(crate) async fn start_server(tx: Sender<()>) -> Result<()> {
                         let err = format!("GitHub Error {:?}", e);
                         error!(err);
                         err
-                    },
+                    }
                 };
 
                 response.logs.push(result);
@@ -570,7 +570,7 @@ pub(crate) async fn start_server(tx: Sender<()>) -> Result<()> {
                         let error = format!("{:?}", e);
                         error!("splunk test error: {}", error);
                         error
-                    },
+                    }
                 };
 
                 response.logs.push(result);

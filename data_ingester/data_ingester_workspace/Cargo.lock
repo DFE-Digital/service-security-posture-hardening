@@ -1354,6 +1354,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "data_ingester_qualys"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "data_ingester_splunk",
+ "data_ingester_supporting",
+ "reqwest 0.11.27",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
 name = "data_ingester_splunk"
 version = "0.1.0"
 dependencies = [

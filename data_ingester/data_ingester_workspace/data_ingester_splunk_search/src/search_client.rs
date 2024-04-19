@@ -1,5 +1,8 @@
 use anyhow::{Context, Result};
-use reqwest::{header::{HeaderMap, HeaderValue}, Client};
+use reqwest::{
+    header::{HeaderMap, HeaderValue},
+    Client,
+};
 //use tracing::info;
 
 pub struct SplunkApiClient {
@@ -14,10 +17,7 @@ impl SplunkApiClient {
             .default_headers(SplunkApiClient::headers(token)?)
             .build()?;
         let url_base = format!("https://{}.splunkcloud.com:8089", &stack);
-        Ok(Self {
-            client,
-            url_base,
-        })
+        Ok(Self { client, url_base })
     }
 
     fn headers(token: &str) -> Result<HeaderMap> {
@@ -31,9 +31,21 @@ impl SplunkApiClient {
     }
 
     pub async fn run_search(&self, search_name: &str) -> Result<String> {
-        let url = format!("{}/servicesNS/nobody/SSPHP_metrics/search/v2/jobs/export", self.url_base);
+        let url = format!(
+            "{}/servicesNS/nobody/SSPHP_metrics/search/v2/jobs/export",
+            self.url_base
+        );
         let form = [("search", search_name), ("output_mode", "raw")];
-        let raw = self.client.post(&url).form(&form).send().await.context("Sending search request")?.text().await.context("Getting search response body")?;
+        let raw = self
+            .client
+            .post(&url)
+            .form(&form)
+            .send()
+            .await
+            .context("Sending search request")?
+            .text()
+            .await
+            .context("Getting search response body")?;
 
         Ok(raw)
     }
