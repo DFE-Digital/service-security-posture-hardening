@@ -59,8 +59,6 @@ impl SplunkApiClient {
         let mut auth = HeaderValue::from_str(&format!("Splunk {}", token))?;
         auth.set_sensitive(true);
         _ = headers.insert("Authorization", auth);
-        // let content_type = HeaderValue::from_str("application/json")?;
-        // _ = headers.insert("Content-Type", content_type);
         Ok(headers)
     }
 
@@ -98,6 +96,7 @@ impl SplunkApiClient {
         Ok(result)
     }
 
+    /// The full url endpoint for Splunk searches
     fn search_url(&self) -> String {
         format!(
             "{}/servicesNS/nobody/{}/search/v2/jobs/export",
