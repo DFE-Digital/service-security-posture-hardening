@@ -6,8 +6,12 @@ use reqwest::{
 use serde::{de::DeserializeOwned, Deserialize};
 
 pub struct SplunkApiClient {
+    /// A reqwest client
     client: Client,
+    /// The full URL to splunk including protocol and port
     url_base: String,
+    /// The Splunk application to route searches to
+    app: String,
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
@@ -37,7 +41,17 @@ impl SplunkApiClient {
         Ok(Self {
             client,
             url_base: url_base.to_owned(),
+            app: "search".to_string(),
         })
+    }
+
+    /// Set a different
+    ///
+    /// The standard app is 'search' use this method to set a
+    /// different Splunk app for searches
+    pub fn set_app(mut self, app: &str) -> Self {
+        self.app = app.to_string();
+        self
     }
 
     fn headers(token: &str) -> Result<HeaderMap> {
@@ -61,10 +75,6 @@ impl SplunkApiClient {
     ///
     /// Use serde_json::Value for unknown data
     pub async fn run_search<T: DeserializeOwned>(&self, search: &str) -> Result<Vec<T>> {
-        let url = format!(
-            "{}/servicesNS/nobody/search/search/v2/jobs/export",
-            self.url_base
-        );
         let form = [
             ("search", search),
             ("output_mode", "json"),
@@ -72,7 +82,7 @@ impl SplunkApiClient {
         ];
         let result = self
             .client
-            .post(&url)
+            .post(&self.search_url())
             .form(&form)
             .send()
             .await
@@ -87,6 +97,13 @@ impl SplunkApiClient {
 
         Ok(result)
     }
+
+    fn search_url(&self) -> String {
+        format!(
+            "{}/servicesNS/nobody/{}/search/v2/jobs/export",
+            self.url_base, self.app
+        )
+    }
 }
 
 #[cfg(test)]
@@ -95,6 +112,7 @@ mod test {
     use anyhow::Result;
     use serde::Deserialize;
 
+    #[allow(dead_code)]
     #[derive(Deserialize, Debug)]
     struct TestSplunkResults {
         _time: String,
@@ -113,8 +131,19 @@ mod test {
                 "| search index=_* | table _time index source sourcetype",
             )
             .await?;
-        dbg!(results.iter().take(2));
+        dbg!(results.iter().take(2).collect::<Vec<&TestSplunkResults>>());
         assert!(!results.is_empty());
+        Ok(())
+    }
+
+    #[test]
+    fn test_splunk_search_url() -> Result<()> {
+        let client =
+            SplunkApiClient::new("https://foo.splunkcloud.com:8089", "bar")?.set_app("custom_app");
+        let url = client.search_url();
+        let expected =
+            "https://foo.splunkcloud.com:8089/servicesNS/nobody/custom_app/search/v2/jobs/export";
+        assert_eq!(expected, url);
         Ok(())
     }
 }

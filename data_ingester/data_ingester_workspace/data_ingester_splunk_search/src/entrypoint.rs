@@ -55,11 +55,12 @@ pub async fn splunk_acs_test(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Resu
         .as_ref()
         .context("Getting splunk_search_token secret")?;
     let url = format!("https://{}.splunkcloud.com:8089", &stack);
-    let search =
-        SplunkApiClient::new(&url, search_token).context("Creating Splunk search client")?;
+    let search_client = SplunkApiClient::new(&url, search_token)
+        .context("Creating Splunk search client")?
+        .set_app("SSPHP_metrics");
 
     info!("Running search");
-    let search_results = search
+    let search_results = search_client
         .run_search::<Cve>("| savedsearch ssphp_get_list_qualys_cve")
         .await
         .context("Running Splunk Search")?;
