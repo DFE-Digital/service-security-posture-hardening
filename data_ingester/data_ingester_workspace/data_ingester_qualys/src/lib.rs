@@ -120,7 +120,9 @@ impl Qualys {
     pub async fn get_qvs(&mut self, cves: &[String]) -> Result<Qvs> {
         info!("Getting QVS data for {} CVEs", cves.len());
         let mut qvs = Qvs::default();
-        for chunk in cves.chunks(100) {
+        // 450 comes from
+        // https://github.com/buddybergman/Qualys-Get_QVS_Data/blob/e86fb599b783b871c8fbc1bc2fc1cadd9ec14b08/Get_Qualys_QVS_Details.py#L26
+        for chunk in cves.chunks(450) {
             let cve = chunk.join(",").to_string();
             let url = format!("https://qualysapi.qg2.apps.qualys.eu/api/2.0/fo/knowledge_base/qvs/?action=list&details=All&cve={}", cve);
             let response = match self.request(Method::GET, &url).send().await {
