@@ -1360,7 +1360,7 @@ dependencies = [
  "anyhow",
  "data_ingester_splunk",
  "data_ingester_supporting",
- "reqwest 0.11.27",
+ "reqwest 0.12.3",
  "serde",
  "serde_json",
  "tokio",
@@ -1392,6 +1392,7 @@ name = "data_ingester_splunk_search"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "data_ingester_qualys",
  "data_ingester_splunk",
  "data_ingester_supporting",
  "reqwest 0.12.3",

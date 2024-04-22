@@ -205,7 +205,7 @@ impl Acs {
         info!("ACS Waiting for ip allow list to update...");
         let now = tokio::time::Instant::now();
         let url = format!("https://{}.splunkcloud.com:8089/", self.stack);
-        const MAX_WAIT_TIME: u64 = 60 * 30;
+        const MAX_WAIT_TIME: u64 = 60 * 10;
         loop {
             match reqwest::Client::new()
                 .get(&url)
@@ -216,7 +216,7 @@ impl Acs {
                 Ok(_) => break,
                 Err(_) => {
                     info!("Waiting for port update");
-                    tokio::time::sleep(Duration::from_secs(20)).await;
+                    tokio::time::sleep(Duration::from_secs(50)).await;
                 }
             }
 

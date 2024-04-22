@@ -1,3 +1,4 @@
+use data_ingester_splunk::splunk::ToHecEvents;
 use serde::Deserialize;
 use serde::Serialize;
 use std::collections::HashMap;
@@ -6,11 +7,29 @@ use std::collections::HashMap;
 #[serde(transparent)]
 pub struct Qvs(HashMap<String, Cve>);
 
+/// Data from the Qualys Qvs Endpoint
 impl Qvs {
     pub(crate) fn extend(&mut self, other: Qvs) {
         self.0.extend(other.0)
     }
 }
+
+impl ToHecEvents for &Qvs {
+    type Item = Cve;
+
+    fn source(&self) -> &str {
+        "qualys_vulnerability_score"
+    }
+
+    fn sourcetype(&self) -> &str {
+        "qualys"
+    }
+
+    fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
+        Box::new(self.0.values())
+    }
+}
+
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Cve {
     #[serde(flatten)]

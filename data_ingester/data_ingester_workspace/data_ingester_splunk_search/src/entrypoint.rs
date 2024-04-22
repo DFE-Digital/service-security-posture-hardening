@@ -1,12 +1,18 @@
-use std::sync::Arc;
-
 use crate::{acs::Acs, search_client::SplunkApiClient};
 use anyhow::{Context, Result};
+use data_ingester_qualys::Qualys;
+use data_ingester_splunk::splunk::{try_collect_send, Splunk};
 use data_ingester_supporting::keyvault::Secrets;
+use serde::Deserialize;
+use std::sync::Arc;
 use tracing::info;
 
-use data_ingester_splunk::splunk::Splunk;
-pub async fn splunk_acs_test(secrets: Arc<Secrets>, _splunk: Arc<Splunk>) -> Result<()> {
+/// Struct for results for the Splunk search Cve data
+#[derive(Default, Debug, Clone, Deserialize)]
+#[serde(transparent)]
+struct Cve(String);
+
+pub async fn splunk_acs_test(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
     // TODO anything but this
     let stack = secrets
         .splunk_host
@@ -37,12 +43,6 @@ pub async fn splunk_acs_test(secrets: Arc<Secrets>, _splunk: Arc<Splunk>) -> Res
     acs.grant_access_for_current_ip()
         .await
         .context("Granting access for current IP")?;
-    let search_token = secrets
-        .splunk_search_token
-        .as_ref()
-        .context("Getting splunk_search_token secret")?;
-    let search =
-        SplunkApiClient::new(&stack, search_token).context("Creating Splunk search client")?;
 
     let ip_allow_list = acs
         .list_search_api_ip_allow_list()
@@ -50,14 +50,23 @@ pub async fn splunk_acs_test(secrets: Arc<Secrets>, _splunk: Arc<Splunk>) -> Res
         .context("Getting IP allow list")?;
     info!("Splunk IP Allow list after add: {:?}", ip_allow_list);
 
+    let search_token = secrets
+        .splunk_search_token
+        .as_ref()
+        .context("Getting splunk_search_token secret")?;
+    let url = format!("https://{}.splunkcloud.com:8089", &stack);
+    let search =
+        SplunkApiClient::new(&url, search_token).context("Creating Splunk search client")?;
+
     info!("Running search");
-    let results = search
-        .run_search("| savedsearch ssphp_get_list_qualys_cve")
+    let search_results = search
+        .run_search::<Cve>("| savedsearch ssphp_get_list_qualys_cve")
         .await
         .context("Running Splunk Search")?;
+
     info!(
-        "Search results ... {}",
-        &results.chars().take(200).collect::<String>()
+        "Search results ... {:?}",
+        &search_results.iter().take(2).collect::<Vec<&Cve>>()
     );
 
     info!("Removing current IP from Splunk Allow list");
@@ -70,6 +79,26 @@ pub async fn splunk_acs_test(secrets: Arc<Secrets>, _splunk: Arc<Splunk>) -> Res
         .await
         .context("Getting IP allow list")?;
     info!("Splunk IP Allow list after remove: {:?}", ip_allow_list);
+
+    let mut qualys_client = Qualys::new(
+        secrets
+            .qualys_username
+            .as_ref()
+            .context("No qualys Username")?,
+        secrets
+            .qualys_password
+            .as_ref()
+            .context("No Qualys password")?,
+    )?;
+
+    info!("Getting data from Qualys QVS");
+    let cves = search_results
+        .iter()
+        .map(|cve| cve.0.to_owned())
+        .collect::<Vec<String>>();
+    let qualys_command = qualys_client.get_qvs(&cves);
+
+    try_collect_send("Qualys vulnerability score", qualys_command, &splunk).await?;
 
     info!("Done");
     Ok(())

@@ -10,7 +10,7 @@ use tracing::{debug, info, warn};
 
 /// A simple Qualys client
 #[derive(Debug, Default)]
-pub(crate) struct Qualys {
+pub struct Qualys {
     client: Client,
     username: String,
     password: String,
@@ -113,9 +113,11 @@ impl Qualys {
 
     /// Get the Qvs data for a slice of CVE IDs
     ///
-    /// ["CVE-2021-36765"]
-    ///
-    pub(crate) async fn get_qvs(&mut self, cves: &[String]) -> Result<Qvs> {
+    /// cves:
+    ///    
+    /// A list of CVE IDs to requset the data for e.g
+    /// &["CVE-2021-36765"]
+    pub async fn get_qvs(&mut self, cves: &[String]) -> Result<Qvs> {
         info!("Getting QVS data for {} CVEs", cves.len());
         let mut qvs = Qvs::default();
         for chunk in cves.chunks(100) {

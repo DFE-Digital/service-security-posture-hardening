@@ -1,5 +1,5 @@
 mod azure_functions;
-use anyhow::Result;
+use anyhow::{Context, Result};
 use azure_functions::start_server;
 use memory_stats::memory_stats;
 use tokio::sync::oneshot;
@@ -10,7 +10,7 @@ use tracing_subscriber::{layer::SubscriberExt, EnvFilter, Registry};
 #[instrument]
 async fn main() -> Result<()> {
     println!("Starting tracing ...");
-    let tracing_guard = start_local_tracing();
+    let tracing_guard = start_local_tracing().context("Starting tracing")?;
 
     info!("Starting Data Ingester...");
     info!(
@@ -54,13 +54,14 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
-pub(crate) fn start_local_tracing() -> DefaultGuard {
+pub(crate) fn start_local_tracing() -> Result<DefaultGuard> {
     let stdout_log = tracing_subscriber::fmt::layer()
         .with_ansi(false)
         .compact()
         .with_writer(std::io::stderr);
-    let subscriber = Registry::default()
-        .with(stdout_log)
-        .with(EnvFilter::from_default_env());
-    tracing::subscriber::set_default(subscriber)
+    let subscriber = Registry::default().with(stdout_log).with(
+        EnvFilter::from_default_env()
+            .add_directive("info".parse().context("Parsing default log level")?),
+    );
+    Ok(tracing::subscriber::set_default(subscriber))
 }
