@@ -60,3 +60,46 @@ pub struct ContributingFactors {
     pub malware_hash: Vec<usize>,
     pub epss: Vec<f64>,
 }
+
+#[cfg(test)]
+mod test {
+    use super::Qvs;
+    use anyhow::Result;
+    #[test]
+    fn test_qvs_deserialization() -> Result<()> {
+        let data = r#"
+{
+  "CVE-2021-36765": {
+    "base": {
+      "id": "CVE-2021-36765",
+      "idType": "CVE",
+      "qvs": "28",
+      "qvsLastChangedDate": 1642032000,
+      "nvdPublishedDate": 1628086500
+    },
+    "contributingFactors": {
+      "cvss": "5",
+      "cvssVersion": "v2"
+    }
+  },
+  "CVE-2021-36798": {
+    "base": {
+      "id": "CVE-2021-36798",
+      "idType": "CVE",
+      "qvs": "78",
+      "qvsLastChangedDate": 1642550400,
+      "nvdPublishedDate": 1628514900
+    },
+    "contributingFactors": {
+      "cvss": "5",
+      "cvssVersion": "v2",
+      "exploitMaturity": [
+        "poc"
+      ]
+    }
+  }
+}"#;
+        let _output = serde_json::from_str::<Qvs>(data)?;
+        Ok(())
+    }
+}

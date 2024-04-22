@@ -80,7 +80,7 @@ impl Qualys {
             .default_headers(Qualys::headers().context("Building Qualys headers")?)
             .build()
             .context("Building Qualys reqwest client")?;
-        debug!("Qualys client: {:?}", client);
+        info!("Qualys client: {:?}", client);
         Ok(Self {
             client,
             username: username.to_string(),
@@ -114,7 +114,7 @@ impl Qualys {
     /// Get the Qvs data for a slice of CVE IDs
     ///
     /// cves:
-    ///    
+    ///
     /// A list of CVE IDs to requset the data for e.g
     /// &["CVE-2021-36765"]
     pub async fn get_qvs(&mut self, cves: &[String]) -> Result<Qvs> {
@@ -133,13 +133,19 @@ impl Qualys {
 
             // TODO: Use limits to throttle requests
             self.limits = QualysLimits::from_headers(response.headers());
-            debug!("Qualys limits: {:?}", self.limits);
+            info!("Qualys limits: {:?}", self.limits);
 
-            let qvs_ = match response.json::<Qvs>().await {
+            let response_text = response.text().await?;
+            let qvs_ = match serde_json::from_str::<Qvs>(&response_text) {
                 Ok(qvs) => qvs,
                 Err(e) => {
-                    warn!("Error while deserializing Qualys QVS data: {:?}", e);
-                    continue;
+                    warn!(
+                        "Error while deserializing Qualys QVS data: {:?},\nResponse body: {}",
+                        e,
+                        &response_text.chars().take(100).collect::<String>()
+                    );
+
+                    anyhow::bail!("Failed deserializing Qvs JSON");
                 }
             };
             qvs.extend(qvs_);
