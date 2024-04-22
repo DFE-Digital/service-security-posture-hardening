@@ -75,6 +75,8 @@ async fn github_collect_installation_org(
         .await
         .context("Getting repos for org")?;
 
+    info!("Retreived {} repos for {}", org_repos.inner.len(), org_name);
+
     let events = (&org_repos)
         .to_hec_events()
         .context("Serialize ResourceGraphResponse.data events")?;
