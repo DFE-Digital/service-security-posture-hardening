@@ -9,8 +9,9 @@ use tracing::info;
 
 /// Struct for results for the Splunk search Cve data
 #[derive(Default, Debug, Clone, Deserialize)]
-#[serde(transparent)]
-struct Cve(String);
+struct Cve{
+    cve: String
+}
 
 pub async fn splunk_acs_test(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
     // TODO anything but this
@@ -95,7 +96,7 @@ pub async fn splunk_acs_test(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Resu
     info!("Getting data from Qualys QVS");
     let cves = search_results
         .iter()
-        .map(|cve| cve.0.to_owned())
+        .map(|cve| cve.cve.to_owned())
         .collect::<Vec<String>>();
     let qualys_command = qualys_client.get_qvs(&cves);
 
