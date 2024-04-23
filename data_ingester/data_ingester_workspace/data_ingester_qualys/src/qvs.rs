@@ -73,11 +73,11 @@ pub struct ContributingFactors {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub threat_actors: Vec<String>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub trending: Vec<usize>,
+    pub trending: Vec<String>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub malware_name: Vec<usize>,
+    pub malware_name: Vec<String>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub malware_hash: Vec<usize>,
+    pub malware_hash: Vec<String>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub epss: Vec<String>,
 }
@@ -121,7 +121,6 @@ mod test {
   }
 }"#;
         let output = serde_json::from_str::<Qvs>(data)?;
-        dbg!(&output);
         let result = serde_json::to_string_pretty(&output)?;
         let expected = r#"{
   "CVE-2021-36765": {

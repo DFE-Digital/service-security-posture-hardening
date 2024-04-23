@@ -183,7 +183,7 @@ impl Qualys {
                     warn!(
                         "Error while deserializing Qualys QVS data: {:?},\nResponse body: {}",
                         e,
-                        &response_text.chars().take(100).collect::<String>()
+                        &response_text
                     );
 
                     anyhow::bail!("Failed deserializing Qvs JSON");
