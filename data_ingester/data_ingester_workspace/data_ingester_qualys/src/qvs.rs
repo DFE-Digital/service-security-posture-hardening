@@ -79,7 +79,7 @@ pub struct ContributingFactors {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub malware_hash: Vec<usize>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub epss: Vec<f64>,
+    pub epss: Vec<String>,
 }
 
 #[cfg(test)]
