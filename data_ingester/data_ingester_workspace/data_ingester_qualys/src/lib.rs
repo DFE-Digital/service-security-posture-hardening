@@ -6,6 +6,7 @@ use reqwest::{
     header::{HeaderMap, HeaderValue},
     Client, Method, RequestBuilder,
 };
+use tokio::time::{sleep, Duration};
 use tracing::{debug, info, warn};
 
 /// A simple Qualys client
@@ -18,8 +19,7 @@ pub struct Qualys {
 }
 
 /// Limits to use when throttling Qualys requests
-/// TODO impl Default with sane vaules
-#[derive(Debug, Default)]
+#[derive(Debug)]
 struct QualysLimits {
     rate_limit: usize,
     rate_window_seconds: usize,
@@ -27,6 +27,37 @@ struct QualysLimits {
     rate_to_wait_seconds: usize,
     concurrency_limit: usize,
     concurrency_running: usize,
+}
+
+impl Default for QualysLimits {
+    /// Express/Consultant
+    /// API Service Concurrency Limit per Subscription (per API): 1 call
+    /// Rate Limit per Subscription (per API): 50 calls per Day
+    ///
+    /// Standard API
+    /// Service Concurrency Limit per Subscription (per API): 2 calls
+    /// Rate Limit per Subscription (per API): 300 calls per Hour
+    ///
+    /// Enterprise API Service
+    /// Concurrency Limit per Subscription (per API): 5 calls
+    /// Rate Limit per Subscription (per API): 750 calls per Hour
+    ///
+    /// Premium API Service
+    /// Concurrency Limit per Subscription (per API): 10 calls
+    /// Rate Limit per Subscription (per API): 2000 calls per Hour
+    ///
+    /// https://cdn2.qualys.com/docs/qualys-api-limits.pdf
+    ///
+    fn default() -> Self {
+        Self {
+            rate_limit: 300,
+            rate_window_seconds: 60 * 60,
+            rate_remaining: 300,
+            rate_to_wait_seconds: 0,
+            concurrency_limit: 2,
+            concurrency_running: 0,
+        }
+    }
 }
 
 impl QualysLimits {
@@ -70,6 +101,13 @@ impl QualysLimits {
         };
         debug!("Qualys parsed limits: {:?}", limits);
         limits
+    }
+
+    /// Wait for the rate limit to expire
+    async fn wait(&self) {
+        if self.rate_remaining > 1 && self.rate_to_wait_seconds > 0 {
+            sleep(Duration::from_secs(self.rate_to_wait_seconds as u64)).await;
+        }
     }
 }
 
@@ -136,6 +174,7 @@ impl Qualys {
             // TODO: Use limits to throttle requests
             self.limits = QualysLimits::from_headers(response.headers());
             info!("Qualys limits: {:?}", self.limits);
+            self.limits.wait().await;
 
             let response_text = response.text().await?;
             let qvs_ = match serde_json::from_str::<Qvs>(&response_text) {
