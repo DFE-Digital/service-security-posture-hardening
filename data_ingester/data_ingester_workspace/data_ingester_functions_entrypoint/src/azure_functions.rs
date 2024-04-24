@@ -99,7 +99,7 @@ impl warp::Reply for AzureInvokeResponse {
 }
 
 pub(crate) async fn start_server(tx: Sender<()>) -> Result<()> {
-    let tracing_guard = start_local_tracing();
+    let tracing_guard = start_local_tracing().context("Starting Tracing for server pre Splunk")?;
 
     info!("Starting server for Azure Functions");
     info!("Getting KeyVault secrets");

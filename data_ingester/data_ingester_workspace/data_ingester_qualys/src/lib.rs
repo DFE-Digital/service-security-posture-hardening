@@ -6,11 +6,12 @@ use reqwest::{
     header::{HeaderMap, HeaderValue},
     Client, Method, RequestBuilder,
 };
+use tokio::time::{sleep, Duration};
 use tracing::{debug, info, warn};
 
 /// A simple Qualys client
 #[derive(Debug, Default)]
-pub(crate) struct Qualys {
+pub struct Qualys {
     client: Client,
     username: String,
     password: String,
@@ -18,8 +19,7 @@ pub(crate) struct Qualys {
 }
 
 /// Limits to use when throttling Qualys requests
-/// TODO impl Default with sane vaules
-#[derive(Debug, Default)]
+#[derive(Debug)]
 struct QualysLimits {
     rate_limit: usize,
     rate_window_seconds: usize,
@@ -27,6 +27,37 @@ struct QualysLimits {
     rate_to_wait_seconds: usize,
     concurrency_limit: usize,
     concurrency_running: usize,
+}
+
+impl Default for QualysLimits {
+    /// Express/Consultant
+    /// API Service Concurrency Limit per Subscription (per API): 1 call
+    /// Rate Limit per Subscription (per API): 50 calls per Day
+    ///
+    /// Standard API
+    /// Service Concurrency Limit per Subscription (per API): 2 calls
+    /// Rate Limit per Subscription (per API): 300 calls per Hour
+    ///
+    /// Enterprise API Service
+    /// Concurrency Limit per Subscription (per API): 5 calls
+    /// Rate Limit per Subscription (per API): 750 calls per Hour
+    ///
+    /// Premium API Service
+    /// Concurrency Limit per Subscription (per API): 10 calls
+    /// Rate Limit per Subscription (per API): 2000 calls per Hour
+    ///
+    /// https://cdn2.qualys.com/docs/qualys-api-limits.pdf
+    ///
+    fn default() -> Self {
+        Self {
+            rate_limit: 300,
+            rate_window_seconds: 60 * 60,
+            rate_remaining: 300,
+            rate_to_wait_seconds: 0,
+            concurrency_limit: 2,
+            concurrency_running: 0,
+        }
+    }
 }
 
 impl QualysLimits {
@@ -71,6 +102,13 @@ impl QualysLimits {
         debug!("Qualys parsed limits: {:?}", limits);
         limits
     }
+
+    /// Wait for the rate limit to expire
+    async fn wait(&self) {
+        if self.rate_remaining > 1 && self.rate_to_wait_seconds > 0 {
+            sleep(Duration::from_secs(self.rate_to_wait_seconds as u64)).await;
+        }
+    }
 }
 
 impl Qualys {
@@ -80,7 +118,7 @@ impl Qualys {
             .default_headers(Qualys::headers().context("Building Qualys headers")?)
             .build()
             .context("Building Qualys reqwest client")?;
-        debug!("Qualys client: {:?}", client);
+        info!("Qualys client: {:?}", client);
         Ok(Self {
             client,
             username: username.to_string(),
@@ -113,12 +151,16 @@ impl Qualys {
 
     /// Get the Qvs data for a slice of CVE IDs
     ///
-    /// ["CVE-2021-36765"]
+    /// cves:
     ///
-    pub(crate) async fn get_qvs(&mut self, cves: &[String]) -> Result<Qvs> {
+    /// A list of CVE IDs to requset the data for e.g
+    /// &["CVE-2021-36765"]
+    pub async fn get_qvs(&mut self, cves: &[String]) -> Result<Qvs> {
         info!("Getting QVS data for {} CVEs", cves.len());
         let mut qvs = Qvs::default();
-        for chunk in cves.chunks(100) {
+        // 450 comes from
+        // https://github.com/buddybergman/Qualys-Get_QVS_Data/blob/e86fb599b783b871c8fbc1bc2fc1cadd9ec14b08/Get_Qualys_QVS_Details.py#L26
+        for chunk in cves.chunks(450) {
             let cve = chunk.join(",").to_string();
             let url = format!("https://qualysapi.qg2.apps.qualys.eu/api/2.0/fo/knowledge_base/qvs/?action=list&details=All&cve={}", cve);
             let response = match self.request(Method::GET, &url).send().await {
@@ -131,13 +173,20 @@ impl Qualys {
 
             // TODO: Use limits to throttle requests
             self.limits = QualysLimits::from_headers(response.headers());
-            debug!("Qualys limits: {:?}", self.limits);
+            info!("Qualys limits: {:?}", self.limits);
+            self.limits.wait().await;
 
-            let qvs_ = match response.json::<Qvs>().await {
+            let response_text = response.text().await?;
+            let qvs_ = match serde_json::from_str::<Qvs>(&response_text) {
                 Ok(qvs) => qvs,
                 Err(e) => {
-                    warn!("Error while deserializing Qualys QVS data: {:?}", e);
-                    continue;
+                    warn!(
+                        "Error while deserializing Qualys QVS data: {:?},\nResponse body: {}",
+                        e,
+                        &response_text
+                    );
+
+                    anyhow::bail!("Failed deserializing Qvs JSON");
                 }
             };
             qvs.extend(qvs_);
