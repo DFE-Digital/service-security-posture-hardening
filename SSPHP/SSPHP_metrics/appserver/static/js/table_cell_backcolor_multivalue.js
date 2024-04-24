@@ -11,7 +11,7 @@ require([
             //return true;
             return _(['state',
                       'branch_protection',
-                      'required_pull_request_reviews.required_approving_review_count',
+                      'required_approving_review_count',
                       'security_advisory.severity',
                       'created_at_age',
                       'created_at',

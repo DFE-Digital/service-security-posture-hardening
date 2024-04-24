@@ -1,7 +1,7 @@
 <dashboard version="1.1" theme="dark" hideFilters="true" script="js/table_cell_color.js">
 
   <label>Security Posture Continuous Assurance : DfE Service Dashboard</label>
-  <description>v2.2.10</description>
+  <description>v2.2.11</description>
   
   <init>
     <set token="form.tkn_fields">C</set>
@@ -436,8 +436,8 @@ $tkn_category$
 
 $tkn_search_filter$
 
-| rename ssphp.source.service as "DfE Service",
-         ssphp.use_case.title as "Use Case",
+| eval "DfE Service"='ssphp.source.service'
+| rename ssphp.use_case.title as "Use Case",
          ssphp.benchmark.control.title  as "Control Title", 
          ssphp.score.score as "Score",
          ssphp.score.compliance_status as "Compliance Status",
@@ -459,7 +459,7 @@ $tkn_search_filter$
         <option name="drilldown">row</option>
         <fields>"DfE Service","Use Case","Control Title","Score","Compliance Status","Control Type","Description"</fields>
         <drilldown>
-          <link target="_blank">/app/$tkn_current_app$/ssphp_service_detail?tkn_use_case_id=$row.ssphp.use_case.id$</link>
+          <link target="_blank">/app/$tkn_current_app$/ssphp_service_detail?tkn__service=$row.ssphp.source.service$&amp;tkn_use_case_id=$row.ssphp.use_case.id$</link>
         </drilldown>
       </table>
     </panel>
