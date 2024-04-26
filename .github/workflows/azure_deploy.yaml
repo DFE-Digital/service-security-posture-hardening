@@ -24,6 +24,15 @@ jobs:
           default: true
           components: rust-src, clippy
 
+      - uses: awalsh128/cache-apt-pkgs-action@v1
+        with:
+          packages: musl-tools
+          version: 1.0
+
+      - name: cargo audit
+        run: cargo install cargo-audit; cd data_ingester/data_ingester_workspace; cargo audit
+
+
       - name: Cache build artifacts
         uses: actions/cache@v3
         with:
@@ -32,14 +41,6 @@ jobs:
             ~/.cargo/git
             data_ingester/data_ingester_workspace/target
           key: cache-rust-target-${{ hashFiles('data_ingester/data_ingester_workspace/Cargo.lock') }}
-
-      - uses: awalsh128/cache-apt-pkgs-action@v1
-        with:
-          packages: musl-tools
-          version: 1.0
-
-      - name: cargo audit
-        run: cargo install cargo-audit; cd data_ingester/data_ingester_workspace; cargo audit
 
       # - uses: actions-rs/cargo@v1
       #   with:
