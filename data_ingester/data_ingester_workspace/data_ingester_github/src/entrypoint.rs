@@ -70,6 +70,13 @@ async fn github_collect_installation_org(
     )
     .await?;
 
+    try_collect_send(
+        &format!("Getting members for {org_name}"),
+        github_client.org_members(&org_name),
+        splunk,
+    )
+    .await?;
+
     let org_repos = github_client
         .org_repos(org_name)
         .await
