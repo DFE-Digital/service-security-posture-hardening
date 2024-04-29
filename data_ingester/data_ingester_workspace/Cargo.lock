@@ -793,61 +793,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "axum"
-version = "0.7.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3a6c9af12842a67734c9a2e355436e5d03b22383ed60cf13cd0c18fbfe3dcbcf"
-dependencies = [
- "async-trait",
- "axum-core",
- "bytes",
- "futures-util",
- "http 1.1.0",
- "http-body 1.0.0",
- "http-body-util",
- "hyper 1.3.1",
- "hyper-util",
- "itoa",
- "matchit",
- "memchr",
- "mime",
- "percent-encoding",
- "pin-project-lite",
- "rustversion",
- "serde",
- "serde_json",
- "serde_path_to_error",
- "serde_urlencoded",
- "sync_wrapper 1.0.1",
- "tokio",
- "tower",
- "tower-layer",
- "tower-service",
- "tracing",
-]
-
-[[package]]
-name = "axum-core"
-version = "0.4.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a15c63fd72d41492dc4f497196f5da1fb04fb7529e631d73630d1b491e47a2e3"
-dependencies = [
- "async-trait",
- "bytes",
- "futures-util",
- "http 1.1.0",
- "http-body 1.0.0",
- "http-body-util",
- "mime",
- "pin-project-lite",
- "rustversion",
- "sync_wrapper 0.1.2",
- "tower-layer",
- "tower-service",
- "tracing",
-]
-
-[[package]]
 name = "azure_core"
 version = "0.19.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -875,6 +820,33 @@ dependencies = [
 ]
 
 [[package]]
+name = "azure_core"
+version = "0.20.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "34ce3de4b65b1ee2667c81d1fc692949049502a4cf9c38118d811d6d79a7eaef"
+dependencies = [
+ "async-trait",
+ "base64 0.22.0",
+ "bytes",
+ "dyn-clone",
+ "futures",
+ "getrandom 0.2.14",
+ "http-types",
+ "once_cell",
+ "paste",
+ "pin-project",
+ "rand 0.8.5",
+ "reqwest 0.12.4",
+ "rustc_version",
+ "serde",
+ "serde_json",
+ "time",
+ "tracing",
+ "url",
+ "uuid",
+]
+
+[[package]]
 name = "azure_identity"
 version = "0.19.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -882,7 +854,7 @@ checksum = "a6d2060f5b2e1c664026ca4edd561306c473be887c1f7a81f10bf06f9b71c63f"
 dependencies = [
  "async-lock",
  "async-trait",
- "azure_core",
+ "azure_core 0.19.0",
  "futures",
  "log",
  "oauth2",
@@ -896,11 +868,11 @@ dependencies = [
 
 [[package]]
 name = "azure_mgmt_authorization"
-version = "0.19.0"
+version = "0.20.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "829b04fd9c7c5e17a5ab005fb88986cc24f7d3461689bf5e5fbdacff3a170e72"
+checksum = "0996028421d746deea5e44692c84dd79d6d1bd77b40f215cddb5b21a49b3d401"
 dependencies = [
- "azure_core",
+ "azure_core 0.20.0",
  "bytes",
  "futures",
  "log",
@@ -916,7 +888,7 @@ version = "0.19.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ae4e54b88482dc72b8bc9ef1449009b335e10e4eb9197315e68cf0d95b329d05"
 dependencies = [
- "azure_core",
+ "azure_core 0.19.0",
  "bytes",
  "futures",
  "log",
@@ -933,7 +905,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9c32a5dbb8b6f67ed8b8fdc7137a912f3b6547af7f961aedb42bb553ee394f5b"
 dependencies = [
  "async-trait",
- "azure_core",
+ "azure_core 0.19.0",
  "futures",
  "serde",
  "serde_json",
@@ -1291,29 +1263,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "data_ingester_axum_entrypoint"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "axum",
- "data_ingester_aws",
- "data_ingester_azure",
- "data_ingester_azure_rest",
- "data_ingester_github",
- "data_ingester_ms_graph",
- "data_ingester_ms_powershell",
- "data_ingester_splunk",
- "data_ingester_splunk_search",
- "data_ingester_supporting",
- "memory-stats",
- "serde",
- "serde_json",
- "tokio",
- "tracing",
- "tracing-subscriber",
-]
-
-[[package]]
 name = "data_ingester_azure"
 version = "0.1.0"
 dependencies = [
@@ -1331,7 +1280,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-recursion",
- "azure_core",
+ "azure_core 0.19.0",
  "azure_identity",
  "azure_mgmt_authorization",
  "azure_mgmt_subscription",
@@ -2286,7 +2235,6 @@ dependencies = [
  "http 1.1.0",
  "http-body 1.0.0",
  "httparse",
- "httpdate",
  "itoa",
  "pin-project-lite",
  "smallvec",
@@ -2612,12 +2560,6 @@ checksum = "8263075bb86c5a1b1427b5ae862e8889656f126e9f77c484496e8b47cf5c5558"
 dependencies = [
  "regex-automata 0.1.10",
 ]
-
-[[package]]
-name = "matchit"
-version = "0.7.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0e7465ac9959cc2b1404e8e2367b43684a6d13790fe23056cc8c6c5a6b7bcb94"
 
 [[package]]
 name = "md-5"
@@ -3275,7 +3217,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_urlencoded",
- "sync_wrapper 0.1.2",
+ "sync_wrapper",
  "system-configuration",
  "tokio",
  "tokio-rustls 0.24.1",
@@ -3320,13 +3262,15 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_urlencoded",
- "sync_wrapper 0.1.2",
+ "sync_wrapper",
  "tokio",
  "tokio-rustls 0.25.0",
+ "tokio-util",
  "tower-service",
  "url",
  "wasm-bindgen",
  "wasm-bindgen-futures",
+ "wasm-streams",
  "web-sys",
  "webpki-roots 0.26.1",
  "winreg 0.52.0",
@@ -3904,12 +3848,6 @@ name = "sync_wrapper"
 version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2047c6ded9c721764247e62cd3b03c09ffc529b2ba5b10ec482ae507a4a70160"
-
-[[package]]
-name = "sync_wrapper"
-version = "1.0.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a7065abeca94b6a8a577f9bd45aa0867a2238b74e8eb67cf10d492bc39351394"
 
 [[package]]
 name = "system-configuration"
