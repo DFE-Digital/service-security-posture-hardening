@@ -1,0 +1,112 @@
+<form theme="dark" version="1.1" script="js/addtags.js">
+  
+  <label>Security Posture Continuous Assurance : Service Risk Dashboard</label>
+  <description>v1.0.0</description>
+  
+  
+  <init>
+    <set token="tkn_show_status">Unhealthy</set>
+    <set token="tkn_font_size_1">900</set>
+    <set token="tkn_font_size_2">400</set>
+    <set token="tkn_padding_1">60</set>
+    <set token="tkn_padding_2">30</set>
+  </init>
+  
+  
+  <search id="bs_1">
+    <query>
+| loadjob savedsearch="nobody:SSPHP_metrics:ssphp_show_defender_assessments_with_static_data"
+| search properties.status.code=$tkn_show_status|s$
+| table *
+    </query>
+  </search>
+  
+  
+  <fieldset submitButton="false">
+    <input type="dropdown" token="tkn_service_id" searchWhenChanged="true">
+      <label>Service</label>
+      <choice value="*">ALL</choice>
+      <fieldForLabel>ssphp_service_name</fieldForLabel>
+      <fieldForValue>ssphp_service_id</fieldForValue>
+      <search base="bs_1">
+        <query>
+| fields ssphp_service_id, ssphp_service_name
+| dedup ssphp_service_id
+| sort 0 ssphp_service_id
+          </query>
+      </search>
+      <default>*</default>
+    </input>
+  </fieldset>
+
+
+  <row depends="$never_show$">
+    <panel>
+      <table>
+        <search>
+          <query>
+  | makeresults
+
+  `ssphp_metrics_eval_field_colors`
+
+  | table tkn_*
+          </query>
+          <done>
+            <set token="tkn_colour_splunk_grey">$result.tkn_colour_splunk_grey$</set>
+            <set token="tkn_colour_red">$result.tkn_colour_red$</set>
+            <set token="tkn_colour_orange">$result.tkn_colour_orange$</set>
+            <set token="tkn_colour_green">$result.tkn_colour_green$</set>
+            <set token="tkn_colour_blue">$result.tkn_colour_blue$</set>
+          </done>
+        </search>
+      </table>
+    </panel>
+  </row>
+
+  <row>
+    <panel>
+      <html>
+        <div id="div_header" style="background:$tkn_colour_red$;color:white;font-weight:bold;font-size:$tkn_font_size_1$%;text-align:center;padding:$tkn_padding_1$">$tkn_total_risk_score$</div> 
+      </html>
+    </panel>
+  </row>
+  
+  
+  <row>
+    <panel>
+      <title>Unhealthy MS Defender Assessments [$tkn_event_count$ assessments]</title>
+      <table>
+        <search base="bs_1">
+          <query>
+| search ssphp_service_id=$tkn_service_id|s$
+
+| eval risk_score=10,
+       risk_days_since_1st_seen=floor((now() - strptime('properties.status.firstEvaluationDate',"%Y-%m-%dT%H:%M:%S"))/60/60/24),
+       risk_score=case(risk_days_since_1st_seen>100,'risk_score'*2,
+                       risk_days_since_1st_seen>30,'risk_score'*1.3,
+                       1==1,'risk_score'),
+       risk_score=case('properties.meadata.severity'="Critical",'risk_score'*10,
+                       'properties.meadata.severity'="High",'risk_score'*5,
+                       'properties.meadata.severity'="Medium",'risk_score'*2,
+                       1==1,'risk_score'),
+        risk_score='risk_score'*('ssphp_service_risk_profile'/10)
+| sort 0 - risk_score
+
+| rex field=properties.resourceDetails.ResourceType ".*\/(?&lt;resource_type&gt;.*)$"
+| eval azure_resource=mvappend("Tenancy=".'tenantId',
+                               "Subscription=".'subscriptionId',
+                               "Resource Group=".'resourceGroup',
+                               "Resource Type=".'resource_type',
+                               "Resource Name=".'properties.resourceDetails.ResourceName')
+                               
+| eventstats count as event_count, sum(risk_score) as total_risk_score
+          </query>
+          <done>
+            <set token="tkn_event_count">$result.event_count$</set>
+            <set token="tkn_total_risk_score">$result.total_risk_score$</set>
+          </done>
+        </search>
+      </table>
+    </panel>
+  </row>
+</form>
