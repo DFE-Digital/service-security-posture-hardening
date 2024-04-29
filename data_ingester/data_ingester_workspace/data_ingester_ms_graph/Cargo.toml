@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 anyhow = { version = "*", features=["backtrace"]}
-azure_mgmt_authorization = { version = "*", default-features = false, features = ["enable_reqwest_rustls", "package-2022-04-01"]}
+azure_mgmt_authorization = { version = "0.19", default-features = false, features = ["enable_reqwest_rustls", "package-2022-04-01"]}
 data_ingester_azure_rest = { path = "../data_ingester_azure_rest" }
 data_ingester_splunk = { path = "../data_ingester_splunk" }
 data_ingester_supporting = { path = "../data_ingester_supporting" }

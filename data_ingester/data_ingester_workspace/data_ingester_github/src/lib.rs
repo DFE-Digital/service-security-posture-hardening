@@ -68,6 +68,12 @@ impl OctocrabGit {
         self.get_collection(&uri).await
     }
 
+    /// Get all members for the organization
+    pub(crate) async fn org_members(&self, org: &str) -> Result<GithubResponses> {
+        let uri = format!("/orgs/{org}/members");
+        self.get_collection(&uri).await
+    }
+
     /// Get branch protection for a specific repo & branch
     pub(crate) async fn repo_branch_protection(
         &self,
