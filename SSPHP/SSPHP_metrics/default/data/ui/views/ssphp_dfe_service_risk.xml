@@ -1,7 +1,7 @@
-<form theme="dark" version="1.1" script="js/addtags.js">
+<form theme="dark" version="1.1" script="js/addtags.js, js/table_cell_color.js">
   
   <label>Security Posture Continuous Assurance : Service Risk Dashboard</label>
-  <description>v1.0.0</description>
+  <description>v1.0.26</description>
   
   
   <init>
@@ -40,33 +40,36 @@
   </fieldset>
 
 
-  <row depends="$never_show$">
-    <panel>
-      <table>
-        <search>
-          <query>
-  | makeresults
 
-  `ssphp_metrics_eval_field_colors`
+<!-- ################### Set Colour and other Tokens ################### --> 
 
-  | table tkn_*
-          </query>
-          <done>
-            <set token="tkn_colour_splunk_grey">$result.tkn_colour_splunk_grey$</set>
-            <set token="tkn_colour_red">$result.tkn_colour_red$</set>
-            <set token="tkn_colour_orange">$result.tkn_colour_orange$</set>
-            <set token="tkn_colour_green">$result.tkn_colour_green$</set>
-            <set token="tkn_colour_blue">$result.tkn_colour_blue$</set>
-          </done>
-        </search>
-      </table>
-    </panel>
-  </row>
+<row depends="$never_show$"> 
+  <panel>
+    <table>
+      <search>
+        <query>
+| makeresults
+
+`ssphp_metrics_eval_field_colors`
+
+| table tkn_*
+        </query>
+        <done>
+          <set token="tkn_colour_splunk_grey">$result.tkn_colour_splunk_grey$</set>
+          <set token="tkn_colour_red">$result.tkn_colour_red$</set>
+          <set token="tkn_colour_orange">$result.tkn_colour_orange$</set>
+          <set token="tkn_colour_green">$result.tkn_colour_green$</set>
+          <set token="tkn_colour_blue">$result.tkn_colour_blue$</set>
+        </done>
+      </search>
+    </table>
+  </panel>
+</row>
 
   <row>
     <panel>
       <html>
-        <div id="div_header" style="background:$tkn_colour_red$;color:white;font-weight:bold;font-size:$tkn_font_size_1$%;text-align:center;padding:$tkn_padding_1$">$tkn_total_risk_score$</div> 
+        <div id="div_header" style="background:$tkn_total_risk_colour$;color:white;font-weight:bold;font-size:$tkn_font_size_1$%;text-align:center;padding:$tkn_padding_1$">$tkn_total_risk_score$</div> 
       </html>
     </panel>
   </row>
@@ -75,37 +78,119 @@
   <row>
     <panel>
       <title>Unhealthy MS Defender Assessments [$tkn_event_count$ assessments]</title>
-      <table>
+      <html>
+        <style>
+          .green{
+            color:green !important;
+          }
+          .blue{
+            color:cyan !important;
+          }
+          .red{
+            color:red !important;
+          }
+          .orange{
+            color:orange !important;
+          }
+          .yellow{
+            color:yellow !important;
+          }
+          .lightgrey{
+            color:gray !important;
+          }
+          .lightblue{
+            color:#485959 !important;
+          }
+        </style>
+      </html>
+      <html>
+        <style>
+           .css_for_green{ 
+           background-color: $tkn_colour_green$ !important;
+           color:#000000 !important;
+           font-size: 100% !important;
+           }
+           .css_for_orange{ 
+           background-color: $tkn_colour_orange$ !important;
+           color:#000000 !important;
+           font-size: 100% !important;
+           }
+           .css_for_red{
+           background-color: $tkn_colour_red$ !important;
+           color:#000000 !important;
+           font-size: 100% !important;
+           }
+           .css_for_blue{
+           background-color: $tkn_colour_blue$ !important;
+           font-size: 100% !important;
+           }
+        </style>
+      </html>
+
+      <table id="table1">
         <search base="bs_1">
           <query>
 | search ssphp_service_id=$tkn_service_id|s$
+```| where isnotnull('cis_benchmark{}')```
 
-| eval risk_score=10,
-       risk_days_since_1st_seen=floor((now() - strptime('properties.status.firstEvaluationDate',"%Y-%m-%dT%H:%M:%S"))/60/60/24),
-       risk_score=case(risk_days_since_1st_seen>100,'risk_score'*2,
-                       risk_days_since_1st_seen>30,'risk_score'*1.3,
-                       1==1,'risk_score'),
-       risk_score=case('properties.meadata.severity'="Critical",'risk_score'*10,
-                       'properties.meadata.severity'="High",'risk_score'*5,
-                       'properties.meadata.severity'="Medium",'risk_score'*2,
-                       1==1,'risk_score'),
-        risk_score='risk_score'*('ssphp_service_risk_profile'/10)
-| sort 0 - risk_score
+`ssphp_risk_calculate_score`
+
+| fillnull value="-" ssphp.use_case.framework.ig_1, ssphp.use_case.framework.ig_2, ssphp.use_case.framework.ig_3
 
 | rex field=properties.resourceDetails.ResourceType ".*\/(?&lt;resource_type&gt;.*)$"
-| eval azure_resource=mvappend("Tenancy=".'tenantId',
-                               "Subscription=".'subscriptionId',
-                               "Resource Group=".'resourceGroup',
-                               "Resource Type=".'resource_type',
-                               "Resource Name=".'properties.resourceDetails.ResourceName')
-                               
+| eval ssphp_norm_azure_resource_display=mvappend("Tenant = ".'tenantId',
+                                                  "Subscription = ".'subscriptionId',
+                                                  "Resource Group = ".'resourceGroup',
+                                                  "Resource Type = ".'resource_type',
+                                                  "Resource Name = ".'properties.resourceDetails.ResourceName'),
+       ssphp.use_case.framework.ig_1=mvjoin('ssphp.use_case.framework.ig_1',", "),
+       ssphp.use_case.framework.ig_2=mvjoin('ssphp.use_case.framework.ig_2',", "),
+       ssphp.use_case.framework.ig_3=mvjoin('ssphp.use_case.framework.ig_3',", "),
+       ssphp_norm_ig_display=mvappend("IG1 = ".'ssphp.use_case.framework.ig_1',
+                                      "IG2 = ".'ssphp.use_case.framework.ig_2',
+                                      "IG3 = ".'ssphp.use_case.framework.ig_3')
+
+| eval ssphp_norm_assessment_display=mvappend("Title = ".'properties.metadata.displayName',
+                                              "Description = ".'properties.metadata.description')
+                                      
+`ssphp_add_display_colours`
+| rename ssphp_norm_azure_resource_display as ssphp_azure_resource,
+         ssphp_norm_ig_display as benchmark_ig,
+         cis_benchmark{} as cis_benchmark
+
+| sort 0 - risk_score
+
+`ssphp_metrics_eval_field_colors`
 | eventstats count as event_count, sum(risk_score) as total_risk_score
+| eval total_risk_colour=case('total_risk_score'>9000,'tkn_colour_red',
+                              'total_risk_score'>5000,'tkn_colour_orange',
+                              1==1,'tkn_colour_green')
+| fieldformat total_risk_score=tostring(total_risk_score, "commas")
+
+| rename ssphp_azure_resource as "Resource Affected",
+         ssphp_norm_assessment_display as Assessment,
+         properties.metadata.severity as "Assessment Severity",
+         risk_score_display as "Assessment Risk Score",
+         ssphp.cis_benchmark.controls.v8 as "CIS Safeguard",
+         benchmark_ig as "CIS Safeguard IG",
+         cis_benchmark as "CIS Azure Benchmark Control",
+         ssphp.cis_benchmark.control.title as "CIS Azure Benchmark Control Title"
           </query>
           <done>
             <set token="tkn_event_count">$result.event_count$</set>
             <set token="tkn_total_risk_score">$result.total_risk_score$</set>
+            <set token="tkn_total_risk_colour">$result.total_risk_colour$</set>
           </done>
         </search>
+        <fields>"Assessment",
+                "Assessment Severity",
+                "Assessment Risk Score",
+                "Resource Affected",
+                "CIS Safeguard",
+                "CIS Safeguard IG",
+                "CIS Azure Benchmark Control",
+                "CIS Azure Benchmark Control Title"
+        </fields>
       </table>
     </panel>
   </row>

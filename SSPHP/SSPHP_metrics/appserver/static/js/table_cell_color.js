@@ -10,6 +10,7 @@ require([
         canRender: function (cell) {
             //return true;
             return _(['Score',
+                      'Assessment Risk Score',
                       'security_advisory.severity',
                       'created_at_age',
                       'created_at',
