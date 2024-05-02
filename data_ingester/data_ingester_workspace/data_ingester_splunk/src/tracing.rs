@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use crate::splunk::{HecEvent, Splunk};
 use crate::thread::SplunkTask;
 use anyhow::{Context, Result};
@@ -8,7 +10,7 @@ use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::Layer;
 use tracing_subscriber::{EnvFilter, Registry};
 
-pub fn start_splunk_tracing(splunk: Splunk, source: &str, sourcetype: &str) -> Result<()> {
+pub fn start_splunk_tracing(splunk: Arc<Splunk>, source: &str, sourcetype: &str) -> Result<()> {
     let stdout_log = tracing_subscriber::fmt::layer()
         .with_ansi(false)
         .compact()
@@ -36,7 +38,7 @@ struct SplunkLayer {
 }
 
 impl SplunkLayer {
-    pub fn new(splunk: Splunk, source: &str, sourcetype: &str) -> Self {
+    pub fn new(splunk: Arc<Splunk>, source: &str, sourcetype: &str) -> Self {
         Self {
             splunk_task: SplunkTask::new(splunk),
             source: source.to_string(),
@@ -85,7 +87,7 @@ mod test {
         let subscriber = Registry::default().with(stdout_log);
 
         let subscriber = subscriber.with(SplunkLayer::new(
-            splunk,
+            splunk.into(),
             "data_ingester_test",
             "data_ingester_test",
         ));

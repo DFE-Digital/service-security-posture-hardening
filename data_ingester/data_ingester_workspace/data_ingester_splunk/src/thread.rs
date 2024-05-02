@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use crate::splunk::{HecEvent, Splunk};
 use anyhow::Result;
 use tokio::sync::mpsc::unbounded_channel;
@@ -10,7 +12,7 @@ pub struct SplunkTask {
 
 impl SplunkTask {
     /// Start a collector listening for events to send to Splunk    
-    pub fn new(splunk: Splunk) -> SplunkTask {
+    pub fn new(splunk: Arc<Splunk>) -> SplunkTask {
         let (tx, rx) = unbounded_channel::<HecEvent>();
         let join_handle = tokio::spawn(async move { Self::process_events(splunk, rx).await });
         SplunkTask {
@@ -29,7 +31,7 @@ impl SplunkTask {
     }
 
     async fn process_events(
-        splunk: Splunk,
+        splunk: Arc<Splunk>,
         mut rx: tokio::sync::mpsc::UnboundedReceiver<HecEvent>,
     ) {
         const AVG_EVENT_SIZE: usize = 341;
@@ -96,7 +98,7 @@ mod test {
             &secrets.splunk_token.as_ref().context("No value")?,
         )?;
 
-        let splunk_task = SplunkTask::new(splunk);
+        let splunk_task = SplunkTask::new(splunk.into());
 
         let data = serde_json::from_str::<serde_json::Value>(r#"{"data": "test"}"#)?;
         let event = HecEvent::new(&data, "threadtest", "threadtest")?;

@@ -9,8 +9,8 @@ use tracing::info;
 
 /// Struct for results for the Splunk search Cve data
 #[derive(Default, Debug, Clone, Deserialize)]
-struct Cve{
-    cve: String
+struct Cve {
+    cve: String,
 }
 
 pub async fn splunk_acs_test(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {

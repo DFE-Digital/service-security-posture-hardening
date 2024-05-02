@@ -182,8 +182,7 @@ impl Qualys {
                 Err(e) => {
                     warn!(
                         "Error while deserializing Qualys QVS data: {:?},\nResponse body: {}",
-                        e,
-                        &response_text
+                        e, &response_text
                     );
 
                     anyhow::bail!("Failed deserializing Qvs JSON");

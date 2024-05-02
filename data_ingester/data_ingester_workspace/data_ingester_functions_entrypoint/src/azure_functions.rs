@@ -128,7 +128,7 @@ pub(crate) async fn start_server(tx: Sender<()>) -> Result<()> {
     info!("Splunk Client created");
 
     set_ssphp_run()?;
-    start_splunk_tracing(splunk.clone(), "data_ingester_rust", "data_ingester_rust")
+    start_splunk_tracing(splunk.clone().into(), "data_ingester_rust", "data_ingester_rust")
         .context("Start Splunk Tracing")?;
 
     drop(tracing_guard);
@@ -598,12 +598,12 @@ pub(crate) async fn start_server(tx: Sender<()>) -> Result<()> {
     });
 
     let function_routes = warp::post()
-        .and(azure)
-        .or(m365)
-        .or(powershell)
-        .or(aws)
+        .and(aws)
+        .or(azure)
         .or(azure_resource_graph)
         .or(github)
+        .or(m365)
+        .or(powershell)
         .or(splunk_test);
 
     let routes = health_check.or(function_routes);

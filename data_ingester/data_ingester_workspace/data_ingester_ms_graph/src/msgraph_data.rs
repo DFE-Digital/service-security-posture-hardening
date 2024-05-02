@@ -12,7 +12,6 @@ pub fn load_m365_toml() -> Result<MsGraphData> {
 
     let decoded: MsGraphData =
         toml::from_str(contents).expect("ms_graph.toml should exist and be valid");
-    println!("{:#?}", decoded);
     Ok(decoded)
 }
 

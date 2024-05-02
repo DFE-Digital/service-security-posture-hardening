@@ -72,7 +72,7 @@ async fn github_collect_installation_org(
 
     try_collect_send(
         &format!("Getting members for {org_name}"),
-        github_client.org_members(&org_name),
+        github_client.org_members(org_name),
         splunk,
     )
     .await?;

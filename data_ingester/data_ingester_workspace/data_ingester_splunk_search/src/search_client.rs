@@ -4,7 +4,6 @@ use reqwest::{
     Client,
 };
 use serde::{de::DeserializeOwned, Deserialize};
-use tracing::info;
 
 pub struct SplunkApiClient {
     /// A reqwest client
