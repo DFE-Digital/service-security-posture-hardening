@@ -1,7 +1,7 @@
 <form theme="dark" version="1.1" script="js/addtags.js, js/table_cell_color.js">
   
   <label>Security Posture Continuous Assurance : Service Risk Dashboard</label>
-  <description>v1.0.26</description>
+  <description>v1.1.3</description>
   
   
   <init>
@@ -10,6 +10,9 @@
     <set token="tkn_font_size_2">400</set>
     <set token="tkn_padding_1">60</set>
     <set token="tkn_padding_2">30</set>
+    <set token="tkn_score_height">150</set>
+    <set token="tkn_total_risk_score"> </set>
+    <unset token="tkn_dashboard_ready"></unset>
   </init>
   
   
@@ -37,6 +40,28 @@
       </search>
       <default>*</default>
     </input>
+
+    <input type="checkbox" token="tkn_show_resource_box">
+      <label>Show</label>
+      <choice value="true">Resource Affected</choice>
+      <change>
+        <condition value="true">
+          <set token="tkn_show_resource">&quot;Resource Affected&quot; </set>
+        </condition>
+        <condition value="*">
+          <set token="tkn_show_resource"> </set>
+        </condition>
+      </change>
+    </input>
+
+    <input type="dropdown" token="tkn_ig" searchWhenChanged="true">
+      <label>IG Level</label>
+      <choice value="ssphp.use_case.framework.ig_1!=&quot;-&quot;">IG1</choice>
+      <choice value="ssphp.use_case.framework.ig_2!=&quot;-&quot;">IG2</choice>
+      <choice value="ssphp.use_case.framework.ig_3!=&quot;-&quot;">IG3</choice>
+      <selectFirstChoice>true</selectFirstChoice>
+    </input>
+
   </fieldset>
 
 
@@ -48,6 +73,7 @@
     <table>
       <search>
         <query>
+
 | makeresults
 
 `ssphp_metrics_eval_field_colors`
@@ -66,16 +92,71 @@
   </panel>
 </row>
 
-  <row>
-    <panel>
-      <html>
-        <div id="div_header" style="background:$tkn_total_risk_colour$;color:white;font-weight:bold;font-size:$tkn_font_size_1$%;text-align:center;padding:$tkn_padding_1$">$tkn_total_risk_score$</div> 
-      </html>
-    </panel>
-  </row>
+<!-- ################### Show Service Details ################### --> 
+
+<row depends="$tkn_dashboard_ready$"> 
+  <panel>
+    <table>
+      <search base="bs_1">
+        <query>
+| search ssphp_service_id=$tkn_service_id|s$
+
+| table ssphp_service_id
+        ssphp_service_name
+        ssphp_service_display_name
+        ssphp_service_division
+        ssphp_service_group
+        ssphp_service_portfolio
+        ssphp_service_risk_profile
+| dedup ssphp_service_id
+| sort 0 ssphp_service_id
+
+| rename ssphp_service_id as "Service ID"
+         ssphp_service_name as "Service Name"
+         ssphp_service_display_name as "Service Display Name"
+         ssphp_service_division as "Division"
+         ssphp_service_group as "Group"
+         ssphp_service_portfolio as "Portfolio"
+         ssphp_service_risk_profile as "Risk Profile"
+        </query>
+          <done>
+            <set token="tkn_dashboard_ready">Y</set>
+          </done>
+      </search>
+    </table>
+  </panel>
+</row>
+
+
+
+<!-- ################### Show Service Risk Score ################### --> 
   
+<row depends="$tkn_dashboard_ready$">
+  <panel>
+    <single>
+      <search>
+        <query>
+| makeresults
+
+| eval total_risk_score=$tkn_total_risk_score$
+| table total_risk_score
+        </query>
+      </search>
+      <option name="drilldown">none</option>
+      <option name="height">$tkn_score_height$</option>
+      <option name="colorMode">block</option>
+      <option name="rangeColors">[$tkn_colour_green$,$tkn_colour_orange$,$tkn_colour_red$]</option>
+      <option name="rangeValues">[5000,9000]</option>        
+      <option name="useColors">1</option>
+      <option name="underLabel">SERVICE RISK SCORE</option>
+    </single>
+  </panel>
+</row>
   
-  <row>
+
+<!-- ################### Show Service Assessments ################### --> 
+
+  <row depends="$tkn_dashboard_ready$">
     <panel>
       <title>Unhealthy MS Defender Assessments [$tkn_event_count$ assessments]</title>
       <html>
@@ -131,66 +212,74 @@
         <search base="bs_1">
           <query>
 | search ssphp_service_id=$tkn_service_id|s$
-```| where isnotnull('cis_benchmark{}')```
+
 
 `ssphp_risk_calculate_score`
 
-| fillnull value="-" ssphp.use_case.framework.ig_1, ssphp.use_case.framework.ig_2, ssphp.use_case.framework.ig_3
+| eval lf="
+"
+
+| eval ig_1=mvdedup(split(mvjoin('ssphp.use_case.framework.ig_1',", "),", ")),
+       ig_2=mvdedup(split(mvjoin('ssphp.use_case.framework.ig_2',", "),", ")),
+       ig_3=mvdedup(split(mvjoin('ssphp.use_case.framework.ig_3',", "),", ")),
+       v8=mvdedup('ssphp.cis_benchmark.controls.v8'),
+       IG1=mvdedup(mvmap('ig_1',mvindex('v8',mvfind('v8','ig_1')))),
+       IG2=mvdedup(mvmap('ig_2',mvindex('v8',mvfind('v8','ig_2')))),
+       IG3=mvdedup(mvmap('ig_3',mvindex('v8',mvfind('v8','ig_3'))))
+| fillnull value="-" IG1, IG2, IG3
+
+| eval IG_1="IG1 = ".mvjoin(replace('IG1',", ",'lf'),'lf'),
+       IG_2="IG2 = ".mvjoin(replace('IG2',", ",'lf'),'lf'),
+       IG_3="IG3 = ".mvjoin(replace('IG3',", ",'lf'),'lf'),
+       ssphp_norm_cis_ig_controls_display=mvappend('IG_1','IG_2','IG_3'),
+       cis_benchmark=mvzip(split('cis_benchmark{}','lf'),'ssphp.cis_benchmark.control.title', " ")
+| fields - IG1, IG2, IG3, IG_1, IG_2, IG_3, ig_1, ig_2, ig_3, v8, lf
+
+| eval ssphp_norm_assessment_display=mvappend("Title = ".'properties.metadata.displayName',
+                                              "Description = ".'properties.metadata.description'),
+       ssphp_norm_severity_display='properties.metadata.severity'
 
 | rex field=properties.resourceDetails.ResourceType ".*\/(?&lt;resource_type&gt;.*)$"
 | eval ssphp_norm_azure_resource_display=mvappend("Tenant = ".'tenantId',
                                                   "Subscription = ".'subscriptionId',
                                                   "Resource Group = ".'resourceGroup',
                                                   "Resource Type = ".'resource_type',
-                                                  "Resource Name = ".'properties.resourceDetails.ResourceName'),
-       ssphp.use_case.framework.ig_1=mvjoin('ssphp.use_case.framework.ig_1',", "),
-       ssphp.use_case.framework.ig_2=mvjoin('ssphp.use_case.framework.ig_2',", "),
-       ssphp.use_case.framework.ig_3=mvjoin('ssphp.use_case.framework.ig_3',", "),
-       ssphp_norm_ig_display=mvappend("IG1 = ".'ssphp.use_case.framework.ig_1',
-                                      "IG2 = ".'ssphp.use_case.framework.ig_2',
-                                      "IG3 = ".'ssphp.use_case.framework.ig_3')
-
-| eval ssphp_norm_assessment_display=mvappend("Title = ".'properties.metadata.displayName',
-                                              "Description = ".'properties.metadata.description')
+                                                  "Resource Name = ".'properties.resourceDetails.ResourceName')
                                       
 `ssphp_add_display_colours`
-| rename ssphp_norm_azure_resource_display as ssphp_azure_resource,
-         ssphp_norm_ig_display as benchmark_ig,
-         cis_benchmark{} as cis_benchmark
+
+
+```| rename ssphp_norm_ig_display as benchmark_ig```
 
 | sort 0 - risk_score
 
 `ssphp_metrics_eval_field_colors`
-| eventstats count as event_count, sum(risk_score) as total_risk_score
-| eval total_risk_colour=case('total_risk_score'>9000,'tkn_colour_red',
-                              'total_risk_score'>5000,'tkn_colour_orange',
-                              1==1,'tkn_colour_green')
-| fieldformat total_risk_score=tostring(total_risk_score, "commas")
 
-| rename ssphp_azure_resource as "Resource Affected",
+| rename ssphp_norm_azure_resource_display as "Resource Affected",
          ssphp_norm_assessment_display as Assessment,
-         properties.metadata.severity as "Assessment Severity",
+         ssphp_norm_severity_display as "Assessment Severity",
          risk_score_display as "Assessment Risk Score",
-         ssphp.cis_benchmark.controls.v8 as "CIS Safeguard",
-         benchmark_ig as "CIS Safeguard IG",
-         cis_benchmark as "CIS Azure Benchmark Control",
-         ssphp.cis_benchmark.control.title as "CIS Azure Benchmark Control Title"
+         cis_benchmark as "CIS Safeguard",
+         ssphp_norm_cis_ig_controls_display as "CIS IG Controls"
+
+| search $tkn_ig$
+
+| eventstats count as event_count, sum(risk_score) as total_risk_score
+
+| table Assessment, "Assessment Severity", "Assessment Risk Score",
+        $tkn_show_resource$
+        "CIS Safeguard", 
+        ```ssphp.use_case.framework.ig_1, ssphp.use_case.framework.ig_2, ssphp.use_case.framework.ig_3, ssphp.cis_benchmark.controls.v8, v8,```
+        "CIS IG Controls",```ig_1,ig_2,ig_3,IG1,IG2,IG3, IG_1, IG_2, IG_3```
+        event_count, total_risk_score
           </query>
           <done>
             <set token="tkn_event_count">$result.event_count$</set>
             <set token="tkn_total_risk_score">$result.total_risk_score$</set>
-            <set token="tkn_total_risk_colour">$result.total_risk_colour$</set>
+            <set token="tkn_dashboard_ready">Y</set>
           </done>
         </search>
-        <fields>"Assessment",
-                "Assessment Severity",
-                "Assessment Risk Score",
-                "Resource Affected",
-                "CIS Safeguard",
-                "CIS Safeguard IG",
-                "CIS Azure Benchmark Control",
-                "CIS Azure Benchmark Control Title"
-        </fields>
+        <fields>Assessment, "Assessment Severity", "Assessment Risk Score", $tkn_show_resource$ "CIS Safeguard", "CIS IG Controls"</fields>
       </table>
     </panel>
   </row>
