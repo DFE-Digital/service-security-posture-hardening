@@ -1,7 +1,7 @@
 <form theme="dark" version="1.1" script="js/addtags.js, js/table_cell_color.js">
   
   <label>Security Posture Continuous Assurance : Service Risk Dashboard</label>
-  <description>v1.1.3</description>
+  <description>v1.1.5</description>
   
   
   <init>
@@ -237,6 +237,8 @@
 
 | eval ssphp_norm_assessment_display=mvappend("Title = ".'properties.metadata.displayName',
                                               "Description = ".'properties.metadata.description'),
+       ssphp_norm_assessment_display=if((isnotnull('properties.metadata.categories{}') AND 'properties.metadata.categories{}'!="" AND 'properties.metadata.categories{}'!="Unknown"),
+                                                    mvappend('ssphp_norm_assessment_display',"Category = ".'properties.metadata.categories{}'),'ssphp_norm_assessment_display'),
        ssphp_norm_severity_display='properties.metadata.severity'
 
 | rex field=properties.resourceDetails.ResourceType ".*\/(?&lt;resource_type&gt;.*)$"
