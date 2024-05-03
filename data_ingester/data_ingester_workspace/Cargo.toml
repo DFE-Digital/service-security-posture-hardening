@@ -1,7 +1,7 @@
 [workspace]
 resolver = "2"
 members = [
-    "data_ingester_aws",
+    "data_ingester_aws", "data_ingester_axum_entrypoint",
     "data_ingester_azure",
     "data_ingester_azure_rest",
     "data_ingester_functions_entrypoint",

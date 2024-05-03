@@ -1,0 +1,15 @@
+{
+    "version": "2.0",
+    "customHandler": {
+        "description": {
+            "defaultExecutablePath": "data_ingester_axum_entrypoint"
+        }
+    },
+    "logging": {
+        "fileLoggingMode": "always",
+        "console": {
+            "isEnabled": true
+        }
+    },
+    "functionTimeout": "-1"
+}

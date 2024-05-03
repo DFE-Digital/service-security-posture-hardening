@@ -193,7 +193,7 @@ mod test {
     use std::{borrow::Borrow, env};
 
     use anyhow::{Context, Result};
-    use data_ingester_splunk::splunk::{set_ssphp_run, Splunk, ToHecEvents};
+    use data_ingester_splunk::splunk::{Splunk, ToHecEvents};
     use data_ingester_supporting::keyvault::get_keyvault_secrets;
     use futures::future::{BoxFuture, FutureExt};
 

@@ -1,0 +1,27 @@
+[package]
+name = "data_ingester_axum_entrypoint"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow = { version = "1", features=["backtrace"]}
+axum = { version = "0.7"}
+data_ingester_aws = { path = "../data_ingester_aws" }
+data_ingester_azure = { path = "../data_ingester_azure" }
+data_ingester_azure_rest = { path = "../data_ingester_azure_rest" }
+data_ingester_github = { path = "../data_ingester_github" }
+data_ingester_ms_graph = { path = "../data_ingester_ms_graph" }
+data_ingester_ms_powershell = { path = "../data_ingester_ms_powershell" }
+data_ingester_splunk = { path = "../data_ingester_splunk" }
+data_ingester_splunk_search = { path = "../data_ingester_splunk_search" }
+data_ingester_supporting = { path = "../data_ingester_supporting" }
+memory-stats = "1"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tracing = "0"
+tracing-subscriber = { version = "*", features = ["env-filter"] } 
+tokio = { version = "1", features = ["full"] }
+
+
+[lints]
+workspace = true
