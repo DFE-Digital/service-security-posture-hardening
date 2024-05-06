@@ -875,6 +875,33 @@ dependencies = [
 ]
 
 [[package]]
+name = "azure_core"
+version = "0.20.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "34ce3de4b65b1ee2667c81d1fc692949049502a4cf9c38118d811d6d79a7eaef"
+dependencies = [
+ "async-trait",
+ "base64 0.22.1",
+ "bytes",
+ "dyn-clone",
+ "futures",
+ "getrandom 0.2.14",
+ "http-types",
+ "once_cell",
+ "paste",
+ "pin-project",
+ "rand 0.8.5",
+ "reqwest 0.12.4",
+ "rustc_version",
+ "serde",
+ "serde_json",
+ "time",
+ "tracing",
+ "url",
+ "uuid",
+]
+
+[[package]]
 name = "azure_identity"
 version = "0.19.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -882,7 +909,7 @@ checksum = "a6d2060f5b2e1c664026ca4edd561306c473be887c1f7a81f10bf06f9b71c63f"
 dependencies = [
  "async-lock",
  "async-trait",
- "azure_core",
+ "azure_core 0.19.0",
  "futures",
  "log",
  "oauth2",
@@ -900,7 +927,7 @@ version = "0.19.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "829b04fd9c7c5e17a5ab005fb88986cc24f7d3461689bf5e5fbdacff3a170e72"
 dependencies = [
- "azure_core",
+ "azure_core 0.19.0",
  "bytes",
  "futures",
  "log",
@@ -916,7 +943,7 @@ version = "0.19.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ae4e54b88482dc72b8bc9ef1449009b335e10e4eb9197315e68cf0d95b329d05"
 dependencies = [
- "azure_core",
+ "azure_core 0.19.0",
  "bytes",
  "futures",
  "log",
@@ -933,7 +960,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9c32a5dbb8b6f67ed8b8fdc7137a912f3b6547af7f961aedb42bb553ee394f5b"
 dependencies = [
  "async-trait",
- "azure_core",
+ "azure_core 0.19.0",
  "futures",
  "serde",
  "serde_json",
@@ -1331,7 +1358,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-recursion",
- "azure_core",
+ "azure_core 0.20.0",
  "azure_identity",
  "azure_mgmt_authorization",
  "azure_mgmt_subscription",
@@ -3323,10 +3350,12 @@ dependencies = [
  "sync_wrapper 0.1.2",
  "tokio",
  "tokio-rustls 0.25.0",
+ "tokio-util",
  "tower-service",
  "url",
  "wasm-bindgen",
  "wasm-bindgen-futures",
+ "wasm-streams",
  "web-sys",
  "webpki-roots 0.26.1",
  "winreg 0.52.0",
