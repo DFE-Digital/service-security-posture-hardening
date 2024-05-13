@@ -119,7 +119,7 @@ where
         Err(e) => {
             error!("{:?}", &e);
             format!("Error {}: {:?}", name, e)
-        },
+        }
     };
     response.logs.push(result);
     drop(lock);
@@ -212,12 +212,12 @@ async fn post_m365(State(state): State<Arc<AppState>>) -> Json<AzureInvokeRespon
 async fn post_powershell(State(state): State<Arc<AppState>>) -> Json<AzureInvokeResponse> {
     if let Ok(_) = state.powershell_lock.try_lock() {
         if !*state.powershell_installed.lock().await {
-        info!("Powershell: Installing");
+            info!("Powershell: Installing");
 
-        data_ingester_ms_powershell::powershell::install_powershell()
-            .await
-            .expect("Powershell should install cleanly in the Azure Function instance");
-        *state.powershell_installed.lock().await = true;
+            data_ingester_ms_powershell::powershell::install_powershell()
+                .await
+                .expect("Powershell should install cleanly in the Azure Function instance");
+            *state.powershell_installed.lock().await = true;
         }
     }
 

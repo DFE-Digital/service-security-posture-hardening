@@ -4,6 +4,7 @@ pub mod entrypoint;
 use anyhow::{Context, Result};
 use data_ingester_splunk::splunk::ToHecEvents;
 use data_ingester_supporting::keyvault::GitHubApp;
+use graphql_client::{GraphQLQuery, Response};
 use http_body_util::BodyExt;
 use itertools::Itertools;
 use octocrab::models::{InstallationId, Repository};
@@ -19,14 +20,6 @@ pub(crate) struct OctocrabGit {
 }
 
 impl OctocrabGit {
-    /// Build an Octocrab client from a [data_ingester_supporting::keyvault::GitHubPat]
-    // pub fn new_from_pat(github_pat: &GitHubPat) -> Result<Self> {
-    //     let octocrab = Octocrab::builder()
-    //         .personal_token(github_pat.pat.to_string())
-    //         .build()?;
-    //     Ok(Self { client: octocrab })
-    // }
-
     pub async fn for_installation_id(&self, installation_id: InstallationId) -> Result<Self> {
         let (installation_client, _secret) =
             self.client.installation_and_token(installation_id).await?;
@@ -65,12 +58,6 @@ impl OctocrabGit {
     /// Get the settings for the org
     pub(crate) async fn org_settings(&self, org: &str) -> Result<GithubResponses> {
         let uri = format!("/orgs/{org}");
-        self.get_collection(&uri).await
-    }
-
-    /// Get all members for the organization
-    pub(crate) async fn org_members(&self, org: &str) -> Result<GithubResponses> {
-        let uri = format!("/orgs/{org}/members");
         self.get_collection(&uri).await
     }
 
@@ -186,7 +173,140 @@ impl OctocrabGit {
 
         Ok(GithubResponses { inner: responses })
     }
+
+    /// Get an Organizations list of members with their roles(ADMIN/MEMBER) from graph QL
+    ///
+    /// org_name: The name of the Organisation to get the members for
+    pub(crate) async fn graphql_org_members_query(&self, org_name: &str) -> Result<OrgMembers> {
+        let mut variables = org_member_query::Variables {
+            login: org_name.to_string(),
+            members_after: None,
+            members_first: 100,
+        };
+        let mut next_page = true;
+        let mut org_members = OrgMembers::default();
+        while next_page {
+            let query = OrgMemberQuery::build_query(variables.clone());
+            let response: Response<org_member_query::ResponseData> =
+                self.client.graphql(&query).await?;
+            let organisation = &response
+                .data
+                .as_ref()
+                .context("data")?
+                .organization
+                .as_ref()
+                .context("org")?;
+            let members_page_info = &organisation.members_with_role.page_info;
+            next_page = members_page_info.has_next_page;
+            variables
+                .members_after
+                .clone_from(&members_page_info.end_cursor);
+            org_members
+                .extend(response)
+                .context("add response to members")?;
+        }
+        Ok(org_members)
+    }
 }
+
+/// Containing for OrgMembers
+#[derive(Default, Debug)]
+struct OrgMembers(Vec<OrgMember>);
+
+impl OrgMembers {
+    /// Extend the members from a [org_member_query::ResponseData]
+    pub(crate) fn extend(
+        &mut self,
+        response: Response<org_member_query::ResponseData>,
+    ) -> Result<()> {
+        let members: OrgMembers = response.try_into().context("Convert to OrgMembers")?;
+        self.0.extend(members.0);
+        Ok(())
+    }
+}
+
+/// Hec Event descriptor for Org Members
+impl ToHecEvents for &OrgMembers {
+    type Item = OrgMember;
+
+    fn source(&self) -> &str {
+        "graphql:org_members_query"
+    }
+
+    fn sourcetype(&self) -> &str {
+        "github"
+    }
+
+    fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
+        Box::new(self.0.iter())
+    }
+}
+
+/// Org member representation sent to Splunk
+#[derive(Serialize, Default, Debug)]
+struct OrgMember {
+    organisation: String,
+    login: String,
+    email: String,
+    role: org_member_query::OrganizationMemberRole,
+}
+
+/// Convert a [org_member_query::ResponseData] to [OrgMembers]
+impl TryFrom<Response<org_member_query::ResponseData>> for OrgMembers {
+    type Error = anyhow::Error;
+    fn try_from(value: Response<org_member_query::ResponseData>) -> Result<Self> {
+        let organization = value
+            .data
+            .and_then(|data| data.organization)
+            .context("OrgQueryOrganization should be present")?;
+        let organization_login = organization.login.as_str();
+        let members_with_roles = organization
+            .members_with_role
+            .edges
+            .context("Expect member_with_role edges to be present")?;
+
+        let mut org_members = Vec::with_capacity(members_with_roles.len());
+
+        for member_with_role in members_with_roles.iter().flatten() {
+            let role = member_with_role
+                .role
+                .as_ref()
+                .context("Role to be present")?;
+            let member = member_with_role
+                .node
+                .as_ref()
+                .context("Expect member to be present")?;
+            let org_member = OrgMember {
+                organisation: organization_login.to_owned(),
+                login: member.login.to_owned(),
+                email: member.email.to_owned(),
+                role: role.clone(),
+            };
+            org_members.push(org_member);
+        }
+        Ok(OrgMembers(org_members))
+    }
+}
+
+impl Default for org_member_query::OrganizationMemberRole {
+    fn default() -> Self {
+        Self::MEMBER
+    }
+}
+
+/// Autogenerated structs from 'src/org_member_query.graphql'
+#[derive(GraphQLQuery)]
+#[graphql(
+    schema_path = "src/schema.docs.graphql",
+    query_path = "src/org_member_query.graphql",
+    response_derives = "Clone, Debug, Default",
+    variables_derives = "Clone, Debug"
+)]
+pub struct OrgMemberQuery;
+
+/// Custom DateTime struct for the GitHub API
+#[derive(Clone, Default, Debug, Serialize, Deserialize)]
+struct DateTime(String);
 
 #[cfg(test)]
 mod test {
@@ -393,6 +513,15 @@ mod test {
             .await?;
         Ok(())
     }
+
+    #[tokio::test]
+    async fn test_github_graphql() -> Result<()> {
+        let client = TestClient::new().await;
+        let result = client.client.graphql_org_members_query("403ind").await?;
+        dbg!(result);
+        assert!(false);
+        Ok(())
+    }
 }
 
 #[derive(Serialize, Debug, Clone)]
@@ -462,6 +591,19 @@ impl ToHecEvents for &GithubResponses {
             .collect())
     }
 }
+
+// impl GithubResponses {
+//     fn to_vec<T>(&self) -> Vec<T> {
+//         self.inner.into_iter().filter_map(|response| {
+//             match response.response {
+//                 SingleOrVec::Vec(vec) => Some(vec),
+//                 SingleOrVec::Single(_) => None,
+//             }
+//         }).flat_map(|vec| vec.into_iter())
+//             .filter_map(|value| serde_json::from_value::(value).ok())
+//             .collect::<Vec<T>>()
+//     }
+// }
 
 /// An  API responses from Github
 #[derive(Serialize, Debug)]

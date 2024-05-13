@@ -128,8 +128,12 @@ pub(crate) async fn start_server(tx: Sender<()>) -> Result<()> {
     info!("Splunk Client created");
 
     set_ssphp_run()?;
-    start_splunk_tracing(splunk.clone().into(), "data_ingester_rust", "data_ingester_rust")
-        .context("Start Splunk Tracing")?;
+    start_splunk_tracing(
+        splunk.clone().into(),
+        "data_ingester_rust",
+        "data_ingester_rust",
+    )
+    .context("Start Splunk Tracing")?;
 
     drop(tracing_guard);
     info!("Splunk tracing started");

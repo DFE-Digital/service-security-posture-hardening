@@ -21,7 +21,7 @@ futures = "*"
 itertools = "*"
 regex = "*"
 url = "*"
-
+graphql_client = "*"
 [lints]
 workspace = true
 

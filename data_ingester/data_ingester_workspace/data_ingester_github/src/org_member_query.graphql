@@ -1,0 +1,23 @@
+query OrgMemberQuery($login: String!, $members_after: String, $members_first: Int!){
+  organization(login: $login) {
+    id
+    login
+    isVerified
+    location
+    membersCanForkPrivateRepositories
+    # organizationBillingEmail
+    membersWithRole(first: $members_first, after: $members_after) {
+      edges {
+        role
+        node {
+          login
+          email
+        }
+      }
+      pageInfo {
+        endCursor
+        hasNextPage
+      }
+    }
+  }
+}
