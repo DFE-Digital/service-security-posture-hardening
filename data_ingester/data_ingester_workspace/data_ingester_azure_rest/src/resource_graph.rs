@@ -309,11 +309,11 @@ pub(crate) struct ResourceGraphData {
 impl ToHecEvents for &ResourceGraphData {
     type Item = Value;
     fn source(&self) -> &str {
-        "azure_resource_graph_TBD"
+        "azure_resource_graph"
     }
 
     fn sourcetype(&self) -> &str {
-        "azure_resource_graph_TBD"
+        "azure_resource_graph"
     }
     fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
         Box::new(self.inner.iter())
