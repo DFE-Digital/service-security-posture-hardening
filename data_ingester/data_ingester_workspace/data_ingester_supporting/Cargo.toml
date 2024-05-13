@@ -8,7 +8,7 @@ edition = "2021"
 [dependencies]
 anyhow = { version = "*", features=["backtrace"]}
 azure_identity = { version = "0.19", default-features = false, features = ["enable_reqwest_rustls", "client_certificate"]}
-azure_security_keyvault = { version = "0.19", default-features = false,  features = ["enable_reqwest_rustls"]}
+azure_security_keyvault = { version = "0.20", default-features = false,  features = ["enable_reqwest_rustls"]}
 base64 = "0.22"
 futures = "*"
 tokio = { version = "1.25.0", features = ["full"] }
