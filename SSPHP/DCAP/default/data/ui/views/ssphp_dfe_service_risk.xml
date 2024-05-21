@@ -18,7 +18,7 @@
   
   <search id="bs_1">
     <query>
-| loadjob savedsearch="nobody:SSPHP_metrics:ssphp_show_defender_assessments_with_static_data"
+| loadjob savedsearch="nobody:$tkn_current_app$:ssphp_show_defender_assessments_with_static_data"
 | search properties.status.code=$tkn_show_status|s$
 | table *
     </query>
@@ -65,6 +65,24 @@
   </fieldset>
 
 
+  <row depends="$never_show$">
+    <panel>
+      <table>
+        <search>
+          <query>
+| makeresults
+| eval app=$env:app|s$
+| table app
+          </query>
+          <done>
+            <set token="tkn_current_app">$result.app$</set>
+          </done>
+        </search>
+      </table>
+    </panel>  
+  </row>
+  
+  
 
 <!-- ################### Set Colour and other Tokens ################### --> 
 
