@@ -271,8 +271,8 @@ class SplunkAppInspect:
     is_flag=True,
 )
 @click.option(
-    "--dev",
-    help="Build a DEV package",
+    "--prod",
+    help="Build a PRODUCTION package",
     type=bool,
     required=False,
     default=False,
@@ -293,7 +293,7 @@ class SplunkAppInspect:
     required=False,
     default=None,
 )
-def main(app_package, splunkuser, splunkpassword, justvalidate, outfile, dev, nodeploy):
+def main(app_package, splunkuser, splunkpassword, justvalidate, outfile, prod, nodeploy):
     # All the code relating to Building the Package
     sai = SplunkAppInspect(splunkuser, splunkpassword, packagetargz=outfile)
 
@@ -301,10 +301,10 @@ def main(app_package, splunkuser, splunkpassword, justvalidate, outfile, dev, no
         report = sai.validate_package(app_package)
     else:
         sai.increment_build_numbers(app_package)
-        if dev:
-            suffix = "_DEV"
-        else:
+        if prod:
             suffix = ""
+        else:
+            suffix = "_DEV"
 
         app_package = sai.copy_app(app_package, suffix)
         sai.concat_conf_files(app_package)
