@@ -34,7 +34,7 @@
         <title>SSPHP M365 CONTROL STATUS</title>
         <table>
           <search>
-            <query>`ssphp_metrics_index` earliest=-4h latest=now ssphp.use_case.id="m365*" ssphp.use_case.id!="*_000"
+            <query>`ssphp_summary_index` earliest=-4h latest=now ssphp.use_case.id="m365*" ssphp.use_case.id!="*_000"
   | eval SSPHP_RUN=strftime(SSPHP_RUN,"%Y-%m-%d %H:%M:%S")." - ".'ssphp.score.score'
   | stats values(SSPHP_RUN) as SSPHP_RUN by ssphp.use_case.id</query>
             <earliest>0</earliest>
@@ -54,7 +54,7 @@
         <title>SSPHP M365 ROLLUP STATUS</title>
         <table>
           <search>
-            <query>`ssphp_metrics_index` earliest=-4h latest=now ssphp.use_case.id="m365_*_000"
+            <query>`ssphp_summary_index` earliest=-4h latest=now ssphp.use_case.id="m365_*_000"
   | eval SSPHP_RUN=strftime(SSPHP_RUN,"%Y-%m-%d %H:%M:%S")." - ".'ssphp.score.score'
   | stats values(SSPHP_RUN) as SSPHP_RUN by ssphp.use_case.id</query>
             <earliest>0</earliest>
