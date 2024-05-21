@@ -1,4 +1,3 @@
-* @casetone @akinnane
-/data-ingester @akinnane
-/SSPHP* @casetone
-/*.py @casetone @akinnane
+* @dfe-digital/security-engineering
+/data-ingester @akinnane @pritchyspritch
+/SSPHP* @casetone @pritchyspritch
