@@ -33,6 +33,7 @@ index="ssphp_metrics_summary" earliest=-2d@d latest=now
     </input>
     
     
+    
     <input type="radio" token="tkn_view" searchWhenChanged="true">
       <label>View</label>
       <choice value="a">Absolute</choice>
