@@ -20,7 +20,7 @@
       <fieldForValue>ssphp.service.id</fieldForValue>
       <search>
         <query>
-index="ssphp_metrics_summary" earliest=-2d@d latest=now
+`ssphp_summary_index` earliest=-2d@d latest=now
 | fields ssphp.service.id, ssphp.service.name
 | dedup ssphp.service.id
 | sort 0 ssphp.service.id
@@ -60,11 +60,11 @@ index="ssphp_metrics_summary" earliest=-2d@d latest=now
       <table>
         <search id="bs_1">
           <query>
-index="ssphp_metrics_summary" earliest=-2d@d latest=now
+`ssphp_summary_index` earliest=-2d@d latest=now
        ssphp.service.id=$tkn__service|s$
     ```ssphp.score.ciso_priority=1```
 
-    [| search index="ssphp_metrics_summary" earliest=-2d@d latest=now 
+    [| search `ssphp_summary_index` earliest=-2d@d latest=now 
            ssphp.service.id=$tkn__service|s$
         ```ssphp.score.ciso_priority=1```
         

@@ -111,8 +111,8 @@
       <table>
         <search>
           <query>
-index="ssphp_metrics_summary" ssphp.use_case.id=$tkn_use_case_id|s$ ssphp.source.service=$tkn__service|s$
-    [| search index="ssphp_metrics_summary" ssphp.use_case.id=$tkn_use_case_id|s$ ssphp.source.service=$tkn__service|s$
+`ssphp_summary_index` ssphp.use_case.id=$tkn_use_case_id|s$ ssphp.source.service=$tkn__service|s$
+    [| search `ssphp_summary_index` ssphp.use_case.id=$tkn_use_case_id|s$ ssphp.source.service=$tkn__service|s$
       | stats max(SSPHP_RUN) as SSPHP_RUN
       | return SSPHP_RUN]
       

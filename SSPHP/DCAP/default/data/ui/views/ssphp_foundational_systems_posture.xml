@@ -281,11 +281,11 @@
       <table>
         <search>
           <query>
-index="ssphp_metrics_summary" earliest=-2d@d latest=now
+`ssphp_summary_index` earliest=-2d@d latest=now
       ssphp.source.service="s194"
       ssphp.score.ciso_priority=1
 
-      [| search index="ssphp_metrics_summary" earliest=-2d@d latest=now 
+      [| search `ssphp_summary_index` earliest=-2d@d latest=now 
                 ssphp.source.service="s194"
                 ssphp.score.ciso_priority=1
           
