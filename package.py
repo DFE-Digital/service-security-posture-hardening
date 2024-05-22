@@ -210,7 +210,7 @@ class SplunkAppInspect:
         file_list = file_list + glob.glob(f"{app_directory}/**/*.xml", recursive=True)
 
         for each in file_list:
-            print("Replacing tripple quotes: {each}")
+            print(f"Replacing tripple quotes: {each}")
             with open(each, "r", encoding="utf8") as source:
                 contents = source.readlines()
 
