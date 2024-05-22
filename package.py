@@ -272,7 +272,7 @@ def render_templates(source, target):
 
     for template in templates:
         print(template)
-        with open(target + "/" + template, "w") as f:
+        with open(target + "/" + template, "w", encoding="utf8") as f:
             template_ = env.get_template(template)
             rendered = template_.render(REPLACEMENT_DICT)
             f.write(rendered)
