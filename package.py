@@ -265,7 +265,6 @@ def git_hash():
 def render_templates(source, target):
     env = Environment(
         loader=FileSystemLoader(source),
-        autoescape=select_autoescape()
         )
     templates = [ template for template in env.list_templates()
                   if template.endswith(".xml") or template.endswith(".conf") or template.endswith(".json") ]
