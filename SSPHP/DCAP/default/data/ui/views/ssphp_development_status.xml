@@ -1,0 +1,90 @@
+<form version="1.1" theme="dark">
+    <label>Development Status</label>
+    <description>v1.0.0</description>
+    <init>
+      <set token="tkn_selected_system">m365</set>
+      <set token="tkn_prev_start_time">1706572800</set>
+    </init>
+    <fieldset submitButton="false">
+      <input type="text" token="tkn_selected_system" searchWhenChanged="true">
+        <label>Foundational Service</label>
+      </input>
+      <input type="text" token="tkn_prev_start_time" searchWhenChanged="true">
+        <label>Previous Start Time</label>
+      </input>
+      <input type="radio" token="tkn_show">
+        <label>Show</label>
+        <choice value="">All</choice>
+        <choice value="| where NOW_ssphp.score.ciso_priority!=PREV_ssphp.score.ciso_priority OR NOW_ssphp.score.color!=PREV_ssphp.score.color OR NOW_ssphp.score.denominator!=PREV_ssphp.score.denominator OR NOW_ssphp.score.numerator!=PREV_ssphp.score.numerator OR NOW_ssphp.score.score!=PREV_ssphp.score.score">Just Changed</choice>
+      </input>
+    </fieldset>
+    
+    <row>
+      <panel>
+        <table>
+          <search>
+            <query>
+  | inputlookup cis_benchmark_v8_doc_$tkn_selected_system$.csv
+  
+  | fields ssphp.use_case.id, ssphp.use_case.foundational_system, ssphp.use_case.title, ssphp.cis_benchmark.controls.ig1, ssphp.cis_benchmark.controls.ig2, ssphp.cis_benchmark.controls.ig3, ssphp.cis_benchmark.control.level, ssphp.cis_benchmark.control.title
+  
+  | join type=outer ssphp.use_case.id
+      [| search `ssphp_summary_index`
+        [| search `ssphp_summary_index` ssphp.use_case.id!="*_000"
+          | stats max(SSPHP_RUN) as SSPHP_RUN by ssphp.use_case.id
+          | eval search_text="(\"ssphp.use_case.id\"=\"".'ssphp.use_case.id'."\" AND SSPHP_RUN=\"".SSPHP_RUN."\")"
+          | stats values(search_text) as search_text
+          | eval search_text="(".mvjoin(search_text," OR ").")"
+          | return $$$$search_text]
+      | eval last_run=strftime(SSPHP_RUN,"%Y-%m-%d %H:%M:%S")
+      | table ssphp.use_case.id, ssphp.score.score, ssphp.score.denominator, ssphp.score.numerator, ssphp.score.color, ssphp.score.ciso_priority, last_run
+      | rename * as NOW_*, NOW_ssphp.use_case.id as ssphp.use_case.id]
+      
+  | join type=outer ssphp.use_case.id
+      [| search `ssphp_summary_index`
+        [| search `ssphp_summary_index` ssphp.use_case.id!="*_000" SSPHP_RUN&lt;$tkn_prev_start_time$
+          | stats max(SSPHP_RUN) as SSPHP_RUN by ssphp.use_case.id
+          | eval search_text="(\"ssphp.use_case.id\"=\"".'ssphp.use_case.id'."\" AND SSPHP_RUN=\"".SSPHP_RUN."\")"
+          | stats values(search_text) as search_text
+          | eval search_text="(".mvjoin(search_text," OR ").")"
+          | return $$$$search_text]
+      | eval last_run=strftime(SSPHP_RUN,"%Y-%m-%d %H:%M:%S")
+      | table ssphp.use_case.id, ssphp.score.score, ssphp.score.denominator, ssphp.score.numerator, ssphp.score.color, ssphp.score.ciso_priority, last_run
+      | rename * as PREV_*, PREV_ssphp.use_case.id as ssphp.use_case.id]
+  
+  | join type=outer ssphp.use_case.id
+      [| rest /servicesNS/-/-/saved/searches splunk_server=local
+       | search title="ssphp_use_case*"
+       | eval ssphp.use_case.id=replace(title,"ssphp_use_case_",""),
+              use_case_exists="TRUE",
+              use_case_converted=if(match('search',"^[\s\S]*##################### end dashboard query #####################[\s\S]*"),"TRUE","FALSE")
+       | table title, ssphp.use_case.id, use_case_exists, use_case_converted```, search```]
+  | fillnull value="FALSE" use_case_exists
+  
+  ``` sort the lines properly ```
+  | rex field=ssphp.use_case.id "^$tkn_selected_system$_00[0-9]{1}_cis_(?&lt;n1&gt;[^-]*)-(?&lt;n2&gt;[^-]*)"
+  | rex field=ssphp.use_case.id "^$tkn_selected_system$_00[0-9]{1}_cis_[^-]*-[^-]*-(?&lt;n3&gt;.*)$$$$"
+  | fillnull value=0 n3
+  | eval n2="00".n2, n2=substr(n2,len(n2)-1,2),
+          n3="00".n3, n3=substr(n3,len(n3)-1,2), 
+          sort_field='n1'.'n2'.'n3'
+  | sort 0 sort_field
+  | fields - sort_field, n1, n2, n3
+  
+  $tkn_show$
+            </query>
+            <earliest>0</earliest>
+            <latest>now</latest>
+            <sampleRatio>1</sampleRatio>
+          </search>
+          <option name="count">10</option>
+          <option name="dataOverlayMode">none</option>
+          <option name="drilldown">none</option>
+          <option name="percentagesRow">false</option>
+          <option name="rowNumbers">false</option>
+          <option name="totalsRow">false</option>
+          <option name="wrap">true</option>
+        </table>
+      </panel>
+    </row>
+  </form>

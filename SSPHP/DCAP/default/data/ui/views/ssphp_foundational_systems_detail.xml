@@ -1,0 +1,553 @@
+<dashboard theme="dark" version="1.1" script="js/addtags.js, js/table_cell_backcolor_multivalue.js">
+
+  <label>Security Posture Continuous Assurance : Control Detail Dashboard</label>
+  <description>v3.0.4</description>
+  
+  <init>
+    <unset token="tkn_show_dashboard"></unset>
+
+    <set token="tkn_m365_2_cis_doc_link">https://educationgovuk-my.sharepoint.com/:b:/r/personal/ian_pearl_education_gov_uk/Documents/CIS%20BENCHMARK%20DOCS/CIS_Microsoft_365_Foundations_Benchmark_v2.0.0.pdf?csf=1&amp;web=1&amp;e=XeRhCK</set>
+    <set token="tkn_m365_2_cis_doc_name">CIS_Microsoft_365_Foundations_Benchmark_v2.0.0.pdf</set>
+    
+    <set token="tkn_m365_3_cis_doc_link">https://educationgovuk-my.sharepoint.com/:b:/r/personal/ian_pearl_education_gov_uk/Documents/CIS%20BENCHMARK%20DOCS/CIS_Microsoft_365_Foundations_Benchmark_v3.0.0.pdf?csf=1&amp;web=1&amp;e=Qi9mSc</set>    
+    <set token="tkn_m365_3_cis_doc_name">CIS_Microsoft_365_Foundations_Benchmark_v3.0.0.pdf</set>
+    
+    <set token="tkn_azure_2_cis_doc_link">https://educationgovuk-my.sharepoint.com/:b:/r/personal/ian_pearl_education_gov_uk/Documents/CIS%20BENCHMARK%20DOCS/CIS_Microsoft_Azure_Foundations_Benchmark_v2.0.0.pdf?csf=1&amp;web=1&amp;e=U6Ewq4</set>    
+    <set token="tkn_azure_2_cis_doc_name">CIS_Microsoft_Azure_Foundations_Benchmark_v2.0.0.pdf</set>
+
+    <set token="tkn_aws_2_cis_doc_link">https://educationgovuk-my.sharepoint.com/:b:/r/personal/ian_pearl_education_gov_uk/Documents/CIS%20BENCHMARK%20DOCS/CIS_Amazon_Web_Services_Foundations_Benchmark_v2.0.0.pdf?csf=1&amp;web=1&amp;e=fwOaIK</set>
+    <set token="tkn_aws_2_cis_doc_name">CIS_Amazon_Web_Services_Foundations_Benchmark_v2.0.0.pdf</set>
+  </init>
+
+  <row depends="$never_show$">
+    <html>
+      <style>
+        .header_r0{
+            height: auto; 
+            margin: 0px auto 0px auto;
+            font-size: 1.7em;
+            font-family: Arial, Helvetica, sans-serif;
+            color: #0000FF; 
+        }
+        .header_r1{
+            height: auto; 
+            margin: 0px auto 0px auto;
+            font-size: 1.1em;
+            font-family: Arial, Helvetica, sans-serif;
+            color: #AAAAAA; 
+        }
+        .header_r2{
+            height: auto; 
+            margin: 0px auto 0px auto;
+            font-size: 1em;
+            font-family: Arial, Helvetica, sans-serif;
+            color: #FFFFFF; 
+            display: block;
+        }
+        .dashboard-cell.dashboard-layout-panel.last-visible div:empty {
+            background: #171d21;
+        }
+      </style>
+    </html>
+
+    <html>
+      <style>
+        .green{
+          color:green !important;
+        }
+        .blue{
+          color:cyan !important;
+        }
+        .red{
+          color:red !important;
+        }
+        .orange{
+          color:orange !important;
+        }
+        .yellow{
+          color:yellow !important;
+        }
+        .lightgrey{
+          color:gray !important;
+        }
+        .lightblue{
+          color:#485959 !important;
+        }
+      </style>
+    </html>
+  </row>
+
+  <row depends="$never_show$">
+    <panel>
+      <table>
+        <search>
+          <query>
+  | makeresults
+
+  `ssphp_metrics_eval_field_colors`
+
+  | table tkn_*
+          </query>
+          <done>
+            <set token="tkn_colour_splunk_grey">$result.tkn_colour_splunk_grey$</set>
+            <set token="tkn_colour_red">$result.tkn_colour_red$</set>
+            <set token="tkn_colour_orange">$result.tkn_colour_orange$</set>
+            <set token="tkn_colour_green">$result.tkn_colour_green$</set>
+            <set token="tkn_colour_blue">$result.tkn_colour_blue$</set>
+          </done>
+        </search>
+      </table>
+    </panel>
+  </row>
+
+
+
+<!-- ########################################################################## DATA Row ########################################################################## --> 
+  <row depends="$never_show$">
+    <panel>
+      <table>
+        <search>
+          <query>
+`ssphp_summary_index` ssphp.use_case.id=$tkn_use_case_id$
+    [| search `ssphp_summary_index` ssphp.use_case.id=$tkn_use_case_id$
+      | stats max(SSPHP_RUN) as SSPHP_RUN
+      | return SSPHP_RUN]
+
+| rex field=ssphp.use_case.title "(?&lt;fs&gt;[^\s]*)\s*(?&lt;notfs&gt;.*)$"
+
+| rex field=ssphp.cis_benchmark.controls.v8 "^(?&lt;safeguard&gt;[^\s]*)\s.*"
+
+| lookup ssphp_cis_critical_security_controls_v8_all.csv safeguard
+
+``` ===== normalise title, description, rationale, impact from different control types into single fields ===== ```
+| eval ssphp_control_title=coalesce('ssphp.cis_benchmark.control.title','ssphp.dfe_benchmark.control.title',"-"),
+       ssphp_control_description=coalesce('ssphp.cis_benchmark.control.description','ssphp.dfe_benchmark.control.description',"-"),
+       ssphp_control_rationale=coalesce('ssphp.cis_benchmark.control.rationale','ssphp.dfe_benchmark.control.rationale',"-"),
+       ssphp_control_impact=coalesce('ssphp.cis_benchmark.control.impact','ssphp.dfe_benchmark.control.impact',"-")
+
+| fillnull value="-" ssphp.microsoft.description, 
+                    ssphp.microsoft.implementation_status,
+                    ssphp.cis_benchmark.document.name,
+                    ssphp.cis_benchmark.document.version,
+                    ssphp.cis_benchmark.version,
+                    ssphp.cis_benchmark.controls.v8,
+                    ssphp.cis_benchmark.control.profile_applicability,
+                    ssphp.cis_benchmark.document.v3.number,
+                    ssphp.risk.expectancy,
+                    ssphp.risk.impact,
+                    control, safeguard, asset_type, title, description
+
+| eval ssphp_control_title=if('ssphp_control_title'="","-",'ssphp_control_title'),
+       ssphp_control_description=if('ssphp_control_description'="","-",'ssphp_control_description'),
+       ssphp_control_rationale=if('ssphp_control_rationale'="","-",'ssphp_control_rationale'),
+       ssphp_control_impact=if('ssphp_control_impact'="","-",'ssphp_control_impact')
+       
+| eval last_run=strftime(SSPHP_RUN,"%Y-%m-%d %H:%M:%S"),
+       score_color=case('ssphp.score.color'="red",$tkn_colour_red|s$,
+                        'ssphp.score.color'="green",$tkn_colour_green|s$,
+                        'ssphp.score.color'="orange",$tkn_colour_orange|s$,
+                        1==1,$tkn_colour_blue|s$),
+       compliance_status=if('ssphp.score.score'=100,"Compliant","Non-Compliant"),
+       nl="
+",
+       ssphp.score.scoring_narrative=replace('ssphp.score.scoring_narrative',"~~",'nl')
+
+| eval ssphp.score.ciso_priority=case('ssphp.score.ciso_priority'=1,"DfE Mandated",
+       'ssphp.score.ciso_priority'=2,"Recommended",
+       1==1,"Desirable")
+       
+| eval doc_link=case('fs'="M365",$tkn_m365_2_cis_doc_link|s$,
+                     'fs'="DNS",$tkn_aws_2_cis_doc_link|s$,
+                     'fs'="AZURE",$tkn_azure_2_cis_doc_link|s$,
+                     1==1,"Document not Available"),
+       doc_name=case('fs'="M365",$tkn_m365_2_cis_doc_name|s$,
+                     'fs'="DNS",$tkn_aws_2_cis_doc_name|s$,
+                     'fs'="AZURE",$tkn_azure_2_cis_doc_name|s$,
+                     1==1,"Document not Available")
+
+| table ssphp*, fs, notfs, control, safeguard, asset_type, title, description, score_color, compliance_status, last_run, doc_link, doc_name
+          </query>
+          <earliest>-2d@d</earliest>
+          <latest>now</latest>
+          <sampleRatio>1</sampleRatio>
+          <done>
+            <set token="tkn_fs">$result.fs$</set>
+            <set token="tkn_notfs">$result.notfs$</set>
+            <set token="tkn_score">$result.ssphp.score.score$</set>
+            <set token="tkn_ciso_priority">$result.ssphp.score.ciso_priority$</set>
+            <set token="tkn_color">$result.ssphp.score.color$</set>
+            <set token="tkn_display_title">$result.ssphp.use_case.title$</set>
+            <set token="tkn_display_short_description">$result.ssphp.use_case.short_description$</set>
+            <set token="tkn_display_description">$result.ssphp.use_case.description$</set>
+            <set token="tkn_numerator">$result.ssphp.score.numerator$</set>
+            <set token="tkn_denominator">$result.ssphp.score.denominator$</set>
+            <set token="tkn_scoring_narrative">$result.ssphp.score.scoring_narrative$</set>
+            <set token="tkn_red">$result.ssphp.score.threshold.red$</set>
+            <set token="tkn_orange">$result.ssphp.score.threshold.orange$</set>
+            <set token="tkn_green">$result.ssphp.score.threshold.green$</set>
+            <set token="tkn_ms_description">$result.ssphp.microsoft.desciption$</set>
+            <set token="tkn_ms_implementation_status">$result.ssphp.microsoft.implementation_status$</set>
+
+            <set token="tkn_control_title">$result.ssphp.benchmark.control.title$</set>
+            <set token="tkn_control_description">$result.ssphp.benchmark.control.description$</set>
+            <set token="tkn_control_rationale">$result.ssphp.benchmark.control.rationale$</set>
+            <set token="tkn_control_impact">$result.ssphp.benchmark.control.impact$</set>
+            <set token="tkn_cis_profile">$result.ssphp.benchmark.control.profile_applicability$</set>
+            
+            <set token="tkn_cis_benchmark">$result.ssphp.cis_benchmark.document.name$ : $result.ssphp.cis_benchmark.document.version$ $result.ssphp.cis_benchmark.version$</set>
+            <set token="tkn_cis_controls">$result.ssphp.cis_benchmark.controls.v8$</set>
+            <set token="tkn_cis_v3_control">$result.ssphp.cis_benchmark.document.v3.number$</set>
+            
+            <set token="tkn_cis_ig1">$result.ssphp.use_case.framework.ig_1$</set>
+            <set token="tkn_cis_ig2">$result.ssphp.use_case.framework.ig_2$</set>
+            <set token="tkn_cis_ig3">$result.ssphp.use_case.framework.ig_3$</set>
+
+            <set token="tkn_safeguard">$result.safeguard$</set>
+            <set token="tkn_control">$result.control$</set>
+            <set token="tkn_asset_type">$result.asset_type$</set>
+            <set token="tkn_title">$result.title$</set>
+            <set token="tkn_description">$result.description$</set>
+
+            <set token="tkn_risk_expectancy">$result.ssphp.risk.expectancy$</set>
+            <set token="tkn_risk_impact">$result.ssphp.risk.impact$</set>
+            
+            <set token="tkn_score_color">$result.score_color$</set>
+            <set token="tkn_compliance_status">$result.compliance_status$</set>
+            <set token="tkn_last_run">$result.last_run$</set>
+
+            <set token="tkn_doc_link">$result.doc_link$</set>
+            <set token="tkn_doc_name">$result.doc_name$</set>
+            
+            <set token="tkn_show_dashboard">show</set>
+          </done>
+        </search>
+      </table>
+    </panel>
+  </row>
+
+
+
+<!-- ########################################################################## TOP Row ########################################################################## --> 
+
+  <row depends="$tkn_show_dashboard$">
+    <panel depends="$tkn_show_cis_panels$">
+      <html>
+        <span class="header_r0" style="color:	cyan">$tkn_fs$ $tkn_notfs$</span>
+        <br></br>
+        <span class="header_r1" style="color:	darkcyan">CIS Title</span>
+        <span class="header_r2">$tkn_control_title$</span>
+        <br></br>
+        <span class="header_r1" style="color:	darkcyan">CIS Profile Applicability</span>
+        <span class="header_r2">$tkn_cis_profile$</span>
+        <br></br>
+      </html>
+    </panel>
+    
+    <panel depends="$tkn_show_dfe_panels$">
+      <html>
+        <span class="header_r0" style="color:	cyan">$tkn_fs$ $tkn_notfs$</span>
+        <br></br>
+        <span class="header_r1" style="color:	yellow">DfE Benchmark</span>
+        <br></br>
+        <span class="header_r1" style="color:	darkcyan">Title</span>
+        <span class="header_r2">$tkn_control_title$</span>
+        <br></br>
+        <span class="header_r1" style="color:	darkcyan">Description</span>
+        <span class="header_r2">$tkn_control_description$</span>
+        <br></br>
+        <span class="header_r1" style="color:	darkcyan">Rationale</span>
+        <span class="header_r2">$tkn_control_rationale$</span>
+        <br></br>
+        <span class="header_r1" style="color:	darkcyan">Impact</span>
+        <span class="header_r2">$tkn_control_impact$</span>
+        <br></br>
+      </html>
+    </panel>    
+    
+    
+    
+    
+
+    <panel>
+      <html>
+        <span class="header_r1" style="color:	darkcyan">Score</span>
+        <br></br>
+        <div id="div_header" style="background:$tkn_score_color$;color:white;font-weight:bold;font-size:800%;text-align:center;padding:50">$tkn_score$</div> 
+        <br></br>
+      </html>
+    </panel>
+
+    <panel>
+      <html>
+        <span class="header_r1" style="color:	darkcyan">Tests in this Control</span>
+        <span class="header_r2">$tkn_denominator$</span>
+        <br></br>
+        <span class="header_r1" style="color:	darkcyan">Tests Failed in this Control</span>
+        <span class="header_r2">$tkn_numerator$</span>
+        <br></br>
+        <span class="header_r1" style="color:	darkcyan">Control Type</span>
+        <span class="header_r2">$tkn_ciso_priority$</span>
+        <br></br>
+        <span class="header_r1" style="color:	darkcyan">Compliance Status</span>
+        <span class="header_r2" style="color:$tkn_score_color$">$tkn_compliance_status$</span>   
+        <br></br>
+      </html>
+    </panel>
+
+    <panel>
+      <html>
+        <span class="header_r1" style="color:	darkcyan">Thresholds</span>
+        <span class="header_r2">Red : $tkn_red$</span>
+        <span class="header_r2">Orange : $tkn_orange$</span>
+        <span class="header_r2">Green : $tkn_green$</span>
+        <br></br>
+        <span class="header_r1" style="color:	darkcyan">Score Weighting</span>
+        <span class="header_r2">Expectancy : $tkn_risk_expectancy$</span>
+        <span class="header_r2">Impact : $tkn_risk_impact$</span>
+        <br></br>
+        <span class="header_r1" style="color:	darkcyan">Last Evaluated</span>
+        <span class="header_r2">$tkn_last_run$</span>
+      </html>
+    </panel>
+  </row>
+
+
+
+<!-- ################### Should this dashboard be showing the DfE Control Panels or the CIS Control Panels? ################### --> 
+  <row depends="$never_show$">
+    <panel>
+      <table>
+        <search>
+          <query>
+  | makeresults
+  | eval ucid=$tkn_use_case_id|s$,
+         show_dfe=if(match(lower('ucid'),"dfe"),"true","false"),
+         show_cis=if(match(lower('ucid'),"cis"),"true","false")
+  | table show_dfe, show_cis
+          </query>
+          <done>
+          <condition match="'result.show_dfe'==&quot;true&quot;">
+            <set token="tkn_show_dfe_panels">true</set>
+            <unset token="tkn_show_cis_panels"></unset>
+          </condition>
+          <condition match="'result.show_cis'==&quot;true&quot;">
+            <set token="tkn_show_cis_panels">true</set>
+            <unset token="tkn_show_dfe_panels"></unset>
+          </condition>
+          </done>
+        </search>
+      </table>
+    </panel>
+  </row>
+
+
+<!-- ########################################################################## CIS Controls Row ########################################################################## --> 
+  <row depends="$tkn_show_dashboard$,$tkn_show_cis_panels$">
+    <panel id="panel1">
+      <html>
+        <style>
+          #panel1{
+            width:50% !important;
+          }
+        </style>
+        <span class="header_r1" style="color:	yellow">CIS Foundations Benchmark</span>
+        <br></br>
+        <span class="header_r1" style="color:	darkcyan">CIS Description</span>
+        <span class="header_r2">$tkn_control_description$</span>
+        <br></br>
+        <span class="header_r1" style="color:	darkcyan">CIS Rationale</span>
+        <span class="header_r2">$tkn_control_rationale$</span>
+        <br></br>
+        <span class="header_r1" style="color:	darkcyan">CIS Impact</span>
+        <span class="header_r2">$tkn_control_impact$</span>
+        <br></br>
+        <a href="$tkn_doc_link$" target="blank">$tkn_doc_name$</a>
+      </html>
+    </panel>
+
+
+    <panel id="panel2">
+      <html>
+        <style>
+          #panel2{
+            width:25% !important;
+          }
+        </style>
+        <span class="header_r1" style="color:	darkcyan">IG1 Controls</span>
+        <span class="header_r2">$tkn_cis_ig1$</span>
+        <br></br>
+        <span class="header_r1" style="color:	darkcyan">IG2 Controls</span>
+        <span class="header_r2">$tkn_cis_ig2$</span>
+        <br></br>
+        <span class="header_r1" style="color:	darkcyan">IG3 Controls</span>
+        <span class="header_r2">$tkn_cis_ig3$</span>
+        <br></br>
+        <span class="header_r1" style="color:	darkcyan">CIS M365 Benchmark Version 3 Control</span>
+        <span class="header_r2">$tkn_cis_v3_control$</span>
+      </html>
+    </panel>
+
+
+    <panel id="panel3">
+      <html>
+        <style>
+          #panel3{
+            width:25% !important;
+          }
+        </style>
+        <span class="header_r1" style="color:	yellow">CIS Navigator Critical Security Controls</span>
+        <br></br>
+        <span class="header_r1" style="color:	darkcyan">Safeguard</span>
+        <span class="header_r2">$tkn_cis_controls$</span>
+        <br></br>
+        <span class="header_r1" style="color:	darkcyan">Asset Type</span>
+        <span class="header_r2">$tkn_asset_type$</span>
+        <br></br>
+        <span class="header_r1" style="color:	darkcyan">Title</span>
+        <span class="header_r2">$tkn_title$</span>
+        <br></br>
+        <span class="header_r1" style="color:	darkcyan">Description</span>
+        <span class="header_r2">$tkn_description$</span>
+      </html>
+    </panel>
+  </row>
+
+
+
+
+<!-- ########################################################################## SCORING EXPLANATION DATA Row ########################################################################## --> 
+
+  <row depends="$tkn_show_dashboard$">
+    <panel id="panel99a">
+      <html>
+        <style>
+          #panel99a{
+            width:75% !important;
+          }
+        </style>
+        <!-- ## <span class="header_r1" style="color:	darkcyan">Scoring Narrative</span>## -->
+        <span class="header_r1" style="color:	darkcyan">Compliance</span>
+        <span class="header_r2" style="white-space:pre-line">$tkn_scoring_narrative$</span>
+        <br></br>
+      </html>
+    </panel>
+
+    <panel id="panel99b">
+      <html>
+        <style>
+          #panel99b{
+            width:25% !important;
+          }
+        </style>
+        <div><span><a href="ssphp_foundational_systems_dashboard_help?tkn_detail=true" class="btn btn-primary" style="color:black;background-color:grey;text-align:center;display:block;float:right;width:30%;" target="_blank">Dashboard Help</a></span></div> 
+      </html>
+    </panel>
+  </row>
+
+  <row depends="$never_show$">
+    <panel>
+      <table>
+        <search>
+          <query>
+| makeresults
+  | eval uc_id=$tkn_use_case_id|s$, uc_id="ssphp_use_case_".uc_id
+  | fields uc_id
+
+  | join type=outer uc_id
+    [| rest /servicesNS/-/-/saved/searches splunk_server=local
+      | rename title as uc_id
+      | search eai:acl.app="SSPHP_metrics" AND uc_id="ssphp_use_case_*"
+      | rex field=search "^(?&lt;search_text&gt;[\s\S]*?)``` ##################### end dashboard query ##################### ```"
+      | eval search_text=replace('search_text',"\|\s*fields","| table"),
+             search_text='search_text'."| sort 0 - ssphp.score.score | fields - temp_total_count"
+      | table uc_id, search, search_text]
+  | table uc_id, search, search_text
+          </query>
+          <done>
+            <set token="tkn_use_case_search_text">$result.search_text$</set>
+          </done>
+        </search>
+      </table>
+    </panel>
+  </row>
+
+
+<!-- ########################################################################## UNDERLYING DATA Row ########################################################################## --> 
+    
+  <row depends="$never_show$">
+    <html>
+      <style>
+         .css_for_green{ 
+         background-color: $tkn_colour_green$ !important;
+         color:#000000 !important;
+         font-size: 100% !important;
+         }
+         .css_for_orange{ 
+         background-color: $tkn_colour_orange$ !important;
+         color:#000000 !important;
+         font-size: 100% !important;
+         }
+         .css_for_red{
+         background-color: $tkn_colour_red$ !important;
+         color:#000000 !important;
+         font-size: 100% !important;
+         }
+         .css_for_blue{
+         background-color: $tkn_colour_blue$ !important;
+         color:#000000 !important;
+         font-size: 100% !important;
+         }
+      </style>
+    </html>
+  </row>
+    
+  <row depends="$tkn_show_dashboard$">
+    <panel>
+      <title>Underlying Data</title>
+      <table id="table3">
+        <search>
+          <query>
+$tkn_use_case_search_text$
+
+
+| rename *{} as *¬¬
+| rename *{}* as *__*
+| rename * as z_*
+| rename z_ssphp* as ssphp*
+| foreach z_* 
+       [| eval fld_val='&lt;&lt;FIELD&gt;&gt;',
+               fld_val=mvjoin('fld_val',"~~"),
+               fld_val=case(isnull('fld_val'),"-",
+                            trim('fld_val')="","-",
+                            len('fld_val')&lt;2 AND !match('fld_val',"[a-zA-Z0-9]+") AND !match('fld_val',"^\*$"),"-",
+                            1==1,'fld_val'),
+               fld_name=replace(replace(replace("&lt;&lt;FIELD&gt;&gt;","¬¬","{}"),"__","{}"),"z_",""),
+               "&lt;&lt;FIELD&gt;&gt;"=if('ssphp.score.non_compliant_fields'='fld_name', 'fld_val'."¬red", 'fld_val')]
+
+| foreach * 
+  [| eval "&lt;&lt;FIELD&gt;&gt;"=if("&lt;&lt;FIELD&gt;&gt;" == "ssphp.score.non_compliant_fields", 'ssphp.score.non_compliant_fields', split('&lt;&lt;FIELD&gt;&gt;',"~~"))]
+               
+| rename z_* as *
+| rename *¬¬ as *{}
+| rename *__* as *{}*
+
+| eval sort_field=if('state'="*** FOR INFORMATION ONLY ***",1,2)
+| sort 0 sort_field, ssphp.score.score
+
+| fields - ssphp.score.score, ssphp.score.numerator, ssphp.score.denominator, fld_name, fld_val, ssphp.score.non_compliant_fields, sort_field
+          </query>
+          <earliest>0</earliest>
+          <latest>now</latest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="count">100</option>
+        <option name="dataOverlayMode">none</option>
+        <option name="drilldown">none</option>
+        <option name="percentagesRow">false</option>
+        <option name="rowNumbers">false</option>
+        <option name="totalsRow">false</option>
+        <option name="wrap">true</option>
+      </table>
+    </panel>
+  </row>
+</dashboard>
