@@ -210,7 +210,6 @@ class SplunkAppInspect:
         file_list = file_list + glob.glob(f"{app_directory}/**/*.xml", recursive=True)
 
         for each in file_list:
-            print(f"Replacing tripple quotes: {each}")
             with open(each, "r", encoding="utf8") as source:
                 contents = source.readlines()
 
@@ -255,10 +254,7 @@ def update_jinja_context(env):
 
 def git_hash():
     repo = Repo(".")
-    print(repo)
     head = repo.heads[0]
-    print(head)
-    print(head.commit)
     return head.commit.hexsha
 
 
