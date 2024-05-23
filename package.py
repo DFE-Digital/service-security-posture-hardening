@@ -352,7 +352,7 @@ def main(app_package, splunkuser, splunkpassword, justvalidate, outfile, prod, n
 
     # All the code relating to installing the package using Victoria Experience
     if report.report_valid() and not nodeploy:
-        acs_token = os.getenv("ACS_TOKEN")
+        acs_token = os.getenv("SPLUNK_ACS_TOKEN")
         acs = SplunkACS("dfe", acs_token, sai.token)
 
         # if acs_response:
