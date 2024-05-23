@@ -1,0 +1,28 @@
+<row>
+    <panel depends="$never_show$">
+        <table>
+            <search>
+                <query>
+| rest /services/authentication/current-context splunk_server=local 
+| table username, roles
+| eval roles=case(username="ian.pearl@education.gov.uk",mvappend('roles',"dfe_ssphp_service_user_s194"),
+                    username="alex.kinnane@education.gov.uk",mvappend('roles',"dfe_ssphp_service_user_s194"),
+                    username="sam.pritchard@education.gov.uk",mvappend('roles',"dfe_ssphp_service_user_s194"),
+                    1==1,'roles')
+| eval roles=mvfilter(match('roles',"dfe_ssphp_service_user_s\d{3}"))
+| where isnotnull('roles')
+| rex field=roles "dfe_ssphp_service_user_(?&lt;service&gt;s\d{3})$"
+| table username, service
+                </query>
+                <done>
+                    <set token="tkn__current_user_name">$result.username$</set>
+                    <set token="tkn__current_user_service">$result.service$</set>
+                </done>
+            </search>
+        </table>
+    </panel>
+
+    <panel>
+        <html>Current User : $tkn__current_user_name$     User Service : $tkn__current_user_service$   version : {{version}}</html>
+    </panel>
+</row>
