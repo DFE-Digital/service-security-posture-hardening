@@ -1,7 +1,7 @@
 <dashboard version="1.1" theme="dark" hideFilters="true" script="js/addtags.js, js/table_cell_color.js">
 
   <label>Security Posture Continuous Assurance : DfE Service Dashboard</label>
-  <description>v2.3.3</description>
+  <description>v2.4.0</description>
   
   <init>
     <set token="form.tkn_fields">C</set>
@@ -53,8 +53,6 @@
     </input>
   </fieldset>
 
-
-{% include 'default/data/ui/views/ssphp_metrics_dashboard.d/ssphp_footer_template.xml' %}
 
 
 <!-- ################### GET THE BASE DATA FOR THE OTHER QUERIES ################### --> 
@@ -540,4 +538,7 @@ $tkn_search_filter$
       </table>
     </panel>
   </row>
+
+{% include 'default/data/ui/views/ssphp_metrics_dashboard.d/ssphp_footer_template.xml' %}
+
 </dashboard>
