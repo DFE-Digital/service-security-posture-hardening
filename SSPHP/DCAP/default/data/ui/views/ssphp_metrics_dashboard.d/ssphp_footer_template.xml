@@ -23,6 +23,6 @@
     </panel>
 
     <panel>
-        <html>Current User : $tkn__current_user_name$     User Service : $tkn__current_user_service$   version : {{version}}</html>
+        <html>Current User : $tkn__current_user_name$&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;User Service : $tkn__current_user_service$&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Version : {{version}}</html>
     </panel>
 </row>
