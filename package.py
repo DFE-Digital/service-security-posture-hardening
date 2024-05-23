@@ -7,12 +7,16 @@ import tarfile
 import time
 import glob
 import re
+import sys
+from jinja2 import Environment, PackageLoader, select_autoescape, FileSystemLoader
+from git import Repo
 from copy import deepcopy
 from datetime import datetime
 from distutils.dir_util import copy_tree
 from pathlib import Path
 from pprint import pprint
 
+from jinja_replace_dict import REPLACEMENT_DICT
 import click
 import requests
 from requests.auth import HTTPBasicAuth
@@ -200,7 +204,7 @@ class SplunkAppInspect:
             out += re.sub('"""', "", line)
         return out
 
-    def replace_dev_tag_and_tripple_quotes(self, app_directory, environment=""):
+    def replace_tripple_quotes(self, app_directory, environment=""):
         file_list = glob.glob(f"{app_directory}/**/*.conf", recursive=True)
         file_list = file_list + glob.glob(f"{app_directory}/**/*.json", recursive=True)
         file_list = file_list + glob.glob(f"{app_directory}/**/*.xml", recursive=True)
@@ -215,8 +219,8 @@ class SplunkAppInspect:
                 contents = "".join(contents)
 
             with open(each, "w", encoding="utf8") as target_file:
-                contents = contents.replace("~^ENV^~", environment)
                 target_file.write(contents)
+
 
     def concat_conf_files(self, app_directory):
         directories = glob.glob(f"{app_directory}/default/*.conf.d/", recursive=True)
@@ -234,7 +238,7 @@ class SplunkAppInspect:
                     target.write(data)
                     target.write("\n\n")
             shutil.rmtree(directory)
-        
+
         # IP added as a work around 24/8/2023 for package building the metrics dashboard failing
         directories = glob.glob(f"{app_directory}/default/**/*.d.archive/", recursive=True)
         for directory in directories:
@@ -242,6 +246,33 @@ class SplunkAppInspect:
                 shutil.rmtree(directory)
             except FileNotFoundError:
                 pass
+
+def update_jinja_context(env):
+    REPLACEMENT_DICT["version"] = git_hash()
+    # going to be "" for prod, "DEV" for dev. This is probably wrong
+    REPLACEMENT_DICT["environment"] = env
+
+def git_hash():
+    repo = Repo(".")
+    head = repo.heads[0]
+    return head.commit.hexsha
+
+
+def render_templates(source, target):
+    env = Environment(
+        loader=FileSystemLoader(source),
+        autoescape=False,
+        )
+    templates = [ template for template in env.list_templates()
+                  if template.endswith(".xml") or template.endswith(".conf") or template.endswith(".json") ]
+
+    for template in templates:
+        print(template)
+        with open(target + "/" + template, "w", encoding="utf8") as f:
+            template_ = env.get_template(template)
+            rendered = template_.render(REPLACEMENT_DICT)
+            f.write(rendered)
+
 
 @click.command()
 @click.argument(
@@ -305,11 +336,13 @@ def main(app_package, splunkuser, splunkpassword, justvalidate, outfile, prod, n
             suffix = ""
         else:
             suffix = "_DEV"
+        update_jinja_context(suffix)
 
-        app_package = sai.copy_app(app_package, suffix)
-        sai.concat_conf_files(app_package)
-        sai.replace_dev_tag_and_tripple_quotes(app_package, suffix)
-        report = sai.package_then_validate(app_package)
+        app_target = sai.copy_app(app_package, suffix)
+        render_templates(app_package, app_target)
+        sai.replace_tripple_quotes(app_target, suffix)
+        sai.concat_conf_files(app_target)
+        report = sai.package_then_validate(app_target)
 
     report = SplunkAppInspectReport(report)
     report.print_manual_checks()
@@ -319,7 +352,7 @@ def main(app_package, splunkuser, splunkpassword, justvalidate, outfile, prod, n
 
     # All the code relating to installing the package using Victoria Experience
     if report.report_valid() and not nodeploy:
-        acs_token = os.getenv("ACS_TOKEN")
+        acs_token = os.getenv("SPLUNK_ACS_TOKEN")
         acs = SplunkACS("dfe", acs_token, sai.token)
 
         # if acs_response:

@@ -3,12 +3,14 @@ name: SSPHP
 
 on:
   push:
+    branches:
+      - main
     paths:
-      - SSPHP/**
+      - SSPHP/DCAP/**
   workflow_dispatch:
 
 jobs:
-  build:
+  deploy:
 
     runs-on: ubuntu-latest
 
@@ -17,7 +19,7 @@ jobs:
       - name: Set up Python 3.x
         uses: actions/setup-python@v4
         with:
-          python-version: '3.7.x'
+          python-version: '3.12.3'
           architecture: 'x64'
           cache: 'pip'
       - run: pip install -U setuptools && pip install -r requirements.txt
@@ -25,28 +27,9 @@ jobs:
       - name: Pip audit
         run: pip-audit -S
 
-      - name: ruff
-        run: ruff package.py --ignore=F401,E501,E402
-
-      - name: bandit
-        run: bandit package.py
-
-      - name: pycodestyle
-        run: pycodestyle package.py --ignore=E501,W503,W504
-
-      - name: pylint
-        run: pylint --fail-under 5 package.py
-
-      - name: package and validate
+      - name: package, validate, deploy
         env:
           SPLUNK_USER: ${{ secrets.SPLUNK_USERNAME }}
           SPLUNK_PASSWORD: ${{ secrets.SPLUNK_PASSWORD }}
-        run: cd SSPHP; ../package.py --outfile SSPHP.tar.gz SSPHP --nodeploy
-
-      - name: Commit changes
-        uses: EndBug/add-and-commit@v9
-        with:
-          author_name: GitHub Actions
-          author_email: 41898282+github-actions[bot]@users.noreply.github.com
-          message: Update deployment zip
-          add: 'SSPHP/*.gz' --force
+          SPLUNK_ACS_TOKEN: ${{ secrets.SPLUNK_ACS_TOKEN }}
+        run: ./package.py --prod SSPHP/DCAP

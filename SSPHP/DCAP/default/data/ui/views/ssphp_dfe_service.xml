@@ -54,6 +54,9 @@
   </fieldset>
 
 
+{% include 'default/data/ui/views/ssphp_metrics_dashboard.d/ssphp_footer_template.xml' %}
+
+
 <!-- ################### GET THE BASE DATA FOR THE OTHER QUERIES ################### --> 
   <row depends="$never_show$">
     <panel>

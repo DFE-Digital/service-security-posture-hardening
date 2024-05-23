@@ -9,3 +9,5 @@ flake8
 ruff
 black
 pypdf
+GitPython
+jinja2

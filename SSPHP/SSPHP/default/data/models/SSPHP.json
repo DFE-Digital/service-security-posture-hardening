@@ -294,7 +294,7 @@
             "calculations": [],
             "constraints": [
                 {
-                    "search": "index=ssphp_findings_summary~^ENV^~",
+                    "search": "index=ssphp_findings_summary{{environment}}",
                     "owner": "findings"
                 }
             ],
