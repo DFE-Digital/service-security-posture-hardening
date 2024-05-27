@@ -54,7 +54,7 @@ jobs:
         run: cp data_ingester/data_ingester_workspace/target/x86_64-unknown-linux-musl/release/data_ingester_axum_entrypoint data_ingester/data_ingester_workspace/data_ingester_axum_entrypoint/function_zip
 
       - name: Deploy terraform
-        uses: hashicorp/setup-terraform@v2
+        uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: 1.5.7
 
