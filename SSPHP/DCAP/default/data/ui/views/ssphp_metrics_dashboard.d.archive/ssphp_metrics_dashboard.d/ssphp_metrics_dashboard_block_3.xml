@@ -1,0 +1,181 @@
+
+
+<!-- ############################################################################################################################################### -->
+<!-- ############################################################ ROLLED UP SUMMARY ROWs ########################################################### -->
+<!-- ############################################################################################################################################### -->
+
+
+<!-- ###****************** Display Panels **********************### -->
+<row depends="$tkn_view_summary_panels$">
+  <panel>
+    <single>
+    <title>All Foundational Services</title>
+      <search>
+        <query>
+| makeresults
+| eval display_val_dns=$tkn_dns_rollup_val$,
+     display_val_aad=$tkn_aad_rollup_val$,
+     display_val_m365=$tkn_m365_rollup_val$,
+     display_val_azr=$tkn_azr_rollup_val$,
+     display_val_busc=$tkn_busc_rollup_val$
+
+| eval display_val=avg(display_val_dns, display_val_aad, display_val_m365, display_val_azr, display_val_busc)
+     
+| table display_val
+        </query>
+      </search>
+      <option name="colorMode">block</option>
+      <option name="height">400</option>
+      <option name="drilldown">none</option>
+      <option name="rangeColors">[$c_red$,$c_orange$,$c_green$]</option>
+      <option name="rangeValues">[50,90]</option>
+      <option name="useColors">1</option>
+    </single>
+  </panel>
+</row>
+
+<row depends="$tkn_view_summary_panels$">
+  <panel depends="$tkn_dns_rollup_show$">
+    <single>
+    <title>DNS</title>
+      <search>
+        <query>
+| makeresults
+| eval display_val=$tkn_dns_rollup_val$,
+        display_panel=if(isnull(display_val),"0","1")
+| table display_val, display_panel
+        </query>
+        <done>
+          <condition match="$result.display_panel$=&quot;1&quot;">
+            <set token="tkn_dns_rollup_show">y</set>
+          </condition>
+          <condition>
+            <unset token="tkn_dns_rollup_show"></unset>
+          </condition>
+        </done>
+      </search>
+      <option name="colorMode">block</option>
+      <option name="drilldown">none</option>
+      <option name="height">$data_panel_height$</option>
+      <option name="rangeColors">[$tkn_dns_rollup_colour$,$tkn_dns_rollup_colour$]</option>
+      <option name="rangeValues">[0]</option>
+      <option name="useColors">1</option>
+    </single>
+  </panel>    
+
+  <panel depends="$tkn_aad_rollup_show$">
+    <single>
+    <title>Azure AD</title>
+      <search>
+        <query>
+| makeresults
+| eval display_val=$tkn_aad_rollup_val$,
+       display_panel=if(isnull(display_val),"0","1")
+| table display_val, display_panel
+        </query>
+        <done>
+          <condition match="$result.display_panel$=&quot;1&quot;">
+            <set token="tkn_aad_rollup_show">y</set>
+          </condition>
+          <condition>
+            <unset token="tkn_aad_rollup_show"></unset>
+          </condition>
+        </done>
+      </search>
+      <option name="colorMode">block</option>
+      <option name="drilldown">none</option>
+      <option name="height">$data_panel_height$</option>
+      <option name="rangeColors">[$tkn_aad_rollup_colour$,$tkn_aad_rollup_colour$]</option>
+      <option name="rangeValues">[0]</option>
+      <option name="useColors">1</option>
+    </single>
+  </panel>       
+
+  <panel depends="$tkn_m365_rollup_show$">
+    <single>
+    <title>Office 365</title>
+      <search>
+        <query>
+| makeresults
+| eval display_val=$tkn_m365_rollup_val$,
+       display_panel=if(isnull(display_val),"0","1")
+| table display_val, display_panel
+        </query>
+        <done>
+          <condition match="$result.display_panel$=&quot;1&quot;">
+            <set token="tkn_m365_rollup_show">y</set>
+          </condition>
+          <condition>
+            <unset token="tkn_m365_rollup_show"></unset>
+          </condition>
+        </done>
+      </search>
+      <option name="colorMode">block</option>
+      <option name="drilldown">none</option>
+      <option name="height">$data_panel_height$</option>
+      <option name="rangeColors">[$tkn_o365_rollup_colour$,$tkn_o365_rollup_colour$]</option>
+      <option name="rangeValues">[0]</option>
+      <option name="useColors">1</option>
+    </single>
+  </panel>          
+
+  <panel depends="$tkn_azr_rollup_show$">
+    <single>
+    <title>Azure</title>
+      <search>
+        <query>
+| makeresults
+| eval display_val=$tkn_azr_rollup_val$,
+        display_panel=if(isnull(display_val),"0","1")
+| table display_val, display_panel
+        </query>
+        <done>
+          <condition match="$result.display_panel$=&quot;1&quot;">
+            <set token="tkn_azr_rollup_show">y</set>
+          </condition>
+          <condition>
+            <unset token="tkn_azr_rollup_show"></unset>
+          </condition>
+        </done>
+      </search>
+      <option name="colorMode">block</option>
+      <option name="drilldown">none</option>
+      <option name="height">$data_panel_height$</option>
+      <option name="rangeColors">[$tkn_o365_rollup_colour$,$tkn_o365_rollup_colour$]</option>
+      <option name="rangeValues">[0]</option>
+      <option name="useColors">1</option>
+    </single>
+  </panel>           
+
+  <panel depends="$tkn_busc_rollup_show$">
+    <single>
+    <title>Business Central</title>
+      <search>
+        <query>
+| makeresults
+| eval display_val=$tkn_busc_rollup_val$,
+       display_panel=if(isnull(display_val),"0","1")
+| table display_val, display_panel
+        </query>
+        <done>
+          <condition match="$result.display_panel$=&quot;1&quot;">
+            <set token="tkn_busc_rollup_show">y</set>
+          </condition>
+          <condition>
+            <unset token="tkn_busc_rollup_show"></unset>
+          </condition>
+        </done>
+      </search>
+      <option name="colorMode">block</option>
+      <option name="drilldown">none</option>
+      <option name="height">$data_panel_height$</option>
+      <option name="rangeColors">[$tkn_o365_rollup_colour$,$tkn_o365_rollup_colour$]</option>
+      <option name="rangeValues">[0]</option>
+      <option name="useColors">1</option>
+    </single>
+  </panel>     
+  
+  
+</row>
+
+</dashboard>
