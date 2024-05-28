@@ -10,7 +10,7 @@ use tracing::{debug, info};
 /// A simple client for Splunk ACS
 /// https://docs.splunk.com/Documentation/SplunkCloud/9.1.2312/Config/ACSIntro
 #[derive(Debug, Default)]
-pub(crate) struct Acs {
+pub struct Acs {
     client: Client,
     stack: String,
     current_cidr: Option<String>,
@@ -18,7 +18,7 @@ pub(crate) struct Acs {
 
 /// Represents an ACS IpAllowList
 #[derive(Debug, Serialize, Deserialize, Default)]
-pub(crate) struct IpAllowList {
+pub struct IpAllowList {
     subnets: Vec<String>,
 }
 

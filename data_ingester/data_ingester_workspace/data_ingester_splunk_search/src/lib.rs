@@ -1,3 +1,3 @@
-mod acs;
+pub mod acs;
 pub mod entrypoint;
-mod search_client;
+pub mod search_client;
