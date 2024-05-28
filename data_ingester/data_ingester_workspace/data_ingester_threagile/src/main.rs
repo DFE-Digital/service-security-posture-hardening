@@ -9,11 +9,23 @@ mod model;
 use model::Model;
 use data_ingester_splunk_search::acs::Acs;
 use data_ingester_splunk_search::search_client::SplunkApiClient;
-use tracing::info;
 use serde::Deserialize;
+use tracing::{debug, info, instrument, subscriber::DefaultGuard, warn};
+use tracing_subscriber::{layer::SubscriberExt, EnvFilter, Registry};
+
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    let stdout_log = tracing_subscriber::fmt::layer()
+        .with_ansi(false)
+        .compact()
+        .with_writer(std::io::stderr);
+    let subscriber = Registry::default().with(stdout_log).with(
+        EnvFilter::from_default_env()
+            .add_directive("info".parse().context("Parsing default log level")?),
+    );
+    tracing::subscriber::set_default(subscriber);
+
     let key_vault_name =
         std::env::var("KEY_VAULT_NAME").context("Getting key vault name from env:KEY_VAULT_NAME")?;
 
