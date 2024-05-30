@@ -34,47 +34,58 @@ async fn main() -> Result<()> {
         .context("Getting KeyVault secrets")?;
     
     // TODO anything but this
+    // let stack = secrets
+    //     .splunk_host
+    //     .as_ref()
+    //     .context("Getting splunk_host secret")?
+    //     .split('.')
+    //     .next()
+    //     .context("Get host url ")?
+    //     .split('-')
+    //     .map(|s| s.to_string())
+    //     .last()
+    //     .context("Get stack from url")?;
+
+
     let stack = secrets
         .splunk_host
         .as_ref()
         .context("Getting splunk_host secret")?
-        .split('.')
+        .split(':')
         .next()
         .context("Get host url ")?
-        .split('-')
-        .map(|s| s.to_string())
-        .last()
-        .context("Get stack from url")?;
+        .to_string();
+    
+    // info!("Building ACS");
+    // let acs_token = secrets
+    //     .splunk_acs_token
+    //     .as_ref()
+    //     .context("Getting splunk_acs_token secret")?;
+    // let mut acs = Acs::new(&stack, acs_token).context("Building Acs Client")?;
 
-    info!("Building ACS");
-    let acs_token = secrets
-        .splunk_acs_token
-        .as_ref()
-        .context("Getting splunk_acs_token secret")?;
-    let mut acs = Acs::new(&stack, acs_token).context("Building Acs Client")?;
+    // let ip_allow_list = acs
+    //     .list_search_api_ip_allow_list()
+    //     .await
+    //     .context("Getting IP allow list")?;
+    // info!("Splunk IP Allow list before add: {:?}", ip_allow_list);
 
-    let ip_allow_list = acs
-        .list_search_api_ip_allow_list()
-        .await
-        .context("Getting IP allow list")?;
-    info!("Splunk IP Allow list before add: {:?}", ip_allow_list);
+    // info!("Granting access for current IP");
+    // acs.grant_access_for_current_ip()
+    //     .await
+    //     .context("Granting access for current IP")?;
 
-    info!("Granting access for current IP");
-    acs.grant_access_for_current_ip()
-        .await
-        .context("Granting access for current IP")?;
-
-    let ip_allow_list = acs
-        .list_search_api_ip_allow_list()
-        .await
-        .context("Getting IP allow list")?;
-    info!("Splunk IP Allow list after add: {:?}", ip_allow_list);
+    // let ip_allow_list = acs
+    //     .list_search_api_ip_allow_list()
+    //     .await
+    //     .context("Getting IP allow list")?;
+    // info!("Splunk IP Allow list after add: {:?}", ip_allow_list);
 
     let search_token = secrets
         .splunk_search_token
         .as_ref()
         .context("Getting splunk_search_token secret")?;
-    let url = format!("https://{}.splunkcloud.com:8089", &stack);
+    //let url = format!("https://{}.splunkcloud.com:8089", &stack);
+    let url = format!("https://{}:8089", &stack);    
     let search_client = SplunkApiClient::new(&url, search_token)
         .context("Creating Splunk search client")?
         .set_app("SSPHP_metrics");
@@ -113,11 +124,11 @@ async fn main() -> Result<()> {
     //     .await
     //     .context("Removing current IP from Splunk")?;
 
-    let ip_allow_list = acs
-        .list_search_api_ip_allow_list()
-        .await
-        .context("Getting IP allow list")?;
-    info!("Splunk IP Allow list after remove: {:?}", ip_allow_list);
+    // let ip_allow_list = acs
+    //     .list_search_api_ip_allow_list()
+    //     .await
+    //     .context("Getting IP allow list")?;
+    // info!("Splunk IP Allow list after remove: {:?}", ip_allow_list);
     Ok(())
 }
 
