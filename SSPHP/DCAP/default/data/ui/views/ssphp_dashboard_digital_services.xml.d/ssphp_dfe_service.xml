@@ -539,6 +539,6 @@ $tkn_search_filter$
     </panel>
   </row>
 
-{% include 'default/data/ui/views/ssphp_metrics_dashboard.d/ssphp_footer_template.xml' %}
+{% include 'default/data/ui/views/ssphp_dashboard_templates.d/ssphp_footer_template.xml' %}
 
 </dashboard>

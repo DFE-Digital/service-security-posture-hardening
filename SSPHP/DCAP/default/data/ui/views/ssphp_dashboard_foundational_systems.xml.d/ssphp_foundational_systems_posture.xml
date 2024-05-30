@@ -1,7 +1,7 @@
 <dashboard version="1.1" theme="dark" hideFilters="true" script="js/table_cell_color.js">
 
-  <label>Security Posture Continuous Assurance : Posture Dashboard</label>
-  <description>v4.0.3</description>
+  <label>Foundational Systems : Security Posture Dashboard</label>
+  <description>v5.0.0</description>
 
   <init>
     <unset token="tkn_ready"></unset>
@@ -224,100 +224,5 @@
     </panel>
   </row>
 
-
-<!-- #################################################################################################################################################### -->   
-<!-- ################################################################### DfE Services ################################################################### -->   
-<!-- #################################################################################################################################################### -->   
-
-
-<!-- ################### Header Row - DfE Services ################### --> 
-
-  <row>
-    <html>
-      <div id="div_header" style="color:yellow;font-weight:bold;font-size:125%;padding:10;">DfE SERVICES : COMPLIANT CONTROLS
-        <span><a href="ssphp_foundational_systems_dashboard_help?tkn_posture=true" class="btn btn-primary" style="color:black;background-color:grey;text-align:center;display:block;float:right;width:12%;" target="_blank">Dashboard Help</a></span></div> 
-    </html>
-  </row>
-
-
-
-<!-- ################### DISPLAY ROWS - DfE Services ################### -->   
-
-
-  <row depends="$tkn_s194_ready$,$tkn_show_abs$">
-    <panel id="panel_s194a">
-      <html>
-        <style>
-          #panel_s194a{
-            width:25% !important;
-          }
-        </style>
-        <div class="absolute" style="background:$tkn_s194_color$;"><a href="ssphp_dfe_service?tkn__service=s194" target="_blank">$tkn_s194_score_abs$</a></div>
-        <div class="undervalue" style="background:$tkn_s194_color$;"><a href="ssphp_dfe_service?tkn__service=s194" target="_blank">$tkn_s194_service_name$</a></div>
-      </html>
-    </panel>
-  </row>
-  
-  
-  <row depends="$tkn_s194_ready$,$tkn_show_perc$">
-    <panel id="panel_s194p">
-      <html>
-        <style>
-          #panel_s194p{
-            width:25% !important;
-          }
-        </style>
-        <div class="absolute" style="background:$tkn_s194_color$;"><a href="ssphp_dfe_service?tkn__service=s194" target="_blank">$tkn_s194_score_perc$</a></div>
-        <div class="undervalue" style="background:$tkn_s194_color$;"><a href="ssphp_dfe_service?tkn__service=s194" target="_blank">$tkn_s194_service_name$</a></div>
-      </html>
-    </panel>
-  </row>
-
-
-<!-- ################### DATA ROW - Regular Services ################### -->   
-
-  <row depends="$never_show$">
-    <panel>
-      <table>
-        <search>
-          <query>
-`ssphp_summary_index` earliest=-2d@d latest=now
-      ssphp.source.service="s194"
-      ssphp.score.ciso_priority=1
-
-      [| search `ssphp_summary_index` earliest=-2d@d latest=now 
-                ssphp.source.service="s194"
-                ssphp.score.ciso_priority=1
-          
-        | stats max(SSPHP_RUN) as SSPHP_RUN by ssphp.use_case.id
-        | eval search_text="(\"ssphp.use_case.id\"=\"".'ssphp.use_case.id'."\" AND SSPHP_RUN=\"".SSPHP_RUN."\")"
-        | stats values(search_text) as search_text
-        | eval search_text="(".mvjoin(search_text," OR ").")"
-        | return $search_text]
-
-| eval ssphp.source.service_name=upper('ssphp.source.service')." - ".'ssphp.source.service_name'
-        
-| stats values(ssphp.source.service_name) as ssphp.source.service_name, count as ssphp.score.denominator, sum(eval(if('ssphp.score.score'="100",1,0))) as ssphp.score.numerator
-
-`ssphp_metrics_eval_field_colors`
-
-| eval s194_compliant_perc=floor('ssphp.score.numerator'*100/'ssphp.score.denominator'),
-       s194_compliant_abs='ssphp.score.numerator'." of ". 'ssphp.score.denominator',
-       s194_compliant_perc='s194_compliant_perc'."%",
-       s194_compliant_color=case(isnull('s194_compliant_perc') OR 's194_compliant_perc'="",'tkn_colour_splunk_grey',
-                                 's194_compliant_perc'=100,'tkn_colour_green',
-                                 1==1,'tkn_colour_red')
-          </query>
-          <done>
-            <set token="tkn_s194_service_name">$result.ssphp.source.service_name$</set>
-            <set token="tkn_s194_color">$result.s194_compliant_color$</set>
-            <set token="tkn_s194_score_abs">$result.s194_compliant_abs$</set>
-            <set token="tkn_s194_score_perc">$result.s194_compliant_perc$</set>
-
-            <set token="tkn_s194_ready">true</set>
-          </done>
-        </search>
-      </table>
-    </panel>
-  </row>
+  {% include 'default/data/ui/views/ssphp_dashboard_templates.d/ssphp_footer_template.xml' %}
 </dashboard>

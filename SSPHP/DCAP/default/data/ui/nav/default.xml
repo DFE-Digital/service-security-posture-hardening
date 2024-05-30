@@ -3,21 +3,25 @@
   <collection label="Vulnerability Management" >
     <a href="ssphp_critical_vulnerabilities">Critical 400+ days</a>
   </collection>
-  <collection label="Continuous Assurance" >
-    <a href="ssphp_dfe_service_risk">Service Risk</a>
+
+  <collection label="Foundational Systems" >
     <a href="ssphp_foundational_systems_posture">Posture Dashboard</a>
     <a href="ssphp_foundational_systems_maturity">Maturity Dashboard</a>
-    <collection label="Service Dashboards" >
-      <collection label="Foundational Services" >
-        <a href="ssphp_foundational_systems_service?form.tkn__service=azure">Azure</a>
-        <a href="ssphp_foundational_systems_service?form.tkn__service=dns">DNS</a>
-        <a href="ssphp_foundational_systems_service?form.tkn__service=aad">Entra AAD</a>
-        <a href="ssphp_foundational_systems_service?form.tkn__service=m365">M365</a>
-      </collection>
-      <collection label="DfE Services" >
-        <a href="ssphp_dfe_service?tkn__service=s194">S194 - CISO Continuous Assurance</a>
-      </collection>
-    </collection>
+    <a href="dummy_dashboard">--------------</a>
+    <a href="ssphp_foundational_systems_service?form.tkn__service=azure">Azure</a>
+    <a href="ssphp_foundational_systems_service?form.tkn__service=dns">DNS</a>
+    <a href="ssphp_foundational_systems_service?form.tkn__service=aad">Entra AAD</a>
+    <a href="ssphp_foundational_systems_service?form.tkn__service=m365">M365</a>
+    <a href="dummy_dashboard">--------------</a>
+    <a href="ssphp_foundational_systems_dashboard_help">Dashboard Help</a>
+  </collection>
+
+  <collection label="DfE Digital Services" >
+    <a href="ssphp_dfe_service_risk">Service Risk</a>
+    <a href="ssphp_foundational_systems_posture">Posture Dashboard</a>
+    <a href="dummy_dashboard">--------------</a>
+    <a href="ssphp_dfe_service?tkn__service=s194">S194 - CISO Continuous Assurance</a>
+    <a href="dummy_dashboard">--------------</a>
     <a href="ssphp_foundational_systems_dashboard_help">Dashboard Help</a>
   </collection>
 </nav>
