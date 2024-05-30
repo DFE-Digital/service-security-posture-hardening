@@ -14,6 +14,7 @@ from copy import deepcopy
 from datetime import datetime
 from distutils.dir_util import copy_tree
 from pathlib import Path
+from pathlib import PurePath
 from pprint import pprint
 
 from jinja_replace_dict import REPLACEMENT_DICT
@@ -247,6 +248,19 @@ class SplunkAppInspect:
             except FileNotFoundError:
                 pass
 
+
+    def write_views_files(self, app_directory):
+        directories = glob.glob(f"{app_directory}/default/**/*.xml.d/", recursive=True)
+        for directory in directories:
+            xml_files = glob.glob(f"{directory}/**/*.xml", recursive=True)
+            for xml_file in xml_files:
+                p = PurePath(xml_file)
+                target_dir = p.parents[1] / p.parts[-1]
+                shutil.copyfile(p, target_dir)
+            shutil.rmtree(directory)
+
+
+
 def update_jinja_context(env):
     REPLACEMENT_DICT["version"] = git_hash()
     # going to be "" for prod, "DEV" for dev. This is probably wrong
@@ -267,7 +281,7 @@ def render_templates(source, target):
                   if template.endswith(".xml") or template.endswith(".conf") or template.endswith(".json") ]
 
     for template in templates:
-        print(template)
+        #print(template)
         with open(target + "/" + template, "w", encoding="utf8") as f:
             template_ = env.get_template(template)
             rendered = template_.render(REPLACEMENT_DICT)
@@ -342,6 +356,8 @@ def main(app_package, splunkuser, splunkpassword, justvalidate, outfile, prod, n
         render_templates(app_package, app_target)
         sai.replace_tripple_quotes(app_target, suffix)
         sai.concat_conf_files(app_target)
+        sai.write_views_files(app_target)
+        
         report = sai.package_then_validate(app_target)
 
     report = SplunkAppInspectReport(report)
