@@ -1,7 +1,12 @@
 <nav search_view="search">
   <view name="search" default='true' />
+  <collection label="Vulnerability Management" >
+    <a href="ssphp_critical_vulnerabilities">Critical 400+ days</a>
+  </collection>
+
   <collection label="Foundational Systems" >
     <a href="ssphp_foundational_systems_posture">Posture Dashboard</a>
+    <a href="ssphp_foundational_systems_maturity">Maturity Dashboard</a>
     <collection label="Foundational Systems" >
       <a href="ssphp_foundational_systems_service?form.tkn__service=azure">Azure</a>
       <a href="ssphp_foundational_systems_service?form.tkn__service=dns">DNS</a>
@@ -17,7 +22,6 @@
     <collection label="Services" >
       <a href="ssphp_dfe_service?tkn__service=s194">S194 - CISO Continuous Assurance</a>
     </collection>
-    <a href="ssphp_critical_vulnerabilities">Vulnerability Management</a>
     <a href="ssphp_foundational_systems_dashboard_help">Dashboard Help</a>
   </collection>
 </nav>

@@ -1,7 +1,7 @@
 <dashboard version="1.1" theme="dark" hideFilters="true" script="js/table_cell_color.js">
 
   <label>Security Posture Continuous Assurance : Service Dashboard</label>
-  <description>v2.0.21</description>
+  <description>v2.0.22</description>
   
   <init>
     <set token="form.tkn_fields">C</set>
@@ -37,6 +37,9 @@
         </condition>
       </change>
     </input>
+
+{% include 'default/data/ui/views/ssphp_dashboard_templates.d/ssphp_footer_menu_template.xml' %}
+
   </fieldset>
 
 
@@ -309,4 +312,10 @@ $tkn_search_filter$
       </table>
     </panel>
   </row>
+
+{% include 'default/data/ui/views/ssphp_dashboard_templates.d/ssphp_footer_template.xml' %}
+
+{% include 'default/data/ui/views/ssphp_dashboard_templates.d/ssphp_footer_debug_template.xml' %}
+        
+  
 </dashboard>

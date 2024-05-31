@@ -1,7 +1,7 @@
 <dashboard version="1.1" theme="dark" hideFilters="true" script="js/table_cell_color.js">
 
   <label>Foundational Systems : Security Posture Dashboard</label>
-  <description>v5.0.0</description>
+  <description>v5.0.2</description>
 
   <init>
     <unset token="tkn_ready"></unset>
@@ -25,6 +25,9 @@
         </condition>
       </change>
     </input>
+
+{% include 'default/data/ui/views/ssphp_dashboard_templates.d/ssphp_footer_menu_template.xml' %}
+
   </fieldset>
 
 
@@ -124,7 +127,7 @@
 <!-- ############################################################################################################################################################# -->   
 
 
-<!-- ################### Header Row - Foundational Services ################### --> 
+<!-- ################### Header Row - Foundational Services ##################
 
   <row>
     <html>
@@ -132,7 +135,7 @@
         <span><a href="ssphp_foundational_systems_dashboard_help?tkn_posture=true" class="btn btn-primary" style="color:black;background-color:grey;text-align:center;display:block;float:right;width:12%;" target="_blank">Dashboard Help</a></span></div> 
     </html>
   </row>
-
+# --> 
 
 
 <!-- ################### DISPLAY ROWS - Foundational Services ################### -->   
@@ -224,5 +227,8 @@
     </panel>
   </row>
 
-  {% include 'default/data/ui/views/ssphp_dashboard_templates.d/ssphp_footer_template.xml' %}
+{% include 'default/data/ui/views/ssphp_dashboard_templates.d/ssphp_footer_template.xml' %}
+
+{% include 'default/data/ui/views/ssphp_dashboard_templates.d/ssphp_footer_debug_template.xml' %}
+
 </dashboard>

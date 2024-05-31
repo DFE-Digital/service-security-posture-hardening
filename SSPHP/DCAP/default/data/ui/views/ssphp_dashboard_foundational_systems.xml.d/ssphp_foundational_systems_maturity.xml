@@ -1,7 +1,7 @@
 <dashboard version="1.1" theme="dark" hideFilters="true">
   
   <label>Security Posture Continuous Assurance : Maturity Dashboard</label>
-  <description>v1.2.6</description>
+  <description>v1.2.7</description>
   
   <init>
     <set token="tkn_aad_ig1">-</set>
@@ -28,6 +28,9 @@
       <suffix>"</suffix>
       <initialValue>absolute</initialValue>
     </input>
+
+{% include 'default/data/ui/views/ssphp_dashboard_templates.d/ssphp_footer_menu_template.xml' %}
+    
   </fieldset>
 
 
@@ -245,4 +248,10 @@ $tkn_type$
       </table>
     </panel>
   </row>
+
+{% include 'default/data/ui/views/ssphp_dashboard_templates.d/ssphp_footer_template.xml' %}
+
+{% include 'default/data/ui/views/ssphp_dashboard_templates.d/ssphp_footer_debug_template.xml' %}
+        
+  
 </dashboard>

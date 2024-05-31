@@ -1,4 +1,4 @@
-<row>
+<row depends="$tkn_show_footer$">
     <panel depends="$never_show$">
         <table>
             <search>
@@ -12,17 +12,19 @@
 | eval roles=mvfilter(match('roles',"dfe_ssphp_service_user_s\d{3}"))
 | where isnotnull('roles')
 | rex field=roles "dfe_ssphp_service_user_(?&lt;service&gt;s\d{3})$"
-| table username, service
+| eval app=$env:app|s$
+| table username, service, app
                 </query>
                 <done>
                     <set token="tkn__current_user_name">$result.username$</set>
                     <set token="tkn__current_user_service">$result.service$</set>
+                    <set token="tkn__current_application">$result.app$</set>
                 </done>
             </search>
         </table>
     </panel>
 
     <panel>
-        <html>Current User : $tkn__current_user_name$&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;User Service : $tkn__current_user_service$&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;Version : {{version}}</html>
+        <html>Current User : $tkn__current_user_name$&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;Current App : $tkn__current_application$&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;User Service : $tkn__current_user_service$&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;Version : {{version}}</html>
     </panel>
 </row>

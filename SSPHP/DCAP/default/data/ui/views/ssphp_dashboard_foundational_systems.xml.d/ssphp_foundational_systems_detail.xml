@@ -1,7 +1,7 @@
-<dashboard theme="dark" version="1.1" script="js/addtags.js, js/table_cell_backcolor_multivalue.js">
+<dashboard theme="dark" version="1.1" hideFilters="true" script="js/addtags.js, js/table_cell_backcolor_multivalue.js">
 
   <label>Security Posture Continuous Assurance : Control Detail Dashboard</label>
-  <description>v3.0.4</description>
+  <description>v3.0.6</description>
   
   <init>
     <unset token="tkn_show_dashboard"></unset>
@@ -18,6 +18,10 @@
     <set token="tkn_aws_2_cis_doc_link">https://educationgovuk-my.sharepoint.com/:b:/r/personal/ian_pearl_education_gov_uk/Documents/CIS%20BENCHMARK%20DOCS/CIS_Amazon_Web_Services_Foundations_Benchmark_v2.0.0.pdf?csf=1&amp;web=1&amp;e=fwOaIK</set>
     <set token="tkn_aws_2_cis_doc_name">CIS_Amazon_Web_Services_Foundations_Benchmark_v2.0.0.pdf</set>
   </init>
+
+  <fieldset submitButton="false">
+    {% include 'default/data/ui/views/ssphp_dashboard_templates.d/ssphp_footer_menu_template.xml' %}
+  </fieldset>
 
   <row depends="$never_show$">
     <html>
@@ -550,4 +554,9 @@ $tkn_use_case_search_text$
       </table>
     </panel>
   </row>
+
+{% include 'default/data/ui/views/ssphp_dashboard_templates.d/ssphp_footer_template.xml' %}
+
+{% include 'default/data/ui/views/ssphp_dashboard_templates.d/ssphp_footer_debug_template.xml' %}
+
 </dashboard>
