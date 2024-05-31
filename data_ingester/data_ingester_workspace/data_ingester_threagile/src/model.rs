@@ -445,27 +445,33 @@ impl From<SplunkResult> for TechnicalAsset {
             "microsoft.cache/redis" => TechnicalAsset { id: value.resource_id.to_string(),
                                                         size: TechnicalAssetSize::Service,
                                                         machine: TechnicalAssetMachine::Virtual,
-                                                        technology: Technology::Vault,
+                                                        technology: Technology::Database,
                                                         ..Default::default()
             },
             "microsoft.storage/storageaccounts" => TechnicalAsset { id: value.resource_id.to_string(),
                                                                     size: TechnicalAssetSize::Service,
                                                                     machine: TechnicalAssetMachine::Virtual,
-                                                                    technology: Technology::Vault,
+                                                                    technology: Technology::BlockStorage,
                                                                     ..Default::default()
             },
             "microsoft.sql/servers/databases" => TechnicalAsset { id: value.resource_id.to_string(),
                                                                   size: TechnicalAssetSize::Service,
                                                                   machine: TechnicalAssetMachine::Virtual,
-                                                                  technology: Technology::Vault,
+                                                                  technology: Technology::Database,
                                                                   ..Default::default()
             },
             "microsoft.compute/virtualmachines" => TechnicalAsset { id: value.resource_id.to_string(),
                                                                     size: TechnicalAssetSize::Service,
                                                                     machine: TechnicalAssetMachine::Virtual,
-                                                                    technology: Technology::Vault,
+                                                                    technology: Technology::ApplicationServer,
                                                                     ..Default::default()
             },
+            "microsoft.authorization/roleassignments" => TechnicalAsset { id: value.resource_id.to_string(),
+                                                                          size: TechnicalAssetSize::Service,
+                                                                          machine: TechnicalAssetMachine::Virtual,
+                                                                          technology: Technology::IdentityStoreDatabase,
+                                                                          ..Default::default()
+},
             _ => TechnicalAsset { id: value.resource_id.to_string(), .. Default::default()},
         };
         ta
