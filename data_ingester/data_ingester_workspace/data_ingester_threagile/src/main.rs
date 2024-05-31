@@ -88,19 +88,19 @@ async fn main() -> Result<()> {
     let url = format!("https://{}:8089", &stack);    
     let search_client = SplunkApiClient::new(&url, search_token)
         .context("Creating Splunk search client")?
-        .set_app("SSPHP_metrics");
+        .set_app("DCAP_DEV");
 
     info!("Running search");
     let search_results = search_client
         .run_search::<serde_json::Value>("| savedsearch ssphp_get_list_service_resources")
         .await
         .context("Running Splunk Search")?;
-
+    dbg!(&search_results);
     let search_results = search_client
         .run_search::<model::SplunkResult>("| savedsearch ssphp_get_list_service_resources")
         .await
         .context("Running Splunk Search")?;
-
+    dbg!(&search_results);
 
     let mut collection = HashMap::new();
     for result in search_results {

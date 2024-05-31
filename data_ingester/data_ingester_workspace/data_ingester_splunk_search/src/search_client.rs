@@ -35,7 +35,7 @@ impl SplunkApiClient {
     ///
     pub fn new(url_base: &str, token: &str) -> Result<Self> {
         let client = reqwest::ClientBuilder::new()
-            .danger_accept_invalid_certs(false)
+            .danger_accept_invalid_certs(true)
             .default_headers(SplunkApiClient::headers(token)?)
             .build()?;
         Ok(Self {

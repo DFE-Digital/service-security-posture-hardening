@@ -386,7 +386,7 @@ impl From<SplunkResult> for TechnicalAsset {
     fn from(value: SplunkResult) -> Self {
         let (size, technology, machine) = match value.r#type.as_str() {
             "microsoft.web/sites" => (TechnicalAssetSize::Service, Technology::Function, TechnicalAssetMachine::Serverless),
-            _ => todo!(),
+            _ => (TechnicalAssetSize::Service, Technology::Function, TechnicalAssetMachine::Serverless),
         };
         TechnicalAsset { id: value.resource_id.to_string(),
                          usage: TechnicalAssetUsage::Business,
@@ -420,7 +420,7 @@ impl From<SplunkResults> for TechnicalAssets {
 
 #[derive(Deserialize, Default, Clone, Debug)]
 pub(crate) struct SplunkResult {
-    service_id: String,
+    // service_id: String,
     #[serde(rename="resourceGroup")]
     resource_group: String,
     pub(crate) resource_id: String,
@@ -450,7 +450,7 @@ mod test {
                     resource_id:"splunk-results-foo".to_string(),
                     r#type:"microsoft.web/sites".to_string(),
                     kind:"functionapp,linux".to_string(),
-                    service_id: "s194".to_string(),
+                    // service_id: "s194".to_string(),
                     resource_group: "rg1".to_string(),
                 }
             ]
