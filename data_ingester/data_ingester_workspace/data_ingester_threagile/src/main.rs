@@ -95,13 +95,16 @@ async fn main() -> Result<()> {
         .run_search::<serde_json::Value>("| savedsearch ssphp_get_list_service_resources")
         .await
         .context("Running Splunk Search")?;
+
     dbg!(&search_results);
+
     let search_results = search_client
         .run_search::<model::SplunkResult>("| savedsearch ssphp_get_list_service_resources")
         .await
         .context("Running Splunk Search")?;
-    dbg!(&search_results);
 
+    dbg!(&search_results);
+    
     let mut collection = HashMap::new();
     for result in search_results {
         collection.insert(result.resource_id.to_string(), result.into());

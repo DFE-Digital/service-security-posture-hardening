@@ -25,96 +25,133 @@ pub(crate) struct Model {
 pub(crate) struct TechnicalAssets(pub(crate) HashMap<String, TechnicalAsset>);
 
 #[serde_as]
-#[derive(Serialize, Default, Debug)]    
+#[derive(Serialize, Debug)]
 pub(crate) struct TechnicalAsset {
     id: String,
-    #[serde_as(as = "DisplayFromStr")]    
+    description: String,
+    #[serde_as(as = "DisplayFromStr")]
     usage: TechnicalAssetUsage,
     #[serde_as(as = "DisplayFromStr")]
     r#type: TechnicalAssetType,
-    #[serde_as(as = "DisplayFromStr")]    
+    #[serde_as(as = "DisplayFromStr")]
     size: TechnicalAssetSize,
-    #[serde_as(as = "DisplayFromStr")]        
+    #[serde_as(as = "DisplayFromStr")]
     encryption: TechnicalAssetEncryption,
-    #[serde_as(as = "DisplayFromStr")]        
+    #[serde_as(as = "DisplayFromStr")]
     machine: TechnicalAssetMachine,
-    #[serde_as(as = "DisplayFromStr")]            
+    #[serde_as(as = "DisplayFromStr")]
     confidentiality: TechnicalAssetConfidentiality,
-    #[serde_as(as = "DisplayFromStr")]            
+    #[serde_as(as = "DisplayFromStr")]
     integrity: TechnicalAssetCriticality,
-    #[serde_as(as = "DisplayFromStr")]            
+    #[serde_as(as = "DisplayFromStr")]
     availability: TechnicalAssetCriticality,
     out_of_scope: bool,
-    #[serde_as(as = "DisplayFromStr")]                
+    #[serde_as(as = "DisplayFromStr")]
     technology: Technology,
     used_as_client_by_human: bool,
     internet: bool,
     multi_tenant: bool,
     redundant: bool,
     custom_developed_parts: bool,
-    //tags: Vec<String>,
+    //tags: Vec<TechnicalAssetTags>,
 }
+
+
+impl Default for TechnicalAsset {
+    fn default() -> Self {
+        Self { id: Default::default(),
+               description: Default::default(),
+               usage: Default::default(),
+               r#type: Default::default(),
+               size: Default::default(),
+               encryption: Default::default(),
+               machine: Default::default(),
+               confidentiality: Default::default(),
+               integrity: Default::default(),
+               availability: TechnicalAssetCriticality::Important,
+               out_of_scope: Default::default(),
+               technology: Default::default(),
+               used_as_client_by_human: Default::default(),
+               internet: true,
+               multi_tenant: Default::default(),
+               redundant: Default::default(),
+               custom_developed_parts: Default::default() }
+    }
+}
+
+// #[derive(Default, Debug, Serialize)]
+// enum TechnicalAssetTags {
+//     #[default]
+//     Name(String),
+//     Azure,
+//     AzureKeyVault,
+//     Vault,
+//     Secrets,
+//     Keys,
+//     AssetType(),
+// }
+
 
 #[derive(Default, Debug, Serialize)]
 enum Technology {
     #[default]
-	AI,
-	ApplicationServer,
-	ArtifactRegistry,
-	BatchProcessing,
-	BigDataPlatform,
-	BlockStorage,
-	Browser,
-	BuildPipeline,
-	ClientSystem,
-	CLI,
-	CMS,
-	CodeInspectionPlatform,
-	ContainerPlatform,
-	DataLake,
-	Database,
-	Desktop,
-	DevOpsClient,
-	EJB,
-	ERP,
-	EventListener,
-	FileServer,
-	Function,
-	Gateway,
-	HSM,
-	IdentityProvider,
-	IdentityStoreDatabase,
-	IdentityStoreLDAP,
-	IDS,
-	IoTDevice,
-	IPS,
-	LDAPServer,
-	Library,
-	LoadBalancer,
-	LocalFileSystem,
-	MailServer,
-	Mainframe,
-	MessageQueue,
-	MobileApp,
-	Monitoring,
-	ReportEngine,
-	ReverseProxy,
-	Scheduler,
-	SearchEngine,
-	SearchIndex,
-	ServiceMesh,
-	ServiceRegistry,
-	SourcecodeRepository,
-	StreamProcessing,
-	Task,
-	Tool,
-	UnknownTechnology,
-	Vault,
-	WAF,
-	WebApplication,
-	WebServer,
-	WebServiceREST,
-	WebServiceSOAP,
+        AI,
+        ApplicationServer,
+        ArtifactRegistry,
+        BatchProcessing,
+        BigDataPlatform,
+        BlockStorage,
+        Browser,
+        BuildPipeline,
+        ClientSystem,
+        CLI,
+        CMS,
+        CodeInspectionPlatform,
+        ContainerPlatform,
+        DataLake,
+        Database,
+        Desktop,
+        DevOpsClient,
+        EJB,
+        ERP,
+        EventListener,
+        FileServer,
+        Function,
+        Gateway,
+        HSM,
+        IdentityProvider,
+        IdentityStoreDatabase,
+        IdentityStoreLDAP,
+        IDS,
+        IoTDevice,
+        IPS,
+        LDAPServer,
+        Library,
+        LoadBalancer,
+        LocalFileSystem,
+        MailServer,
+        Mainframe,
+        MessageQueue,
+        MobileApp,
+        Monitoring,
+        ReportEngine,
+        ReverseProxy,
+        Scheduler,
+        SearchEngine,
+        SearchIndex,
+        ServiceMesh,
+        ServiceRegistry,
+        SourcecodeRepository,
+        StreamProcessing,
+        Task,
+        Tool,
+        UnknownTechnology,
+        Vault,
+        WAF,
+        WebApplication,
+        WebServer,
+        WebServiceREST,
+        WebServiceSOAP,
 }
 
 impl std::fmt::Display for Technology {
@@ -122,62 +159,62 @@ impl std::fmt::Display for Technology {
         use Technology::*;
         match self {
             AI                     => write!(f, "ai")?,
-	    ApplicationServer      => write!(f, "application-server")?,
-	    ArtifactRegistry       => write!(f, "artifact-registry")?,
-	    BatchProcessing        => write!(f, "batch-processing")?,
-	    BigDataPlatform        => write!(f, "big-data-platform")?,
-	    BlockStorage           => write!(f, "block-storage")?,
-	    Browser                => write!(f, "browser")?,
-	    BuildPipeline          => write!(f, "build-pipeline")?,
-	    ClientSystem           => write!(f, "client-system")?,
-	    CLI                    => write!(f, "cli")?,
-	    CMS                    => write!(f, "cms")?,
-	    CodeInspectionPlatform => write!(f, "code-inspection-platform")?,
-	    ContainerPlatform      => write!(f, "container-platform")?,
-	    DataLake               => write!(f, "data-lake")?,
-	    Database               => write!(f, "database")?,
-	    Desktop                => write!(f, "desktop")?,
-	    DevOpsClient           => write!(f, "devops-client")?,
-	    EJB                    => write!(f, "ejb")?,
-	    ERP                    => write!(f, "erp")?,
-	    EventListener          => write!(f, "event-listener")?,
-	    FileServer             => write!(f, "file-server")?,
-	    Function               => write!(f, "function")?,
-	    Gateway                => write!(f, "gateway")?,
-	    HSM                    => write!(f, "hsm")?,
-	    IdentityProvider       => write!(f, "identity-provider")?,
-	    IdentityStoreDatabase  => write!(f, "identity-store-database")?,
-	    IdentityStoreLDAP      => write!(f, "identity-store-ldap")?,
-	    IDS                    => write!(f, "ids")?,
-	    IoTDevice              => write!(f, "iot-device")?,
-	    IPS                    => write!(f, "ips")?,
-	    LDAPServer             => write!(f, "ldap-server")?,
-	    Library                => write!(f, "library")?,
-	    LoadBalancer           => write!(f, "load-balancer")?,
-	    LocalFileSystem        => write!(f, "local-file-system")?,
-	    MailServer             => write!(f, "mail-server")?,
-	    Mainframe              => write!(f, "mainframe")?,
-	    MessageQueue           => write!(f, "message-queue")?,
-	    MobileApp              => write!(f, "mobile-app")?,
-	    Monitoring             => write!(f, "monitoring")?,
-	    ReportEngine           => write!(f, "report-engine")?,
-	    ReverseProxy           => write!(f, "reverse-proxy")?,
-	    Scheduler              => write!(f, "scheduler")?,
-	    SearchEngine           => write!(f, "search-engine")?,
-	    SearchIndex            => write!(f, "search-index")?,
-	    ServiceMesh            => write!(f, "service-mesh")?,
-	    ServiceRegistry        => write!(f, "service-registry")?,
-	    SourcecodeRepository   => write!(f, "sourcecode-repository")?,
-	    StreamProcessing       => write!(f, "stream-processing")?,
-	    Task                   => write!(f, "task")?,
-	    Tool                   => write!(f, "tool")?,
-	    UnknownTechnology      => write!(f, "unknown-technology")?,
-	    Vault                  => write!(f, "vault")?,
-	    WAF                    => write!(f, "waf")?,
-	    WebApplication         => write!(f, "web-application")?,
-	    WebServer              => write!(f, "web-server")?,
-	    WebServiceREST         => write!(f, "web-service-rest")?,
-	    WebServiceSOAP         => write!(f, "web-service-soap")?,
+            ApplicationServer      => write!(f, "application-server")?,
+            ArtifactRegistry       => write!(f, "artifact-registry")?,
+            BatchProcessing        => write!(f, "batch-processing")?,
+            BigDataPlatform        => write!(f, "big-data-platform")?,
+            BlockStorage           => write!(f, "block-storage")?,
+            Browser                => write!(f, "browser")?,
+            BuildPipeline          => write!(f, "build-pipeline")?,
+            ClientSystem           => write!(f, "client-system")?,
+            CLI                    => write!(f, "cli")?,
+            CMS                    => write!(f, "cms")?,
+            CodeInspectionPlatform => write!(f, "code-inspection-platform")?,
+            ContainerPlatform      => write!(f, "container-platform")?,
+            DataLake               => write!(f, "data-lake")?,
+            Database               => write!(f, "database")?,
+            Desktop                => write!(f, "desktop")?,
+            DevOpsClient           => write!(f, "devops-client")?,
+            EJB                    => write!(f, "ejb")?,
+            ERP                    => write!(f, "erp")?,
+            EventListener          => write!(f, "event-listener")?,
+            FileServer             => write!(f, "file-server")?,
+            Function               => write!(f, "function")?,
+            Gateway                => write!(f, "gateway")?,
+            HSM                    => write!(f, "hsm")?,
+            IdentityProvider       => write!(f, "identity-provider")?,
+            IdentityStoreDatabase  => write!(f, "identity-store-database")?,
+            IdentityStoreLDAP      => write!(f, "identity-store-ldap")?,
+            IDS                    => write!(f, "ids")?,
+            IoTDevice              => write!(f, "iot-device")?,
+            IPS                    => write!(f, "ips")?,
+            LDAPServer             => write!(f, "ldap-server")?,
+            Library                => write!(f, "library")?,
+            LoadBalancer           => write!(f, "load-balancer")?,
+            LocalFileSystem        => write!(f, "local-file-system")?,
+            MailServer             => write!(f, "mail-server")?,
+            Mainframe              => write!(f, "mainframe")?,
+            MessageQueue           => write!(f, "message-queue")?,
+            MobileApp              => write!(f, "mobile-app")?,
+            Monitoring             => write!(f, "monitoring")?,
+            ReportEngine           => write!(f, "report-engine")?,
+            ReverseProxy           => write!(f, "reverse-proxy")?,
+            Scheduler              => write!(f, "scheduler")?,
+            SearchEngine           => write!(f, "search-engine")?,
+            SearchIndex            => write!(f, "search-index")?,
+            ServiceMesh            => write!(f, "service-mesh")?,
+            ServiceRegistry        => write!(f, "service-registry")?,
+            SourcecodeRepository   => write!(f, "sourcecode-repository")?,
+            StreamProcessing       => write!(f, "stream-processing")?,
+            Task                   => write!(f, "task")?,
+            Tool                   => write!(f, "tool")?,
+            UnknownTechnology      => write!(f, "unknown-technology")?,
+            Vault                  => write!(f, "vault")?,
+            WAF                    => write!(f, "waf")?,
+            WebApplication         => write!(f, "web-application")?,
+            WebServer              => write!(f, "web-server")?,
+            WebServiceREST         => write!(f, "web-service-rest")?,
+            WebServiceSOAP         => write!(f, "web-service-soap")?,
         }
         Ok(())
     }
@@ -193,7 +230,7 @@ impl std::fmt::Display for TechnicalAssetUsage {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             TechnicalAssetUsage::Business => write!(f, "business")?,
-            TechnicalAssetUsage::Devops => write!(f, "devops")?,            
+            TechnicalAssetUsage::Devops => write!(f, "devops")?,
         }
         Ok(())
     }
@@ -201,10 +238,10 @@ impl std::fmt::Display for TechnicalAssetUsage {
 
 #[derive(Default, Debug, Serialize)]
 enum TechnicalAssetCriticality {
-    #[default]
     Archive,
     Operational,
     Important,
+    #[default]
     Critical,
     MissionCritical,
 }
@@ -224,10 +261,10 @@ impl std::fmt::Display for TechnicalAssetCriticality {
 
 #[derive(Default, Debug, Serialize)]
 enum TechnicalAssetConfidentiality {
-    #[default]
     Public,
     Internal,
     Restricted,
+    #[default]
     Confidential,
     StrictlyConfidential,
 }
@@ -311,12 +348,12 @@ impl std::fmt::Display for TechnicalAssetType {
     }
 }
 
-#[derive(Serialize, Default, Debug)]    
+#[derive(Serialize, Default, Debug)]
 enum TechnicalAssetSize {
     System,
     Service,
     Application,
-    #[default]    
+    #[default]
     Component,
 }
 
@@ -345,11 +382,12 @@ impl Model {
     fn push_ta(&mut self, ta: TechnicalAsset) {
         self.technical_assets.0.insert(ta.id.to_string(), ta);
     }
-    
+
     pub(crate) fn test_data() -> Self {
         let mut technical_assets = HashMap::new();
         technical_assets.insert("asset1".to_string(), TechnicalAsset{
             id: "asset1-id".to_string(),
+            description: "this is a test".to_string(),
             usage: TechnicalAssetUsage::Business,
             r#type: TechnicalAssetType::ExternalEntity,
             size: TechnicalAssetSize::Component,
@@ -365,7 +403,6 @@ impl Model {
             multi_tenant: true,
             redundant: true,
             custom_developed_parts: true,
-            //tags: vec!["long".to_string()],
         });
         Self {
             threagile_version: "1".to_string(),
@@ -384,27 +421,54 @@ impl Model {
 
 impl From<SplunkResult> for TechnicalAsset {
     fn from(value: SplunkResult) -> Self {
-        let (size, technology, machine) = match value.r#type.as_str() {
-            "microsoft.web/sites" => (TechnicalAssetSize::Service, Technology::Function, TechnicalAssetMachine::Serverless),
-            _ => (TechnicalAssetSize::Service, Technology::Function, TechnicalAssetMachine::Serverless),
+        let ta = match value.r#type.as_str() {
+            "microsoft.web/sites" =>  TechnicalAsset { id: value.resource_id.to_string(),
+                                                       size: TechnicalAssetSize::Service,
+                                                       machine: TechnicalAssetMachine::Serverless,
+                                                       technology: Technology::Function,
+                                                       ..Default::default()
+            },
+            "microsoft.app/containerapps" => TechnicalAsset { id: value.resource_id.to_string(),
+                                                              description: "A container app running a web application for the public.".to_string(),
+                                                              size: TechnicalAssetSize::Service,
+                                                              machine: TechnicalAssetMachine::Container,
+                                                              technology: Technology::WebApplication,
+                                                              ..Default::default()
+            },
+            "microsoft.keyvault/vaults" => TechnicalAsset { id: value.resource_id.to_string(),
+                                                            description: "A key vault used to hold sensitive keys, secrets, and config.".to_string(),
+                                                            size: TechnicalAssetSize::Service,
+                                                            machine: TechnicalAssetMachine::Virtual,
+                                                            technology: Technology::Vault,
+                                                            ..Default::default()
+            },
+            "microsoft.cache/redis" => TechnicalAsset { id: value.resource_id.to_string(),
+                                                        size: TechnicalAssetSize::Service,
+                                                        machine: TechnicalAssetMachine::Virtual,
+                                                        technology: Technology::Vault,
+                                                        ..Default::default()
+            },
+            "microsoft.storage/storageaccounts" => TechnicalAsset { id: value.resource_id.to_string(),
+                                                                    size: TechnicalAssetSize::Service,
+                                                                    machine: TechnicalAssetMachine::Virtual,
+                                                                    technology: Technology::Vault,
+                                                                    ..Default::default()
+            },
+            "microsoft.sql/servers/databases" => TechnicalAsset { id: value.resource_id.to_string(),
+                                                                  size: TechnicalAssetSize::Service,
+                                                                  machine: TechnicalAssetMachine::Virtual,
+                                                                  technology: Technology::Vault,
+                                                                  ..Default::default()
+            },
+            "microsoft.compute/virtualmachines" => TechnicalAsset { id: value.resource_id.to_string(),
+                                                                    size: TechnicalAssetSize::Service,
+                                                                    machine: TechnicalAssetMachine::Virtual,
+                                                                    technology: Technology::Vault,
+                                                                    ..Default::default()
+            },
+            _ => TechnicalAsset { id: value.resource_id.to_string(), .. Default::default()},
         };
-        TechnicalAsset { id: value.resource_id.to_string(),
-                         usage: TechnicalAssetUsage::Business,
-                         r#type: TechnicalAssetType::ExternalEntity,
-                         size,
-                         encryption: TechnicalAssetEncryption::None,
-                         machine,
-                         confidentiality: TechnicalAssetConfidentiality::Confidential,
-                         integrity: TechnicalAssetCriticality::Critical,
-                         availability: TechnicalAssetCriticality::Important,
-                         out_of_scope: false,
-                         technology,
-                         used_as_client_by_human: false,
-                         internet: true,
-                         multi_tenant: false,
-                         redundant: false,
-                         custom_developed_parts: false,
-        }
+        ta
     }
 }
 
@@ -420,7 +484,9 @@ impl From<SplunkResults> for TechnicalAssets {
 
 #[derive(Deserialize, Default, Clone, Debug)]
 pub(crate) struct SplunkResult {
-    // service_id: String,
+    //service_id: String,
+    #[serde(rename="SSPHP_RUN")]
+    ssphp_run: String,
     #[serde(rename="resourceGroup")]
     resource_group: String,
     pub(crate) resource_id: String,
@@ -442,11 +508,12 @@ impl SplunkResults {
 mod test {
     use super::*;
 
-    
+
     fn splunk_results() -> SplunkResults {
         SplunkResults {
             results: vec![
                 SplunkResult {
+                    ssphp_run: "foo".to_string(),
                     resource_id:"splunk-results-foo".to_string(),
                     r#type:"microsoft.web/sites".to_string(),
                     kind:"functionapp,linux".to_string(),
@@ -467,7 +534,7 @@ mod test {
     fn test_from_splunk_result() {
         let mut model = Model::test_data();
         model.technical_assets = TechnicalAssets::from(splunk_results());
-        
+
         model.write_file("results_from_splunk.yaml");
-    }    
+    }
 }
