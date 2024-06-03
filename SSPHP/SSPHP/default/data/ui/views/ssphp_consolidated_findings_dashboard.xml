@@ -778,7 +778,7 @@ BY findings.ssphp_norm_time,
 
 `ssphp_normalise_display_fields`
 
-`ssphp_add_display_colours`
+`ssphp_add_display_colours{{environment}}`
 
 | rename ssphp_norm_description_display as "Description",
          ssphp_norm_remediation_display as "Remediation",

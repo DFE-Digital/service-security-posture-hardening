@@ -88,7 +88,7 @@
           <query>
   | makeresults
 
-  `ssphp_metrics_eval_field_colors`
+  `ssphp_metrics_eval_field_colors{{environment}}`
 
   | table tkn_*
           </query>
@@ -112,8 +112,8 @@
       <table>
         <search>
           <query>
-`ssphp_summary_index` ssphp.use_case.id=$tkn_use_case_id$
-    [| search `ssphp_summary_index` ssphp.use_case.id=$tkn_use_case_id$
+`ssphp_summary_index{{environment}}` ssphp.use_case.id=$tkn_use_case_id$
+    [| search `ssphp_summary_index{{environment}}` ssphp.use_case.id=$tkn_use_case_id$
       | stats max(SSPHP_RUN) as SSPHP_RUN
       | return SSPHP_RUN]
 

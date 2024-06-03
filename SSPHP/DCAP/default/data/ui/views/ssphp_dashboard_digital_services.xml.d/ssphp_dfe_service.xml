@@ -20,7 +20,7 @@
       <fieldForValue>ssphp.service.id</fieldForValue>
       <search>
         <query>
-`ssphp_summary_index` earliest=-2d@d latest=now
+`ssphp_summary_index{{environment}}` earliest=-2d@d latest=now
 | fields ssphp.service.id, ssphp.service.name
 | dedup ssphp.service.id
 | sort 0 ssphp.service.id
@@ -61,11 +61,11 @@
       <table>
         <search id="bs_1">
           <query>
-`ssphp_summary_index` earliest=-2d@d latest=now
+`ssphp_summary_index{{environment}}` earliest=-2d@d latest=now
        ssphp.service.id=$tkn__service|s$
     ```ssphp.score.ciso_priority=1```
 
-    [| search `ssphp_summary_index` earliest=-2d@d latest=now 
+    [| search `ssphp_summary_index{{environment}}` earliest=-2d@d latest=now 
            ssphp.service.id=$tkn__service|s$
         ```ssphp.score.ciso_priority=1```
         
@@ -117,7 +117,7 @@
           <query>
   | makeresults
 
-  `ssphp_metrics_eval_field_colors`
+  `ssphp_metrics_eval_field_colors{{environment}}`
 
   | table tkn_*
           </query>
@@ -148,7 +148,7 @@
         
 | stats values(ssphp.service.name) as ssphp.service.name, count as ssphp.score.denominator, sum(eval(if('ssphp.score.score'="100",1,0))) as ssphp.score.numerator
 
-`ssphp_metrics_eval_field_colors`
+`ssphp_metrics_eval_field_colors{{environment}}`
 
 | eval service_compliant_perc=floor('ssphp.score.numerator'*100/'ssphp.score.denominator'),
         service_compliant_abs='ssphp.score.numerator'." of ". 'ssphp.score.denominator',
@@ -200,7 +200,7 @@
         
 | stats values(ssphp.service.name) as ssphp.service.name, count as ssphp.score.denominator, sum(eval(if('ssphp.score.score'="100",1,0))) as ssphp.score.numerator by ssphp.use_case.category
 
-`ssphp_metrics_eval_field_colors`
+`ssphp_metrics_eval_field_colors{{environment}}`
 
 | eval service_compliant_perc=floor('ssphp.score.numerator'*100/'ssphp.score.denominator'),
        service_compliant_abs='ssphp.score.numerator'." of ". 'ssphp.score.denominator',
@@ -219,7 +219,7 @@
 | rename xx_* as *
 | stats values(*) as *
 
-`ssphp_metrics_eval_field_colors`
+`ssphp_metrics_eval_field_colors{{environment}}`
 
 | fillnull value="0" POSTURE_service_compliant_perc, DETECT_service_compliant_perc, VULN_service_compliant_perc, SDLC_service_compliant_perc 
 | fillnull value="0 / 0" POSTURE_service_compliant_abs, DETECT_service_compliant_abs, VULN_service_compliant_abs, SDLC_service_compliant_abs
@@ -496,7 +496,7 @@ $tkn_category$
                                                   "Subscription = ".'ssphp.resource.subscription_id',
                                                   "Resource Group = ".'ssphp.resource.resource_group_id',
                                                   "Resource Name = ".'ssphp.resource.name')
-`ssphp_add_display_colours`
+`ssphp_add_display_colours{{environment}}`
 
 ``` sort the lines properly ```
 | fillnull value=0 n3

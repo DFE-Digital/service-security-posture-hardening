@@ -5,7 +5,7 @@
             <table>
                 <search>
                     <query>
-    | tstats max(_time) as last_run where `ssphp_metrics_data_index` by index, sourcetype
+    | tstats max(_time) as last_run where `ssphp_metrics_data_index{{environment}}' by index, sourcetype
     | eval last_run=strftime('last_run',"%Y-%m-%d %H:%M:%S")
     | table index, sourcetype, last_run
     | sort 0 - last_run
@@ -20,7 +20,7 @@
             <table>
                 <search>
                     <query>
-    `ssphp_summary_index` earliest=-30d@d latest=now
+    `ssphp_summary_index{{environment}}` earliest=-30d@d latest=now
     | stats max(SSPHP_RUN) as SSPHP_RUN by ssphp.use_case.id
     | eval last_run=strftime('SSPHP_RUN',"%Y-%m-%d %H:%M:%S")
     | table ssphp.use_case.id, last_run, SSPHP_RUN

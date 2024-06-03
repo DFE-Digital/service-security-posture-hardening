@@ -22,7 +22,7 @@
       <chart>
         <search>
           <query>
-`ssphp_summary_index` ssphp.use_case.id="$tkn_foundational_system$*"
+`ssphp_summary_index{{environment}}` ssphp.use_case.id="$tkn_foundational_system$*"
 
 | timechart min(ssphp.score.score) as score by ssphp.use_case.display.title span=1h
 | sort 0 - _time

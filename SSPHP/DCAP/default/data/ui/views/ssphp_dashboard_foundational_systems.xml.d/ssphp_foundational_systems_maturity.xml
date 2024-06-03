@@ -60,7 +60,7 @@
           <query>
   | makeresults
 
-  `ssphp_metrics_eval_field_colors`
+  `ssphp_metrics_eval_field_colors{{environment}}`
 
   | table tkn_*
           </query>
@@ -203,7 +203,7 @@
       <table>
         <search>
           <query>
-| loadjob savedsearch="nobody:$tkn_current_app$:ssphp_create_dashboard_dataset_maturity"
+| loadjob savedsearch="nobody:$tkn_current_app$:ssphp_create_dashboard_dataset_maturity{{environment}}"
 
 $tkn_type$
 

@@ -80,7 +80,7 @@ Note.... build then commit (because the build increments the version number and 
 | fields ssphp_resource_id
 | rename ssphp_resource_id as ssphp_id
 | join type=outer ssphp_id 
-    [| loadjob savedsearch="<your splunk user name>:SSPHP_DEV:ssphp_mem_test"]
+    [| loadjob savedsearch="<your splunk user name>:SSPHP_DEV:ssphp_mem_test{{environment}}"]
 | table ssphp_*
 | search ssphp_level_1_display_name="*" AND ssphp_level_2_display_name="*"
 ```

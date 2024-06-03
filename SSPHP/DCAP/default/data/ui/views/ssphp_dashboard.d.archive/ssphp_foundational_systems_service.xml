@@ -205,7 +205,7 @@
       <table id="table1">
         <search>
           <query>
-| loadjob savedsearch="nobody:$tkn_current_app$:ssphp_create_dashboard_dataset_service"
+| loadjob savedsearch="nobody:$tkn_current_app$:ssphp_create_dashboard_dataset_service{{environment}}"
 
 | rename  ssphp.use_case.title as "Title",
           ssphp.use_case.description as "Description",

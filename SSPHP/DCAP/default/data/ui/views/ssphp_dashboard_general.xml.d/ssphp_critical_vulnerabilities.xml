@@ -5,7 +5,7 @@
   
   <search id="bs_1">
     <query>
-| loadjob savedsearch="nobody:$tkn_current_app$:ssphp_vulnerabilities_create_data"
+| loadjob savedsearch="nobody:$tkn_current_app$:ssphp_vulnerabilities_create_data{{environment}}"
 | table *
     </query>
   </search>
