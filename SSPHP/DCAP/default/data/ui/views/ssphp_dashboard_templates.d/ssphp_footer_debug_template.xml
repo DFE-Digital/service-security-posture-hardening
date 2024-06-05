@@ -5,7 +5,7 @@
             <table>
                 <search>
                     <query>
-    | tstats max(_time) as last_run where `ssphp_metrics_data_index{{environment}}' by index, sourcetype
+    | tstats max(_time) as last_run where `ssphp_metrics_data_index{{environment}}` by index, sourcetype
     | eval last_run=strftime('last_run',"%Y-%m-%d %H:%M:%S")
     | table index, sourcetype, last_run
     | sort 0 - last_run
