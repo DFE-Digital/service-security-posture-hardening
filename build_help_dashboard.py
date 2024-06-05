@@ -57,7 +57,7 @@ def main():
     link_file = ""
 
 # Read the Dashboard Template File
-    filename=os.path.dirname(__file__)+"\\SSPHP Documentation\\SSPHP_Metrics Documentation\\ssphp_help_dashboard_template.xml"
+    filename=os.path.dirname(__file__)+"\\SSPHP Documentation\\{{app}} Documentation\\ssphp_help_dashboard_template.xml"
     with open(filename, "r") as f1:
         for line in f1:
             link_line = re.search(r"~~~(?P<link_file>.*)~~~",line)
