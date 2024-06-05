@@ -234,3 +234,4 @@
 {% include 'default/data/ui/views/ssphp_dashboard_templates.d/ssphp_footer_debug_template.xml' %}
         
   </dashboard>
+  
