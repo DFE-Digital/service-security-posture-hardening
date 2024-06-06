@@ -20,11 +20,11 @@
             <table>
                 <search>
                     <query>
-    `ssphp_summary_index{{environment}}` earliest=-30d@d latest=now
-    | stats max(SSPHP_RUN) as SSPHP_RUN by ssphp.use_case.id
-    | eval last_run=strftime('SSPHP_RUN',"%Y-%m-%d %H:%M:%S")
-    | table ssphp.use_case.id, last_run, SSPHP_RUN
-    | sort 0 - last_run
+`ssphp_summary_index{{environment}}` earliest=-30d@d latest=now ssphp.use_case.savedsearch="*{{environment}}"
+| stats values(ssphp.use_case.savedsearch) as ssphp.use_case.savedsearch, max(SSPHP_RUN) as SSPHP_RUN by ssphp.use_case.id
+| eval last_run=strftime('SSPHP_RUN',"%Y-%m-%d %H:%M:%S")
+| table ssphp.use_case.id, ssphp.use_case.savedsearch, last_run, SSPHP_RUN
+| sort 0 - last_run
                     </query>
                 </search>
                 <option name="count">50</option>

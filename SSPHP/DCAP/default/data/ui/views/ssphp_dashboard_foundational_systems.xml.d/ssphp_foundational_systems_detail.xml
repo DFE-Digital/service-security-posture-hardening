@@ -1,7 +1,7 @@
 <dashboard theme="dark" version="1.1" hideFilters="true" script="js/addtags.js, js/table_cell_backcolor_multivalue.js">
 
   <label>Security Posture Continuous Assurance : Control Detail Dashboard</label>
-  <description>v3.0.6</description>
+  <description>v3.1.1</description>
   
   <init>
     <unset token="tkn_show_dashboard"></unset>
@@ -191,6 +191,7 @@
             <set token="tkn_green">$result.ssphp.score.threshold.green$</set>
             <set token="tkn_ms_description">$result.ssphp.microsoft.desciption$</set>
             <set token="tkn_ms_implementation_status">$result.ssphp.microsoft.implementation_status$</set>
+            <set token="tkn_saved_search">$result.ssphp.use_case.savedsearch$</set>
 
             <set token="tkn_control_title">$result.ssphp.benchmark.control.title$</set>
             <set token="tkn_control_description">$result.ssphp.benchmark.control.description$</set>
@@ -453,19 +454,15 @@
       <table>
         <search>
           <query>
-| makeresults
-  | eval uc_id=$tkn_use_case_id|s$, uc_id="ssphp_use_case_".uc_id
-  | fields uc_id
+| rest /servicesNS/-/-/saved/searches splunk_server=local
 
-  | join type=outer uc_id
-    [| rest /servicesNS/-/-/saved/searches splunk_server=local
-      | rename title as uc_id
-      | search eai:acl.app="SSPHP_metrics" AND uc_id="ssphp_use_case_*"
-      | rex field=search "^(?&lt;search_text&gt;[\s\S]*?)``` ##################### end dashboard query ##################### ```"
-      | eval search_text=replace('search_text',"\|\s*fields","| table"),
-             search_text='search_text'."| sort 0 - ssphp.score.score | fields - temp_total_count"
-      | table uc_id, search, search_text]
-  | table uc_id, search, search_text
+| search eai:acl.app="{{app}}{{environment}}" AND title=$tkn_saved_search|s$
+
+| rex field=search "^(?&lt;search_text&gt;[\s\S]*?)``` ##################### end dashboard query ##################### ```"
+| eval search_text=replace('search_text',"\|\s*fields","| table"),
+        search_text='search_text'."| sort 0 - ssphp.score.score | fields - temp_total_count"
+
+| table title, search, search_text
           </query>
           <done>
             <set token="tkn_use_case_search_text">$result.search_text$</set>
