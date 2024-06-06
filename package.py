@@ -268,7 +268,7 @@ def update_jinja_context(env):
 
 def git_hash():
     repo = Repo(".")
-    head = repo.heads[0]
+    head = repo.head
     return head.commit.hexsha
 
 
