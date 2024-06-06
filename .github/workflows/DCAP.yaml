@@ -1,12 +1,12 @@
 ---
-name: SSPHP
+name: DCAP Production Deploy
 
 on:
   push:
     branches:
       - main
     paths:
-      - SSPHP/DCAP/**
+      - DCAP/**
   workflow_dispatch:
 
 jobs:
@@ -32,4 +32,4 @@ jobs:
           SPLUNK_USER: ${{ secrets.SPLUNK_USERNAME }}
           SPLUNK_PASSWORD: ${{ secrets.SPLUNK_PASSWORD }}
           SPLUNK_ACS_TOKEN: ${{ secrets.SPLUNK_ACS_TOKEN }}
-        run: ./package.py --prod SSPHP/DCAP
+        run: ./package.py --prod DCAP
