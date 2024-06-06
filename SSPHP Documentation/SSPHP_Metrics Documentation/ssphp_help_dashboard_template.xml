@@ -5,13 +5,13 @@
     <row>
       <panel>
         <html>
-  ~~~\\SSPHP Documentation\\SSPHP_Metrics Documentation\\S001 - Background.md~~~
+  ~~~\\SSPHP Documentation\\{{app}} Documentation\\S001 - Background.md~~~
         </html>
       </panel>
 
       <panel>
         <html>
-  ~~~\\SSPHP Documentation\\SSPHP_Metrics Documentation\\S004 - Dashboards.md~~~
+  ~~~\\SSPHP Documentation\\{{app}} Documentation\\S004 - Dashboards.md~~~
         </html>
       </panel>
     </row>

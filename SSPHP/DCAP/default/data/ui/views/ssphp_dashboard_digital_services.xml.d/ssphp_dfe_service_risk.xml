@@ -18,7 +18,7 @@
   
   <search id="bs_1">
     <query>
-| loadjob savedsearch="nobody:$tkn_current_app$:ssphp_show_defender_assessments_with_static_data"
+| loadjob savedsearch="nobody:$tkn_current_app$:ssphp_show_defender_assessments_with_static_data{{environment}}"
 | search properties.status.code=$tkn_show_status|s$
 | table *
     </query>
@@ -94,7 +94,7 @@
 
 | makeresults
 
-`ssphp_metrics_eval_field_colors`
+`ssphp_metrics_eval_field_colors{{environment}}`
 
 | table tkn_*
         </query>
@@ -232,7 +232,7 @@
 | search ssphp_service_id=$tkn_service_id|s$
 
 
-`ssphp_risk_calculate_score`
+`ssphp_risk_calculate_score{{environment}}`
 
 | eval lf="
 "
@@ -266,14 +266,14 @@
                                                   "Resource Type = ".'resource_type',
                                                   "Resource Name = ".'properties.resourceDetails.ResourceName')
                                       
-`ssphp_add_display_colours`
+`ssphp_add_display_colours{{environment}}`
 
 
 ```| rename ssphp_norm_ig_display as benchmark_ig```
 
 | sort 0 - risk_score
 
-`ssphp_metrics_eval_field_colors`
+`ssphp_metrics_eval_field_colors{{environment}}`
 
 | rename ssphp_norm_azure_resource_display as "Resource Affected",
          ssphp_norm_assessment_display as Assessment,

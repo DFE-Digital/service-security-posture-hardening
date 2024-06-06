@@ -54,7 +54,7 @@
           <query>
   | makeresults
 
-  `ssphp_metrics_eval_field_colors`
+  `ssphp_metrics_eval_field_colors{{environment}}`
 
   | table tkn_*
           </query>
@@ -192,7 +192,7 @@
       <table>
         <search>
           <query>
-| loadjob savedsearch="nobody:$tkn_current_app$:ssphp_create_dashboard_dataset_posture"
+| loadjob savedsearch="nobody:$tkn_current_app$:ssphp_create_dashboard_dataset_posture{{environment}}"
 | search line_type="summary" AND ssphp.source.foundational_system="*"
 | eval compliant_perc='compliant_perc'."%"
 | table ssphp.source.foundational_system, compliant_perc, compliant_abs, compliant_color
@@ -281,11 +281,11 @@
       <table>
         <search>
           <query>
-`ssphp_summary_index` earliest=-2d@d latest=now
+`ssphp_summary_index{{environment}}` earliest=-2d@d latest=now
       ssphp.source.service="s194"
       ssphp.score.ciso_priority=1
 
-      [| search `ssphp_summary_index` earliest=-2d@d latest=now 
+      [| search `ssphp_summary_index{{environment}}` earliest=-2d@d latest=now 
                 ssphp.source.service="s194"
                 ssphp.score.ciso_priority=1
           
@@ -299,7 +299,7 @@
         
 | stats values(ssphp.source.service_name) as ssphp.source.service_name, count as ssphp.score.denominator, sum(eval(if('ssphp.score.score'="100",1,0))) as ssphp.score.numerator
 
-`ssphp_metrics_eval_field_colors`
+`ssphp_metrics_eval_field_colors{{environment}}`
 
 | eval s194_compliant_perc=floor('ssphp.score.numerator'*100/'ssphp.score.denominator'),
        s194_compliant_abs='ssphp.score.numerator'." of ". 'ssphp.score.denominator',

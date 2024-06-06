@@ -90,8 +90,8 @@
       <table>
         <search>
           <query>
-`ssphp_summary_index` ssphp.use_case.id="*"
-    [| search `ssphp_summary_index`
+`ssphp_summary_index{{environment}}` ssphp.use_case.id="*"
+    [| search `ssphp_summary_index{{environment}}`
      | stats max(SSPHP_RUN) as SSPHP_RUN by ssphp.use_case.id
      | eval search_text="(\"ssphp.use_case.id\"=\"".'ssphp.use_case.id'."\" AND SSPHP_RUN=\"".SSPHP_RUN."\")"
      | stats values(search_text) as search_text
@@ -176,7 +176,7 @@
     <table>
       <search>
         <query>
-`ssphp_summary_index` ssphp.use_case.id="dns_rollup"
+`ssphp_summary_index{{environment}}` ssphp.use_case.id="dns_rollup"
 | stats count
         </query>
         <done>
@@ -199,8 +199,8 @@
     <table>
       <search>
         <query>
-`ssphp_summary_index` ssphp.use_case.id="dns_*"
-  [| search `ssphp_summary_index`
+`ssphp_summary_index{{environment}}` ssphp.use_case.id="dns_*"
+  [| search `ssphp_summary_index{{environment}}`
    | stats max(SSPHP_RUN) as SSPHP_RUN by ssphp.use_case.id
    | eval search_text="(\"ssphp.use_case.id\"=\"".'ssphp.use_case.id'."\" AND SSPHP_RUN=\"".SSPHP_RUN."\")"
    | stats values(search_text) as search_text
@@ -328,8 +328,8 @@ BY index, sourcetype
     <table>
       <search>
         <query>
-`ssphp_summary_index` ssphp.use_case.id="dns_*"
-  [| search `ssphp_summary_index`
+`ssphp_summary_index{{environment}}` ssphp.use_case.id="dns_*"
+  [| search `ssphp_summary_index{{environment}}`
    | stats max(SSPHP_RUN) as SSPHP_RUN by ssphp.use_case.id
    | eval search_text="(\"ssphp.use_case.id\"=\"".'ssphp.use_case.id'."\" AND SSPHP_RUN=\"".SSPHP_RUN."\")"
    | stats values(search_text) as search_text
@@ -358,8 +358,8 @@ BY index, sourcetype
     <table>
       <search>
         <query>
-`ssphp_summary_index` ssphp.use_case.id="dns_*"
-  [| search `ssphp_summary_index`
+`ssphp_summary_index{{environment}}` ssphp.use_case.id="dns_*"
+  [| search `ssphp_summary_index{{environment}}`
    | stats max(SSPHP_RUN) as SSPHP_RUN by ssphp.use_case.id
    | eval search_text="(\"ssphp.use_case.id\"=\"".'ssphp.use_case.id'."\" AND SSPHP_RUN=\"".SSPHP_RUN."\")"
    | stats values(search_text) as search_text
@@ -684,7 +684,7 @@ BY index, sourcetype
     <table>
       <search>
         <query>
-`ssphp_summary_index` ssphp.use_case.id="aad_rollup"
+`ssphp_summary_index{{environment}}` ssphp.use_case.id="aad_rollup"
 | stats count
         </query>
         <done>
@@ -707,8 +707,8 @@ BY index, sourcetype
     <table>
       <search>
         <query>
-`ssphp_summary_index` ssphp.use_case.id="aad_*"
-  [| search `ssphp_summary_index`
+`ssphp_summary_index{{environment}}` ssphp.use_case.id="aad_*"
+  [| search `ssphp_summary_index{{environment}}`
    | stats max(SSPHP_RUN) as SSPHP_RUN by ssphp.use_case.id
    | eval search_text="(\"ssphp.use_case.id\"=\"".'ssphp.use_case.id'."\" AND SSPHP_RUN=\"".SSPHP_RUN."\")"
    | stats values(search_text) as search_text
@@ -836,8 +836,8 @@ BY index, sourcetype
     <table>
       <search>
         <query>
-`ssphp_summary_index` ssphp.use_case.id="aad_*"
-  [| search `ssphp_summary_index`
+`ssphp_summary_index{{environment}}` ssphp.use_case.id="aad_*"
+  [| search `ssphp_summary_index{{environment}}`
    | stats max(SSPHP_RUN) as SSPHP_RUN by ssphp.use_case.id
    | eval search_text="(\"ssphp.use_case.id\"=\"".'ssphp.use_case.id'."\" AND SSPHP_RUN=\"".SSPHP_RUN."\")"
    | stats values(search_text) as search_text
@@ -866,8 +866,8 @@ BY index, sourcetype
     <table>
       <search>
         <query>
-`ssphp_summary_index` ssphp.use_case.id="aad_*"
-  [| search `ssphp_summary_index`
+`ssphp_summary_index{{environment}}` ssphp.use_case.id="aad_*"
+  [| search `ssphp_summary_index{{environment}}`
    | stats max(SSPHP_RUN) as SSPHP_RUN by ssphp.use_case.id
    | eval search_text="(\"ssphp.use_case.id\"=\"".'ssphp.use_case.id'."\" AND SSPHP_RUN=\"".SSPHP_RUN."\")"
    | stats values(search_text) as search_text
@@ -1192,7 +1192,7 @@ BY index, sourcetype
     <table>
       <search>
         <query>
-`ssphp_summary_index` ssphp.use_case.id="azr_rollup"
+`ssphp_summary_index{{environment}}` ssphp.use_case.id="azr_rollup"
 | stats count
         </query>
         <done>
@@ -1215,8 +1215,8 @@ BY index, sourcetype
     <table>
       <search>
         <query>
-`ssphp_summary_index` ssphp.use_case.id="azr_*"
-  [| search `ssphp_summary_index`
+`ssphp_summary_index{{environment}}` ssphp.use_case.id="azr_*"
+  [| search `ssphp_summary_index{{environment}}`
    | stats max(SSPHP_RUN) as SSPHP_RUN by ssphp.use_case.id
    | eval search_text="(\"ssphp.use_case.id\"=\"".'ssphp.use_case.id'."\" AND SSPHP_RUN=\"".SSPHP_RUN."\")"
    | stats values(search_text) as search_text
@@ -1344,8 +1344,8 @@ BY index, sourcetype
     <table>
       <search>
         <query>
-`ssphp_summary_index` ssphp.use_case.id="azr_*"
-  [| search `ssphp_summary_index`
+`ssphp_summary_index{{environment}}` ssphp.use_case.id="azr_*"
+  [| search `ssphp_summary_index{{environment}}`
    | stats max(SSPHP_RUN) as SSPHP_RUN by ssphp.use_case.id
    | eval search_text="(\"ssphp.use_case.id\"=\"".'ssphp.use_case.id'."\" AND SSPHP_RUN=\"".SSPHP_RUN."\")"
    | stats values(search_text) as search_text
@@ -1374,8 +1374,8 @@ BY index, sourcetype
     <table>
       <search>
         <query>
-`ssphp_summary_index` ssphp.use_case.id="azr_*"
-  [| search `ssphp_summary_index`
+`ssphp_summary_index{{environment}}` ssphp.use_case.id="azr_*"
+  [| search `ssphp_summary_index{{environment}}`
    | stats max(SSPHP_RUN) as SSPHP_RUN by ssphp.use_case.id
    | eval search_text="(\"ssphp.use_case.id\"=\"".'ssphp.use_case.id'."\" AND SSPHP_RUN=\"".SSPHP_RUN."\")"
    | stats values(search_text) as search_text
@@ -1700,7 +1700,7 @@ BY index, sourcetype
     <table>
       <search>
         <query>
-`ssphp_summary_index` ssphp.use_case.id="m365_rollup"
+`ssphp_summary_index{{environment}}` ssphp.use_case.id="m365_rollup"
 | stats count
         </query>
         <done>
@@ -1723,8 +1723,8 @@ BY index, sourcetype
     <table>
       <search>
         <query>
-`ssphp_summary_index` ssphp.use_case.id="m365_*"
-  [| search `ssphp_summary_index`
+`ssphp_summary_index{{environment}}` ssphp.use_case.id="m365_*"
+  [| search `ssphp_summary_index{{environment}}`
    | stats max(SSPHP_RUN) as SSPHP_RUN by ssphp.use_case.id
    | eval search_text="(\"ssphp.use_case.id\"=\"".'ssphp.use_case.id'."\" AND SSPHP_RUN=\"".SSPHP_RUN."\")"
    | stats values(search_text) as search_text
@@ -1852,8 +1852,8 @@ BY index, sourcetype
     <table>
       <search>
         <query>
-`ssphp_summary_index` ssphp.use_case.id="m365_*"
-  [| search `ssphp_summary_index`
+`ssphp_summary_index{{environment}}` ssphp.use_case.id="m365_*"
+  [| search `ssphp_summary_index{{environment}}`
    | stats max(SSPHP_RUN) as SSPHP_RUN by ssphp.use_case.id
    | eval search_text="(\"ssphp.use_case.id\"=\"".'ssphp.use_case.id'."\" AND SSPHP_RUN=\"".SSPHP_RUN."\")"
    | stats values(search_text) as search_text
@@ -1882,8 +1882,8 @@ BY index, sourcetype
     <table>
       <search>
         <query>
-`ssphp_summary_index` ssphp.use_case.id="m365_*"
-  [| search `ssphp_summary_index`
+`ssphp_summary_index{{environment}}` ssphp.use_case.id="m365_*"
+  [| search `ssphp_summary_index{{environment}}`
    | stats max(SSPHP_RUN) as SSPHP_RUN by ssphp.use_case.id
    | eval search_text="(\"ssphp.use_case.id\"=\"".'ssphp.use_case.id'."\" AND SSPHP_RUN=\"".SSPHP_RUN."\")"
    | stats values(search_text) as search_text
@@ -2208,7 +2208,7 @@ BY index, sourcetype
     <table>
       <search>
         <query>
-`ssphp_summary_index` ssphp.use_case.id="busc_rollup"
+`ssphp_summary_index{{environment}}` ssphp.use_case.id="busc_rollup"
 | stats count
         </query>
         <done>
@@ -2231,8 +2231,8 @@ BY index, sourcetype
     <table>
       <search>
         <query>
-`ssphp_summary_index` ssphp.use_case.id="busc_*"
-  [| search `ssphp_summary_index`
+`ssphp_summary_index{{environment}}` ssphp.use_case.id="busc_*"
+  [| search `ssphp_summary_index{{environment}}`
    | stats max(SSPHP_RUN) as SSPHP_RUN by ssphp.use_case.id
    | eval search_text="(\"ssphp.use_case.id\"=\"".'ssphp.use_case.id'."\" AND SSPHP_RUN=\"".SSPHP_RUN."\")"
    | stats values(search_text) as search_text
@@ -2360,8 +2360,8 @@ BY index, sourcetype
     <table>
       <search>
         <query>
-`ssphp_summary_index` ssphp.use_case.id="busc_*"
-  [| search `ssphp_summary_index`
+`ssphp_summary_index{{environment}}` ssphp.use_case.id="busc_*"
+  [| search `ssphp_summary_index{{environment}}`
    | stats max(SSPHP_RUN) as SSPHP_RUN by ssphp.use_case.id
    | eval search_text="(\"ssphp.use_case.id\"=\"".'ssphp.use_case.id'."\" AND SSPHP_RUN=\"".SSPHP_RUN."\")"
    | stats values(search_text) as search_text
@@ -2390,8 +2390,8 @@ BY index, sourcetype
     <table>
       <search>
         <query>
-`ssphp_summary_index` ssphp.use_case.id="busc_*"
-  [| search `ssphp_summary_index`
+`ssphp_summary_index{{environment}}` ssphp.use_case.id="busc_*"
+  [| search `ssphp_summary_index{{environment}}`
    | stats max(SSPHP_RUN) as SSPHP_RUN by ssphp.use_case.id
    | eval search_text="(\"ssphp.use_case.id\"=\"".'ssphp.use_case.id'."\" AND SSPHP_RUN=\"".SSPHP_RUN."\")"
    | stats values(search_text) as search_text
@@ -2839,5 +2839,3 @@ BY index, sourcetype
 </row>
 
 </dashboard>
-
-

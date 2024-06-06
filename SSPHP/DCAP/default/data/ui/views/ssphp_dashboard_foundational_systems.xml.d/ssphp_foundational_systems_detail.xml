@@ -1,7 +1,7 @@
-<dashboard theme="dark" version="1.1" script="js/addtags.js, js/table_cell_backcolor_multivalue.js">
+<dashboard theme="dark" version="1.1" hideFilters="true" script="js/addtags.js, js/table_cell_backcolor_multivalue.js">
 
   <label>Security Posture Continuous Assurance : Control Detail Dashboard</label>
-  <description>v3.0.4</description>
+  <description>v3.1.1</description>
   
   <init>
     <unset token="tkn_show_dashboard"></unset>
@@ -18,6 +18,10 @@
     <set token="tkn_aws_2_cis_doc_link">https://educationgovuk-my.sharepoint.com/:b:/r/personal/ian_pearl_education_gov_uk/Documents/CIS%20BENCHMARK%20DOCS/CIS_Amazon_Web_Services_Foundations_Benchmark_v2.0.0.pdf?csf=1&amp;web=1&amp;e=fwOaIK</set>
     <set token="tkn_aws_2_cis_doc_name">CIS_Amazon_Web_Services_Foundations_Benchmark_v2.0.0.pdf</set>
   </init>
+
+  <fieldset submitButton="false">
+    {% include 'default/data/ui/views/ssphp_dashboard_templates.d/ssphp_footer_menu_template.xml' %}
+  </fieldset>
 
   <row depends="$never_show$">
     <html>
@@ -84,7 +88,7 @@
           <query>
   | makeresults
 
-  `ssphp_metrics_eval_field_colors`
+  `ssphp_metrics_eval_field_colors{{environment}}`
 
   | table tkn_*
           </query>
@@ -108,8 +112,8 @@
       <table>
         <search>
           <query>
-`ssphp_summary_index` ssphp.use_case.id=$tkn_use_case_id$
-    [| search `ssphp_summary_index` ssphp.use_case.id=$tkn_use_case_id$
+`ssphp_summary_index{{environment}}` ssphp.use_case.id=$tkn_use_case_id$
+    [| search `ssphp_summary_index{{environment}}` ssphp.use_case.id=$tkn_use_case_id$
       | stats max(SSPHP_RUN) as SSPHP_RUN
       | return SSPHP_RUN]
 
@@ -187,6 +191,7 @@
             <set token="tkn_green">$result.ssphp.score.threshold.green$</set>
             <set token="tkn_ms_description">$result.ssphp.microsoft.desciption$</set>
             <set token="tkn_ms_implementation_status">$result.ssphp.microsoft.implementation_status$</set>
+            <set token="tkn_saved_search">$result.ssphp.use_case.savedsearch$</set>
 
             <set token="tkn_control_title">$result.ssphp.benchmark.control.title$</set>
             <set token="tkn_control_description">$result.ssphp.benchmark.control.description$</set>
@@ -449,19 +454,15 @@
       <table>
         <search>
           <query>
-| makeresults
-  | eval uc_id=$tkn_use_case_id|s$, uc_id="ssphp_use_case_".uc_id
-  | fields uc_id
+| rest /servicesNS/-/-/saved/searches splunk_server=local
 
-  | join type=outer uc_id
-    [| rest /servicesNS/-/-/saved/searches splunk_server=local
-      | rename title as uc_id
-      | search eai:acl.app="SSPHP_metrics" AND uc_id="ssphp_use_case_*"
-      | rex field=search "^(?&lt;search_text&gt;[\s\S]*?)``` ##################### end dashboard query ##################### ```"
-      | eval search_text=replace('search_text',"\|\s*fields","| table"),
-             search_text='search_text'."| sort 0 - ssphp.score.score | fields - temp_total_count"
-      | table uc_id, search, search_text]
-  | table uc_id, search, search_text
+| search eai:acl.app="{{app}}{{environment}}" AND title=$tkn_saved_search|s$
+
+| rex field=search "^(?&lt;search_text&gt;[\s\S]*?)``` ##################### end dashboard query ##################### ```"
+| eval search_text=replace('search_text',"\|\s*fields","| table"),
+        search_text='search_text'."| sort 0 - ssphp.score.score | fields - temp_total_count"
+
+| table title, search, search_text
           </query>
           <done>
             <set token="tkn_use_case_search_text">$result.search_text$</set>
@@ -550,4 +551,9 @@ $tkn_use_case_search_text$
       </table>
     </panel>
   </row>
+
+{% include 'default/data/ui/views/ssphp_dashboard_templates.d/ssphp_footer_template.xml' %}
+
+{% include 'default/data/ui/views/ssphp_dashboard_templates.d/ssphp_footer_debug_template.xml' %}
+
 </dashboard>

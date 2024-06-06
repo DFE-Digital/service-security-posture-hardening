@@ -24,8 +24,8 @@
         <title>OVERALL IG1 SCORE</title>
         <search>
           <query>
-`ssphp_summary_index` ssphp.use_case.id="all_000" earliest=-2d@d latest=now
-    [| search `ssphp_summary_index` ssphp.use_case.id="all_000" earliest=-2d@d latest=now
+`ssphp_summary_index{{environment}}` ssphp.use_case.id="all_000" earliest=-2d@d latest=now
+    [| search `ssphp_summary_index{{environment}}` ssphp.use_case.id="all_000" earliest=-2d@d latest=now
     | stats max(SSPHP_RUN) as SSPHP_RUN
     | return SSPHP_RUN]
 | table ssphp.score.score, ssphp.score.color
@@ -59,8 +59,8 @@
         <title>DNS</title>
         <search>
           <query>
-`ssphp_summary_index` ssphp.use_case.id="dns_000" earliest=-2d@d latest=now
-    [| search `ssphp_summary_index` ssphp.use_case.id="dns_000" earliest=-2d@d latest=now
+`ssphp_summary_index{{environment}}` ssphp.use_case.id="dns_000" earliest=-2d@d latest=now
+    [| search `ssphp_summary_index{{environment}}` ssphp.use_case.id="dns_000" earliest=-2d@d latest=now
     | stats max(SSPHP_RUN) as SSPHP_RUN
     | return SSPHP_RUN]
 | table ssphp.score.score, ssphp.score.color
@@ -88,8 +88,8 @@
         <title>AZURE</title>
         <search>
           <query>
-`ssphp_summary_index` ssphp.use_case.id="azure_000" earliest=-2d@d latest=now
-    [| search `ssphp_summary_index` ssphp.use_case.id="azure_000" earliest=-2d@d latest=now
+`ssphp_summary_index{{environment}}` ssphp.use_case.id="azure_000" earliest=-2d@d latest=now
+    [| search `ssphp_summary_index{{environment}}` ssphp.use_case.id="azure_000" earliest=-2d@d latest=now
     | stats max(SSPHP_RUN) as SSPHP_RUN
     | return SSPHP_RUN]
 | table ssphp.score.score, ssphp.score.color
@@ -117,8 +117,8 @@
         <title>AZURE ACTIVE DIRECTORY</title>
         <search>
           <query>
-`ssphp_summary_index` ssphp.use_case.id="aad_000" earliest=-2d@d latest=now
-    [| search `ssphp_summary_index` ssphp.use_case.id="aad_000" earliest=-2d@d latest=now
+`ssphp_summary_index{{environment}}` ssphp.use_case.id="aad_000" earliest=-2d@d latest=now
+    [| search `ssphp_summary_index{{environment}}` ssphp.use_case.id="aad_000" earliest=-2d@d latest=now
     | stats max(SSPHP_RUN) as SSPHP_RUN
     | return SSPHP_RUN]
 | table ssphp.score.score, ssphp.score.color
@@ -146,8 +146,8 @@
         <title>M365</title>
         <search>
           <query>
-`ssphp_summary_index` ssphp.use_case.id="m365_000" earliest=-2d@d latest=now
-    [| search `ssphp_summary_index` ssphp.use_case.id="m365_000" earliest=-2d@d latest=now
+`ssphp_summary_index{{environment}}` ssphp.use_case.id="m365_000" earliest=-2d@d latest=now
+    [| search `ssphp_summary_index{{environment}}` ssphp.use_case.id="m365_000" earliest=-2d@d latest=now
     | stats max(SSPHP_RUN) as SSPHP_RUN
     | return SSPHP_RUN]
 | table ssphp.score.score, ssphp.score.color
@@ -183,8 +183,8 @@
       <table id="table1">
         <search>
           <query>
-`ssphp_summary_index` ssphp.use_case.id="*_*_000" NOT ssphp.use_case.id="*_*.*_000" earliest=-2d@d latest=now
-    [| search `ssphp_summary_index` ssphp.use_case.id="*_*_000" NOT ssphp.use_case.id="*_*.*_000" earliest=-2d@d latest=now
+`ssphp_summary_index{{environment}}` ssphp.use_case.id="*_*_000" NOT ssphp.use_case.id="*_*.*_000" earliest=-2d@d latest=now
+    [| search `ssphp_summary_index{{environment}}` ssphp.use_case.id="*_*_000" NOT ssphp.use_case.id="*_*.*_000" earliest=-2d@d latest=now
       | stats max(SSPHP_RUN) as SSPHP_RUN by ssphp.use_case.id
       | eval search_text="(\"ssphp.use_case.id\"=\"".'ssphp.use_case.id'."\" AND SSPHP_RUN=\"".SSPHP_RUN."\")"
       | stats values(search_text) as search_text
@@ -297,7 +297,7 @@
       <table id="table2">
         <search>
           <query>
-`ssphp_summary_index` ssphp.use_case.id="$tkn_selected_system$*" $tkn_show_ig1$
+`ssphp_summary_index{{environment}}` ssphp.use_case.id="$tkn_selected_system$*" $tkn_show_ig1$
 | dedup ssphp.use_case.id
 | search ssphp.use_case.title!="" AND ssphp.use_case.id!="*_000" ```AND ssphp.use_case.id!="*rollup*" AND ssphp.use_case.id!="m365_001" AND ssphp.use_case.id!="m365_002" AND ssphp.use_case.id!="*6_1" AND ssphp.use_case.id!="*6_2"```
 

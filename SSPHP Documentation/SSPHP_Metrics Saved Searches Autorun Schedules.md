@@ -1,4 +1,4 @@
-**SSPHP_Metrics Saved Searches Autorun Schedules**
+**{{app}} Saved Searches Autorun Schedules**
 
 Each Use Case is driven by a single Splunk SaveSearch. The data comes from Azure Functions which run daily at between 2am and 3:30am, depending on which API/SDK is being used to source the data). These run every 30 minutes and take approximately 10 minutes each to complete. So the assumption is that they will all have completed before 4am  day.
 

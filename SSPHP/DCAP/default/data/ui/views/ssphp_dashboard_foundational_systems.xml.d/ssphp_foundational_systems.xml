@@ -1,6 +1,6 @@
-<dashboard version="1.1" theme="dark" script="js/table_cell_color.js">
+<dashboard version="1.1" theme="dark" hideFilters="true" script="js/table_cell_color.js">
   <label>Foundation Services : Security Posture Continuous Assurance</label>
-  <description>v1.02</description>
+  <description>v1.03</description>
   
   <init>
     <set token="tkn_selected_system">m365</set>
@@ -24,6 +24,13 @@
     <unset token="tkn_show">show</unset>
     
   </init>
+
+
+  <fieldset submitButton="false">
+    {% include 'default/data/ui/views/ssphp_dashboard_templates.d/ssphp_footer_menu_template.xml' %}
+  </fieldset>
+
+
   
 <!-- ################### What app are we running in ################### -->   
   <row depends="$never_show$">
@@ -48,8 +55,8 @@
       <table>
         <search id="base_rollup_1">
           <query>
-      `ssphp_summary_index` (ssphp.use_case.id="*_*_000" OR ssphp.use_case.id="*_000") earliest=-1d@d latest=now
-      [| search `ssphp_summary_index` (ssphp.use_case.id="*_*_000" OR ssphp.use_case.id="*_000") earliest=-1d@d latest=now
+      `ssphp_summary_index{{environment}}` (ssphp.use_case.id="*_*_000" OR ssphp.use_case.id="*_000") earliest=-1d@d latest=now
+      [| search `ssphp_summary_index{{environment}}` (ssphp.use_case.id="*_*_000" OR ssphp.use_case.id="*_000") earliest=-1d@d latest=now
         | stats max(SSPHP_RUN) as SSPHP_RUN by ssphp.use_case.id
         | eval search_text="(\"ssphp.use_case.id\"=\"".'ssphp.use_case.id'."\" AND SSPHP_RUN=\"".SSPHP_RUN."\")"
         | stats values(search_text) as search_text
@@ -222,5 +229,9 @@
     </panel>
   </row>
 
+{% include 'default/data/ui/views/ssphp_dashboard_templates.d/ssphp_footer_template.xml' %}
 
-</dashboard>
+{% include 'default/data/ui/views/ssphp_dashboard_templates.d/ssphp_footer_debug_template.xml' %}
+        
+  </dashboard>
+  

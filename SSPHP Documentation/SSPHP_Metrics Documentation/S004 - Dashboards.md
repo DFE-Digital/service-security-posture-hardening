@@ -54,4 +54,4 @@ For CIS Benchmark Controls, the dashboard includes details of IG status and whic
 
 
 ## MENUS
-There is a default Menu for users of the SSPHP_Metrics Splunk App - in the top|left of the browser tab. Each of the Dashboards described can be accessed via the menu.
+There is a default Menu for users of the {{app}} Splunk App - in the top|left of the browser tab. Each of the Dashboards described can be accessed via the menu.

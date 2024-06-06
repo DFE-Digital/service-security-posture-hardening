@@ -1,6 +1,11 @@
-<dashboard theme="dark" version="1.1">
+<dashboard theme="dark" version="1.1" hideFilters="true">
 
     <label>Security Posture Continuous Assurance : Help Dashboard</label>
+    <description>v1.0.1</description>
+
+  <fieldset submitButton="false">
+    {% include 'default/data/ui/views/ssphp_dashboard_templates.d/ssphp_footer_menu_template.xml' %}
+  </fieldset>
 
     <row>
       <panel>
@@ -33,10 +38,14 @@ DfE Mandated &amp; Non-Compliant = Red
 Recommended &amp; Non-Compliant = Orange
 Desirable &amp; Non-Compliant = White<br></br>By default, the rows are sorted so that all the DfE Mandated Controls are at the top, then Recommended, then Desirable. Within each of these categories, the Non-Compliant Controls are at the top.<br></br>Clicking anywhere on a row will open the Detail Dashboard in a new browser tab, and the context will automatically be set to the Control that was clicked.<br></br>
 <div style="font-size:125%;color:CornflowerBlue;">DETAIL DASHBOARD</div>This dashboard is intended for the person responsible for understanding and remediating individual non-compliance issues; it shows the field level details about the tests that were run for a single Control, the expected results, and what needs to be changed in order to comply.<br></br><b>NOTE</b> the dashboard will only work if it is passed the id of a Control, so it can only really be used by a click through from the Service Dashboard. Manually adding the Control ID to the URL is another way of setting the target control for the dashboard (in the format ?tkn_use_case_id=m365_001_cis_1-1-2 or ?tkn_use_case_id=dns_dfe_2-0).<br></br>The Dashboard displays different details depending on the source of the Benchmark - for Controls based on the CIS Benchmarks, the detail fields in the dashboard will show description and other metadata taken from the benchmark document. For DfE Custom Controls developed by Threat Modelling, the fields will come from the Control itself and there will be no reference to the CIS fields.<br></br>The Score is calculated from the 'numerator' (Tests Failed in this Control) / 'denominator' (Number of Tests in this Control), expressed as a percentage. Depending on the context of the Control, numerator and denominator have different meanings...(a) for a Control where there is only a single setting to be investigated (ie 1 line), numerator and denominator means the number of fields that were investigated in the algorithm. (b) for a Control which has meany lines (for example, where the Control requires us to look at every user to see whether they each have the correct settings), then each use is deemed to be either Compliant or Non-Compliant and the denominator and numerator would be the number of events (in the example, users) and the number that failed the tests.<br></br>The 'Underlying Data' panel shows what was returned by the underlying system's API when the posture data was requested. The panel labelled 'Compliance' gives details of exactly what field settings are expected for each line item in the 'Underlying Data' panel. Fields with a red background have been determined to be problematic (Non-Compliant) and need to be remediated. So the dashboard is extremely detailed in explaining what the tests expected and which items of data were deemed to require remediation.<br></br>For CIS Benchmark Controls, the dashboard includes details of IG status and which 'CIS Navigator Critical Security Controls' match.<br></br>
-<div style="font-size:125%;color:CornflowerBlue;">MENUS</div>There is a default Menu for users of the SSPHP_Metrics Splunk App - in the top|left of the browser tab. Each of the Dashboards described can be accessed via the menu.
+<div style="font-size:125%;color:CornflowerBlue;">MENUS</div>There is a default Menu for users of the {{app}} Splunk App - in the top|left of the browser tab. Each of the Dashboards described can be accessed via the menu.
 
         </html>
       </panel>
     </row>
+
+{% include 'default/data/ui/views/ssphp_dashboard_templates.d/ssphp_footer_template.xml' %}
+
+{% include 'default/data/ui/views/ssphp_dashboard_templates.d/ssphp_footer_debug_template.xml' %}
       
   </dashboard>

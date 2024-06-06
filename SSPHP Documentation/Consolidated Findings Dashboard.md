@@ -17,7 +17,7 @@ How this works in the xml
 **Table Presentation**
 The dashboard presents data in Splunk Tables by invoking HTML tags using bespoke JavaScipt code. In order to make the large amount 
 Special Javascript... addtags.js is where to find that
-How it works - look in macro `ssphp_add_display_colours` for execution
+How it works - look in macro `ssphp_add_display_colours{{environment}}` for execution
 ¬¬~!span
 ~!\/span~!"¬¬
 

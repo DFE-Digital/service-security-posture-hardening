@@ -1,0 +1,16 @@
+<input type="radio" token="tkn_footer" searchWhenChanged="true">
+    <label>Show Dashboard Details</label>
+    <choice value="s">Show</choice>
+    <choice value="h">Hide</choice>
+    <default>h</default>
+    <initialValue>h</initialValue>
+    <change>
+      <condition value="s">
+        <set token="tkn_show_footer">true</set>
+      </condition>
+      <condition>
+        <unset token="tkn_show_footer"></unset>
+      </condition>
+    </change>
+  </input>
+  
