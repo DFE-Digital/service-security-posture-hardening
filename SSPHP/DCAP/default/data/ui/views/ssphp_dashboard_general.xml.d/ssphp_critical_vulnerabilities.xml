@@ -1,4 +1,10 @@
-<form version="1.1" theme="dark">
+{% if environment=="_DEV" %}
+  <form version="1.1" theme="light">
+{% else %}
+  <form version="1.1" theme="dark">
+{% endif %}  
+
+
   <label>Vulnerability Management</label>
   <description>v1.2.0</description>
   

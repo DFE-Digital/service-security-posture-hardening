@@ -1,4 +1,9 @@
-<form version="1.1" theme="dark">
+{% if environment=="_DEV" %}
+  <form version="1.1" theme="light">
+{% else %}
+  <form version="1.1" theme="dark">
+{% endif %}  
+
     <label>Development Status</label>
     <description>v1.0.0</description>
     <init>
@@ -88,4 +93,3 @@
       </panel>
     </row>
   </form>
-  

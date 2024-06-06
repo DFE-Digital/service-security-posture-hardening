@@ -1,0 +1,46 @@
+.header_r0{
+    height: auto; 
+    margin: 0px auto 0px auto;
+    font-size: 1.7em;
+    font-family: Arial, Helvetica, sans-serif;
+    color: #0000FF; 
+}
+.header_r1{
+    height: auto; 
+    margin: 0px auto 0px auto;
+    font-size: 1.1em;
+    font-family: Arial, Helvetica, sans-serif;
+    color: #AAAAAA; 
+}
+.header_r2{
+    height: auto; 
+    margin: 0px auto 0px auto;
+    font-size: 1em;
+    font-family: Arial, Helvetica, sans-serif;
+    color: #FFFFFF; 
+    display: block;
+}
+.dashboard-cell.dashboard-layout-panel.last-visible div:empty {
+    background: #171d21;
+}
+.green{
+color:green !important;
+}
+.blue{
+color:cyan !important;
+}
+.red{
+color:red !important;
+}
+.orange{
+color:orange !important;
+}
+.yellow{
+color:yellow !important;
+}
+.lightgrey{
+color:gray !important;
+}
+.lightblue{
+color:#485959 !important;
+}

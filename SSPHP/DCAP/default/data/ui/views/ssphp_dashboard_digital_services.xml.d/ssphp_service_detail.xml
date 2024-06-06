@@ -1,7 +1,11 @@
-<dashboard theme="dark" version="1.1" script="js/addtags.js, js/table_cell_backcolor_multivalue.js">
+{% if environment=="_DEV" %}
+  <dashboard theme="light" version="1.1" script="js/addtags.js, js/table_cell_backcolor_multivalue.js">
+{% else %}
+  <dashboard theme="dark" version="1.1" script="js/addtags.js, js/table_cell_backcolor_multivalue.js">
+{% endif %}  
 
   <label>Security Posture Continuous Assurance : Service Control Detail Dashboard</label>
-  <description>v3.0.24</description>
+  <description>v3.0.25</description>
   
   <init>
     <unset token="tkn_show_dashboard"></unset>
