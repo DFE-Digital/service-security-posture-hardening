@@ -1,6 +1,12 @@
-<dashboard version="1.1" theme="dark" hideFilters="true" script="js/table_cell_color.js">
+{% if environment=="_DEV" %}
+  <dashboard version="1.1" theme="light" hideFilters="true" script="js/table_cell_color.js">
+{% else %}
+  <dashboard version="1.1" theme="dark" hideFilters="true" script="js/table_cell_color.js">
+{% endif %}  
+
+
   <label>Foundation Services : Security Posture Continuous Assurance</label>
-  <description>v1.03</description>
+  <description>v1.04</description>
   
   <init>
     <set token="tkn_selected_system">m365</set>
@@ -234,4 +240,3 @@
 {% include 'default/data/ui/views/ssphp_dashboard_templates.d/ssphp_footer_debug_template.xml' %}
         
   </dashboard>
-  

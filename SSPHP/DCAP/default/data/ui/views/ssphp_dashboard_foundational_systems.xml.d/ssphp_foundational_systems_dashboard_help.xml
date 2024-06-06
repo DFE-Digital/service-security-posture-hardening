@@ -1,7 +1,11 @@
-<dashboard theme="dark" version="1.1" hideFilters="true">
+{% if environment=="_DEV" %}
+  <dashboard theme="light" version="1.1" hideFilters="true">
+{% else %}
+  <dashboard theme="dark" version="1.1" hideFilters="true"> 
+{% endif %}  
 
     <label>Security Posture Continuous Assurance : Help Dashboard</label>
-    <description>v1.0.1</description>
+    <description>v1.0.2</description>
 
   <fieldset submitButton="false">
     {% include 'default/data/ui/views/ssphp_dashboard_templates.d/ssphp_footer_menu_template.xml' %}

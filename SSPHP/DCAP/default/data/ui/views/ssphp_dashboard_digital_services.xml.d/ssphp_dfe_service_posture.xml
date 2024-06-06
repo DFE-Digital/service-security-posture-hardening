@@ -1,7 +1,12 @@
-<dashboard version="1.1" theme="dark" hideFilters="true" script="js/table_cell_color.js">
+{% if environment=="_DEV" %}
+  <dashboard version="1.1" theme="light" hideFilters="true" script="js/table_cell_color.js">
+{% else %}
+  <dashboard version="1.1" theme="dark" hideFilters="true" script="js/table_cell_color.js">
+{% endif %}  
+
 
   <label>Foundational Systems : Security Posture Dashboard</label>
-  <description>v5.0.0</description>
+  <description>v5.0.1</description>
 
   <init>
     <unset token="tkn_ready"></unset>
