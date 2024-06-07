@@ -30,8 +30,6 @@ const config = { attributes: true, childList: true, subtree: true };
 
 let targetNode = document.getElementById("routing_table");
 
-console.log(`observering: ${targetNodes[i]}`);
-
 observer.observe(targetNode, config);
 
 
