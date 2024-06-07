@@ -1,0 +1,44 @@
+<dashboard version="1.1" theme="light" hideFilters="true" script="js/route.js">
+  <label>DCAP HOME</label>
+
+    <row depends="$never_show$">
+        <panel>
+            <table id="routing_table">
+                <search>
+                    <query>
+| rest splunk_server=local /services/authentication/current-context
+
+| eval roles=mvappend("dfe_ssphp_service_user_aad",
+                      "dfe_ssphp_service_user_m365",
+                      'roles',
+                      "dfe_ssphp_service_user_s184",
+                      "dfe_ssphp_service_user_s284",
+                      "dfe_ssphp_service_user_dns")
+| mvexpand roles
+
+| rex field=roles "^dfe_ssphp_service_user_(?&lt;service&gt;[s][0-9]{3})$"
+| rex field=roles "^dfe_ssphp_service_user_(?&lt;fs&gt;m365|aad|azure|dns)$"
+
+| eval param=coalesce('service','fs','roles')
+
+| eval order=case(param="m365","a",
+                  param="azure","b",
+                  param="aad","c",
+                  param="dns","d",
+                  param="sc_admin","v",
+                  param="power","v",
+                  1==1,"p")
+| eval dashboard=case(isnotnull('fs'),"ssphp_foundational_systems_service",
+                      isnotnull('service'),"ssphp_dfe_service",
+                      1==1,"ssphp_foundational_systems_posture")
+
+| sort 1 order, service
+| eval link_target="/en-GB/app/{{app}}{{environment}}/".'dashboard'."?form.tkn__service=".'param'
+| table link_target```, dashboard, param, roles, service, fs, order```
+                    </query>
+                </search>
+            </table>
+        </panel>
+    </row>
+
+</dashboard>
