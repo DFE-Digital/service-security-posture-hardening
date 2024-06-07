@@ -8,7 +8,7 @@ let change = (mutationList, observer) => {
 
         for (var tdsIter = 0; tdsIter < tds.length; tdsIter++) {
 
-            if (tds[tdsIter].classList.contains("string") {
+            if (tds[tdsIter].classList.contains("string")) {
 
                 console.log("Looking for URL");
 
@@ -28,7 +28,7 @@ console.log("Starting Routing observations");
 const observer = new MutationObserver(change);
 const config = { attributes: true, childList: true, subtree: true };
 
-let targetNodes = document.getElementsById("routing_table");
+let targetNodes = document.getElementById("routing_table");
 
 for (var i = 0; i < targetNodes.length; i++) {
 
