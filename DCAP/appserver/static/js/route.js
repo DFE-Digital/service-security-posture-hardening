@@ -16,7 +16,7 @@ let change = (mutationList, observer) => {
 
                 console.log(`Found URL: ${new_location}`);
 
-                window.locataion.replace(new_location);
+                window.location.replace(new_location);
 
             }
         }
@@ -28,13 +28,11 @@ console.log("Starting Routing observations");
 const observer = new MutationObserver(change);
 const config = { attributes: true, childList: true, subtree: true };
 
-let targetNodes = document.getElementById("routing_table");
+let targetNode = document.getElementById("routing_table");
 
-for (var i = 0; i < targetNodes.length; i++) {
+console.log(`observering: ${targetNodes[i]}`);
 
-    console.log(`observering: ${targetNodes[i]}`);
+observer.observe(targetNode, config);
 
-    observer.observe(targetNodes[i], config);
-}
 
 console.log("Routing observations complete");
