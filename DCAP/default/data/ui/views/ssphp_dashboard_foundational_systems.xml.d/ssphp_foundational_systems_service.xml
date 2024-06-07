@@ -5,10 +5,11 @@
 {% endif %}  
 
   <label>Security Posture Continuous Assurance : Service Dashboard</label>
-  <description>v2.0.23</description>
+  <description>v2.0.24</description>
   
   <init>
     <set token="form.tkn_fields">C</set>
+    <set token="tkn_fields">C</set>
     <set token="tkn_controls_compliant_text"></set>
     <unset token="tkn_ready"></unset>
   </init>
