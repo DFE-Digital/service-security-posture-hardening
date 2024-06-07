@@ -1,5 +1,5 @@
 <nav search_view="search">
-  <view name="search" default='true' />
+  <view name="dcap_home" default='true' />
   <collection label="Foundational Systems" >
     <a href="ssphp_foundational_systems_posture">Posture Dashboard</a>
     <collection label="Foundational Systems" >
