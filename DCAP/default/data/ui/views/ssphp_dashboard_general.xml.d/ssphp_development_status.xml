@@ -5,7 +5,7 @@
 {% endif %}  
 
     <label>Development Status</label>
-    <description>v1.0.0</description>
+    <description>{{environment}} v1.0.0</description>
     <init>
       <set token="tkn_selected_system">m365</set>
       <set token="tkn_prev_start_time">1706572800</set>

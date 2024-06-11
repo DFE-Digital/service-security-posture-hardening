@@ -5,7 +5,7 @@
 {% endif %}  
 
   <label>Foundational Systems : Security Posture Dashboard</label>
-  <description>v5.0.3</description>
+  <description>{{environment}} v5.0.3</description>
 
   <init>
     <unset token="tkn_ready"></unset>

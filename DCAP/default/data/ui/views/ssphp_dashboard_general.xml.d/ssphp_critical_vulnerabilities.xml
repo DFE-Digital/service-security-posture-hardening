@@ -6,7 +6,7 @@
 
 
   <label>Vulnerability Management</label>
-  <description>v1.2.0</description>
+  <description>{{environment}} v1.2.0</description>
   
   
   <search id="bs_1">
