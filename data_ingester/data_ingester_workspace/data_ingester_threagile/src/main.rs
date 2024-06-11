@@ -1,18 +1,20 @@
 use anyhow::{Result, Context};
 use serde::Serialize;
 use serde_with::serde_as;
-use std::fs::File;
+use std::fs::{self, File};
 use std::io::prelude::*;
 use std::collections::HashMap;
 use serde_with::DisplayFromStr;
 mod model;
+mod risks;
 use model::Model;
 use data_ingester_splunk_search::acs::Acs;
 use data_ingester_splunk_search::search_client::SplunkApiClient;
 use serde::Deserialize;
 use tracing::{debug, info, instrument, subscriber::DefaultGuard, warn};
 use tracing_subscriber::{layer::SubscriberExt, EnvFilter, Registry};
-
+use std::process::Command;
+use std::os::unix::fs::PermissionsExt;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -114,24 +116,40 @@ async fn main() -> Result<()> {
     let mut model = model::Model::test_data();
     model.technical_assets = ta;
         
-    model.write_file("results_from_splunk.yaml");
+    model.write_file("/tmp/results_from_splunk.yaml");
 
+    let current_exe = std::env::current_exe().context("Gettting current exe path")?;
+    let current_exe_dir = current_exe.parent().context("No parent for current exe path")?;
 
-    // info!(
-    //     "Search results ... {:?}",
-    //     &search_results.iter().take(2).collect::<Vec<&Cve>>()
-    // );
+    
+    let threagile_bytes = include_bytes!("../threagile_bin/threagile");
+    let threagile_path = current_exe_dir.join("threagile");
+    let mut threagile_file = std::fs::File::create(&threagile_path).context("Unable to create 'threagile' bin")?;
+    threagile_file.write_all(threagile_bytes).context("Unable to write 'threagile' bytes to file");
+    let threagile_file_metadata = threagile_file.metadata().context("Unable to get 'threagile' metadata")?;
+    dbg!(&threagile_file_metadata);
+    let mut threagile_file_permissions = threagile_file_metadata.permissions();
+    dbg!(&threagile_file_permissions);
+    threagile_file_permissions.set_mode(0o100700);
+    fs::set_permissions(&threagile_path, threagile_file_permissions);
+    drop(threagile_file);
+    
+    let raa_calc_bytes = include_bytes!("../threagile_bin/raa_calc");
+    let raa_calc_path = current_exe_dir.join("raa_calc");
+    let mut raa_calc_file = std::fs::File::create(&raa_calc_path).context("Unable to create 'raa_calc' bin")?;
+    raa_calc_file.write_all(raa_calc_bytes).context("Unable to write raa_calc bytes to file");
+    let raa_calc_file_metadata = raa_calc_file.metadata().context("Unable to get raa_calc metadata")?;
+    let mut raa_calc_file_permissions = raa_calc_file_metadata.permissions();
+    raa_calc_file_permissions.set_mode(0o100700);
+    fs::set_permissions(&raa_calc_path, raa_calc_file_permissions);
+    drop(raa_calc_file);    
+    
 
-    // info!("Removing current IP from Splunk Allow list");
-    // acs.remove_current_cidr()
-    //     .await
-    //     .context("Removing current IP from Splunk")?;
+    let threagile_output = Command::new(&threagile_path).args(["analyze-model", "--model", "/tmp/results_from_splunk.yaml", "--verbose"]).output()?;
 
-    // let ip_allow_list = acs
-    //     .list_search_api_ip_allow_list()
-    //     .await
-    //     .context("Getting IP allow list")?;
-    // info!("Splunk IP Allow list after remove: {:?}", ip_allow_list);
+    println!("{}", String::from_utf8(threagile_output.stdout.clone())?);
+                                      
+    
     Ok(())
 }
 
