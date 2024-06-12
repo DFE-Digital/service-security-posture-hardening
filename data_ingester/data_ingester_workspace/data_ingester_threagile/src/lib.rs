@@ -109,6 +109,8 @@ pub async fn threagile(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()>
         .await
         .context("Running Splunk Search")?;
 
+    info!("Splunk search results: {:?}", search_results);
+
     let mut services: HashMap<String, Vec<model::SplunkResult>> = HashMap::new();
 
     for result in search_results {
