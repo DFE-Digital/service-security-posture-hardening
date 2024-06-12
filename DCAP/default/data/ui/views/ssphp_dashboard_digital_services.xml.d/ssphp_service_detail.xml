@@ -5,7 +5,7 @@
 {% endif %}  
 
   <label>Security Posture Continuous Assurance : Service Control Detail Dashboard</label>
-  <description>v3.0.25</description>
+  <description>{{environment}} v3.0.25</description>
   
   <init>
     <unset token="tkn_show_dashboard"></unset>

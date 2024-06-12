@@ -6,7 +6,7 @@
 
 
   <label>Foundation Services : Security Posture Continuous Assurance</label>
-  <description>v1.04</description>
+  <description>{{environment}} v1.04</description>
   
   <init>
     <set token="tkn_selected_system">m365</set>

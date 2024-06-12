@@ -6,7 +6,7 @@
 
 
   <label>Foundational Systems : Security Posture Dashboard</label>
-  <description>v5.0.1</description>
+  <description>{{environment}} v5.0.1</description>
 
   <init>
     <unset token="tkn_ready"></unset>
