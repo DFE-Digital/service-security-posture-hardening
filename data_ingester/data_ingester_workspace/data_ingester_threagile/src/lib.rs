@@ -23,6 +23,7 @@ fn extract_threagile() -> Result<PathBuf> {
     dbg!(&current_exe_dir);
     let threagile_bytes = include_bytes!("../threagile_bin/threagile");
     let threagile_path = current_exe_dir.join("threagile_bin");
+    let threagile_path = PathBuf::from("/tmp/threagile_bin");
     dbg!(&threagile_path);
     let mut threagile_file = std::fs::File::create(&threagile_path).context("Unable to create 'threagile' bin")?;
     threagile_file.write_all(threagile_bytes).context("Unable to write 'threagile' bytes to file")?;
@@ -36,6 +37,7 @@ fn extract_threagile() -> Result<PathBuf> {
     info!("Extracting raa_calc");
     let raa_calc_bytes = include_bytes!("../threagile_bin/raa_calc");
     let raa_calc_path = current_exe_dir.join("raa_calc");
+    let raa_calc_path = PathBuf::from("/tmp/raa_calc");    
     let mut raa_calc_file = std::fs::File::create(&raa_calc_path).context("Unable to create 'raa_calc' bin")?;
     raa_calc_file.write_all(raa_calc_bytes).context("Unable to write raa_calc bytes to file")?;
     let raa_calc_file_metadata = raa_calc_file.metadata().context("Unable to get raa_calc metadata")?;
