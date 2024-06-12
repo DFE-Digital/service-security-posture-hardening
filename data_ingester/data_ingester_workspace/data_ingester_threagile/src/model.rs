@@ -527,7 +527,6 @@ mod test {
                     resource_id:"splunk-results-foo".to_string(),
                     r#type:"microsoft.web/sites".to_string(),
                     kind:"functionapp,linux".to_string(),
-                    // service_id: "s194".to_string(),
                     resource_group: "rg1".to_string(),
                 }
             ]
@@ -536,13 +535,13 @@ mod test {
 
     #[test]
     fn test_data() {
-        let mut model = Model::test_data();
+        let mut model = Model::default();
         model.write_file("test1.yaml");
     }
 
     #[test]
     fn test_from_splunk_result() {
-        let mut model = Model::test_data();
+        let mut model = Model::default();
         model.technical_assets = TechnicalAssets::from(splunk_results());
 
         model.write_file("results_from_splunk.yaml");
