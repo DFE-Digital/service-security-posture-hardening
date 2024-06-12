@@ -22,7 +22,7 @@ fn extract_threagile() -> Result<PathBuf> {
     let current_exe_dir = current_exe.parent().context("No parent for current exe path")?;
     dbg!(&current_exe_dir);
     let threagile_bytes = include_bytes!("../threagile_bin/threagile");
-    let threagile_path = current_exe_dir.join("threagile");
+    let threagile_path = current_exe_dir.join("threagile_bin");
     dbg!(&threagile_path);
     let mut threagile_file = std::fs::File::create(&threagile_path).context("Unable to create 'threagile' bin")?;
     threagile_file.write_all(threagile_bytes).context("Unable to write 'threagile' bytes to file")?;
