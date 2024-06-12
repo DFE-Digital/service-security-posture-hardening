@@ -1,33 +1,40 @@
+use anyhow::{Context, Result};
 use data_ingester_splunk::splunk::{Splunk, ToHecEvents};
-use anyhow::{Result, Context};
 use data_ingester_supporting::keyvault::Secrets;
 use serde_json::Value;
+use std::collections::HashMap;
 use std::fs::{self, File};
 use std::io::{prelude::*, BufReader};
-use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
 mod model;
 mod risks;
 use data_ingester_splunk_search::acs::Acs;
 use data_ingester_splunk_search::search_client::SplunkApiClient;
-use tracing::info;
-use std::process::Command;
 use std::os::unix::fs::PermissionsExt;
+use std::process::Command;
+use tracing::info;
 
 fn extract_threagile() -> Result<PathBuf> {
     info!("Extracting threagile");
     let current_exe = std::env::current_exe().context("Gettting current exe path")?;
     dbg!(&current_exe);
-    let current_exe_dir = current_exe.parent().context("No parent for current exe path")?;
+    let current_exe_dir = current_exe
+        .parent()
+        .context("No parent for current exe path")?;
     dbg!(&current_exe_dir);
     let threagile_bytes = include_bytes!("../threagile_bin/threagile");
     let threagile_path = current_exe_dir.join("threagile_bin");
     let threagile_path = PathBuf::from("/tmp/threagile_bin");
     dbg!(&threagile_path);
-    let mut threagile_file = std::fs::File::create(&threagile_path).context("Unable to create 'threagile' bin")?;
-    threagile_file.write_all(threagile_bytes).context("Unable to write 'threagile' bytes to file")?;
-    let threagile_file_metadata = threagile_file.metadata().context("Unable to get 'threagile' metadata")?;
+    let mut threagile_file =
+        std::fs::File::create(&threagile_path).context("Unable to create 'threagile' bin")?;
+    threagile_file
+        .write_all(threagile_bytes)
+        .context("Unable to write 'threagile' bytes to file")?;
+    let threagile_file_metadata = threagile_file
+        .metadata()
+        .context("Unable to get 'threagile' metadata")?;
 
     let mut threagile_file_permissions = threagile_file_metadata.permissions();
 
@@ -37,10 +44,15 @@ fn extract_threagile() -> Result<PathBuf> {
     info!("Extracting raa_calc");
     let raa_calc_bytes = include_bytes!("../threagile_bin/raa_calc");
     let raa_calc_path = current_exe_dir.join("raa_calc");
-    let raa_calc_path = PathBuf::from("/tmp/raa_calc");    
-    let mut raa_calc_file = std::fs::File::create(&raa_calc_path).context("Unable to create 'raa_calc' bin")?;
-    raa_calc_file.write_all(raa_calc_bytes).context("Unable to write raa_calc bytes to file")?;
-    let raa_calc_file_metadata = raa_calc_file.metadata().context("Unable to get raa_calc metadata")?;
+    let raa_calc_path = PathBuf::from("/tmp/raa_calc");
+    let mut raa_calc_file =
+        std::fs::File::create(&raa_calc_path).context("Unable to create 'raa_calc' bin")?;
+    raa_calc_file
+        .write_all(raa_calc_bytes)
+        .context("Unable to write raa_calc bytes to file")?;
+    let raa_calc_file_metadata = raa_calc_file
+        .metadata()
+        .context("Unable to get raa_calc metadata")?;
     let mut raa_calc_file_permissions = raa_calc_file_metadata.permissions();
     raa_calc_file_permissions.set_mode(0o100700);
     fs::set_permissions(&raa_calc_path, raa_calc_file_permissions)?;
@@ -48,9 +60,7 @@ fn extract_threagile() -> Result<PathBuf> {
     Ok(threagile_path)
 }
 
-
 pub async fn threagile(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
-
     info!("Extracting Threagile bins");
     let threagile_path = extract_threagile()?;
 
@@ -109,8 +119,6 @@ pub async fn threagile(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()>
     info!("Found {} services", services.len());
 
     for (service, risks) in services {
-
-
         let mut collection = HashMap::new();
         for result in risks {
             collection.insert(result.resource_id.to_string(), result.into());
@@ -120,13 +128,26 @@ pub async fn threagile(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()>
         let mut model = model::Model::default();
         model.technical_assets = ta;
 
-
         let risks_path = format!("/tmp/{}_results_from_splunk.yaml", &service);
         info!("Writing risks file: {}", risks_path);
-        model.write_file(&risks_path).context("Writing risks file")?;
+        model
+            .write_file(&risks_path)
+            .context("Writing risks file")?;
         info!("Running Threagile");
-        let threagile_output = Command::new(&threagile_path).args(["analyze-model", "--model", &risks_path, "--verbose", "--output", "/tmp"]).output()?;
-        println!("Threagile stdout: {}", String::from_utf8(threagile_output.stdout.clone())?);
+        let threagile_output = Command::new(&threagile_path)
+            .args([
+                "analyze-model",
+                "--model",
+                &risks_path,
+                "--verbose",
+                "--output",
+                "/tmp",
+            ])
+            .output()?;
+        println!(
+            "Threagile stdout: {}",
+            String::from_utf8(threagile_output.stdout.clone())?
+        );
 
         info!("Reading risks.json");
         let risks = risks::RisksJson::from_file("/tmp/risks.json", &service)?;
@@ -142,15 +163,15 @@ pub async fn threagile(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()>
 }
 
 #[cfg(test)]
-mod test{
+mod test {
     use std::sync::Arc;
 
-    use data_ingester_splunk::splunk::Splunk;
     use anyhow::{Context, Result};
+    use data_ingester_splunk::splunk::Splunk;
     use tracing_subscriber::{layer::SubscriberExt, EnvFilter, Registry};
 
     #[tokio::test]
-    async fn test_threagile() -> Result<()>{
+    async fn test_threagile() -> Result<()> {
         let stdout_log = tracing_subscriber::fmt::layer()
             .with_ansi(false)
             .compact()
@@ -161,13 +182,12 @@ mod test{
         );
         tracing::subscriber::set_default(subscriber);
 
-        let key_vault_name =
-            std::env::var("KEY_VAULT_NAME").context("Getting key vault name from env:KEY_VAULT_NAME")?;
+        let key_vault_name = std::env::var("KEY_VAULT_NAME")
+            .context("Getting key vault name from env:KEY_VAULT_NAME")?;
 
         let secrets = data_ingester_supporting::keyvault::get_keyvault_secrets(&key_vault_name)
-                .await
+            .await
             .context("Getting KeyVault secrets")?;
-
 
         let splunk = Splunk::new(
             &secrets.splunk_host.as_ref().context("No value")?,
