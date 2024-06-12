@@ -125,11 +125,11 @@ pub async fn threagile(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()>
         info!("Writing risks file: {}", risks_path);
         model.write_file(&risks_path).context("Writing risks file")?;
         info!("Running Threagile");
-        let threagile_output = Command::new(&threagile_path).args(["analyze-model", "--model", &risks_path, "--verbose"]).output()?;
+        let threagile_output = Command::new(&threagile_path).args(["analyze-model", "--model", &risks_path, "--verbose", "--output", "/tmp"]).output()?;
         println!("Threagile stdout: {}", String::from_utf8(threagile_output.stdout.clone())?);
 
         info!("Reading risks.json");
-        let risks = risks::RisksJson::from_file("risks.json", &service)?;
+        let risks = risks::RisksJson::from_file("/tmp/risks.json", &service)?;
 
         info!("Found {} risks for {}", risks.risks.len(), &service);
 
