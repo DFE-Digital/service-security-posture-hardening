@@ -15,6 +15,7 @@ use dyn_fmt::AsStrFormatExt;
 use futures::stream::StreamExt;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use serde_json::Value;
+use tracing::error;
 use std::iter;
 use std::{collections::HashMap, sync::Arc};
 use url::Url;
@@ -262,8 +263,8 @@ impl AzureRest {
         let rt: T = match serde_json::from_str(&response) {
             Ok(obj) => obj,
             Err(err) => {
-                dbg!(&err);
-                dbg!(&response);
+                error!("serde error: {:?}", &err);
+                error!("serde error &response: {:?}", &response);
                 anyhow::bail!("Failed to deserialize HTTP response");
             }
         };
