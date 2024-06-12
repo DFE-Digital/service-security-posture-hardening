@@ -15,6 +15,7 @@ data_ingester_ms_powershell = { path = "../data_ingester_ms_powershell" }
 data_ingester_splunk = { path = "../data_ingester_splunk" }
 data_ingester_splunk_search = { path = "../data_ingester_splunk_search" }
 data_ingester_supporting = { path = "../data_ingester_supporting" }
+data_ingester_threagile = { path = "../data_ingester_threagile" }
 memory-stats = "1"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"

@@ -9,13 +9,13 @@ use std::io::BufReader;
 
 #[derive(Deserialize, Serialize, Default, Debug)]
 #[serde(rename_all="snake_case")]
-struct RisksJson{
-    risks: Vec<Value>,
-    service: String,
+pub(crate) struct RisksJson{
+    pub(crate) risks: Vec<Value>,
+    pub(crate) service: String,
 }
 
 impl RisksJson {
-    fn from_file(path: &str, service: &str) -> Result<Self> {
+    pub(crate) fn from_file(path: &str, service: &str) -> Result<Self> {
         let file = File::open(path)?;
         let reader = BufReader::new(file);
         let risks: Vec<Value> = serde_json::from_reader(reader)?;
@@ -40,4 +40,3 @@ impl ToHecEvents for &RisksJson {
         Box::new(self.risks.iter())
     }
 }
-                                

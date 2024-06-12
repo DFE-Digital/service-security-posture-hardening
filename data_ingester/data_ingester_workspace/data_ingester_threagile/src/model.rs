@@ -7,7 +7,7 @@ use std::collections::HashMap;
 use serde_with::DisplayFromStr;
 use serde::Deserialize;
 
-#[derive(Serialize, Default, Debug)]
+#[derive(Serialize, Debug)]
 #[serde(rename_all="snake_case")]
 pub(crate) struct Model {
     threagile_version: String,
@@ -383,7 +383,16 @@ impl Model {
         self.technical_assets.0.insert(ta.id.to_string(), ta);
     }
 
-    pub(crate) fn test_data() -> Self {
+    pub(crate) fn write_file(self, filename: &str) -> Result<()> {
+        let mut file = File::create(filename)?;
+        let output = serde_yaml::to_string(&self)?;
+        file.write_all(output.as_bytes())?;
+        Ok(())
+    }
+}
+
+impl Default for Model {
+   fn default() -> Self {
         let mut technical_assets = HashMap::new();
         technical_assets.insert("asset1".to_string(), TechnicalAsset{
             id: "asset1-id".to_string(),
@@ -410,12 +419,6 @@ impl Model {
             business_criticality: TechnicalAssetCriticality::Critical,
             technical_assets: TechnicalAssets(technical_assets),
         }
-    }
-    pub(crate) fn write_file(self, filename: &str) -> Result<()> {
-        let mut file = File::create(filename)?;
-        let output = serde_yaml::to_string(&self)?;
-        file.write_all(output.as_bytes())?;
-        Ok(())
     }
 }
 
@@ -490,7 +493,7 @@ impl From<SplunkResults> for TechnicalAssets {
 
 #[derive(Deserialize, Default, Clone, Debug)]
 pub(crate) struct SplunkResult {
-    //service_id: String,
+    pub service_id: String,
     #[serde(rename="SSPHP_RUN")]
     ssphp_run: String,
     #[serde(rename="resourceGroup")]
@@ -519,6 +522,7 @@ mod test {
         SplunkResults {
             results: vec![
                 SplunkResult {
+                    service_id: "service_id".to_string(),
                     ssphp_run: "foo".to_string(),
                     resource_id:"splunk-results-foo".to_string(),
                     r#type:"microsoft.web/sites".to_string(),

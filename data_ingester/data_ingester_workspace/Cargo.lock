@@ -1324,6 +1324,7 @@ dependencies = [
  "data_ingester_splunk",
  "data_ingester_splunk_search",
  "data_ingester_supporting",
+ "data_ingester_threagile",
  "memory-stats",
  "serde",
  "serde_json",
@@ -1519,6 +1520,7 @@ name = "data_ingester_threagile"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "data_ingester_splunk",
  "data_ingester_splunk_search",
  "data_ingester_supporting",
  "serde",
