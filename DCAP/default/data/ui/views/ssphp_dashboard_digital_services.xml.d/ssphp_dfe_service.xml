@@ -5,7 +5,7 @@
 {% endif %}  
 
   <label>Security Posture Continuous Assurance : DfE Service Dashboard</label>
-  <description>{{environment}} v2.4.1</description>
+  <description>{{environment}} v2.5.0</description>
   
   <init>
     <set token="form.tkn_fields">C</set>
@@ -320,6 +320,8 @@
       <html>
         <div id="div_header" style="font-size:175%;color:yellow;">$tkn_current_service$</div> 
         <div id="div_header" style="font-size:120%">Control Details &amp; Scores [$tkn_controls_total$]</div> 
+        <br></br>
+        <div><span><a href="ssphp_dfe_service_threat_model?tkn__service=$tkn__service$" class="btn btn-primary" style="color:white;background-color:grey;text-align:left;display:block;width:100%;" target="_blank">Service Threat Model Dashboard</a></span></div> 
       </html>
     </panel>
 
