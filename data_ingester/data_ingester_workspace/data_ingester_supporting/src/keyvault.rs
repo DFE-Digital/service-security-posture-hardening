@@ -11,6 +11,8 @@ pub struct Secrets {
     pub splunk_token: Option<String>,
     pub splunk_acs_token: Option<String>,
     pub splunk_search_token: Option<String>,
+    pub splunk_search_url: Option<String>,
+    pub splunk_cloud_stack: Option<String>,
     pub azure_client_id: Option<String>,
     pub azure_client_secret: Option<String>,
     pub azure_client_certificate: Option<String>,
@@ -57,7 +59,7 @@ fn get_secret(client: &SecretClient, name: &str) -> JoinHandle<Option<String>> {
         match client_.get(&name_).await {
             Ok(secret) => Some(secret.value.to_string()),
             Err(err) => {
-                warn!("Keyvault: Error gettingt '{}': {:?}", &name_, err);
+                warn!("Keyvault: Error getting '{}': {:?}", &name_, err);
                 None
             }
         }
@@ -79,6 +81,8 @@ pub async fn get_keyvault_secrets(keyvault_name: &str) -> Result<Secrets> {
     let splunk_token = get_secret(&client, "splunk-token");
     let splunk_acs_token = get_secret(&client, "splunk-acs-token");
     let splunk_search_token = get_secret(&client, "splunk-search-token");
+    let splunk_search_url = get_secret(&client, "splunk-search-url");
+    let splunk_cloud_stack = get_secret(&client, "splunk-cloud-stack");
     let azure_client_id = get_secret(&client, "ad-client-id");
     let azure_client_secret = get_secret(&client, "ad-client-secret");
     // Secret is automatically created when generating a certificate in KeyVault
@@ -108,6 +112,8 @@ pub async fn get_keyvault_secrets(keyvault_name: &str) -> Result<Secrets> {
         splunk_token: splunk_token.await?,
         splunk_acs_token: splunk_acs_token.await?,
         splunk_search_token: splunk_search_token.await?,
+        splunk_search_url: splunk_search_url.await?,
+        splunk_cloud_stack: splunk_cloud_stack.await?,
         azure_client_id: azure_client_id.await?,
         azure_client_secret: azure_client_secret.await?,
         azure_client_certificate: azure_client_certificate.await?,

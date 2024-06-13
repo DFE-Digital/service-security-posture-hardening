@@ -34,11 +34,22 @@ impl SplunkApiClient {
     /// A JWT token for Splunk access. This can be retrieved
     /// from 'Settings -> Token' in the Splunk console
     ///
+    /// Setting an envionment variable called "ACCEPT_INVALID_CERTS"
+    /// to any value will disable certificate checking. This can be
+    /// used when connecting to green Splunk Docker instances.
+    ///
     pub fn new(url_base: &str, token: &str) -> Result<Self> {
-        let client = reqwest::ClientBuilder::new()
-            .danger_accept_invalid_certs(false)
-            .default_headers(SplunkApiClient::headers(token)?)
-            .build()?;
+        let client = if std::env::var_os("ACCEPT_INVALID_CERTS").is_none() {
+            reqwest::ClientBuilder::new()
+                .danger_accept_invalid_certs(false)
+                .default_headers(SplunkApiClient::headers(token)?)
+                .build()?
+        } else {
+            reqwest::ClientBuilder::new()
+                .danger_accept_invalid_certs(true)
+                .default_headers(SplunkApiClient::headers(token)?)
+                .build()?
+        };
         Ok(Self {
             client,
             url_base: url_base.to_owned(),
