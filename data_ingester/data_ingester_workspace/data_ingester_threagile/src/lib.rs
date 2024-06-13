@@ -103,7 +103,7 @@ pub async fn threagile(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()>
         .context("Creating Splunk search client")?
         .set_app("DCAP_DEV");
 
-    info!("Running splunk search ssphp_get_list_service_resources");
+    info!("Running splunk search ssphp_get_list_service_resources_DEV");
     let search_results = search_client
         // TODO Remove '_DEV' before merge
         .run_search::<model::SplunkResult>("| savedsearch ssphp_get_list_service_resources_DEV")
