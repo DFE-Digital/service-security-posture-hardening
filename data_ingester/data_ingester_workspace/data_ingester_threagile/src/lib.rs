@@ -146,6 +146,9 @@ pub async fn threagile(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()>
                 "--verbose",
                 "--output",
                 "/tmp",
+                "--temp-dir",
+                "/tmp",
+
             ])
             .output()?;
 
