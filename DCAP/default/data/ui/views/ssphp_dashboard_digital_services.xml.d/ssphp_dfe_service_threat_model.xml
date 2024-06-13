@@ -1,0 +1,101 @@
+{% if environment=="_DEV" %}
+  <dashboard version="1.1" theme="light" hideFilters="true">
+{% else %}
+  <dashboard version="1.1" theme="dark" hideFilters="true">
+{% endif %}  
+
+  <label>Security Posture Continuous Assurance : DfE Service Threat Model Dashboard</label>
+  <description>{{environment}} v1.0.3</description>
+
+  <fieldset submitButton="false">
+    {% include 'default/data/ui/views/ssphp_dashboard_templates.d/ssphp_footer_menu_template.xml' %}
+  </fieldset>
+
+
+  <init>
+    <unset token="tkn_ready"></unset>
+  </init>
+
+
+  <row>
+    <panel>
+    <title>Service Details</title>
+      <table>
+        <search>
+          <query>
+`ssphp_metrics_data_index_DEV` sourcetype="metadata_azure" type="AzureResourceGroup"  earliest=0 latest=now
+    [| search `ssphp_metrics_data_index_DEV` sourcetype="metadata_azure" type="AzureResourceGroup"   earliest=0 latest=now
+      | stats max(SSPHP_RUN) as SSPHP_RUN 
+      | return SSPHP_RUN]
+| rename service.id as service_id, azure.resource_group_id as resourceGroup
+
+| search service_id=$tkn__service|s$
+
+| stats values(service_id) as service_id,
+        values(service.name) as service.name,
+        values(service.display_name) as service.display_name,
+        values(service.division) as service.division,
+        values(service.portfolio) as service.portfolio,
+        values(service.group) as service.group   
+            </query>
+          <done>
+            <set token="tkn_ready">true</set>
+          </done>
+        </search>
+      </table>
+    </panel>
+  </row>
+
+
+
+  <row>
+    <panel>
+    <title>Threagile Findings</title>
+      <table>
+        <search>
+          <query>
+`ssphp_metrics_data_index{{environment}}` sourcetype=threagile_risks category!="unnecessary-technical-asset" earliest=-7d latest=now
+    [| search `ssphp_metrics_data_index{{environment}}` sourcetype=threagile_risks category!="unnecessary-technical-asset" earliest=-7d latest=now
+      | stats max(SSPHP_RUN) as SSPHP_RUN
+      | return SSPHP_RUN]
+      
+| eval title=replace('title',"&lt;b&gt;",""),
+        title=replace('title',"&lt;/b&gt;","")
+| rename source as service_id, data_breach_technical_assets{} as resource_id
+
+| search service_id=$tkn__service|s$
+
+| table service_id, category, severity, exploitation_impact, exploitation_likelihood, title, resource_id        
+            </query>
+          <done>
+            <set token="tkn_ready">true</set>
+          </done>
+        </search>
+      </table>
+    </panel>
+  </row>
+
+
+  <row>
+    <panel>
+    <title>Service Resources</title>
+      <table>
+        <search>
+          <query>
+| savedsearch ssphp_get_list_service_resources{{environment}}
+
+| search service_id=$tkn__service|s$
+| fields - SSPHP_RUN
+            </query>
+          <done>
+            <set token="tkn_ready">true</set>
+          </done>
+        </search>
+      </table>
+    </panel>
+  </row>
+
+
+{% include 'default/data/ui/views/ssphp_dashboard_templates.d/ssphp_footer_template.xml' %}
+
+</dashboard>
