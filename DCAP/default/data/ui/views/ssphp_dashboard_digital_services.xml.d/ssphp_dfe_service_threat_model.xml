@@ -23,8 +23,8 @@
       <table>
         <search>
           <query>
-`ssphp_metrics_data_index_DEV` sourcetype="metadata_azure" type="AzureResourceGroup"  earliest=0 latest=now
-    [| search `ssphp_metrics_data_index_DEV` sourcetype="metadata_azure" type="AzureResourceGroup"   earliest=0 latest=now
+`ssphp_metrics_data_index{{environment}}` sourcetype="metadata_azure" type="AzureResourceGroup"  earliest=0 latest=now
+    [| search `ssphp_metrics_data_index{{environment}}` sourcetype="metadata_azure" type="AzureResourceGroup"   earliest=0 latest=now
       | stats max(SSPHP_RUN) as SSPHP_RUN 
       | return SSPHP_RUN]
 | rename service.id as service_id, azure.resource_group_id as resourceGroup
