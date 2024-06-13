@@ -106,7 +106,7 @@ pub async fn threagile(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()>
     info!("Running splunk search ssphp_get_list_service_resources");
     let search_results = search_client
         // TODO Remove '_DEV' before merge
-        .run_search::<model::SplunkResult>("| savedsearch ssphp_test_savedsearch_DEV")
+        .run_search::<model::SplunkResult>("| savedsearch ssphp_get_list_service_resources_DEV")
         .await
         .context("Running Splunk Search")?;
 
@@ -136,7 +136,8 @@ pub async fn threagile(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()>
         model
             .write_file(&risks_path)
             .context("Writing risks file")?;
-        info!("Running Threagile");
+        info!("Running Threagile: {:?}", &threagile_path);
+
         let threagile_output = Command::new(&threagile_path)
             .args([
                 "analyze-model",
@@ -147,9 +148,12 @@ pub async fn threagile(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()>
                 "/tmp",
             ])
             .output()?;
-        println!(
-            "Threagile stdout: {}",
-            String::from_utf8(threagile_output.stdout.clone())?
+
+        info!(
+            "Threagile status: {:?}\nstdout: {}\nstderr: {}",
+            threagile_output.status,
+            String::from_utf8(threagile_output.stdout.clone())?,
+            String::from_utf8(threagile_output.stderr.clone())?,
         );
 
         info!("Reading risks.json");
