@@ -90,7 +90,7 @@ impl SplunkApiClient {
             .await
             .context("Getting search response body")?
             .lines()
-            .inspect(|line| info!("line: {:?}", line))
+//            .inspect(|line| info!("line: {:?}", line))
             .flat_map(serde_json::from_str::<SearchResult<T>>)
             .map(|sr| sr.result)
             .collect();

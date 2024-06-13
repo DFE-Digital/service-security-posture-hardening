@@ -41,22 +41,24 @@ fn extract_threagile() -> Result<PathBuf> {
     threagile_file_permissions.set_mode(0o100700);
     fs::set_permissions(&threagile_path, threagile_file_permissions)?;
     drop(threagile_file);
-    info!("Extracting raa_calc");
-    let raa_calc_bytes = include_bytes!("../threagile_bin/raa_calc");
-    let raa_calc_path = current_exe_dir.join("raa_calc");
-    let raa_calc_path = PathBuf::from("/tmp/raa_calc");
-    let mut raa_calc_file =
-        std::fs::File::create(&raa_calc_path).context("Unable to create 'raa_calc' bin")?;
-    raa_calc_file
-        .write_all(raa_calc_bytes)
-        .context("Unable to write raa_calc bytes to file")?;
-    let raa_calc_file_metadata = raa_calc_file
-        .metadata()
-        .context("Unable to get raa_calc metadata")?;
-    let mut raa_calc_file_permissions = raa_calc_file_metadata.permissions();
-    raa_calc_file_permissions.set_mode(0o100700);
-    fs::set_permissions(&raa_calc_path, raa_calc_file_permissions)?;
-    drop(raa_calc_file);
+
+
+    // info!("Extracting raa_calc");
+    // let raa_calc_bytes = include_bytes!("../threagile_bin/raa_calc");
+    // let raa_calc_path = current_exe_dir.join("raa_calc");
+    // let raa_calc_path = PathBuf::from("/tmp/raa_calc");
+    // let mut raa_calc_file =
+    //     std::fs::File::create(&raa_calc_path).context("Unable to create 'raa_calc' bin")?;
+    // raa_calc_file
+    //     .write_all(raa_calc_bytes)
+    //     .context("Unable to write raa_calc bytes to file")?;
+    // let raa_calc_file_metadata = raa_calc_file
+    //     .metadata()
+    //     .context("Unable to get raa_calc metadata")?;
+    // let mut raa_calc_file_permissions = raa_calc_file_metadata.permissions();
+    // raa_calc_file_permissions.set_mode(0o100700);
+    // fs::set_permissions(&raa_calc_path, raa_calc_file_permissions)?;
+    // drop(raa_calc_file);
     Ok(threagile_path)
 }
 
