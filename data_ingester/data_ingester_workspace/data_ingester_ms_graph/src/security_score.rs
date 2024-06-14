@@ -31,6 +31,9 @@ impl ToHecEvents for &SecurityScores {
             None => Box::new(iter::empty()),
         }
     }
+    fn ssphp_run_key(&self) -> &str {
+        "m365"
+    }
 }
 
 #[cfg(test)]

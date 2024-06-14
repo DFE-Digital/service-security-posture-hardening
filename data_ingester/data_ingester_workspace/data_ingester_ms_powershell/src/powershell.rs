@@ -73,6 +73,10 @@ impl ToHecEvents for &ExchangeOrganizationConfig {
     fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
         Box::new(iter::once(self))
     }
+
+    fn ssphp_run_key(&self) -> &str {
+        "powershell"
+    }
 }
 
 pub async fn run_powershell_get_safe_links_policy(secrets: &Secrets) -> Result<SafeLinksPolicy> {
@@ -97,6 +101,10 @@ impl ToHecEvents for &SafeLinksPolicy {
 
     fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
         Box::new(self.0.iter())
+    }
+
+    fn ssphp_run_key(&self) -> &str {
+        "powershell"
     }
 }
 
@@ -129,6 +137,9 @@ impl ToHecEvents for &SharingPolicy {
             SharingPolicy::Collection(collection) => Box::new(collection.iter()),
             SharingPolicy::Single(single) => Box::new(iter::once(single)),
         }
+    }
+    fn ssphp_run_key(&self) -> &str {
+        "powershell"
     }
 }
 
@@ -164,6 +175,9 @@ impl ToHecEvents for &MalwareFilterPolicy {
             MalwareFilterPolicy::Single(single) => Box::new(iter::once(single)),
         }
     }
+    fn ssphp_run_key(&self) -> &str {
+        "powershell"
+    }
 }
 
 pub async fn run_powershell_get_eop_protection_policy_rule(
@@ -198,6 +212,9 @@ impl ToHecEvents for &EopProtectionPolicyRule {
             EopProtectionPolicyRule::Single(single) => Box::new(iter::once(single)),
         }
     }
+    fn ssphp_run_key(&self) -> &str {
+        "powershell"
+    }
 }
 
 pub async fn run_powershell_get_hosted_outbound_spam_filter_policy(
@@ -224,6 +241,9 @@ impl ToHecEvents for &HostedOutboundSpamFilterPolicy {
 
     fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
         Box::new(iter::once(self))
+    }
+    fn ssphp_run_key(&self) -> &str {
+        "powershell"
     }
 }
 
@@ -257,6 +277,9 @@ impl ToHecEvents for &AntiPhishPolicy {
             AntiPhishPolicy::Single(single) => Box::new(iter::once(single)),
         }
     }
+    fn ssphp_run_key(&self) -> &str {
+        "powershell"
+    }
 }
 
 pub async fn run_powershell_get_admin_audit_log_config(
@@ -284,6 +307,9 @@ impl ToHecEvents for &AdminAuditLogConfig {
     fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
         Box::new(iter::once(self))
     }
+    fn ssphp_run_key(&self) -> &str {
+        "powershell"
+    }
 }
 
 /// TODO Casuses deserialization errors. Need to limit the fields to the ones used.
@@ -309,6 +335,9 @@ impl ToHecEvents for &OwaMailboxPolicy {
 
     fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
         Box::new(iter::once(self))
+    }
+    fn ssphp_run_key(&self) -> &str {
+        "powershell"
     }
 }
 
@@ -350,6 +379,9 @@ impl ToHecEvents for &Mailboxes {
             Mailboxes::Single(single) => Box::new(iter::once(single)),
         }
     }
+    fn ssphp_run_key(&self) -> &str {
+        "powershell"
+    }
 }
 
 pub async fn run_powershell_get_safe_attachment_policy(
@@ -377,6 +409,9 @@ impl ToHecEvents for &SafeAttachmentPolicy {
     fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
         Box::new(self.0.iter())
     }
+    fn ssphp_run_key(&self) -> &str {
+        "powershell"
+    }
 }
 
 pub async fn run_powershell_get_atp_policy_for_o365(secrets: &Secrets) -> Result<AtpPolciyForO365> {
@@ -401,6 +436,9 @@ impl ToHecEvents for &AtpPolciyForO365 {
 
     fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
         Box::new(iter::once(self))
+    }
+    fn ssphp_run_key(&self) -> &str {
+        "powershell"
     }
 }
 
@@ -436,6 +474,9 @@ impl ToHecEvents for &DlpCompliancePolicy {
             DlpCompliancePolicy::Single(single) => Box::new(iter::once(single)),
         }
     }
+    fn ssphp_run_key(&self) -> &str {
+        "powershell"
+    }
 }
 
 pub async fn run_powershell_get_transport_rule(secrets: &Secrets) -> Result<TransportRule> {
@@ -460,6 +501,9 @@ impl ToHecEvents for &TransportRule {
 
     fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
         Box::new(self.0.iter())
+    }
+    fn ssphp_run_key(&self) -> &str {
+        "powershell"
     }
 }
 
@@ -488,6 +532,9 @@ impl ToHecEvents for &DkimSigningConfig {
     fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
         Box::new(self.0.iter())
     }
+    fn ssphp_run_key(&self) -> &str {
+        "powershell"
+    }
 }
 
 pub async fn run_powershell_get_spoof_intelligence_insight(
@@ -514,6 +561,9 @@ impl ToHecEvents for &SpoofIntelligenceInsight {
 
     fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
         Box::new(self.0.iter())
+    }
+    fn ssphp_run_key(&self) -> &str {
+        "powershell"
     }
 }
 
@@ -542,6 +592,9 @@ impl ToHecEvents for &BlockedSenderAddress {
     fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
         Box::new(iter::once(self))
     }
+    fn ssphp_run_key(&self) -> &str {
+        "powershell"
+    }
 }
 
 /// 4.12
@@ -569,6 +622,9 @@ impl ToHecEvents for &EmailTenantSettings {
 
     fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
         Box::new(iter::once(self))
+    }
+    fn ssphp_run_key(&self) -> &str {
+        "powershell"
     }
 }
 
@@ -612,6 +668,9 @@ impl ToHecEvents for &UserVip {
             UserVip::Single(single) => Box::new(iter::once(single)),
         }
     }
+    fn ssphp_run_key(&self) -> &str {
+        "powershell"
+    }
 }
 
 // 4.12
@@ -637,6 +696,9 @@ impl ToHecEvents for &ProtectionAlert {
 
     fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
         Box::new(self.0.iter())
+    }
+    fn ssphp_run_key(&self) -> &str {
+        "powershell"
     }
 }
 
@@ -673,6 +735,9 @@ impl ToHecEvents for &HostedContentFilterPolicy {
             HostedContentFilterPolicy::Single(single) => Box::new(iter::once(single)),
         }
     }
+    fn ssphp_run_key(&self) -> &str {
+        "powershell"
+    }
 }
 
 // 3.7
@@ -707,6 +772,9 @@ impl ToHecEvents for &CsTeamsClientConfiguration {
             CsTeamsClientConfiguration::Collection(collection) => Box::new(collection.iter()),
             CsTeamsClientConfiguration::Single(single) => Box::new(iter::once(single)),
         }
+    }
+    fn ssphp_run_key(&self) -> &str {
+        "powershell"
     }
 }
 
@@ -743,6 +811,9 @@ impl ToHecEvents for &CsTenantFederationConfiguration {
             CsTenantFederationConfiguration::Single(single) => Box::new(iter::once(single)),
         }
     }
+    fn ssphp_run_key(&self) -> &str {
+        "powershell"
+    }
 }
 
 // M365 V2 2.8
@@ -777,6 +848,9 @@ impl ToHecEvents for &ManagementRoleAssignment {
             ManagementRoleAssignment::Collection(collection) => Box::new(collection.iter()),
             ManagementRoleAssignment::Single(single) => Box::new(iter::once(single)),
         }
+    }
+    fn ssphp_run_key(&self) -> &str {
+        "powershell"
     }
 }
 
@@ -830,6 +904,9 @@ impl ToHecEvents for &LoginTest {
             LoginTest::Collection(collection) => Box::new(collection.iter()),
             LoginTest::Single(single) => Box::new(iter::once(single)),
         }
+    }
+    fn ssphp_run_key(&self) -> &str {
+        "powershell"
     }
 }
 
@@ -963,7 +1040,7 @@ mod test {
     async fn setup() -> Result<(Splunk, Secrets)> {
         let secrets = get_keyvault_secrets(&env::var("KEY_VAULT_NAME")?).await?;
 
-        set_ssphp_run()?;
+        set_ssphp_run("default")?;
 
         let splunk = Splunk::new(
             &secrets.splunk_host.as_ref().context("No value")?,

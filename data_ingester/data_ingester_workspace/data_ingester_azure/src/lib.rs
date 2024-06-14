@@ -8,7 +8,7 @@ use data_ingester_supporting::keyvault::Secrets;
 use std::sync::Arc;
 
 pub async fn azure_users(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
-    set_ssphp_run()?;
+    set_ssphp_run("azure_users")?;
 
     splunk.log("Starting Azure Users collection").await?;
     splunk
@@ -152,7 +152,6 @@ pub async fn azure_users(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<(
         }
         anyhow::Ok::<()>(())
     });
-
     let _ = list_users.await?;
 
     let _ = process_to_splunk.await?;

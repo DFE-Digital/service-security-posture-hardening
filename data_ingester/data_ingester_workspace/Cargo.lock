@@ -1437,6 +1437,7 @@ dependencies = [
  "serde_with",
  "tokio",
  "toml",
+ "tracing",
  "url",
 ]
 

@@ -7,20 +7,27 @@ use serde::{Deserialize, Serialize};
 // #[cfg(test)]
 use serde_json::Value;
 use std::borrow::Borrow;
+use std::collections::HashMap;
+use std::sync::LazyLock;
 use tracing::info;
 use tracing::warn;
 // #[cfg(test)]
+use anyhow::{anyhow, Result};
+use std::fmt::Debug;
+use std::future::Future;
 use std::iter;
 use std::sync::RwLock;
 use std::time::{SystemTime, UNIX_EPOCH};
 use uuid::Uuid;
-//use futures::lock::Mutex;
-use anyhow::{anyhow, Result};
-use std::fmt::Debug;
-use std::future::Future;
 
 // TODO Should not be shared between calls to the web endpoint!
 static SSPHP_RUN: RwLock<u64> = RwLock::new(0_u64);
+
+static SSPHP_RUN_NEW: LazyLock<RwLock<HashMap<String, u64>>> = LazyLock::new(|| {
+    let mut hm = HashMap::new();
+    hm.insert("default".to_string(), 0_u64);
+    RwLock::new(hm)
+});
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct HecEvent {
@@ -47,6 +54,24 @@ impl HecEvent {
             event: serde_json::to_string(&ssphp_event)?,
         })
     }
+
+    pub fn new_with_ssphp_run<T: Serialize>(
+        event: &T,
+        source: &str,
+        sourcetype: &str,
+        ssphp_run: u64,
+    ) -> Result<HecEvent> {
+        let ssphp_event = SsphpEvent { ssphp_run, event };
+        let hostname = hostname::get()?
+            .into_string()
+            .unwrap_or("NO HOSTNAME".to_owned());
+        Ok(HecEvent {
+            source: source.to_string(),
+            sourcetype: sourcetype.to_string(),
+            host: hostname,
+            event: serde_json::to_string(&ssphp_event)?,
+        })
+    }
 }
 
 #[derive(Serialize, Deserialize)]
@@ -57,13 +82,21 @@ struct SsphpEvent<T> {
     event: T,
 }
 
-pub fn set_ssphp_run() -> Result<()> {
+pub fn set_ssphp_run(ssphp_run_key: &str) -> Result<()> {
     let start = SystemTime::now();
-    let since_the_epoch = start.duration_since(UNIX_EPOCH)?;
+    let since_the_epoch = start.duration_since(UNIX_EPOCH)?.as_secs();
 
-    match SSPHP_RUN.write() {
-        Ok(mut ssphp_run) => *ssphp_run = since_the_epoch.as_secs(),
-        Err(err) => eprintln!("Unable to lock SSPHP_RUN for writing: {:?}", err),
+    info!(
+        "Setting SSPHP_RUN[{}] to {}",
+        ssphp_run_key, since_the_epoch
+    );
+    match SSPHP_RUN_NEW.write() {
+        Ok(mut ssphp_run) => {
+            let _ = ssphp_run.insert(ssphp_run_key.to_string(), since_the_epoch);
+        }
+        Err(err) => {
+            eprintln!("Unable to lock SSPHP_RUN for writing: {:?}", err);
+        }
     }
     Ok(())
 }
@@ -72,10 +105,12 @@ pub fn to_hec_events<T: Serialize>(
     collection: &[T],
     source: &str,
     sourcetype: &str,
+    ssphp_run_key: &str,
 ) -> Result<Vec<HecEvent>> {
+    let ssphp_run = get_ssphp_run(ssphp_run_key);
     let (ok, err): (Vec<_>, Vec<_>) = collection
         .iter()
-        .map(|u| HecEvent::new(u, source, sourcetype))
+        .map(|u| HecEvent::new_with_ssphp_run(u, source, sourcetype, ssphp_run))
         .partition_result();
     if !err.is_empty() {
         return Err(anyhow!(err
@@ -87,12 +122,30 @@ pub fn to_hec_events<T: Serialize>(
     Ok(ok)
 }
 
+pub fn get_ssphp_run(ssphp_run_key: &str) -> u64 {
+    let ssphp_run = SSPHP_RUN_NEW
+        .read()
+        .map(|hm| {
+            *hm.get(ssphp_run_key)
+                .unwrap_or_else(|| hm.get("default").unwrap_or_else(|| &0))
+        })
+        .unwrap_or_else(|_| 0);
+    ssphp_run
+}
+
 pub trait ToHecEvents {
     type Item: Serialize;
     fn to_hec_events(&self) -> Result<Vec<HecEvent>> {
         let (ok, err): (Vec<_>, Vec<_>) = self
             .collection()
-            .map(|u| HecEvent::new(&u, self.source(), self.sourcetype()))
+            .map(|u| {
+                HecEvent::new_with_ssphp_run(
+                    &u,
+                    self.source(),
+                    self.sourcetype(),
+                    self.get_ssphp_run(),
+                )
+            })
             .partition_result();
         if !err.is_empty() {
             return Err(anyhow!(err
@@ -106,6 +159,20 @@ pub trait ToHecEvents {
     fn source(&self) -> &str;
     fn sourcetype(&self) -> &str;
     fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i>;
+    fn get_ssphp_run(&self) -> u64 {
+        let ssphp_run = SSPHP_RUN_NEW
+            .read()
+            .map(|hm| {
+                *hm.get(self.ssphp_run_key())
+                    .unwrap_or_else(|| hm.get("default").unwrap_or_else(|| &0))
+            })
+            .unwrap_or_else(|_| 0);
+        ssphp_run
+    }
+    fn ssphp_run_key(&self) -> &str;
+    // fn ssphp_run_key(&self) -> &str {
+    //     "default"
+    // }
 }
 
 #[derive(Debug, Clone)]
@@ -251,40 +318,43 @@ where
 
 /// Struct to use for creating dynamic / testing ToHec events
 // #[cfg(test)]
-#[derive(Debug, Serialize, Deserialize, Default)]
-pub struct HecDynamic {
-    inner: Value,
-    sourcetype: String,
-    source: String,
-}
+// #[derive(Debug, Serialize, Deserialize, Default)]
+// pub struct HecDynamic {
+//     inner: Value,
+//     sourcetype: String,
+//     source: String,
+// }
 
-// #[cfg(test)]
-impl HecDynamic {
-    pub fn new<S: Into<String>>(value: Value, sourcetype: S, source: S) -> Self {
-        Self {
-            inner: value,
-            sourcetype: sourcetype.into(),
-            source: source.into(),
-        }
-    }
-}
+// // #[cfg(test)]
+// impl HecDynamic {
+//     pub fn new<S: Into<String>>(value: Value, sourcetype: S, source: S) -> Self {
+//         Self {
+//             inner: value,
+//             sourcetype: sourcetype.into(),
+//             source: source.into(),
+//         }
+//     }
+// }
 
-// #[cfg(test)]
-impl ToHecEvents for &HecDynamic {
-    type Item = Value;
+// // #[cfg(test)]
+// impl ToHecEvents for &HecDynamic {
+//     type Item = Value;
 
-    fn source(&self) -> &str {
-        &self.source
-    }
+//     fn source(&self) -> &str {
+//         &self.source
+//     }
 
-    fn sourcetype(&self) -> &str {
-        &self.sourcetype
-    }
+//     fn sourcetype(&self) -> &str {
+//         &self.sourcetype
+//     }
 
-    fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
-        Box::new(iter::once(&self.inner))
-    }
-}
+//     fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
+//         Box::new(iter::once(&self.inner))
+//     }
+
+//     fn ssphp_run_key(&self) -> &str {
+//     }
+// }
 
 /// Run a future to completion and send the results to Splunk.
 ///

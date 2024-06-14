@@ -31,6 +31,10 @@ impl ToHecEvents for &Qvs {
     fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
         Box::new(self.0.values())
     }
+
+    fn ssphp_run_key(&self) -> &str {
+        "qualys"
+    }
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]

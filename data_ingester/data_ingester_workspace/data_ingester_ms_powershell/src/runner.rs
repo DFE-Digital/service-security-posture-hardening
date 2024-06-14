@@ -34,7 +34,7 @@ use crate::powershell::run_powershell_get_transport_rule;
 use crate::powershell::run_powershell_get_user_vip;
 
 pub async fn powershell(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
-    set_ssphp_run()?;
+    set_ssphp_run("powershell")?;
 
     splunk.log("Starting M365 Powershell collection").await?;
     splunk

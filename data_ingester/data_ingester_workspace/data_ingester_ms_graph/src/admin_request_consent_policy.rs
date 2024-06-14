@@ -17,6 +17,9 @@ impl ToHecEvents for &AdminRequestConsentPolicy {
     fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
         Box::new(std::iter::once(self))
     }
+    fn ssphp_run_key(&self) -> &str {
+        "m365"
+    }
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]

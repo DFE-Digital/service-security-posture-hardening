@@ -44,7 +44,7 @@ use data_ingester_splunk::splunk::{set_ssphp_run, Splunk, ToHecEvents};
 use data_ingester_supporting::keyvault::Secrets;
 
 pub async fn aws(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
-    set_ssphp_run()?;
+    set_ssphp_run("aws")?;
 
     splunk.log("Starting AWS collection").await?;
     splunk
@@ -1590,6 +1590,9 @@ impl ToHecEvents for &RecordSets {
     fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
         Box::new(self.inner.iter())
     }
+    fn ssphp_run_key(&self) -> &str {
+        "aws"
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -1660,6 +1663,9 @@ impl ToHecEvents for &AnalyzerSummaries {
     fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
         Box::new(self.inner.iter())
     }
+    fn ssphp_run_key(&self) -> &str {
+        "aws"
+    }
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -1720,6 +1726,9 @@ impl ToHecEvents for &ServerCertificatesMetadata {
 
     fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
         Box::new(self.inner.iter())
+    }
+    fn ssphp_run_key(&self) -> &str {
+        "aws"
     }
 }
 
@@ -1798,6 +1807,9 @@ impl ToHecEvents for &AccessKeys {
     fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
         Box::new(self.inner.iter())
     }
+    fn ssphp_run_key(&self) -> &str {
+        "aws"
+    }
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -1849,6 +1861,9 @@ impl ToHecEvents for &ContactInformationSerde {
     fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
         Box::new(iter::once(self))
     }
+    fn ssphp_run_key(&self) -> &str {
+        "aws"
+    }
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -1882,6 +1897,9 @@ impl ToHecEvents for &AccountSummary {
 
     fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
         Box::new(iter::once(self))
+    }
+    fn ssphp_run_key(&self) -> &str {
+        "aws"
     }
 }
 
@@ -1930,6 +1948,9 @@ impl ToHecEvents for &AccountPasswordPolicy {
 
     fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
         Box::new(iter::once(self))
+    }
+    fn ssphp_run_key(&self) -> &str {
+        "aws"
     }
 }
 
@@ -1990,6 +2011,9 @@ impl ToHecEvents for &CredentialReport {
     fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
         Box::new(self.inner.iter())
     }
+    fn ssphp_run_key(&self) -> &str {
+        "aws"
+    }
 }
 
 #[cfg(test)]
@@ -2006,7 +2030,7 @@ mod test {
 
     pub async fn setup() -> Result<(Splunk, AwsClient)> {
         let secrets = get_keyvault_secrets(&env::var("KEY_VAULT_NAME")?).await?;
-        set_ssphp_run()?;
+        set_ssphp_run("default")?;
         let splunk = Splunk::new(
             &secrets.splunk_host.as_ref().context("No value")?,
             &secrets.splunk_token.as_ref().context("No value")?,
@@ -2020,7 +2044,7 @@ mod test {
     #[tokio::test]
     async fn test_aws_full() -> Result<()> {
         let secrets = get_keyvault_secrets(&env::var("KEY_VAULT_NAME")?).await?;
-        set_ssphp_run()?;
+        set_ssphp_run("default")?;
         let splunk = Splunk::new(
             &secrets.splunk_host.as_ref().context("No value")?,
             &secrets.splunk_token.as_ref().context("No value")?,

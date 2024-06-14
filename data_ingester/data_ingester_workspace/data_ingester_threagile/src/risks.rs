@@ -38,4 +38,8 @@ impl ToHecEvents for &RisksJson {
     fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
         Box::new(self.risks.iter())
     }
+
+    fn ssphp_run_key(&self) -> &str {
+        "threagile"
+    }
 }

@@ -127,7 +127,7 @@ pub(crate) async fn start_server(tx: Sender<()>) -> Result<()> {
 
     info!("Splunk Client created");
 
-    set_ssphp_run()?;
+    set_ssphp_run("default")?;
     start_splunk_tracing(
         splunk.clone().into(),
         "data_ingester_rust",

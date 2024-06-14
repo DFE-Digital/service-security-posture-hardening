@@ -549,6 +549,9 @@ impl ToHecEvents for &LegacyPolicies {
     fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
         Box::new(self.inner.iter())
     }
+    fn ssphp_run_key(&self) -> &str {
+        "m365"
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, Default)]
@@ -568,6 +571,9 @@ impl ToHecEvents for &DeviceRegistrationPolicy {
 
     fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
         Box::new(self.inner.iter())
+    }
+    fn ssphp_run_key(&self) -> &str {
+        "m365"
     }
 }
 
@@ -590,6 +596,9 @@ impl ToHecEvents for &NamedLocations {
     fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
         Box::new(self.inner.iter())
     }
+    fn ssphp_run_key(&self) -> &str {
+        "m365"
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, Default)]
@@ -611,6 +620,9 @@ impl ToHecEvents for &AccessReviewDefinitions {
     fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
         Box::new(self.inner.iter())
     }
+    fn ssphp_run_key(&self) -> &str {
+        "m365"
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, Default)]
@@ -631,6 +643,9 @@ impl ToHecEvents for &AdminFormSettings {
 
     fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
         Box::new(self.inner.iter())
+    }
+    fn ssphp_run_key(&self) -> &str {
+        "m365"
     }
 }
 
@@ -673,16 +688,11 @@ impl ToHecEvents for &AuthorizationPolicy {
         "m365:authorization_policy"
     }
 
-    fn to_hec_events(&self) -> anyhow::Result<Vec<data_ingester_splunk::splunk::HecEvent>> {
-        Ok(vec![HecEvent::new(
-            &self,
-            self.source(),
-            self.sourcetype(),
-        )?])
-    }
-
     fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
-        unimplemented!()
+        Box::new(iter::once(self))
+    }
+    fn ssphp_run_key(&self) -> &str {
+        "m365"
     }
 }
 
@@ -705,6 +715,10 @@ impl ToHecEvents for &RoleEligibilityScheduleInstance {
     fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
         Box::new(self.inner.iter())
     }
+
+    fn ssphp_run_key(&self) -> &str {
+        "m365"
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, Default)]
@@ -726,6 +740,9 @@ impl ToHecEvents for &GroupSettings {
     fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
         Box::new(self.inner.iter())
     }
+    fn ssphp_run_key(&self) -> &str {
+        "m365"
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, Default)]
@@ -743,6 +760,9 @@ impl ToHecEvents for &AuthenticationMethodsPolicy {
 
     fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
         Box::new(iter::once(self))
+    }
+    fn ssphp_run_key(&self) -> &str {
+        "m365"
     }
 }
 
@@ -793,6 +813,9 @@ impl ToHecEvents for &Domains {
     fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
         Box::new(self.inner.iter())
     }
+    fn ssphp_run_key(&self) -> &str {
+        "m365"
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, Default)]
@@ -814,6 +837,10 @@ impl ToHecEvents for &PermissionGrantPolicy {
     fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
         Box::new(self.inner.iter())
     }
+
+    fn ssphp_run_key(&self) -> &str {
+        "m365"
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, Default)]
@@ -829,21 +856,13 @@ impl ToHecEvents for &IdentitySecurityDefaultsEnforcementPolicy {
         "m365:identitySecurityDefaultsEnforcementPolicy"
     }
 
-    fn to_hec_events(&self) -> anyhow::Result<Vec<data_ingester_splunk::splunk::HecEvent>> {
-        Ok(vec![HecEvent::new(
-            &self,
-            self.source(),
-            self.sourcetype(),
-        )?])
-    }
-
     fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
-        unimplemented!()
+        Box::new(iter::once(self))
     }
 
-    // fn collection(&self) -> Box<dyn Iterator<Item = &&Self::Item>> {
-    //     Box::new(vec![self].iter())
-    // }
+    fn ssphp_run_key(&self) -> &str {
+        "m365"
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, Default)]
@@ -887,7 +906,8 @@ pub struct Group {
 pub async fn m365(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
     //    let secrets = get_keyvault_secrets(&env::var("KEY_VAULT_NAME")?).await?;
 
-    set_ssphp_run()?;
+    let ssphp_run_key = "m365";
+    set_ssphp_run(ssphp_run_key)?;
 
     //    let splunk = Splunk::new(&secrets.splunk_host, &secrets.splunk_token)?;
     splunk.log("Starting M365 collection").await?;
@@ -918,32 +938,9 @@ pub async fn m365(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
     splunk
         .log(&format!("Loaded {} m365 sources", sources.len()))
         .await?;
-    sources.process_sources(&ms_graph, &splunk).await?;
-
-    // TODO move this into another function
-    // splunk.log("Getting SecurityScores").await?;
-
-    // match ms_graph.get_security_secure_scores().await {
-    //     Ok(mut security_scores) => {
-    //         let security_score = security_scores
-    //             .value
-    //             .first_mut()
-    //             .context("Unable to get first SecurityScore")?;
-    //         security_score.odata_context = Some(security_scores.odata_context.to_owned());
-    //         let batch = security_score
-    //             .control_scores
-    //             .iter()
-    //             .map(|cs| cs.to_hec_event().unwrap())
-    //             .collect::<Vec<HecEvent>>();
-    //         splunk.send_batch(&batch[..]).await?;
-    //         splunk.send_batch(&[security_score.to_hec_event()?]).await?;
-    //     }
-    //     Err(error) => {
-    //         splunk
-    //             .log(&format!("Failed to get SecurityScores: {}", error))
-    //             .await?;
-    //     }
-    // }
+    sources
+        .process_sources(&ms_graph, &splunk, ssphp_run_key)
+        .await?;
 
     // M365 1.1.17 V2
     try_collect_send(
@@ -1062,13 +1059,13 @@ pub(crate) mod test {
     use crate::users::UsersMap;
 
     use anyhow::{Context, Result};
-    use data_ingester_splunk::splunk::{set_ssphp_run, HecDynamic, Splunk, ToHecEvents};
+    use data_ingester_splunk::splunk::{set_ssphp_run, Splunk, ToHecEvents};
     use data_ingester_supporting::keyvault::get_keyvault_secrets;
 
     pub async fn setup() -> Result<(Splunk, MsGraph)> {
         let secrets = get_keyvault_secrets(&env::var("KEY_VAULT_NAME")?).await?;
 
-        set_ssphp_run()?;
+        set_ssphp_run("default")?;
         let ms_graph = login(
             secrets
                 .azure_client_id
@@ -1235,15 +1232,15 @@ pub(crate) mod test {
         Ok(())
     }
 
-    #[ignore]
-    #[tokio::test]
-    async fn list_token_lifetime_policies() -> Result<()> {
-        let (splunk, ms_graph) = setup().await?;
-        let result = ms_graph.list_token_lifetime_policies().await?;
-        let hec = HecDynamic::new(result, "msgraph:tokenlifetime", "aktest");
-        splunk.send_batch((&hec).to_hec_events()?).await?;
-        Ok(())
-    }
+    // #[ignore]
+    // #[tokio::test]
+    // async fn list_token_lifetime_policies() -> Result<()> {
+    //     let (splunk, ms_graph) = setup().await?;
+    //     let result = ms_graph.list_token_lifetime_policies().await?;
+    //     let hec = HecDynamic::new(result, "msgraph:tokenlifetime", "aktest");
+    //     splunk.send_batch((&hec).to_hec_events()?).await?;
+    //     Ok(())
+    // }
 
     #[tokio::test]
     async fn list_permission_grant_policies() -> Result<()> {

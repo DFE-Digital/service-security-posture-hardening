@@ -29,6 +29,10 @@ impl ToHecEvents for &DescribeHubOutput {
     fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
         Box::new(std::iter::once(self))
     }
+
+    fn ssphp_run_key(&self) -> &str {
+        "aws"
+    }
 }
 
 impl From<aws_sdk_securityhub::operation::describe_hub::DescribeHubOutput> for DescribeHubOutput {

@@ -1,7 +1,7 @@
 use crate::{acs::Acs, search_client::SplunkApiClient};
 use anyhow::{Context, Result};
 use data_ingester_qualys::Qualys;
-use data_ingester_splunk::splunk::{try_collect_send, Splunk};
+use data_ingester_splunk::splunk::{set_ssphp_run, try_collect_send, Splunk};
 use data_ingester_supporting::keyvault::Secrets;
 use serde::Deserialize;
 use std::sync::Arc;
@@ -14,6 +14,8 @@ struct Cve {
 }
 
 pub async fn splunk_acs_test(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
+    set_ssphp_run("qualys")?;
+
     // TODO anything but this
     let stack = secrets
         .splunk_host

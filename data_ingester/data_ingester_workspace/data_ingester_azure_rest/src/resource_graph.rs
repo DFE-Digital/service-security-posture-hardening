@@ -7,9 +7,9 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::{collections::VecDeque, sync::Arc};
 use tokio::time::{Duration, Instant};
-use tracing::{info, error};
+use tracing::{error, info};
 pub async fn azure_resource_graph(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
-    set_ssphp_run()?;
+    set_ssphp_run("azure_resource_graph")?;
 
     splunk
         .log("Starting Azure Resource Graph collection")
@@ -317,6 +317,9 @@ impl ToHecEvents for &ResourceGraphData {
     }
     fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
         Box::new(self.inner.iter())
+    }
+    fn ssphp_run_key(&self) -> &str {
+        "aws"
     }
 }
 
