@@ -12,8 +12,6 @@ use std::io::prelude::*;
 pub(crate) struct Model {
     threagile_version: String,
     title: String,
-    //#[serde(rename="Foo bar_baz")]
-    //foo_bar_baz: String,
     business_criticality: TechnicalAssetCriticality,
     pub(crate) technical_assets: TechnicalAssets,
 }
@@ -78,18 +76,6 @@ impl Default for TechnicalAsset {
         }
     }
 }
-
-// #[derive(Default, Debug, Serialize)]
-// enum TechnicalAssetTags {
-//     #[default]
-//     Name(String),
-//     Azure,
-//     AzureKeyVault,
-//     Vault,
-//     Secrets,
-//     Keys,
-//     AssetType(),
-// }
 
 #[derive(Default, Debug, Serialize)]
 enum Technology {
