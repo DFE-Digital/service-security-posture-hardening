@@ -5,7 +5,7 @@
 {% endif %}  
 
   <label>Security Posture Continuous Assurance : DfE Service Threat Model Dashboard</label>
-  <description>{{environment}} v1.0.3</description>
+  <description>{{environment}} v1.0.7</description>
 
   <fieldset submitButton="false">
     {% include 'default/data/ui/views/ssphp_dashboard_templates.d/ssphp_footer_menu_template.xml' %}
@@ -65,7 +65,7 @@
 
 | search service_id=$tkn__service|s$
 
-| table service_id, category, severity, exploitation_impact, exploitation_likelihood, title, resource_id        
+| table category, severity, exploitation_impact, exploitation_likelihood, title, resource_id        
             </query>
           <done>
             <set token="tkn_ready">true</set>
@@ -78,7 +78,7 @@
 
   <row>
     <panel>
-    <title>Service Resources</title>
+    <title>Service Resources [$tkn_resource_count$]</title>
       <table>
         <search>
           <query>
@@ -86,11 +86,21 @@
 
 | search service_id=$tkn__service|s$
 | fields - SSPHP_RUN
+
+| rex field=resource_id "^.*\/subscriptions\/(?&lt;subscription&gt;[^\/]*).*$"
+  | eval resource=mvindex(split('resource_id',"/"),-1)
+  | eval type=mvindex(split('resource_id',"/"),-2)
+  
+  | stats values(resource) as resources by subscription, resourceGroup, type
+
+  | eventstats count
             </query>
           <done>
             <set token="tkn_ready">true</set>
+            <set token="tkn_resource_count">$result.count$</set>
           </done>
         </search>
+        <fields>subscription, resourceGroup, type, resources</fields>
       </table>
     </panel>
   </row>
