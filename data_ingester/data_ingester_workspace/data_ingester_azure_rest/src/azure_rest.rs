@@ -15,13 +15,13 @@ use dyn_fmt::AsStrFormatExt;
 use futures::stream::StreamExt;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use serde_json::Value;
-use tracing::error;
 use std::iter;
 use std::{collections::HashMap, sync::Arc};
+use tracing::error;
 use url::Url;
 
-use data_ingester_splunk::splunk::HecEvent;
 use data_ingester_splunk::splunk::ToHecEvents;
+use data_ingester_splunk::splunk::{get_ssphp_run, HecEvent};
 
 pub struct AzureRest {
     pub(crate) credential: Arc<ClientSecretCredential>,
@@ -67,13 +67,17 @@ impl AzureRest {
 
     pub async fn get_security_contacts(&self) -> Result<ReturnTypes> {
         let url_template = "https://management.azure.com/subscriptions/{}/providers/Microsoft.Security/securityContacts?api-version=2020-01-01-preview";
-        let results = self.rest_request_subscription_iter(url_template).await?;
+        let results = self
+            .rest_request_subscription_iter(url_template, "azure_users")
+            .await?;
         Ok(results)
     }
 
     pub async fn get_security_center_built_in(&self) -> Result<ReturnTypes> {
         let url_template = "https://management.azure.com/subscriptions/{}/providers/Microsoft.Authorization/policyAssignments/SecurityCenterBuiltIn?api-version=2021-06-01";
-        let results = self.rest_request_subscription_iter(url_template).await?;
+        let results = self
+            .rest_request_subscription_iter(url_template, "azure_users")
+            .await?;
         Ok(results)
     }
 
@@ -153,13 +157,17 @@ impl AzureRest {
 
     pub async fn get_microsoft_security_settings(&self) -> Result<ReturnTypes> {
         let url_template = "https://management.azure.com/subscriptions/{}/providers/Microsoft.Security/settings?api-version=2021-06-01";
-        let results = self.rest_request_subscription_iter(url_template).await?;
+        let results = self
+            .rest_request_subscription_iter(url_template, "azure_users")
+            .await?;
         Ok(results)
     }
 
     pub async fn get_microsoft_security_auto_provisioning_settings(&self) -> Result<ReturnTypes> {
         let url_template = "https://management.azure.com/subscriptions/{}/providers/Microsoft.Security/autoProvisioningSettings?api-version=2017-08-01-preview";
-        let results = self.rest_request_subscription_iter(url_template).await?;
+        let results = self
+            .rest_request_subscription_iter(url_template, "azure_users")
+            .await?;
         Ok(results)
     }
 
@@ -195,9 +203,12 @@ impl AzureRest {
                                 "https://management.azure.com{}/encryptionProtector?api-version=2022-05-01-preview",
                                 server_url);
                             let result = self.get_rest_request::<ReturnType>(&url).await?;
-                            collection
-                                .collection
-                                .push(result.into_return_type_wrapper(url.as_str().to_string()));
+                            collection.collection.push(
+                                result.into_return_type_wrapper(
+                                    url.as_str().to_string(),
+                                    "azure_users",
+                                ),
+                            );
                         }
                     }
                 }
@@ -302,7 +313,11 @@ impl AzureRest {
         Ok(collection)
     }
 
-    pub async fn rest_request_subscription_iter(&self, url_template: &str) -> Result<ReturnTypes> {
+    pub async fn rest_request_subscription_iter(
+        &self,
+        url_template: &str,
+        ssphp_run_key: &str,
+    ) -> Result<ReturnTypes> {
         let response = self
             .credential
             .get_token(&["https://management.azure.com/.default"])
@@ -326,8 +341,7 @@ impl AzureRest {
 
             collection
                 .collection
-                .push(rt.into_return_type_wrapper(url.as_str().to_string()));
-            //collection.extend(rt.to_hec_events(url.as_str())?);
+                .push(rt.into_return_type_wrapper(url.as_str().to_string(), ssphp_run_key));
         }
         Ok(collection)
     }
@@ -347,7 +361,7 @@ pub enum ReturnType {
 
 // TODO Use ToHecEvents trait
 impl ReturnType {
-    pub fn to_hec_events(&self, source: &str) -> Result<Vec<HecEvent>> {
+    pub fn to_hec_events(&self, source: &str, ssphp_run_key: &str) -> Result<Vec<HecEvent>> {
         let mut collection = vec![];
         match self {
             ReturnType::Collection { value, next_link } => {
@@ -357,7 +371,7 @@ impl ReturnType {
                     unimplemented!();
                 }
                 for v in value.iter() {
-                    collection.push(HecEvent::new(
+                    collection.push(HecEvent::new_with_ssphp_run(
                         &v,
                         //&url.as_str(),
                         // TODO
@@ -368,12 +382,13 @@ impl ReturnType {
                             .context("No key 'type'")?
                             .as_str()
                             .context("Type is not a str")?,
+                        get_ssphp_run(ssphp_run_key),
                     )?);
                 }
             }
             ReturnType::Array(vec) => {
                 for v in vec.iter() {
-                    collection.push(HecEvent::new(
+                    collection.push(HecEvent::new_with_ssphp_run(
                         &v,
                         // TODO
                         source,
@@ -384,11 +399,12 @@ impl ReturnType {
                             .context("No key 'type'")?
                             .as_str()
                             .context("Type is not a str")?,
+                        get_ssphp_run(ssphp_run_key),
                     )?);
                 }
             }
             ReturnType::Value(value) => {
-                collection.push(HecEvent::new(
+                collection.push(HecEvent::new_with_ssphp_run(
                     &value,
                     // TODO
                     source,
@@ -400,15 +416,17 @@ impl ReturnType {
                         .context("No key 'type'")?
                         .as_str()
                         .context("Type is not a str")?,
+                    get_ssphp_run(ssphp_run_key),
                 )?);
             }
         };
         Ok(collection)
     }
-    fn into_return_type_wrapper(self, source: String) -> ReturnTypeWrapper {
+    fn into_return_type_wrapper(self, source: String, ssphp_run_key: &str) -> ReturnTypeWrapper {
         ReturnTypeWrapper {
             collection: self,
             source,
+            ssphp_run_key: ssphp_run_key.to_string(),
         }
     }
 }
@@ -417,11 +435,13 @@ impl ReturnType {
 pub(crate) struct ReturnTypeWrapper {
     collection: ReturnType,
     source: String,
+    ssphp_run_key: String,
 }
 
 impl ToHecEvents for &ReturnTypeWrapper {
     fn to_hec_events(&self) -> Result<Vec<HecEvent>> {
-        self.collection.to_hec_events(&self.source)
+        self.collection
+            .to_hec_events(&self.source, &self.ssphp_run_key)
     }
 
     type Item = ();
@@ -435,6 +455,10 @@ impl ToHecEvents for &ReturnTypeWrapper {
     }
     fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
         unimplemented!()
+    }
+
+    fn ssphp_run_key(&self) -> &str {
+        &self.ssphp_run_key
     }
 }
 
@@ -473,6 +497,10 @@ impl ToHecEvents for &ReturnTypes {
     fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
         unimplemented!()
     }
+
+    fn ssphp_run_key(&self) -> &str {
+        unimplemented!()
+    }
 }
 
 #[cfg(test)]
@@ -498,7 +526,7 @@ pub(crate) mod test {
             &secrets.splunk_token.as_ref().context("No value")?,
         )?;
 
-        set_ssphp_run()?;
+        set_ssphp_run("default")?;
 
         let azure_rest = AzureRest::new(
             secrets
@@ -640,6 +668,9 @@ impl ToHecEvents for &RoleAssignments {
     fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
         Box::new(self.inner.values())
     }
+    fn ssphp_run_key(&self) -> &str {
+        "azure_resource_graph"
+    }
 }
 
 // impl ToHecEvents for &HashMap<String, RoleAssignment> {
@@ -685,6 +716,9 @@ impl ToHecEvents for &RoleDefinitions {
     fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
         Box::new(self.inner.values())
     }
+    fn ssphp_run_key(&self) -> &str {
+        "azure_resource_graph"
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -704,6 +738,9 @@ impl ToHecEvents for &Subscriptions {
 
     fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
         Box::new(self.inner.iter())
+    }
+    fn ssphp_run_key(&self) -> &str {
+        "azure_resource_graph"
     }
 }
 
@@ -725,5 +762,8 @@ impl ToHecEvents for &SubscriptionPolicies {
 
     fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
         Box::new(iter::once(self))
+    }
+    fn ssphp_run_key(&self) -> &str {
+        "azure_resource_graph"
     }
 }

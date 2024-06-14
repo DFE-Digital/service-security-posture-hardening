@@ -83,4 +83,8 @@ impl ToHecEvents for &RoleDefinitions {
     fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
         Box::new(self.value.values())
     }
+
+    fn ssphp_run_key(&self) -> &str {
+        "azure_resource_graph"
+    }
 }

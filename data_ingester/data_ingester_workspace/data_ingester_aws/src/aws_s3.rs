@@ -20,6 +20,9 @@ impl ToHecEvents for &GetBucketAclOutputs {
     fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
         Box::new(self.inner.iter())
     }
+    fn ssphp_run_key(&self) -> &str {
+        "aws"
+    }
 }
 
 #[derive(serde::Serialize, Debug)]
@@ -126,6 +129,9 @@ impl ToHecEvents for &GetBucketPolicyOutputs {
     fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
         Box::new(self.inner.iter())
     }
+    fn ssphp_run_key(&self) -> &str {
+        "aws"
+    }
 }
 
 #[derive(serde::Serialize, Debug)]
@@ -151,6 +157,9 @@ impl ToHecEvents for &GetBucketPolicyOutput {
 
     fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
         Box::new(std::iter::once(self))
+    }
+    fn ssphp_run_key(&self) -> &str {
+        "aws"
     }
 }
 
@@ -188,6 +197,9 @@ impl ToHecEvents for &GetBucketLoggingOutputs {
 
     fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
         Box::new(self.inner.iter())
+    }
+    fn ssphp_run_key(&self) -> &str {
+        "aws"
     }
 }
 
@@ -346,6 +358,9 @@ impl ToHecEvents for &GetBucketVersioningOutputs {
     fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
         Box::new(self.inner.iter())
     }
+    fn ssphp_run_key(&self) -> &str {
+        "aws"
+    }
 }
 
 #[derive(::std::clone::Clone, ::std::cmp::PartialEq, ::std::fmt::Debug, Serialize)]
@@ -426,5 +441,8 @@ impl ToHecEvents for &GetPublicAccessBlocks {
 
     fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
         Box::new(self.inner.iter())
+    }
+    fn ssphp_run_key(&self) -> &str {
+        "aws"
     }
 }

@@ -56,16 +56,12 @@ impl<'a> ToHecEvents for &Groups<'a> {
         "SSPHP.AAD.group"
     }
 
-    // fn to_hec_events(&self) -> anyhow::Result<Vec<crate::splunk::HecEvent>> {
-    //     Ok(self
-    //         .inner
-    //         .iter()
-    //         .map(|i| HecEvent::new(&i, self.source(), self.sourcetype()).unwrap())
-    //         .collect())
-    // }
-
     fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
         Box::new(self.inner.iter())
+    }
+
+    fn ssphp_run_key(&self) -> &str {
+        "m365"
     }
 }
 

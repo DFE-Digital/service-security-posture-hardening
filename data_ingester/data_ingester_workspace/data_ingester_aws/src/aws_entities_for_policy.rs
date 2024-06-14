@@ -46,6 +46,9 @@ impl ToHecEvents for &EntitiesForPolicyOutput {
     fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
         Box::new(iter::once(self))
     }
+    fn ssphp_run_key(&self) -> &str {
+        "aws"
+    }
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]

@@ -33,7 +33,7 @@ pub(crate) async fn start_server(tx: Sender<()>) -> Result<()> {
 
     let app_state = AppState::new().await.context("Building App State")?;
 
-    set_ssphp_run()?;
+    set_ssphp_run("default")?;
     start_splunk_tracing(
         app_state.splunk.clone(),
         "data_ingester_rust",
@@ -246,7 +246,6 @@ async fn post_splunk_test(State(state): State<Arc<AppState>>) -> Json<AzureInvok
         .await,
     )
 }
-
 
 async fn post_threagile(State(state): State<Arc<AppState>>) -> Json<AzureInvokeResponse> {
     Json(

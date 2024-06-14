@@ -27,6 +27,9 @@ impl ToHecEvents for &DescribeConfigurationRecordersOutput {
             None => Box::new(std::iter::empty()),
         }
     }
+    fn ssphp_run_key(&self) -> &str {
+        "aws"
+    }
 }
 
 impl From<aws_sdk_config::operation::describe_configuration_recorders::DescribeConfigurationRecordersOutput> for DescribeConfigurationRecordersOutput {

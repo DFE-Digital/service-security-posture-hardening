@@ -5,6 +5,7 @@ use crate::ms_graph::MsGraph;
 use anyhow::Result;
 use data_ingester_splunk::splunk::{to_hec_events, HecEvent, Message, Splunk};
 use serde::Deserialize;
+use tracing::{error, info};
 
 /// Loads data from the ms_graph.toml file
 pub fn load_m365_toml() -> Result<MsGraphData> {
@@ -19,14 +20,25 @@ pub fn load_m365_toml() -> Result<MsGraphData> {
 pub struct MsGraphData(HashMap<String, HashMap<String, MsGraphSource>>);
 
 impl MsGraphData {
-    pub async fn process_sources(&self, ms_graph: &MsGraph, splunk: &Arc<Splunk>) -> Result<()> {
+    pub async fn process_sources(
+        &self,
+        ms_graph: &MsGraph,
+        splunk: &Arc<Splunk>,
+        ssphp_run_key: &str,
+    ) -> Result<()> {
         for ms_graph_sources in self.0.values() {
             // dbg!(&section, &ms_graph_sources);
             for (source_name, ms_graph_source) in ms_graph_sources {
                 // dbg!(&source_name, &ms_graph_source);
 
-                MsGraphData::try_collect_send(source_name, ms_graph_source, ms_graph, splunk)
-                    .await?;
+                MsGraphData::try_collect_send(
+                    source_name,
+                    ms_graph_source,
+                    ms_graph,
+                    splunk,
+                    ssphp_run_key,
+                )
+                .await?;
             }
         }
         Ok(())
@@ -37,42 +49,34 @@ impl MsGraphData {
         ms_graph_source: &MsGraphSource,
         ms_graph: &MsGraph,
         splunk: &Splunk,
+        ssphp_run_key: &str,
     ) -> Result<()> {
         let log_name = &format!("{}: {:?}", source_name, ms_graph_source);
-        splunk.log(&format!("Getting {}", &log_name)).await?;
+        info!("Getting {}", &log_name);
         match ms_graph.get_url(&ms_graph_source.endpoint).await {
             Ok(ref result) => {
                 let hec_events = match to_hec_events(
                     result,
                     ms_graph_source.source(),
                     ms_graph_source.sourcetype(),
+                    ssphp_run_key,
                 ) {
                     Ok(hec_events) => hec_events,
                     Err(e) => {
-                        eprintln!("Failed converting to HecEvents: {}", e);
-                        dbg!(&result);
-                        vec![HecEvent::new(
-                            &Message {
-                                event: format!("Failed converting to HecEvents: {}", e),
-                            },
-                            "data_ingester_rust",
-                            "data_ingester_rust_logs",
-                        )?]
+                        error!("Failed converting to HecEvents: {}", e);
+                        vec![]
                     }
                 };
 
                 match splunk.send_batch(&hec_events).await {
-                    Ok(_) => eprintln!("Sent to Splunk"),
+                    Ok(_) => info!("Sent to Splunk"),
                     Err(e) => {
-                        eprintln!("Failed Sending to Splunk: {}", e);
-                        dbg!(&hec_events);
+                        error!("Failed Sending to Splunk: {}", e);
                     }
                 };
             }
             Err(err) => {
-                splunk
-                    .log(&format!("Failed to get {}: {}", &log_name, err))
-                    .await?
+                error!("Failed to get {}: {}", &log_name, err);
             }
         };
         Ok(())
@@ -166,7 +170,9 @@ mod test {
             &secrets.splunk_token.as_ref().context("No value")?,
         )?);
 
-        sources.process_sources(&ms_graph, &splunk).await?;
+        sources
+            .process_sources(&ms_graph, &splunk, "default")
+            .await?;
 
         Ok(())
     }

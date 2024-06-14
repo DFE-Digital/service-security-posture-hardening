@@ -9,7 +9,7 @@ use tracing::info;
 
 /// Public entry point
 pub async fn github_octocrab_entrypoint(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
-    set_ssphp_run()?;
+    set_ssphp_run("github")?;
 
     info!("Starting GitHub collection");
 

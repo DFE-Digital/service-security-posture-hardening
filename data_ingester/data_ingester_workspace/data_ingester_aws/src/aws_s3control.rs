@@ -24,6 +24,9 @@ impl ToHecEvents for &GetPublicAccessBlockOutput {
     fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
         Box::new(std::iter::once(self))
     }
+    fn ssphp_run_key(&self) -> &str {
+        "aws"
+    }
 }
 
 impl From<aws_sdk_s3control::operation::get_public_access_block::GetPublicAccessBlockOutput>

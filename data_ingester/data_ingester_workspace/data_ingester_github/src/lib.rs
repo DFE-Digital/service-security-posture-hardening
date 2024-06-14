@@ -240,6 +240,9 @@ impl ToHecEvents for &OrgMembers {
     fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
         Box::new(self.0.iter())
     }
+    fn ssphp_run_key(&self) -> &str {
+        "github"
+    }
 }
 
 /// Org member representation sent to Splunk
@@ -553,6 +556,9 @@ impl ToHecEvents for &Repos {
     fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
         Box::new(self.inner.iter())
     }
+    fn ssphp_run_key(&self) -> &str {
+        "github"
+    }
 }
 
 /// A collection of API responses from Github
@@ -589,6 +595,9 @@ impl ToHecEvents for &GithubResponses {
             .flat_map(|response| response.to_hec_events())
             .flatten()
             .collect())
+    }
+    fn ssphp_run_key(&self) -> &str {
+        "github"
     }
 }
 
@@ -656,10 +665,19 @@ impl ToHecEvents for &GithubResponse {
                 ssphp_http_status: self.ssphp_http_status,
             })
             .map(|gr| {
-                data_ingester_splunk::splunk::HecEvent::new(&gr, self.source(), self.sourcetype())
+                data_ingester_splunk::splunk::HecEvent::new_with_ssphp_run(
+                    &gr,
+                    self.source(),
+                    self.sourcetype(),
+                    self.get_ssphp_run(),
+                )
             })
             .partition_result();
         Ok(ok)
+    }
+
+    fn ssphp_run_key(&self) -> &str {
+        "github"
     }
 }
 

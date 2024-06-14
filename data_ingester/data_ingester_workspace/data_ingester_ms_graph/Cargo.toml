@@ -25,6 +25,7 @@ toml = "*"
 hickory-proto = "*"
 hickory-resolver = { version = "*", features = ["dns-over-rustls"] }
 url = "*"
+tracing = "*"
 
 [build-dependencies]
 toml = "*"

@@ -1,5 +1,5 @@
 use anyhow::{Context, Result};
-use data_ingester_splunk::splunk::{Splunk, ToHecEvents};
+use data_ingester_splunk::splunk::{set_ssphp_run, Splunk, ToHecEvents};
 use data_ingester_supporting::keyvault::Secrets;
 use serde_json::Value;
 use std::collections::HashMap;
@@ -46,6 +46,7 @@ fn extract_threagile() -> Result<PathBuf> {
 }
 
 pub async fn threagile(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
+    set_ssphp_run("threagile")?;
     info!("Extracting Threagile bins");
     let threagile_path = extract_threagile()?;
 
