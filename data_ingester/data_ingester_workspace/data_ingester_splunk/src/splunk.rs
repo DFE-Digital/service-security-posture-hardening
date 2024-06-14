@@ -20,7 +20,7 @@ use std::sync::RwLock;
 use std::time::{SystemTime, UNIX_EPOCH};
 use uuid::Uuid;
 
-// TODO Should not be shared between calls to the web endpoint!
+// Legacy, just used for tests and logs
 static SSPHP_RUN: RwLock<u64> = RwLock::new(0_u64);
 
 static SSPHP_RUN_NEW: LazyLock<RwLock<HashMap<String, u64>>> = LazyLock::new(|| {
@@ -170,9 +170,6 @@ pub trait ToHecEvents {
         ssphp_run
     }
     fn ssphp_run_key(&self) -> &str;
-    // fn ssphp_run_key(&self) -> &str {
-    //     "default"
-    // }
 }
 
 #[derive(Debug, Clone)]
@@ -315,46 +312,6 @@ where
         Some(lines)
     }
 }
-
-/// Struct to use for creating dynamic / testing ToHec events
-// #[cfg(test)]
-// #[derive(Debug, Serialize, Deserialize, Default)]
-// pub struct HecDynamic {
-//     inner: Value,
-//     sourcetype: String,
-//     source: String,
-// }
-
-// // #[cfg(test)]
-// impl HecDynamic {
-//     pub fn new<S: Into<String>>(value: Value, sourcetype: S, source: S) -> Self {
-//         Self {
-//             inner: value,
-//             sourcetype: sourcetype.into(),
-//             source: source.into(),
-//         }
-//     }
-// }
-
-// // #[cfg(test)]
-// impl ToHecEvents for &HecDynamic {
-//     type Item = Value;
-
-//     fn source(&self) -> &str {
-//         &self.source
-//     }
-
-//     fn sourcetype(&self) -> &str {
-//         &self.sourcetype
-//     }
-
-//     fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
-//         Box::new(iter::once(&self.inner))
-//     }
-
-//     fn ssphp_run_key(&self) -> &str {
-//     }
-// }
 
 /// Run a future to completion and send the results to Splunk.
 ///
