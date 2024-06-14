@@ -38,6 +38,9 @@ pub(crate) struct AppState {
 
     /// Lock for splunk_test to stop concurrent executions            
     pub(crate) splunk_test_lock: Arc<Mutex<()>>,
+
+    /// Lock for threagile to stop concurrent executions            
+    pub(crate) threagile_lock: Arc<Mutex<()>>,    
 }
 
 impl AppState {
@@ -57,6 +60,7 @@ impl AppState {
             azure_resource_graph_lock: Arc::new(Mutex::new(())),
             github_lock: Arc::new(Mutex::new(())),
             splunk_test_lock: Arc::new(Mutex::new(())),
+            threagile_lock: Arc::new(Mutex::new(())),            
         })
     }
 

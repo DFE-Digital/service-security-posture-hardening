@@ -53,6 +53,7 @@ pub(crate) async fn start_server(tx: Sender<()>) -> Result<()> {
         .route("/m365", post(post_m365))
         .route("/powershell", post(post_powershell))
         .route("/splunk_test", post(post_splunk_test))
+        .route("/threagile", post(post_threagile))
         .with_state(Arc::new(app_state));
 
     let port_key = "FUNCTIONS_CUSTOMHANDLER_PORT";
@@ -241,6 +242,19 @@ async fn post_splunk_test(State(state): State<Arc<AppState>>) -> Json<AzureInvok
             state.splunk_test_lock.clone(),
             state,
             data_ingester_splunk_search::entrypoint::splunk_acs_test,
+        )
+        .await,
+    )
+}
+
+
+async fn post_threagile(State(state): State<Arc<AppState>>) -> Json<AzureInvokeResponse> {
+    Json(
+        function_runner(
+            "Threagile Test",
+            state.threagile_lock.clone(),
+            state,
+            data_ingester_threagile::threagile,
         )
         .await,
     )

@@ -1,6 +1,13 @@
 *.tar
 *.tar.gz
 *report.json
+*risks.json
+*risks.xlsx
+*results_from_splunk.yaml
+*stats.json
+*tags.xlsx
+*assets.json
+*test1.yaml
 .*cache
 __pycache__
 target

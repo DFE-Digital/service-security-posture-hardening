@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::{collections::VecDeque, sync::Arc};
 use tokio::time::{Duration, Instant};
-
+use tracing::{info, error};
 pub async fn azure_resource_graph(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
     set_ssphp_run()?;
 
@@ -49,7 +49,7 @@ async fn resource_graph_all(az_client: AzureRest, splunk: &Splunk) -> Result<()>
         let sub_id = sub.subscription_id.as_ref().context("no subscription_id")?;
 
         for table in &crate::resource_graph::RESOURCE_GRAPH_TABLES {
-            println!("{}: {}", sub_id, table);
+            info!("{}: {}", sub_id, table);
             let mut request_body =
                 ResourceGraphRequest::new(sub_id, &format!("{} | order by name asc", &table));
 
@@ -71,7 +71,7 @@ async fn resource_graph_all(az_client: AzureRest, splunk: &Splunk) -> Result<()>
             let mut batch = 0;
             while let Some(ref skip_token) = response.skip_token {
                 batch += 1;
-                println!("{}: {}: batch {}", sub_id, table, batch);
+                info!("{}: {}: batch {}", sub_id, table, batch);
                 request_body.add_skip_token(skip_token);
 
                 response = make_request(&az_client, endpoint, &request_body, &mut rate_limit)
@@ -116,7 +116,7 @@ async fn make_request(
             // Known errors
             ResourceGraphResponse::Error(error) => match error.error.code {
                 QueryErrorErrorCode::RateLimiting => {
-                    eprintln!("Rate limited!:\n {:?}", error);
+                    error!("Rate limited!:\n {:?}", error);
                     tokio::time::sleep(rate_limit.interval).await;
                     continue;
                 }
@@ -129,7 +129,7 @@ async fn make_request(
                         .code
                     {
                         QueryErrorErrorDetailsCode::ResponsePayloadTooLarge => {
-                            println!("ResponsePayloadTooLarge error!");
+                            error!("ResponsePayloadTooLarge error!");
                             let mut new_request_body = request_body.clone();
                             new_request_body.options.top = Some(10);
                             break make_request(az_client, endpoint, &new_request_body, rate_limit)
@@ -138,27 +138,27 @@ async fn make_request(
                         }
 
                         QueryErrorErrorDetailsCode::RateLimiting => {
-                            eprintln!("Rate limited!:\n {:?}", error);
+                            error!("Rate limited!:\n {:?}", error);
                             tokio::time::sleep(rate_limit.interval).await;
                             continue;
                         }
 
                         // Unknown Errors and responses
                         QueryErrorErrorDetailsCode::Other(other) => {
-                            dbg!(&other);
+                            error!("{:?}", &other);
                             anyhow::bail!("Unknown Error Type : {:?}", other);
                         }
                     }
                 }
                 // Unknown Errors and responses
                 QueryErrorErrorCode::Other(other) => {
-                    dbg!(&other);
+                    error!("{:?}", &other);
                     anyhow::bail!("Unknown Error Type : {:?}", other);
                 }
             },
             // Unknown Errors and responses
             ResourceGraphResponse::Other(other) => {
-                dbg!(&other);
+                error!("{:?}", &other);
                 anyhow::bail!("Unknown response Error: {:?}", other);
             }
         };

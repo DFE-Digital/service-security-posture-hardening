@@ -10,7 +10,7 @@ use tracing::{debug, info};
 /// A simple client for Splunk ACS
 /// https://docs.splunk.com/Documentation/SplunkCloud/9.1.2312/Config/ACSIntro
 #[derive(Debug, Default)]
-pub(crate) struct Acs {
+pub struct Acs {
     client: Client,
     stack: String,
     current_cidr: Option<String>,
@@ -18,7 +18,7 @@ pub(crate) struct Acs {
 
 /// Represents an ACS IpAllowList
 #[derive(Debug, Serialize, Deserialize, Default)]
-pub(crate) struct IpAllowList {
+pub struct IpAllowList {
     subnets: Vec<String>,
 }
 
@@ -129,9 +129,14 @@ impl Acs {
         Ok(())
     }
 
-    pub async fn remove_current_cidr(&self) -> Result<()> {
+    pub async fn remove_current_cidr(&mut self) -> Result<()> {
         if let Some(ip) = self.current_cidr.as_ref() {
             self.delete_search_api_ip_allow_list(ip)
+                .await
+                .context("ACS: Removing current_ip from search-api ip_allow_list")?;
+        } else {
+            let ip = self.get_current_ip().await?;
+            self.delete_search_api_ip_allow_list(&ip)
                 .await
                 .context("ACS: Removing current_ip from search-api ip_allow_list")?;
         }
