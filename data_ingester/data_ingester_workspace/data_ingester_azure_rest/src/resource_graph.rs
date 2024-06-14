@@ -319,7 +319,7 @@ impl ToHecEvents for &ResourceGraphData {
         Box::new(self.inner.iter())
     }
     fn ssphp_run_key(&self) -> &str {
-        "aws"
+        "azure_resource_graph"
     }
 }
 
