@@ -13,20 +13,20 @@ use data_ingester_splunk_search::acs::Acs;
 use data_ingester_splunk_search::search_client::SplunkApiClient;
 use std::os::unix::fs::PermissionsExt;
 use std::process::Command;
-use tracing::info;
+use tracing::{debug, info};
 
 fn extract_threagile() -> Result<PathBuf> {
     info!("Extracting threagile");
     let current_exe = std::env::current_exe().context("Gettting current exe path")?;
-    dbg!(&current_exe);
+
     let current_exe_dir = current_exe
         .parent()
         .context("No parent for current exe path")?;
-    dbg!(&current_exe_dir);
+
     let threagile_bytes = include_bytes!("../threagile_bin/threagile");
     let threagile_path = current_exe_dir.join("threagile_bin");
     let threagile_path = PathBuf::from("/tmp/threagile_bin");
-    dbg!(&threagile_path);
+
     let mut threagile_file =
         std::fs::File::create(&threagile_path).context("Unable to create 'threagile' bin")?;
     threagile_file
@@ -42,23 +42,6 @@ fn extract_threagile() -> Result<PathBuf> {
     fs::set_permissions(&threagile_path, threagile_file_permissions)?;
     drop(threagile_file);
 
-
-    // info!("Extracting raa_calc");
-    // let raa_calc_bytes = include_bytes!("../threagile_bin/raa_calc");
-    // let raa_calc_path = current_exe_dir.join("raa_calc");
-    // let raa_calc_path = PathBuf::from("/tmp/raa_calc");
-    // let mut raa_calc_file =
-    //     std::fs::File::create(&raa_calc_path).context("Unable to create 'raa_calc' bin")?;
-    // raa_calc_file
-    //     .write_all(raa_calc_bytes)
-    //     .context("Unable to write raa_calc bytes to file")?;
-    // let raa_calc_file_metadata = raa_calc_file
-    //     .metadata()
-    //     .context("Unable to get raa_calc metadata")?;
-    // let mut raa_calc_file_permissions = raa_calc_file_metadata.permissions();
-    // raa_calc_file_permissions.set_mode(0o100700);
-    // fs::set_permissions(&raa_calc_path, raa_calc_file_permissions)?;
-    // drop(raa_calc_file);
     Ok(threagile_path)
 }
 
@@ -95,16 +78,15 @@ pub async fn threagile(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()>
 
     let search_client = SplunkApiClient::new(&splunk_search_url, search_token)
         .context("Creating Splunk search client")?
-        .set_app("DCAP_DEV");
+        .set_app("DCAP");
 
     info!("Running splunk search ssphp_get_list_service_resources_DEV");
     let search_results = search_client
-        // TODO Remove '_DEV' before merge
-        .run_search::<model::SplunkResult>("| savedsearch ssphp_get_list_service_resources_DEV")
+        .run_search::<model::SplunkResult>("| savedsearch ssphp_get_list_service_resources")
         .await
         .context("Running Splunk Search")?;
 
-    info!("Splunk search results: {:?}", search_results);
+    debug!("Splunk search results: {:?}", search_results);
 
     let mut services: HashMap<String, Vec<model::SplunkResult>> = HashMap::new();
 
@@ -142,7 +124,6 @@ pub async fn threagile(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()>
                 "/tmp",
                 "--temp-dir",
                 "/tmp",
-
             ])
             .output()?;
 
@@ -175,10 +156,9 @@ pub async fn threagile(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()>
         let mut acs = Acs::new(&splunk_stack, acs_token).context("Building Acs Client")?;
         info!("Granting access for current IP");
 
-        // TODO Uncomment before merge
-        // acs.remove_current_cidr()
-        //     .await
-        //     .context("Granting access for current IP")?;
+        acs.remove_current_cidr()
+            .await
+            .context("Granting access for current IP")?;
     }
 
     Ok(())
