@@ -50,9 +50,15 @@ pub async fn threagile(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()>
     info!("Extracting Threagile bins");
     let threagile_path = extract_threagile()?;
 
-    let splunk_cloud_stack = secrets.splunk_cloud_stack.as_ref().map(|acs| acs.as_str());
+    let splunk_cloud_stack = secrets
+        .splunk_cloud_stack
+        .as_ref()
+        .map(|stack| stack.as_str());
 
-    let splunk_acs_token = secrets.splunk_acs_token.as_ref().map(|acs| acs.as_str());
+    let splunk_acs_token = secrets
+        .splunk_acs_token
+        .as_ref()
+        .map(|token| token.as_str());
 
     let splunk_search_token = secrets
         .splunk_search_token
