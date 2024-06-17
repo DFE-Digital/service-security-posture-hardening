@@ -3,6 +3,8 @@ name: Data Ingester Azure Terraform
 
 on:
   push:
+    branches:
+      - main
     paths:
       - data_ingester/**
   workflow_dispatch:
