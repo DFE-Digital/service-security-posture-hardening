@@ -91,14 +91,14 @@ impl SplunkApiClient {
     /// Remove search access via ACS
     ///
     /// If this client was craeted with the appropriate ACS
-    /// credentials then use that to remove our current IP address from the
-    /// ACS allow list
+    /// credentials then use that to remove our current IP address
+    /// from the ACS allow list
     ///
     pub async fn close_acs(&mut self) -> Result<()> {
         if let Some(acs) = self.acs.as_mut() {
             acs.remove_current_cidr()
                 .await
-                .context("Granting access for current IP")?;
+                .context("Removing access for current IP")?;
         }
         Ok(())
     }
