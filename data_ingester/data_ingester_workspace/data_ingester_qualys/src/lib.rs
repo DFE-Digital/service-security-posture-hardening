@@ -1,5 +1,5 @@
+pub mod entrypoint;
 mod qvs;
-
 use anyhow::{Context, Result};
 use qvs::Qvs;
 use reqwest::{

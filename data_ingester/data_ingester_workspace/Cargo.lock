@@ -1321,6 +1321,7 @@ dependencies = [
  "data_ingester_github",
  "data_ingester_ms_graph",
  "data_ingester_ms_powershell",
+ "data_ingester_qualys",
  "data_ingester_splunk",
  "data_ingester_splunk_search",
  "data_ingester_supporting",
@@ -1378,6 +1379,7 @@ dependencies = [
  "data_ingester_github",
  "data_ingester_ms_graph",
  "data_ingester_ms_powershell",
+ "data_ingester_qualys",
  "data_ingester_splunk",
  "data_ingester_splunk_search",
  "data_ingester_supporting",
@@ -1459,6 +1461,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "data_ingester_splunk",
+ "data_ingester_splunk_search",
  "data_ingester_supporting",
  "reqwest 0.12.4",
  "serde",
@@ -1492,7 +1495,6 @@ name = "data_ingester_splunk_search"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "data_ingester_qualys",
  "data_ingester_splunk",
  "data_ingester_supporting",
  "reqwest 0.12.4",
