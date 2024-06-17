@@ -136,7 +136,8 @@ impl Acs {
                 .context("ACS: Removing current_ip from search-api ip_allow_list")?;
         } else {
             let ip = self.get_current_ip().await?;
-            self.delete_search_api_ip_allow_list(&ip)
+            let cidr = format!("{}/32", ip);
+            self.delete_search_api_ip_allow_list(&cidr)
                 .await
                 .context("ACS: Removing current_ip from search-api ip_allow_list")?;
         }
