@@ -52,7 +52,7 @@ pub(crate) async fn start_server(tx: Sender<()>) -> Result<()> {
         .route("/github", post(post_github))
         .route("/m365", post(post_m365))
         .route("/powershell", post(post_powershell))
-        .route("/splunk_test", post(post_splunk_test))
+        .route("/qualys_qvs", post(post_qualys_qvs))
         .route("/threagile", post(post_threagile))
         .with_state(Arc::new(app_state));
 
@@ -234,19 +234,19 @@ async fn post_powershell(State(state): State<Arc<AppState>>) -> Json<AzureInvoke
 }
 
 /// Collect Splunk test data
-/// TODO make this Qualys
-async fn post_splunk_test(State(state): State<Arc<AppState>>) -> Json<AzureInvokeResponse> {
+async fn post_qualys_qvs(State(state): State<Arc<AppState>>) -> Json<AzureInvokeResponse> {
     Json(
         function_runner(
             "Splunk Test",
             state.splunk_test_lock.clone(),
             state,
-            data_ingester_splunk_search::entrypoint::splunk_acs_test,
+            data_ingester_qualys::entrypoint::qualys_qvs,
         )
         .await,
     )
 }
 
+/// Run Threagile against assets from Splunk
 async fn post_threagile(State(state): State<Arc<AppState>>) -> Json<AzureInvokeResponse> {
     Json(
         function_runner(

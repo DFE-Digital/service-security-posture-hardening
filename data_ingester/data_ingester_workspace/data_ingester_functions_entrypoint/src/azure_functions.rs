@@ -564,18 +564,16 @@ pub(crate) async fn start_server(tx: Sender<()>) -> Result<()> {
                     }
                 };
 
-                let result = match data_ingester_splunk_search::entrypoint::splunk_acs_test(
-                    st_secrets, st_splunk,
-                )
-                .await
-                {
-                    Ok(_) => "Success".to_owned(),
-                    Err(e) => {
-                        let error = format!("{:?}", e);
-                        error!("splunk test error: {}", error);
-                        error
-                    }
-                };
+                let result =
+                    match data_ingester_qualys::entrypoint::qualys_qvs(st_secrets, st_splunk).await
+                    {
+                        Ok(_) => "Success".to_owned(),
+                        Err(e) => {
+                            let error = format!("{:?}", e);
+                            error!("splunk test error: {}", error);
+                            error
+                        }
+                    };
 
                 response.logs.push(result);
                 if let Some(usage) = memory_stats() {

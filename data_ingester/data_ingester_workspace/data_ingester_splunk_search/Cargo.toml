@@ -7,7 +7,6 @@ edition = "2021"
 anyhow = { version = "*", features=["backtrace"]}
 data_ingester_splunk = { path = "../data_ingester_splunk" }
 data_ingester_supporting = { path = "../data_ingester_supporting" }
-data_ingester_qualys = { path = "../data_ingester_qualys" }
 reqwest = {version = "*", features = ["rustls-tls", "json"], default-features = false}
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "*"
