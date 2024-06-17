@@ -81,9 +81,11 @@ pub async fn threagile(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()>
         .context("Creating Splunk search client")?
         .set_app("DCAP");
 
-    info!("Running splunk search ssphp_get_list_service_resources_DEV");
+    let search = "| savedsearch ssphp_get_list_service_resources";
+
+    info!("Running splunk search '{}'", search);
     let search_results = search_client
-        .run_search::<model::SplunkResult>("| savedsearch ssphp_get_list_service_resources")
+        .run_search::<model::SplunkResult>(search)
         .await
         .context("Running Splunk Search")?;
 
@@ -155,7 +157,7 @@ pub async fn threagile(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()>
             .context("Getting splunk_acs_token secret")?;
 
         let mut acs = Acs::new(&splunk_stack, acs_token).context("Building Acs Client")?;
-        info!("Granting access for current IP");
+        info!("Removing access for current IP");
 
         acs.remove_current_cidr()
             .await
