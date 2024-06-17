@@ -130,13 +130,14 @@ impl Acs {
     }
 
     pub async fn remove_current_cidr(&mut self) -> Result<()> {
-        if let Some(ip) = self.current_cidr.as_ref() {
-            self.delete_search_api_ip_allow_list(ip)
+        if let Some(cidr) = self.current_cidr.as_ref() {
+            self.delete_search_api_ip_allow_list(cidr)
                 .await
                 .context("ACS: Removing current_ip from search-api ip_allow_list")?;
         } else {
             let ip = self.get_current_ip().await?;
-            self.delete_search_api_ip_allow_list(&ip)
+            let cidr = format!("{}/32", ip);
+            self.delete_search_api_ip_allow_list(&cidr)
                 .await
                 .context("ACS: Removing current_ip from search-api ip_allow_list")?;
         }

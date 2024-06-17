@@ -5,7 +5,7 @@ use data_ingester_splunk_search::{acs::Acs, search_client::SplunkApiClient};
 use data_ingester_supporting::keyvault::Secrets;
 use serde::Deserialize;
 use std::sync::Arc;
-use tracing::info;
+use tracing::{debug, info};
 
 /// Struct for results for the Splunk search Cve data
 #[derive(Default, Debug, Clone, Deserialize)]
@@ -16,73 +16,59 @@ struct Cve {
 pub async fn qualys_qvs(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
     set_ssphp_run("qualys")?;
 
-    // TODO anything but this
-    let stack = secrets
-        .splunk_host
+    let splunk_cloud_stack = secrets
+        .splunk_cloud_stack
         .as_ref()
-        .context("Getting splunk_host secret")?
-        .split('.')
-        .next()
-        .context("Get host url ")?
-        .split('-')
-        .map(|s| s.to_string())
-        .last()
-        .context("Get stack from url")?;
+        .map(|stack| stack.as_str());
 
-    info!("Building ACS");
-    let acs_token = secrets
+    let splunk_acs_token = secrets
         .splunk_acs_token
         .as_ref()
-        .context("Getting splunk_acs_token secret")?;
-    let mut acs = Acs::new(&stack, acs_token).context("Building Acs Client")?;
+        .map(|token| token.as_str());
 
-    let ip_allow_list = acs
-        .list_search_api_ip_allow_list()
-        .await
-        .context("Getting IP allow list")?;
-    info!("Splunk IP Allow list before add: {:?}", ip_allow_list);
-
-    info!("Granting access for current IP");
-    acs.grant_access_for_current_ip()
-        .await
-        .context("Granting access for current IP")?;
-
-    let ip_allow_list = acs
-        .list_search_api_ip_allow_list()
-        .await
-        .context("Getting IP allow list")?;
-    info!("Splunk IP Allow list after add: {:?}", ip_allow_list);
-
-    let search_token = secrets
+    let splunk_search_token = secrets
         .splunk_search_token
         .as_ref()
         .context("Getting splunk_search_token secret")?;
-    let url = format!("https://{}.splunkcloud.com:8089", &stack);
-    let search_client = SplunkApiClient::new(&url, search_token)
-        .context("Creating Splunk search client")?
-        .set_app("SSPHP_metrics");
 
-    info!("Running search");
+    let splunk_search_url = secrets
+        .splunk_search_url
+        .as_ref()
+        .context("Getting splunk_search_url secret")?;
+
+    let mut search_client = SplunkApiClient::new(
+        &splunk_search_url,
+        splunk_search_token,
+        splunk_cloud_stack,
+        splunk_acs_token,
+    )
+    .context("Creating Splunk search client")?
+    .set_app("DCAP");
+
+    search_client
+        .open_acs()
+        .await
+        .context("Opening Splunk access via ACS")?;
+
+    let search = "| savedsearch  ssphp_get_list_qualys_cve";
+
+    info!("Running splunk search '{}'", search);
     let search_results = search_client
-        .run_search::<Cve>("| savedsearch ssphp_get_list_qualys_cve")
+        .run_search::<Cve>(search)
         .await
         .context("Running Splunk Search")?;
+
+    search_client
+        .close_acs()
+        .await
+        .context("Closing Splunk access via ACS")?;
+
+    debug!("Splunk search results: {:?}", search_results);
 
     info!(
         "Search results ... {:?}",
         &search_results.iter().take(2).collect::<Vec<&Cve>>()
     );
-
-    info!("Removing current IP from Splunk Allow list");
-    acs.remove_current_cidr()
-        .await
-        .context("Removing current IP from Splunk")?;
-
-    let ip_allow_list = acs
-        .list_search_api_ip_allow_list()
-        .await
-        .context("Getting IP allow list")?;
-    info!("Splunk IP Allow list after remove: {:?}", ip_allow_list);
 
     let mut qualys_client = Qualys::new(
         secrets

@@ -50,24 +50,17 @@ pub async fn threagile(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()>
     info!("Extracting Threagile bins");
     let threagile_path = extract_threagile()?;
 
-    // Open splunk search access
-    if let Some(splunk_stack) = secrets.splunk_cloud_stack.as_ref() {
-        info!("Building ACS Client");
+    let splunk_cloud_stack = secrets
+        .splunk_cloud_stack
+        .as_ref()
+        .map(|stack| stack.as_str());
 
-        let acs_token = secrets
-            .splunk_acs_token
-            .as_ref()
-            .context("Getting splunk_acs_token secret")?;
+    let splunk_acs_token = secrets
+        .splunk_acs_token
+        .as_ref()
+        .map(|token| token.as_str());
 
-        let mut acs = Acs::new(&splunk_stack, acs_token).context("Building Acs Client")?;
-        info!("Granting access for current IP");
-
-        acs.grant_access_for_current_ip()
-            .await
-            .context("Granting access for current IP")?;
-    }
-
-    let search_token = secrets
+    let splunk_search_token = secrets
         .splunk_search_token
         .as_ref()
         .context("Getting splunk_search_token secret")?;
@@ -77,9 +70,19 @@ pub async fn threagile(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()>
         .as_ref()
         .context("Getting splunk_search_url secret")?;
 
-    let search_client = SplunkApiClient::new(&splunk_search_url, search_token)
-        .context("Creating Splunk search client")?
-        .set_app("DCAP");
+    let mut search_client = SplunkApiClient::new(
+        &splunk_search_url,
+        splunk_search_token,
+        splunk_cloud_stack,
+        splunk_acs_token,
+    )
+    .context("Creating Splunk search client")?
+    .set_app("DCAP");
+
+    search_client
+        .open_acs()
+        .await
+        .context("Opening Splunk access via ACS")?;
 
     let search = "| savedsearch ssphp_get_list_service_resources";
 
@@ -90,6 +93,11 @@ pub async fn threagile(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()>
         .context("Running Splunk Search")?;
 
     debug!("Splunk search results: {:?}", search_results);
+
+    search_client
+        .close_acs()
+        .await
+        .context("Closing Splunk access via ACS")?;
 
     let mut services: HashMap<String, Vec<model::SplunkResult>> = HashMap::new();
 
@@ -145,23 +153,6 @@ pub async fn threagile(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()>
         let splunk_events = (&risks).to_hec_events()?;
 
         splunk.send_batch(&splunk_events).await?;
-    }
-
-    // Close splunk search access
-    if let Some(splunk_stack) = secrets.splunk_cloud_stack.as_ref() {
-        info!("Building ACS Client");
-
-        let acs_token = secrets
-            .splunk_acs_token
-            .as_ref()
-            .context("Getting splunk_acs_token secret")?;
-
-        let mut acs = Acs::new(&splunk_stack, acs_token).context("Building Acs Client")?;
-        info!("Removing access for current IP");
-
-        acs.remove_current_cidr()
-            .await
-            .context("Granting access for current IP")?;
     }
 
     Ok(())

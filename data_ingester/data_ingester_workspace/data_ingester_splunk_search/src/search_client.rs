@@ -6,6 +6,8 @@ use reqwest::{
 use serde::{de::DeserializeOwned, Deserialize};
 use tracing::info;
 
+use crate::acs::Acs;
+
 pub struct SplunkApiClient {
     /// A reqwest client
     client: Client,
@@ -13,6 +15,7 @@ pub struct SplunkApiClient {
     url_base: String,
     /// The Splunk application to route searches to
     app: String,
+    acs: Option<Acs>,
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
@@ -38,7 +41,12 @@ impl SplunkApiClient {
     /// to any value will disable certificate checking. This can be
     /// used when connecting to green Splunk Docker instances.
     ///
-    pub fn new(url_base: &str, token: &str) -> Result<Self> {
+    pub fn new<'b, T: Into<&'b str>>(
+        url_base: &str,
+        token: &str,
+        acs_stack: Option<T>,
+        acs_token: Option<T>,
+    ) -> Result<Self> {
         let client = if std::env::var_os("ACCEPT_INVALID_CERTS").is_none() {
             reqwest::ClientBuilder::new()
                 .danger_accept_invalid_certs(false)
@@ -50,11 +58,49 @@ impl SplunkApiClient {
                 .default_headers(SplunkApiClient::headers(token)?)
                 .build()?
         };
+        let acs = if let (Some(stack), Some(token)) = (acs_stack, acs_token) {
+            info!("Building ACS Client");
+            Some(Acs::new(&stack.into(), token.into()).context("Building Acs Client")?)
+        } else {
+            None
+        };
+
         Ok(Self {
             client,
             url_base: url_base.to_owned(),
             app: "search".to_string(),
+            acs,
         })
+    }
+
+    /// Grant search access via ACS
+    ///
+    /// If this client was craeted with the appropriate ACS
+    /// credentials then use that to add our current IP address to the
+    /// ACS allow list
+    ///
+    pub async fn open_acs(&mut self) -> Result<()> {
+        if let Some(acs) = self.acs.as_mut() {
+            acs.grant_access_for_current_ip()
+                .await
+                .context("Granting access for current IP")?
+        }
+        Ok(())
+    }
+
+    /// Remove search access via ACS
+    ///
+    /// If this client was craeted with the appropriate ACS
+    /// credentials then use that to remove our current IP address
+    /// from the ACS allow list
+    ///
+    pub async fn close_acs(&mut self) -> Result<()> {
+        if let Some(acs) = self.acs.as_mut() {
+            acs.remove_current_cidr()
+                .await
+                .context("Removing access for current IP")?;
+        }
+        Ok(())
     }
 
     /// Set a different
