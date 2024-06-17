@@ -1,15 +1,18 @@
 [workspace]
 resolver = "2"
 members = [
-    "data_ingester_aws", "data_ingester_axum_entrypoint",
+    "data_ingester_aws",
+    "data_ingester_axum_entrypoint",
     "data_ingester_azure",
     "data_ingester_azure_rest",
-    "data_ingester_functions_entrypoint",
     "data_ingester_github",
     "data_ingester_ms_graph",
-    "data_ingester_ms_powershell", "data_ingester_qualys",
-    "data_ingester_splunk", "data_ingester_splunk_search",
-    "data_ingester_supporting", "data_ingester_threagile",
+    "data_ingester_ms_powershell",
+    "data_ingester_qualys",
+    "data_ingester_splunk",
+    "data_ingester_splunk_search",
+    "data_ingester_supporting",
+    "data_ingester_threagile",
     ]
 
 [workspace.lints.clippy]
