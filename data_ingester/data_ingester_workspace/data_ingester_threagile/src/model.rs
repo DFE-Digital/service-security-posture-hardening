@@ -369,20 +369,6 @@ impl std::fmt::Display for TechnicalAssetSize {
 }
 
 impl Model {
-    // TODO DELETE BEFORE PR
-    // fn default() -> Self {
-    //     Model {
-    //         threagile_version: "1.0.0".to_string(),
-    //         title: "Results from splunk".to_string(),
-    //         business_criticality: TechnicalAssetCriticality::Important,
-    //         technical_assets: TechnicalAssets::default(),
-    //     }
-    // }
-
-    // fn push_ta(&mut self, ta: TechnicalAsset) {
-    //     let _ = self.technical_assets.0.insert(ta.id.to_string(), ta);
-    // }
-
     pub(crate) fn write_file(self, filename: &str) -> Result<()> {
         let mut file = File::create(filename)?;
         let output = serde_yaml::to_string(&self)?;
