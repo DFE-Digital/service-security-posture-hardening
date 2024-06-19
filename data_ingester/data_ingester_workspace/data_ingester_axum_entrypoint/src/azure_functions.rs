@@ -211,15 +211,13 @@ async fn post_m365(State(state): State<Arc<AppState>>) -> Json<AzureInvokeRespon
 ///
 /// Installs powershell on the functions host before collection
 async fn post_powershell(State(state): State<Arc<AppState>>) -> Json<AzureInvokeResponse> {
-    if let Ok(_) = state.powershell_lock.try_lock() {
-        if !*state.powershell_installed.lock().await {
-            info!("Powershell: Installing");
+    if state.powershell_lock.try_lock().is_ok() && !*state.powershell_installed.lock().await {
+        info!("Powershell: Installing");
 
-            data_ingester_ms_powershell::powershell::install_powershell()
-                .await
-                .expect("Powershell should install cleanly in the Azure Function instance");
-            *state.powershell_installed.lock().await = true;
-        }
+        data_ingester_ms_powershell::powershell::install_powershell()
+            .await
+            .expect("Powershell should install cleanly in the Azure Function instance");
+        *state.powershell_installed.lock().await = true;
     }
 
     Json(

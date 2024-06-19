@@ -127,7 +127,7 @@ pub fn get_ssphp_run(ssphp_run_key: &str) -> u64 {
         .read()
         .map(|hm| {
             *hm.get(ssphp_run_key)
-                .unwrap_or_else(|| hm.get("default").unwrap_or_else(|| &0))
+                .unwrap_or_else(|| hm.get("default").unwrap_or(&0))
         })
         .unwrap_or_else(|_| 0);
     ssphp_run
@@ -164,7 +164,7 @@ pub trait ToHecEvents {
             .read()
             .map(|hm| {
                 *hm.get(self.ssphp_run_key())
-                    .unwrap_or_else(|| hm.get("default").unwrap_or_else(|| &0))
+                    .unwrap_or_else(|| hm.get("default").unwrap_or(&0))
             })
             .unwrap_or_else(|_| 0);
         ssphp_run

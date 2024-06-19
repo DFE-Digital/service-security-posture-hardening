@@ -42,15 +42,9 @@ pub async fn threagile(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()>
     info!("Extracting Threagile bins");
     let threagile_path = extract_threagile()?;
 
-    let splunk_cloud_stack = secrets
-        .splunk_cloud_stack
-        .as_ref()
-        .map(|stack| stack.as_str());
+    let splunk_cloud_stack = secrets.splunk_cloud_stack.as_deref();
 
-    let splunk_acs_token = secrets
-        .splunk_acs_token
-        .as_ref()
-        .map(|token| token.as_str());
+    let splunk_acs_token = secrets.splunk_acs_token.as_deref();
 
     let splunk_search_token = secrets
         .splunk_search_token
@@ -63,7 +57,7 @@ pub async fn threagile(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()>
         .context("Getting splunk_search_url secret")?;
 
     let mut search_client = SplunkApiClient::new(
-        &splunk_search_url,
+        splunk_search_url,
         splunk_search_token,
         splunk_cloud_stack,
         splunk_acs_token,
@@ -178,8 +172,8 @@ mod test {
             .context("Getting KeyVault secrets")?;
 
         let splunk = Splunk::new(
-            &secrets.splunk_host.as_ref().context("No value")?,
-            &secrets.splunk_token.as_ref().context("No value")?,
+            secrets.splunk_host.as_ref().context("No value")?,
+            secrets.splunk_token.as_ref().context("No value")?,
         )?;
 
         super::threagile(Arc::new(secrets), Arc::new(splunk)).await?;

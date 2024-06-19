@@ -2032,8 +2032,8 @@ mod test {
         let secrets = get_keyvault_secrets(&env::var("KEY_VAULT_NAME")?).await?;
         set_ssphp_run("default")?;
         let splunk = Splunk::new(
-            &secrets.splunk_host.as_ref().context("No value")?,
-            &secrets.splunk_token.as_ref().context("No value")?,
+            secrets.splunk_host.as_ref().context("No value")?,
+            secrets.splunk_token.as_ref().context("No value")?,
         )?;
         let aws = AwsClient {
             secrets: Arc::new(secrets),
@@ -2046,8 +2046,8 @@ mod test {
         let secrets = get_keyvault_secrets(&env::var("KEY_VAULT_NAME")?).await?;
         set_ssphp_run("default")?;
         let splunk = Splunk::new(
-            &secrets.splunk_host.as_ref().context("No value")?,
-            &secrets.splunk_token.as_ref().context("No value")?,
+            secrets.splunk_host.as_ref().context("No value")?,
+            secrets.splunk_token.as_ref().context("No value")?,
         )?;
         aws(Arc::new(secrets), Arc::new(splunk)).await?;
         Ok(())

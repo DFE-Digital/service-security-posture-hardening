@@ -80,7 +80,8 @@ impl Default for TechnicalAsset {
 #[allow(dead_code)]
 enum Technology {
     #[default]
-    AI,
+    #[serde(rename = "AI")]
+    Ai,
     ApplicationServer,
     ArtifactRegistry,
     BatchProcessing,
@@ -89,27 +90,34 @@ enum Technology {
     Browser,
     BuildPipeline,
     ClientSystem,
-    CLI,
-    CMS,
+    #[serde(rename = "CLI")]
+    Cli,
+    #[serde(rename = "CMS")]
+    Cms,
     CodeInspectionPlatform,
     ContainerPlatform,
     DataLake,
     Database,
     Desktop,
     DevOpsClient,
-    EJB,
-    ERP,
+    #[serde(rename = "EJB")]
+    Ejb,
+    #[serde(rename = "ERP")]
+    Erp,
     EventListener,
     FileServer,
     Function,
     Gateway,
-    HSM,
+    #[serde(rename = "HSM")]
+    Hsm,
     IdentityProvider,
     IdentityStoreDatabase,
     IdentityStoreLDAP,
-    IDS,
+    #[serde(rename = "IDS")]
+    Ids,
     IoTDevice,
-    IPS,
+    #[serde(rename = "IPS")]
+    Ips,
     LDAPServer,
     Library,
     LoadBalancer,
@@ -130,9 +138,11 @@ enum Technology {
     StreamProcessing,
     Task,
     Tool,
-    UnknownTechnology,
+    #[serde(rename = "UnknownTechnology")]
+    Unknown,
     Vault,
-    WAF,
+    #[serde(rename = "WAF")]
+    Waf,
     WebApplication,
     WebServer,
     WebServiceREST,
@@ -143,7 +153,7 @@ impl std::fmt::Display for Technology {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         use Technology::*;
         match self {
-            AI => write!(f, "ai")?,
+            Ai => write!(f, "ai")?,
             ApplicationServer => write!(f, "application-server")?,
             ArtifactRegistry => write!(f, "artifact-registry")?,
             BatchProcessing => write!(f, "batch-processing")?,
@@ -152,27 +162,27 @@ impl std::fmt::Display for Technology {
             Browser => write!(f, "browser")?,
             BuildPipeline => write!(f, "build-pipeline")?,
             ClientSystem => write!(f, "client-system")?,
-            CLI => write!(f, "cli")?,
-            CMS => write!(f, "cms")?,
+            Cli => write!(f, "cli")?,
+            Cms => write!(f, "cms")?,
             CodeInspectionPlatform => write!(f, "code-inspection-platform")?,
             ContainerPlatform => write!(f, "container-platform")?,
             DataLake => write!(f, "data-lake")?,
             Database => write!(f, "database")?,
             Desktop => write!(f, "desktop")?,
             DevOpsClient => write!(f, "devops-client")?,
-            EJB => write!(f, "ejb")?,
-            ERP => write!(f, "erp")?,
+            Ejb => write!(f, "ejb")?,
+            Erp => write!(f, "erp")?,
             EventListener => write!(f, "event-listener")?,
             FileServer => write!(f, "file-server")?,
             Function => write!(f, "function")?,
             Gateway => write!(f, "gateway")?,
-            HSM => write!(f, "hsm")?,
+            Hsm => write!(f, "hsm")?,
             IdentityProvider => write!(f, "identity-provider")?,
             IdentityStoreDatabase => write!(f, "identity-store-database")?,
             IdentityStoreLDAP => write!(f, "identity-store-ldap")?,
-            IDS => write!(f, "ids")?,
+            Ids => write!(f, "ids")?,
             IoTDevice => write!(f, "iot-device")?,
-            IPS => write!(f, "ips")?,
+            Ips => write!(f, "ips")?,
             LDAPServer => write!(f, "ldap-server")?,
             Library => write!(f, "library")?,
             LoadBalancer => write!(f, "load-balancer")?,
@@ -193,9 +203,9 @@ impl std::fmt::Display for Technology {
             StreamProcessing => write!(f, "stream-processing")?,
             Task => write!(f, "task")?,
             Tool => write!(f, "tool")?,
-            UnknownTechnology => write!(f, "unknown-technology")?,
+            Unknown => write!(f, "unknown-technology")?,
             Vault => write!(f, "vault")?,
-            WAF => write!(f, "waf")?,
+            Waf => write!(f, "waf")?,
             WebApplication => write!(f, "web-application")?,
             WebServer => write!(f, "web-server")?,
             WebServiceREST => write!(f, "web-service-rest")?,
@@ -336,7 +346,6 @@ impl std::fmt::Display for TechnicalAssetType {
     }
 }
 
-
 #[derive(Serialize, Default, Debug)]
 #[allow(dead_code)]
 enum TechnicalAssetSize {
@@ -399,7 +408,7 @@ impl Default for Model {
                 integrity: TechnicalAssetCriticality::Archive,
                 availability: TechnicalAssetCriticality::Archive,
                 out_of_scope: false,
-                technology: Technology::AI,
+                technology: Technology::Ai,
                 used_as_client_by_human: true,
                 internet: true,
                 multi_tenant: true,
@@ -527,8 +536,8 @@ impl SplunkResults {
 
 #[cfg(test)]
 mod test {
-    use anyhow::Result;
     use super::{Model, SplunkResult, SplunkResults, TechnicalAssets};
+    use anyhow::Result;
 
     fn splunk_results() -> SplunkResults {
         SplunkResults {
@@ -551,9 +560,11 @@ mod test {
     }
 
     #[test]
-    fn test_from_splunk_result() -> Result<()>{
-        let mut model = Model::default();
-        model.technical_assets = TechnicalAssets::from(splunk_results());
+    fn test_from_splunk_result() -> Result<()> {
+        let model = Model {
+            technical_assets: TechnicalAssets::from(splunk_results()),
+            ..Default::default()
+        };
 
         model.write_file("results_from_splunk.yaml")?;
         Ok(())

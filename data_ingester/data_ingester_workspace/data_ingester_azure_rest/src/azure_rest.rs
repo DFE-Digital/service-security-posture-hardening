@@ -524,8 +524,8 @@ pub(crate) mod test {
         .unwrap();
 
         let splunk = Splunk::new(
-            &secrets.splunk_host.as_ref().context("No value")?,
-            &secrets.splunk_token.as_ref().context("No value")?,
+            secrets.splunk_host.as_ref().context("No value")?,
+            secrets.splunk_token.as_ref().context("No value")?,
         )?;
 
         set_ssphp_run("default")?;

@@ -60,7 +60,7 @@ impl SplunkApiClient {
         };
         let acs = if let (Some(stack), Some(token)) = (acs_stack, acs_token) {
             info!("Building ACS Client");
-            Some(Acs::new(&stack.into(), token.into()).context("Building Acs Client")?)
+            Some(Acs::new(stack.into(), token.into()).context("Building Acs Client")?)
         } else {
             None
         };
