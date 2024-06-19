@@ -365,7 +365,7 @@ impl ReturnType {
         let mut collection = vec![];
         match self {
             ReturnType::Collection { value, next_link } => {
-                if let Some(next_link) = next_link {
+                if let Some(_next_link) = next_link {
                     error!(
                         "`ReturnType::Collection shouldn't have a `next_link`: {:?}",
                         self
@@ -524,8 +524,8 @@ pub(crate) mod test {
         .unwrap();
 
         let splunk = Splunk::new(
-            &secrets.splunk_host.as_ref().context("No value")?,
-            &secrets.splunk_token.as_ref().context("No value")?,
+            secrets.splunk_host.as_ref().context("No value")?,
+            secrets.splunk_token.as_ref().context("No value")?,
         )?;
 
         set_ssphp_run("default")?;

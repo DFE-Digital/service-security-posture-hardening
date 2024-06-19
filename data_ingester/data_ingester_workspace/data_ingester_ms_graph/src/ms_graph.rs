@@ -340,11 +340,7 @@ impl MsGraph {
         Ok(groups)
     }
 
-    pub async fn list_users_channel(
-        &self,
-        splunk: &Splunk,
-        sender: UnboundedSender<UsersMap<'_>>,
-    ) -> Result<()> {
+    pub async fn list_users_channel(&self, sender: UnboundedSender<UsersMap<'_>>) -> Result<()> {
         let mut stream = self
             .beta_client
             .users()
@@ -1071,8 +1067,8 @@ pub(crate) mod test {
         )
         .await?;
         let splunk = Splunk::new(
-            &secrets.splunk_host.as_ref().context("No value")?,
-            &secrets.splunk_token.as_ref().context("No value")?,
+            secrets.splunk_host.as_ref().context("No value")?,
+            secrets.splunk_token.as_ref().context("No value")?,
         )?;
         Ok((splunk, ms_graph))
     }
@@ -1083,12 +1079,9 @@ pub(crate) mod test {
 
         let (sender, mut reciever) = tokio::sync::mpsc::unbounded_channel::<UsersMap>();
 
-        let splunk_clone = splunk.clone();
         let ms_graph_clone = ms_graph.clone();
         let list_users = tokio::spawn(async move {
-            ms_graph_clone
-                .list_users_channel(&splunk_clone, sender)
-                .await?;
+            ms_graph_clone.list_users_channel(sender).await?;
             anyhow::Ok::<()>(())
         });
 

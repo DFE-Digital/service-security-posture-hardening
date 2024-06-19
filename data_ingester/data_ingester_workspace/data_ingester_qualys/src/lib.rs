@@ -20,6 +20,7 @@ pub struct Qualys {
 
 /// Limits to use when throttling Qualys requests
 #[derive(Debug)]
+#[allow(dead_code)]
 struct QualysLimits {
     rate_limit: usize,
     rate_window_seconds: usize,

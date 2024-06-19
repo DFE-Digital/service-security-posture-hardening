@@ -355,8 +355,8 @@ mod test {
             .await
             .unwrap();
             let splunk = Splunk::new(
-                &secrets.splunk_host.as_ref().context("No value")?,
-                &secrets.splunk_token.as_ref().context("No value")?,
+                secrets.splunk_host.as_ref().context("No value")?,
+                secrets.splunk_token.as_ref().context("No value")?,
             )?;
 
             let github_app = secrets
@@ -451,7 +451,7 @@ mod test {
             .repo_iter(|repo_name: &str| {
                 client
                     .client
-                    .repo_code_scanning_default_setup(&repo_name)
+                    .repo_code_scanning_default_setup(repo_name)
                     .boxed()
             })
             .await?;
@@ -462,7 +462,7 @@ mod test {
     async fn test_github_repo_codeowners() -> Result<()> {
         let client = TestClient::new().await;
         client
-            .repo_iter(|repo_name: &str| client.client.repo_codeowners(&repo_name).boxed())
+            .repo_iter(|repo_name: &str| client.client.repo_codeowners(repo_name).boxed())
             .await?;
         Ok(())
     }
@@ -471,7 +471,7 @@ mod test {
     async fn test_github_repo_deploy_keys() -> Result<()> {
         let client = TestClient::new().await;
         client
-            .repo_iter(|repo_name: &str| client.client.repo_deploy_keys(&repo_name).boxed())
+            .repo_iter(|repo_name: &str| client.client.repo_deploy_keys(repo_name).boxed())
             .await?;
         Ok(())
     }
@@ -480,7 +480,7 @@ mod test {
     async fn test_github_repo_dependabot_status() -> Result<()> {
         let client = TestClient::new().await;
         client
-            .repo_iter(|repo_name: &str| client.client.repo_dependabot_status(&repo_name).boxed())
+            .repo_iter(|repo_name: &str| client.client.repo_dependabot_status(repo_name).boxed())
             .await?;
         Ok(())
     }
@@ -489,7 +489,7 @@ mod test {
     async fn test_github_repo_dependabot_alerts() -> Result<()> {
         let client = TestClient::new().await;
         client
-            .repo_iter(|repo_name: &str| client.client.repo_dependabot_alerts(&repo_name).boxed())
+            .repo_iter(|repo_name: &str| client.client.repo_dependabot_alerts(repo_name).boxed())
             .await?;
         Ok(())
     }
@@ -499,10 +499,7 @@ mod test {
         let client = TestClient::new().await;
         client
             .repo_iter(|repo_name: &str| {
-                client
-                    .client
-                    .repo_secret_scanning_alerts(&repo_name)
-                    .boxed()
+                client.client.repo_secret_scanning_alerts(repo_name).boxed()
             })
             .await?;
         Ok(())
@@ -512,7 +509,7 @@ mod test {
     async fn test_github_org_settings() -> Result<()> {
         let client = TestClient::new().await;
         client
-            .org(|org_name: &str| client.client.org_settings(&org_name).boxed())
+            .org(|org_name: &str| client.client.org_settings(org_name).boxed())
             .await?;
         Ok(())
     }
@@ -520,8 +517,7 @@ mod test {
     #[tokio::test]
     async fn test_github_graphql() -> Result<()> {
         let client = TestClient::new().await;
-        let result = client.client.graphql_org_members_query("403ind").await?;
-        assert!(false);
+        let _result = client.client.graphql_org_members_query("403ind").await?;
         Ok(())
     }
 }

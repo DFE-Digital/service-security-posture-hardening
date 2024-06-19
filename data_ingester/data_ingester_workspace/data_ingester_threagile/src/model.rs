@@ -50,7 +50,6 @@ pub(crate) struct TechnicalAsset {
     multi_tenant: bool,
     redundant: bool,
     custom_developed_parts: bool,
-    //tags: Vec<TechnicalAssetTags>,
 }
 
 impl Default for TechnicalAsset {
@@ -78,9 +77,11 @@ impl Default for TechnicalAsset {
 }
 
 #[derive(Default, Debug, Serialize)]
+#[allow(dead_code)]
 enum Technology {
     #[default]
-    AI,
+    #[serde(rename = "AI")]
+    Ai,
     ApplicationServer,
     ArtifactRegistry,
     BatchProcessing,
@@ -89,27 +90,34 @@ enum Technology {
     Browser,
     BuildPipeline,
     ClientSystem,
-    CLI,
-    CMS,
+    #[serde(rename = "CLI")]
+    Cli,
+    #[serde(rename = "CMS")]
+    Cms,
     CodeInspectionPlatform,
     ContainerPlatform,
     DataLake,
     Database,
     Desktop,
     DevOpsClient,
-    EJB,
-    ERP,
+    #[serde(rename = "EJB")]
+    Ejb,
+    #[serde(rename = "ERP")]
+    Erp,
     EventListener,
     FileServer,
     Function,
     Gateway,
-    HSM,
+    #[serde(rename = "HSM")]
+    Hsm,
     IdentityProvider,
     IdentityStoreDatabase,
     IdentityStoreLDAP,
-    IDS,
+    #[serde(rename = "IDS")]
+    Ids,
     IoTDevice,
-    IPS,
+    #[serde(rename = "IPS")]
+    Ips,
     LDAPServer,
     Library,
     LoadBalancer,
@@ -130,9 +138,11 @@ enum Technology {
     StreamProcessing,
     Task,
     Tool,
-    UnknownTechnology,
+    #[serde(rename = "UnknownTechnology")]
+    Unknown,
     Vault,
-    WAF,
+    #[serde(rename = "WAF")]
+    Waf,
     WebApplication,
     WebServer,
     WebServiceREST,
@@ -143,7 +153,7 @@ impl std::fmt::Display for Technology {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         use Technology::*;
         match self {
-            AI => write!(f, "ai")?,
+            Ai => write!(f, "ai")?,
             ApplicationServer => write!(f, "application-server")?,
             ArtifactRegistry => write!(f, "artifact-registry")?,
             BatchProcessing => write!(f, "batch-processing")?,
@@ -152,27 +162,27 @@ impl std::fmt::Display for Technology {
             Browser => write!(f, "browser")?,
             BuildPipeline => write!(f, "build-pipeline")?,
             ClientSystem => write!(f, "client-system")?,
-            CLI => write!(f, "cli")?,
-            CMS => write!(f, "cms")?,
+            Cli => write!(f, "cli")?,
+            Cms => write!(f, "cms")?,
             CodeInspectionPlatform => write!(f, "code-inspection-platform")?,
             ContainerPlatform => write!(f, "container-platform")?,
             DataLake => write!(f, "data-lake")?,
             Database => write!(f, "database")?,
             Desktop => write!(f, "desktop")?,
             DevOpsClient => write!(f, "devops-client")?,
-            EJB => write!(f, "ejb")?,
-            ERP => write!(f, "erp")?,
+            Ejb => write!(f, "ejb")?,
+            Erp => write!(f, "erp")?,
             EventListener => write!(f, "event-listener")?,
             FileServer => write!(f, "file-server")?,
             Function => write!(f, "function")?,
             Gateway => write!(f, "gateway")?,
-            HSM => write!(f, "hsm")?,
+            Hsm => write!(f, "hsm")?,
             IdentityProvider => write!(f, "identity-provider")?,
             IdentityStoreDatabase => write!(f, "identity-store-database")?,
             IdentityStoreLDAP => write!(f, "identity-store-ldap")?,
-            IDS => write!(f, "ids")?,
+            Ids => write!(f, "ids")?,
             IoTDevice => write!(f, "iot-device")?,
-            IPS => write!(f, "ips")?,
+            Ips => write!(f, "ips")?,
             LDAPServer => write!(f, "ldap-server")?,
             Library => write!(f, "library")?,
             LoadBalancer => write!(f, "load-balancer")?,
@@ -193,9 +203,9 @@ impl std::fmt::Display for Technology {
             StreamProcessing => write!(f, "stream-processing")?,
             Task => write!(f, "task")?,
             Tool => write!(f, "tool")?,
-            UnknownTechnology => write!(f, "unknown-technology")?,
+            Unknown => write!(f, "unknown-technology")?,
             Vault => write!(f, "vault")?,
-            WAF => write!(f, "waf")?,
+            Waf => write!(f, "waf")?,
             WebApplication => write!(f, "web-application")?,
             WebServer => write!(f, "web-server")?,
             WebServiceREST => write!(f, "web-service-rest")?,
@@ -206,6 +216,7 @@ impl std::fmt::Display for Technology {
 }
 
 #[derive(Default, Debug, Serialize)]
+#[allow(dead_code)]
 enum TechnicalAssetUsage {
     #[default]
     Business,
@@ -222,6 +233,7 @@ impl std::fmt::Display for TechnicalAssetUsage {
 }
 
 #[derive(Default, Debug, Serialize)]
+#[allow(dead_code)]
 enum TechnicalAssetCriticality {
     Archive,
     Operational,
@@ -244,6 +256,7 @@ impl std::fmt::Display for TechnicalAssetCriticality {
 }
 
 #[derive(Default, Debug, Serialize)]
+#[allow(dead_code)]
 enum TechnicalAssetConfidentiality {
     Public,
     Internal,
@@ -290,6 +303,7 @@ impl std::fmt::Display for TechnicalAssetMachine {
 }
 
 #[derive(Default, Debug, Serialize)]
+#[allow(dead_code)]
 enum TechnicalAssetEncryption {
     #[default]
     None,
@@ -313,6 +327,7 @@ impl std::fmt::Display for TechnicalAssetEncryption {
 }
 
 #[derive(Default, Debug, Serialize)]
+#[allow(dead_code)]
 enum TechnicalAssetType {
     #[default]
     ExternalEntity,
@@ -332,6 +347,7 @@ impl std::fmt::Display for TechnicalAssetType {
 }
 
 #[derive(Serialize, Default, Debug)]
+#[allow(dead_code)]
 enum TechnicalAssetSize {
     System,
     Service,
@@ -353,19 +369,6 @@ impl std::fmt::Display for TechnicalAssetSize {
 }
 
 impl Model {
-    fn default() -> Self {
-        Model {
-            threagile_version: "1.0.0".to_string(),
-            title: "Results from splunk".to_string(),
-            business_criticality: TechnicalAssetCriticality::Important,
-            technical_assets: TechnicalAssets::default(),
-        }
-    }
-
-    fn push_ta(&mut self, ta: TechnicalAsset) {
-        self.technical_assets.0.insert(ta.id.to_string(), ta);
-    }
-
     pub(crate) fn write_file(self, filename: &str) -> Result<()> {
         let mut file = File::create(filename)?;
         let output = serde_yaml::to_string(&self)?;
@@ -377,7 +380,7 @@ impl Model {
 impl Default for Model {
     fn default() -> Self {
         let mut technical_assets = HashMap::new();
-        technical_assets.insert(
+        let _ = technical_assets.insert(
             "asset1".to_string(),
             TechnicalAsset {
                 id: "asset1-id".to_string(),
@@ -391,7 +394,7 @@ impl Default for Model {
                 integrity: TechnicalAssetCriticality::Archive,
                 availability: TechnicalAssetCriticality::Archive,
                 out_of_scope: false,
-                technology: Technology::AI,
+                technology: Technology::Ai,
                 used_as_client_by_human: true,
                 internet: true,
                 multi_tenant: true,
@@ -484,22 +487,26 @@ impl From<SplunkResults> for TechnicalAssets {
     fn from(value: SplunkResults) -> Self {
         let mut collection = HashMap::with_capacity(value.len());
         for result in value.results {
-            collection.insert(result.resource_id.to_string(), result.into());
+            let _ = collection.insert(result.resource_id.to_string(), result.into());
         }
         TechnicalAssets(collection)
     }
 }
 
+/// A type representing the fields returned from the Splunk search `ssphp_get_list_service_resources`
+/// DCAP/default/savedsearches.conf.d/ssphp_use_case_general.conf.d/ssphp_get_list_service_resources.conf
+///
+#[allow(dead_code)]
 #[derive(Deserialize, Default, Clone, Debug)]
 pub(crate) struct SplunkResult {
-    pub service_id: String,
-    #[serde(rename = "SSPHP_RUN")]
-    ssphp_run: String,
+    kind: String,
     #[serde(rename = "resourceGroup")]
     resource_group: String,
     pub(crate) resource_id: String,
+    pub service_id: String,
+    #[serde(rename = "SSPHP_RUN")]
+    ssphp_run: String,
     r#type: String,
-    kind: String,
 }
 
 #[derive(Deserialize, Default, Debug)]
@@ -513,8 +520,10 @@ impl SplunkResults {
     }
 }
 
+#[cfg(test)]
 mod test {
-    use super::*;
+    use super::{Model, SplunkResult, SplunkResults, TechnicalAssets};
+    use anyhow::Result;
 
     fn splunk_results() -> SplunkResults {
         SplunkResults {
@@ -530,16 +539,20 @@ mod test {
     }
 
     #[test]
-    fn test_data() {
-        let mut model = Model::default();
-        model.write_file("test1.yaml");
+    fn test_data() -> Result<()> {
+        let model = Model::default();
+        model.write_file("test1.yaml")?;
+        Ok(())
     }
 
     #[test]
-    fn test_from_splunk_result() {
-        let mut model = Model::default();
-        model.technical_assets = TechnicalAssets::from(splunk_results());
+    fn test_from_splunk_result() -> Result<()> {
+        let model = Model {
+            technical_assets: TechnicalAssets::from(splunk_results()),
+            ..Default::default()
+        };
 
-        model.write_file("results_from_splunk.yaml");
+        model.write_file("results_from_splunk.yaml")?;
+        Ok(())
     }
 }

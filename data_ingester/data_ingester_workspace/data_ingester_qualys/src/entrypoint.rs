@@ -1,7 +1,7 @@
 use crate::Qualys;
 use anyhow::{Context, Result};
 use data_ingester_splunk::splunk::{set_ssphp_run, try_collect_send, Splunk};
-use data_ingester_splunk_search::{acs::Acs, search_client::SplunkApiClient};
+use data_ingester_splunk_search::search_client::SplunkApiClient;
 use data_ingester_supporting::keyvault::Secrets;
 use serde::Deserialize;
 use std::sync::Arc;
@@ -16,15 +16,9 @@ struct Cve {
 pub async fn qualys_qvs(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
     set_ssphp_run("qualys")?;
 
-    let splunk_cloud_stack = secrets
-        .splunk_cloud_stack
-        .as_ref()
-        .map(|stack| stack.as_str());
+    let splunk_cloud_stack = secrets.splunk_cloud_stack.as_deref();
 
-    let splunk_acs_token = secrets
-        .splunk_acs_token
-        .as_ref()
-        .map(|token| token.as_str());
+    let splunk_acs_token = secrets.splunk_acs_token.as_deref();
 
     let splunk_search_token = secrets
         .splunk_search_token
@@ -37,7 +31,7 @@ pub async fn qualys_qvs(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()
         .context("Getting splunk_search_url secret")?;
 
     let mut search_client = SplunkApiClient::new(
-        &splunk_search_url,
+        splunk_search_url,
         splunk_search_token,
         splunk_cloud_stack,
         splunk_acs_token,

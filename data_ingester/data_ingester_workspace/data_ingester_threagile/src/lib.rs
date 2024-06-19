@@ -1,15 +1,13 @@
 use anyhow::{Context, Result};
 use data_ingester_splunk::splunk::{set_ssphp_run, Splunk, ToHecEvents};
 use data_ingester_supporting::keyvault::Secrets;
-use serde_json::Value;
 use std::collections::HashMap;
-use std::fs::{self, File};
-use std::io::{prelude::*, BufReader};
+use std::fs::{self};
+use std::io::prelude::*;
 use std::path::PathBuf;
 use std::sync::Arc;
 mod model;
 mod risks;
-use data_ingester_splunk_search::acs::Acs;
 use data_ingester_splunk_search::search_client::SplunkApiClient;
 use std::os::unix::fs::PermissionsExt;
 use std::process::Command;
@@ -17,14 +15,8 @@ use tracing::{debug, info};
 
 fn extract_threagile() -> Result<PathBuf> {
     info!("Extracting threagile");
-    let current_exe = std::env::current_exe().context("Gettting current exe path")?;
-
-    let current_exe_dir = current_exe
-        .parent()
-        .context("No parent for current exe path")?;
 
     let threagile_bytes = include_bytes!("../threagile_bin/threagile");
-    let threagile_path = current_exe_dir.join("threagile_bin");
     let threagile_path = PathBuf::from("/tmp/threagile_bin");
 
     let mut threagile_file =
@@ -50,15 +42,9 @@ pub async fn threagile(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()>
     info!("Extracting Threagile bins");
     let threagile_path = extract_threagile()?;
 
-    let splunk_cloud_stack = secrets
-        .splunk_cloud_stack
-        .as_ref()
-        .map(|stack| stack.as_str());
+    let splunk_cloud_stack = secrets.splunk_cloud_stack.as_deref();
 
-    let splunk_acs_token = secrets
-        .splunk_acs_token
-        .as_ref()
-        .map(|token| token.as_str());
+    let splunk_acs_token = secrets.splunk_acs_token.as_deref();
 
     let splunk_search_token = secrets
         .splunk_search_token
@@ -71,7 +57,7 @@ pub async fn threagile(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()>
         .context("Getting splunk_search_url secret")?;
 
     let mut search_client = SplunkApiClient::new(
-        &splunk_search_url,
+        splunk_search_url,
         splunk_search_token,
         splunk_cloud_stack,
         splunk_acs_token,
@@ -111,7 +97,7 @@ pub async fn threagile(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()>
     for (service, risks) in services {
         let mut collection = HashMap::new();
         for result in risks {
-            collection.insert(result.resource_id.to_string(), result.into());
+            let _ = collection.insert(result.resource_id.to_string(), result.into());
         }
         let ta = model::TechnicalAssets(collection);
 
@@ -176,7 +162,7 @@ mod test {
             EnvFilter::from_default_env()
                 .add_directive("info".parse().context("Parsing default log level")?),
         );
-        tracing::subscriber::set_default(subscriber);
+        let _tracing_guard = tracing::subscriber::set_default(subscriber);
 
         let key_vault_name = std::env::var("KEY_VAULT_NAME")
             .context("Getting key vault name from env:KEY_VAULT_NAME")?;
@@ -186,8 +172,8 @@ mod test {
             .context("Getting KeyVault secrets")?;
 
         let splunk = Splunk::new(
-            &secrets.splunk_host.as_ref().context("No value")?,
-            &secrets.splunk_token.as_ref().context("No value")?,
+            secrets.splunk_host.as_ref().context("No value")?,
+            secrets.splunk_token.as_ref().context("No value")?,
         )?;
 
         super::threagile(Arc::new(secrets), Arc::new(splunk)).await?;

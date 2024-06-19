@@ -21,7 +21,6 @@ pub fn start_splunk_tracing(splunk: Arc<Splunk>, source: &str, sourcetype: &str)
 
     let splunk_layer = SplunkLayer::new(splunk, source, sourcetype);
 
-    //    let env_filter = EnvFilter::from_default_env();
     let subscriber = Registry::default()
         .with(stdout_log)
         .with(splunk_layer)
@@ -79,8 +78,8 @@ mod test {
         .unwrap();
 
         let splunk = Splunk::new(
-            &secrets.splunk_host.as_ref().context("No value")?,
-            &secrets.splunk_token.as_ref().context("No value")?,
+            secrets.splunk_host.as_ref().context("No value")?,
+            secrets.splunk_token.as_ref().context("No value")?,
         )?;
 
         let stdout_log = tracing_subscriber::fmt::layer().pretty();
