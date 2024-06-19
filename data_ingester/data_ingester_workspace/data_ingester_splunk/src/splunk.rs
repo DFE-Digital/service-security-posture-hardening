@@ -5,7 +5,6 @@ use reqwest::header::HeaderValue;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 // #[cfg(test)]
-use serde_json::Value;
 use std::borrow::Borrow;
 use std::collections::HashMap;
 use std::sync::LazyLock;
@@ -17,7 +16,6 @@ use tracing::warn;
 use anyhow::{anyhow, Result};
 use std::fmt::Debug;
 use std::future::Future;
-use std::iter;
 use std::sync::RwLock;
 use std::time::{SystemTime, UNIX_EPOCH};
 use uuid::Uuid;
@@ -27,7 +25,7 @@ static SSPHP_RUN: RwLock<u64> = RwLock::new(0_u64);
 
 static SSPHP_RUN_NEW: LazyLock<RwLock<HashMap<String, u64>>> = LazyLock::new(|| {
     let mut hm = HashMap::new();
-    hm.insert("default".to_string(), 0_u64);
+    let _ = hm.insert("default".to_string(), 0_u64);
     RwLock::new(hm)
 });
 

@@ -342,7 +342,6 @@ impl MsGraph {
 
     pub async fn list_users_channel(
         &self,
-        splunk: &Splunk,
         sender: UnboundedSender<UsersMap<'_>>,
     ) -> Result<()> {
         let mut stream = self
@@ -1083,11 +1082,10 @@ pub(crate) mod test {
 
         let (sender, mut reciever) = tokio::sync::mpsc::unbounded_channel::<UsersMap>();
 
-        let splunk_clone = splunk.clone();
         let ms_graph_clone = ms_graph.clone();
         let list_users = tokio::spawn(async move {
             ms_graph_clone
-                .list_users_channel(&splunk_clone, sender)
+                .list_users_channel(sender)
                 .await?;
             anyhow::Ok::<()>(())
         });

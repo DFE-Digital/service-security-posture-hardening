@@ -50,7 +50,6 @@ pub(crate) struct TechnicalAsset {
     multi_tenant: bool,
     redundant: bool,
     custom_developed_parts: bool,
-    //tags: Vec<TechnicalAssetTags>,
 }
 
 impl Default for TechnicalAsset {
@@ -78,6 +77,7 @@ impl Default for TechnicalAsset {
 }
 
 #[derive(Default, Debug, Serialize)]
+#[allow(dead_code)]
 enum Technology {
     #[default]
     AI,
@@ -206,6 +206,7 @@ impl std::fmt::Display for Technology {
 }
 
 #[derive(Default, Debug, Serialize)]
+#[allow(dead_code)]
 enum TechnicalAssetUsage {
     #[default]
     Business,
@@ -222,6 +223,7 @@ impl std::fmt::Display for TechnicalAssetUsage {
 }
 
 #[derive(Default, Debug, Serialize)]
+#[allow(dead_code)]
 enum TechnicalAssetCriticality {
     Archive,
     Operational,
@@ -244,6 +246,7 @@ impl std::fmt::Display for TechnicalAssetCriticality {
 }
 
 #[derive(Default, Debug, Serialize)]
+#[allow(dead_code)]
 enum TechnicalAssetConfidentiality {
     Public,
     Internal,
@@ -290,6 +293,7 @@ impl std::fmt::Display for TechnicalAssetMachine {
 }
 
 #[derive(Default, Debug, Serialize)]
+#[allow(dead_code)]
 enum TechnicalAssetEncryption {
     #[default]
     None,
@@ -313,6 +317,7 @@ impl std::fmt::Display for TechnicalAssetEncryption {
 }
 
 #[derive(Default, Debug, Serialize)]
+#[allow(dead_code)]
 enum TechnicalAssetType {
     #[default]
     ExternalEntity,
@@ -331,7 +336,9 @@ impl std::fmt::Display for TechnicalAssetType {
     }
 }
 
+
 #[derive(Serialize, Default, Debug)]
+#[allow(dead_code)]
 enum TechnicalAssetSize {
     System,
     Service,
@@ -353,18 +360,19 @@ impl std::fmt::Display for TechnicalAssetSize {
 }
 
 impl Model {
-    fn default() -> Self {
-        Model {
-            threagile_version: "1.0.0".to_string(),
-            title: "Results from splunk".to_string(),
-            business_criticality: TechnicalAssetCriticality::Important,
-            technical_assets: TechnicalAssets::default(),
-        }
-    }
+    // TODO DELETE BEFORE PR
+    // fn default() -> Self {
+    //     Model {
+    //         threagile_version: "1.0.0".to_string(),
+    //         title: "Results from splunk".to_string(),
+    //         business_criticality: TechnicalAssetCriticality::Important,
+    //         technical_assets: TechnicalAssets::default(),
+    //     }
+    // }
 
-    fn push_ta(&mut self, ta: TechnicalAsset) {
-        self.technical_assets.0.insert(ta.id.to_string(), ta);
-    }
+    // fn push_ta(&mut self, ta: TechnicalAsset) {
+    //     let _ = self.technical_assets.0.insert(ta.id.to_string(), ta);
+    // }
 
     pub(crate) fn write_file(self, filename: &str) -> Result<()> {
         let mut file = File::create(filename)?;
@@ -377,7 +385,7 @@ impl Model {
 impl Default for Model {
     fn default() -> Self {
         let mut technical_assets = HashMap::new();
-        technical_assets.insert(
+        let _ = technical_assets.insert(
             "asset1".to_string(),
             TechnicalAsset {
                 id: "asset1-id".to_string(),
@@ -484,22 +492,26 @@ impl From<SplunkResults> for TechnicalAssets {
     fn from(value: SplunkResults) -> Self {
         let mut collection = HashMap::with_capacity(value.len());
         for result in value.results {
-            collection.insert(result.resource_id.to_string(), result.into());
+            let _ = collection.insert(result.resource_id.to_string(), result.into());
         }
         TechnicalAssets(collection)
     }
 }
 
+/// A type representing the fields returned from the Splunk search `ssphp_get_list_service_resources`
+/// DCAP/default/savedsearches.conf.d/ssphp_use_case_general.conf.d/ssphp_get_list_service_resources.conf
+///
+#[allow(dead_code)]
 #[derive(Deserialize, Default, Clone, Debug)]
 pub(crate) struct SplunkResult {
-    pub service_id: String,
-    #[serde(rename = "SSPHP_RUN")]
-    ssphp_run: String,
+    kind: String,
     #[serde(rename = "resourceGroup")]
     resource_group: String,
     pub(crate) resource_id: String,
+    pub service_id: String,
+    #[serde(rename = "SSPHP_RUN")]
+    ssphp_run: String,
     r#type: String,
-    kind: String,
 }
 
 #[derive(Deserialize, Default, Debug)]
@@ -513,8 +525,10 @@ impl SplunkResults {
     }
 }
 
+#[cfg(test)]
 mod test {
-    use super::*;
+    use anyhow::Result;
+    use super::{Model, SplunkResult, SplunkResults, TechnicalAssets};
 
     fn splunk_results() -> SplunkResults {
         SplunkResults {
@@ -530,16 +544,18 @@ mod test {
     }
 
     #[test]
-    fn test_data() {
-        let mut model = Model::default();
-        model.write_file("test1.yaml");
+    fn test_data() -> Result<()> {
+        let model = Model::default();
+        model.write_file("test1.yaml")?;
+        Ok(())
     }
 
     #[test]
-    fn test_from_splunk_result() {
+    fn test_from_splunk_result() -> Result<()>{
         let mut model = Model::default();
         model.technical_assets = TechnicalAssets::from(splunk_results());
 
-        model.write_file("results_from_splunk.yaml");
+        model.write_file("results_from_splunk.yaml")?;
+        Ok(())
     }
 }

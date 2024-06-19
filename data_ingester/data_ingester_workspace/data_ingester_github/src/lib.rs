@@ -520,8 +520,7 @@ mod test {
     #[tokio::test]
     async fn test_github_graphql() -> Result<()> {
         let client = TestClient::new().await;
-        let result = client.client.graphql_org_members_query("403ind").await?;
-        assert!(false);
+        let _result = client.client.graphql_org_members_query("403ind").await?;
         Ok(())
     }
 }

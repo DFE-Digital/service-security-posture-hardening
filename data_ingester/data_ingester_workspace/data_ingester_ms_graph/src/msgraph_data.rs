@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 use crate::ms_graph::MsGraph;
 use anyhow::Result;
-use data_ingester_splunk::splunk::{to_hec_events, HecEvent, Message, Splunk};
+use data_ingester_splunk::splunk::{to_hec_events, Splunk};
 use serde::Deserialize;
 use tracing::{error, info};
 

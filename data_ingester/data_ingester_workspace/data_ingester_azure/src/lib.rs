@@ -52,11 +52,10 @@ pub async fn azure_users(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<(
 
     info!("Getting Azure users");
 
-    let splunk_clone = splunk.clone();
     let ms_graph_clone = ms_graph.clone();
     let list_users = tokio::spawn(async move {
         ms_graph_clone
-            .list_users_channel(&splunk_clone, sender)
+            .list_users_channel(sender)
             .await?;
         anyhow::Ok::<()>(())
     });

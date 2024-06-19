@@ -365,7 +365,7 @@ impl ReturnType {
         let mut collection = vec![];
         match self {
             ReturnType::Collection { value, next_link } => {
-                if let Some(next_link) = next_link {
+                if let Some(_next_link) = next_link {
                     error!(
                         "`ReturnType::Collection shouldn't have a `next_link`: {:?}",
                         self
