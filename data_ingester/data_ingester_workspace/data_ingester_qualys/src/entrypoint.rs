@@ -93,19 +93,3 @@ pub async fn qualys_qvs(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()
     info!("Done");
     Ok(())
 }
-
-#[test]
-fn test_foo() {
-    let stack = "http-inputs-dfe.splunkcloud.com"
-        .split('.')
-        .next()
-        .context("Get host url ")
-        .unwrap()
-        .split('-')
-        .map(|s| s.to_string())
-        .last()
-        .context("Get stack from url")
-        .unwrap();
-    dbg!(stack);
-    assert!(false);
-}

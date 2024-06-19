@@ -4,6 +4,7 @@ use crate::splunk::{HecEvent, Splunk};
 use anyhow::Result;
 use tokio::sync::mpsc::unbounded_channel;
 use tokio::task::JoinHandle;
+use tracing::error;
 
 pub struct SplunkTask {
     tx: Option<tokio::sync::mpsc::UnboundedSender<HecEvent>>,
@@ -52,7 +53,7 @@ impl SplunkTask {
                     events.clear();
                     continue;
                 }
-                Err(err) => eprintln!("Failed to send event to Splunk: {}", err),
+                Err(err) => error!("Failed to send event to Splunk: {}", err),
             }
         }
     }

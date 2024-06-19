@@ -11,13 +11,8 @@ use tracing::{error, info};
 pub async fn azure_resource_graph(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
     set_ssphp_run("azure_resource_graph")?;
 
-    splunk
-        .log("Starting Azure Resource Graph collection")
-        .await?;
-    splunk
-        .log(&format!("GIT_HASH: {}", env!("GIT_HASH")))
-        .await
-        .context("Failed logging to Splunk")?;
+    info!("Starting Azure Resource Graph collection");
+    info!("GIT_HASH: {}", env!("GIT_HASH"));
 
     let azure_rest = AzureRest::new(
         secrets

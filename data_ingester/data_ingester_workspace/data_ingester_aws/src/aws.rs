@@ -21,6 +21,8 @@ use aws_sdk_iam::operation::get_account_summary::GetAccountSummaryOutput;
 use aws_sdk_iam::types::{AccessKeyMetadata, PasswordPolicy};
 use aws_sdk_kms::types::KeyListEntry;
 use serde::{Deserialize, Serialize};
+use tracing::error;
+use tracing::info;
 
 use crate::aws_alternate_contact_information::AlternateContact;
 use crate::aws_config::DescribeConfigurationRecordersOutput;
@@ -46,10 +48,8 @@ use data_ingester_supporting::keyvault::Secrets;
 pub async fn aws(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
     set_ssphp_run("aws")?;
 
-    splunk.log("Starting AWS collection").await?;
-    splunk
-        .log(&format!("GIT_HASH: {}", env!("GIT_HASH")))
-        .await?;
+    info!("Starting AWS collection");
+    info!("GIT_HASH: {}", env!("GIT_HASH"));
 
     let aws_client = AwsClient { secrets };
 
@@ -254,7 +254,7 @@ pub async fn aws(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
 
     try_collect_send("aws_dfe_5x", aws_client.aws_dfe_5x(), &splunk).await?;
 
-    splunk.log("AWS Collection Complete").await?;
+    info!("AWS Collection Complete");
 
     Ok(())
 }
@@ -358,8 +358,8 @@ impl AwsClient {
                 .flat_map(|region| region.region_name)
                 .collect(),
             Err(err) => {
-                eprintln!("Unable to get list of regions from EC2 endpoint: {:?}", err);
-                eprintln!("Using static list of regions");
+                error!("Unable to get list of regions from EC2 endpoint: {:?}", err);
+                error!("Using static list of regions");
                 vec![
                     "af-south-1".to_string(),
                     "ap-east-1".to_string(),
@@ -767,7 +767,7 @@ impl AwsClient {
                     policies.push(policy);
                 }
                 Err(e) => {
-                    eprintln!("Error getting bucket policy: {:?} {:?}", bucket_name, e);
+                    error!("Error getting bucket policy: {:?} {:?}", bucket_name, e);
                     policies.push(GetBucketPolicyOutput {
                         policy: None,
                         bucket_name,
@@ -812,7 +812,7 @@ impl AwsClient {
                     versionings.push(versioning);
                 }
                 Err(e) => {
-                    eprintln!("Error getting bucket policy: {:?} {:?}", bucket_name, e);
+                    error!("Error getting bucket policy: {:?} {:?}", bucket_name, e);
                     versionings.push(GetBucketVersioningOutput {
                         status: None,
                         mfa_delete: None,
@@ -857,7 +857,7 @@ impl AwsClient {
                     blocks.push(block);
                 }
                 Err(e) => {
-                    eprintln!("Error getting bucket policy: {:?} {:?}", bucket_name, &e);
+                    error!("Error getting bucket policy: {:?} {:?}", bucket_name, &e);
                     blocks.push(GetPublicAccessBlockOutput {
                         public_access_block_configuration: None,
                         bucket_name,
@@ -889,7 +889,7 @@ impl AwsClient {
                 pab
             }
             Err(e) => {
-                eprintln!(
+                error!(
                     "Error getting public access block for: {:?} {:?}",
                     account_id, e
                 );
@@ -979,7 +979,7 @@ impl AwsClient {
             {
                 Ok(client) => client,
                 Err(err) => {
-                    eprintln!(
+                    error!(
                         "Error building client for bucket: {:?}, {:?}",
                         &bucket_name, err
                     );
@@ -1001,7 +1001,7 @@ impl AwsClient {
                 }
 
                 Err(e) => {
-                    eprintln!("Error getting bucket acl: {:?} {:?}", bucket_name, e);
+                    error!("Error getting bucket acl: {:?} {:?}", bucket_name, e);
                 }
             }
         }
@@ -1031,7 +1031,7 @@ impl AwsClient {
             {
                 Ok(client) => client,
                 Err(err) => {
-                    eprintln!(
+                    error!(
                         "Error building client for bucket: {:?}, {:?}",
                         &bucket_name, err
                     );
@@ -1052,7 +1052,7 @@ impl AwsClient {
                     policies.push(policy);
                 }
                 Err(e) => {
-                    eprintln!("Error getting bucket policy: {:?} {:?}", bucket_name, e);
+                    error!("Error getting bucket policy: {:?} {:?}", bucket_name, e);
                 }
             }
         }
@@ -1086,7 +1086,7 @@ impl AwsClient {
             {
                 Ok(client) => client,
                 Err(err) => {
-                    eprintln!(
+                    error!(
                         "Error building client for bucket: {:?}, {:?}",
                         &bucket_name, err
                     );
@@ -1107,7 +1107,7 @@ impl AwsClient {
                     logging_policies.push(logging);
                 }
                 Err(e) => {
-                    eprintln!("Error getting bucket policy: {:?} {:?}", bucket_name, e);
+                    error!("Error getting bucket policy: {:?} {:?}", bucket_name, e);
                 }
             }
         }
@@ -1153,7 +1153,7 @@ impl AwsClient {
                         .map(|vec| vec.into_iter().map(|crs| crs.into()).collect());
                 }
                 Err(e) => {
-                    eprintln!("Error getting bucket policy: {:?} {:?}", config.name, e);
+                    error!("Error getting bucket policy: {:?} {:?}", config.name, e);
                 }
             }
         }
@@ -1444,7 +1444,7 @@ impl AwsClient {
                             ),
                             error: format!("{err:?}"),
                         });
-                        eprintln!(
+                        error!(
                             "failed to get RecordType for {}: {}",
                             resource_record.r#type.as_str(),
                             err
@@ -1477,7 +1477,7 @@ impl AwsClient {
                             ),
                             error: err.to_string(),
                         });
-                        eprintln!(
+                        error!(
                             "failed to lookup for: {} {}: {}",
                             lookup_name, record_type, err
                         );

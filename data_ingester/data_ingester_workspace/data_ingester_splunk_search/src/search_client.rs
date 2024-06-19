@@ -183,6 +183,8 @@ mod test {
         let client = SplunkApiClient::new(
             &std::env::var("splunk_rest_host").expect("Envionment variable"),
             &std::env::var("splunk_rest_token").expect("Envionment variable"),
+            None::<&str>,
+            None::<&str>,
         )?;
         let results = client
             .run_search::<TestSplunkResults>(
@@ -196,8 +198,13 @@ mod test {
 
     #[test]
     fn test_splunk_search_url() -> Result<()> {
-        let client =
-            SplunkApiClient::new("https://foo.splunkcloud.com:8089", "bar")?.set_app("custom_app");
+        let client = SplunkApiClient::new(
+            "https://foo.splunkcloud.com:8089",
+            "bar",
+            None::<&str>,
+            None::<&str>,
+        )?
+        .set_app("custom_app");
         let url = client.search_url();
         let expected =
             "https://foo.splunkcloud.com:8089/servicesNS/nobody/custom_app/search/v2/jobs/export";

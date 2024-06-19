@@ -9,6 +9,8 @@ use serde_json::Value;
 use std::borrow::Borrow;
 use std::collections::HashMap;
 use std::sync::LazyLock;
+use tracing::debug;
+use tracing::error;
 use tracing::info;
 use tracing::warn;
 // #[cfg(test)]
@@ -95,7 +97,7 @@ pub fn set_ssphp_run(ssphp_run_key: &str) -> Result<()> {
             let _ = ssphp_run.insert(ssphp_run_key.to_string(), since_the_epoch);
         }
         Err(err) => {
-            eprintln!("Unable to lock SSPHP_RUN for writing: {:?}", err);
+            error!("Unable to lock SSPHP_RUN for writing: {:?}", err);
         }
     }
     Ok(())
@@ -236,8 +238,9 @@ impl Splunk {
         Ok(())
     }
 
+    #[deprecated(note = "Use `tracing` instead.")]
     pub async fn log(&self, message: &str) -> Result<()> {
-        eprintln!("{}", &message);
+        debug!("{}", &message);
         self.send_batch(&[HecEvent::new(
             &Message {
                 event: message.to_owned(),
@@ -295,7 +298,7 @@ where
                 let json = match serde_json::to_string(&x) {
                     Ok(json) => json,
                     Err(err) => {
-                        eprintln!("Failed to serialize Item for Splunk:  {err}");
+                        error!("Failed to serialize Item for Splunk:  {err}");
                         continue;
                     }
                 };

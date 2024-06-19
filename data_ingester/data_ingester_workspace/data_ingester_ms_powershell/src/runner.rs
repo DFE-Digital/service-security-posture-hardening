@@ -1,5 +1,6 @@
 use anyhow::Result;
 use std::sync::Arc;
+use tracing::info;
 
 use data_ingester_splunk::splunk::set_ssphp_run;
 
@@ -36,10 +37,8 @@ use crate::powershell::run_powershell_get_user_vip;
 pub async fn powershell(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
     set_ssphp_run("powershell")?;
 
-    splunk.log("Starting M365 Powershell collection").await?;
-    splunk
-        .log(&format!("GIT_HASH: {}", env!("GIT_HASH")))
-        .await?;
+    info!("Starting M365 Powershell collection");
+    info!("GIT_HASH: {}", env!("GIT_HASH"));
 
     // M365 V2.0 2.8
     try_collect_send(
@@ -222,7 +221,7 @@ pub async fn powershell(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()
     )
     .await?;
 
-    splunk.log("M365 Powershell Collection Complete").await?;
+    info!("M365 Powershell Collection Complete");
 
     Ok(())
 }

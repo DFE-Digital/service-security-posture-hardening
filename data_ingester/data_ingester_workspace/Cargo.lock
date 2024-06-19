@@ -1350,6 +1350,7 @@ dependencies = [
  "data_ingester_splunk",
  "data_ingester_supporting",
  "tokio",
+ "tracing",
 ]
 
 [[package]]
@@ -1434,6 +1435,7 @@ dependencies = [
  "serde",
  "serde_json",
  "tokio",
+ "tracing",
 ]
 
 [[package]]

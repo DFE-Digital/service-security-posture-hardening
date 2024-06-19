@@ -6,36 +6,25 @@ pub(crate) async fn try_collect_send<T>(
 where
     for<'a> &'a T: ToHecEvents + Debug,
 {
-    splunk.log(&format!("Getting {}", &name)).await?;
+    info!("Getting {}", &name);
     match future.await {
         Ok(ref result) => {
             let hec_events = match result.to_hec_events() {
                 Ok(hec_events) => hec_events,
                 Err(e) => {
-                    eprintln!("Failed converting to HecEvents: {}", e);
-                    dbg!(&result);
-                    vec![HecEvent::new(
-                        &Message {
-                            event: format!("Failed converting to HecEvents: {}", e),
-                        },
-                        "data_ingester_rust",
-                        "data_ingester_rust_logs",
-                    )?]
+                    error!("Failed converting to HecEvents: {}", e);
                 }
             };
 
             match splunk.send_batch(&hec_events).await {
-                Ok(_) => eprintln!("Sent to Splunk"),
+                Ok(_) => debug!("Sent to Splunk"),
                 Err(e) => {
-                    eprintln!("Failed Sending to Splunk: {}", e);
-                    //dbg!(&hec_events);
+                    error!("Failed Sending to Splunk: {}", e);
                 }
             };
         }
         Err(err) => {
-            splunk
-                .log(&format!("Failed to get {}: {}", &name, err))
-                .await?
+            error!("Failed to get {}: {}", &name, err);
         }
     };
     Ok(())
