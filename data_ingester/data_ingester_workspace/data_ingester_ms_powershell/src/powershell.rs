@@ -3,12 +3,13 @@ use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use serde_json::Value;
 use std::iter;
 use std::process::Command;
+use tracing::info;
 
 use data_ingester_splunk::splunk::ToHecEvents;
 use data_ingester_supporting::keyvault::Secrets;
 
 pub async fn install_powershell() -> Result<()> {
-    eprintln!("Downloading Powershell .deb");
+    info!("Downloading Powershell .deb");
     let _output = Command::new("curl")
         .args(
             [
@@ -20,12 +21,12 @@ pub async fn install_powershell() -> Result<()> {
         )
         .output()?;
 
-    eprintln!("Installing Powershelll .deb");
+    info!("Installing Powershelll .deb");
     let _output = Command::new("dpkg")
         .args(["-i", "/tmp/powershell_7.3.7-1.deb_amd64.deb"])
         .output()?;
 
-    eprintln!("Installing Powershelll ExchangeOnlineManagement");
+    info!("Installing Powershelll ExchangeOnlineManagement");
     let _output = Command::new("pwsh")
         .args([
             "-Command",
@@ -35,7 +36,7 @@ Install-Module -Confirm:$False -Force -Name ExchangeOnlineManagement;
         ])
         .output()?;
 
-    eprintln!("Installing Powershelll MicrosoftTeams");
+    info!("Installing Powershelll MicrosoftTeams");
     let _output = Command::new("pwsh")
         .args([
             "-Command",

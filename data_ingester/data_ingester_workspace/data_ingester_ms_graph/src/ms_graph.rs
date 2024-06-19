@@ -4,6 +4,8 @@ use crate::conditional_access_policies::ConditionalAccessPolicies;
 use crate::groups::Groups;
 use data_ingester_supporting::dns::resolve_txt_record;
 use data_ingester_supporting::keyvault::Secrets;
+use tracing::error;
+use tracing::info;
 
 use crate::msgraph_data::load_m365_toml;
 use crate::roles::RoleDefinitions;
@@ -12,7 +14,6 @@ use crate::users::Users;
 use crate::users::UsersMap;
 use anyhow::{Context, Result};
 use data_ingester_splunk::splunk::try_collect_send;
-use data_ingester_splunk::splunk::HecEvent;
 use data_ingester_splunk::splunk::ToHecEvents;
 use data_ingester_splunk::splunk::{set_ssphp_run, Splunk};
 use futures::StreamExt;
@@ -36,8 +37,6 @@ use std::sync::Arc;
 use tokio::sync::mpsc::UnboundedSender;
 use url::Url;
 
-//use crate::azure_rest::AzureRest;
-
 pub async fn login(client_id: &str, client_secret: &str, tenant_id: &str) -> Result<MsGraph> {
     let mut oauth = OAuth::new();
     _ = oauth
@@ -56,10 +55,10 @@ pub async fn login(client_id: &str, client_secret: &str, tenant_id: &str) -> Res
         // See if Microsoft Graph returned an error in the Response body
         match response.json::<serde_json::Value>().await {
             Ok(response) => {
-                println!("response{:?}", response)
+                error!("Ms graph login response:{:?}", response)
             }
             Err(_) => {
-                println!("no response!");
+                error!("Ms graph login: no response!");
             }
         }
     }
@@ -379,13 +378,10 @@ impl MsGraph {
 
             total_users += users.value.len();
 
-            splunk
-                .log(&format!(
-                    "Getting users batch {}, total users: {}",
-                    batch, total_users
-                ))
-                .await
-                .expect("Unable to log");
+            info!(
+                "Getting users batch {}, total users: {}",
+                batch, total_users
+            );
             batch += 1;
 
             users.value.iter_mut().for_each(|u| {
@@ -904,16 +900,11 @@ pub struct Group {
 }
 
 pub async fn m365(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
-    //    let secrets = get_keyvault_secrets(&env::var("KEY_VAULT_NAME")?).await?;
-
     let ssphp_run_key = "m365";
     set_ssphp_run(ssphp_run_key)?;
 
-    //    let splunk = Splunk::new(&secrets.splunk_host, &secrets.splunk_token)?;
-    splunk.log("Starting M365 collection").await?;
-    splunk
-        .log(&format!("GIT_HASH: {}", env!("GIT_HASH")))
-        .await?;
+    info!("Starting M365 collection");
+    info!("GIT_HASH: {}", env!("GIT_HASH"));
 
     let ms_graph = login(
         secrets
@@ -931,13 +922,11 @@ pub async fn m365(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
     )
     .await?;
 
-    splunk.log("MS Graph logged in").await?;
+    info!("MS Graph logged in");
 
     let sources = load_m365_toml()?;
 
-    splunk
-        .log(&format!("Loaded {} m365 sources", sources.len()))
-        .await?;
+    info!("Loaded {} m365 sources", sources.len());
     sources
         .process_sources(&ms_graph, &splunk, ssphp_run_key)
         .await?;
@@ -1046,7 +1035,7 @@ pub async fn m365(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
 
     try_collect_send("MS Graph Groups", ms_graph.list_groups(), &splunk).await?;
 
-    splunk.log("M365 Collection Complete").await?;
+    info!("M365 Collection Complete");
 
     Ok(())
 }

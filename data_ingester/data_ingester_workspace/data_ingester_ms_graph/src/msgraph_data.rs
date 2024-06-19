@@ -27,10 +27,7 @@ impl MsGraphData {
         ssphp_run_key: &str,
     ) -> Result<()> {
         for ms_graph_sources in self.0.values() {
-            // dbg!(&section, &ms_graph_sources);
             for (source_name, ms_graph_source) in ms_graph_sources {
-                // dbg!(&source_name, &ms_graph_source);
-
                 MsGraphData::try_collect_send(
                     source_name,
                     ms_graph_source,

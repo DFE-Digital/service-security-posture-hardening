@@ -6,14 +6,13 @@ use data_ingester_splunk::splunk::try_collect_send;
 use data_ingester_splunk::splunk::{set_ssphp_run, Splunk, ToHecEvents};
 use data_ingester_supporting::keyvault::Secrets;
 use std::sync::Arc;
+use tracing::info;
 
 pub async fn azure_users(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
     set_ssphp_run("azure_users")?;
 
-    splunk.log("Starting Azure Users collection").await?;
-    splunk
-        .log(&format!("GIT_HASH: {}", env!("GIT_HASH")))
-        .await?;
+    info!("Starting Azure Users collection");
+    info!("GIT_HASH: {}", env!("GIT_HASH"));
 
     let ms_graph = login(
         secrets
@@ -47,11 +46,11 @@ pub async fn azure_users(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<(
     )
     .await?;
 
-    splunk.log("Azure logged in").await?;
+    info!("Azure logged in");
 
     let (sender, mut reciever) = tokio::sync::mpsc::unbounded_channel::<UsersMap>();
 
-    splunk.log("Getting Azure users").await?;
+    info!("Getting Azure users");
 
     let splunk_clone = splunk.clone();
     let ms_graph_clone = ms_graph.clone();
@@ -62,39 +61,33 @@ pub async fn azure_users(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<(
         anyhow::Ok::<()>(())
     });
 
-    splunk.log("Getting Azure Subscriptions").await?;
+    info!("Getting Azure Subscriptions");
     let subscriptions = azure_rest.azure_subscriptions().await?;
     splunk.send_batch((&subscriptions).to_hec_events()?).await?;
 
-    splunk.log("Getting Azure Subscriptions").await?;
+    info!("Getting Azure Subscriptions");
     let subscription_policies = azure_rest.get_microsoft_subscription_policies().await?;
     splunk
         .send_batch((&subscription_policies).to_hec_events()?)
         .await?;
 
-    splunk
-        .log("Getting Azure Subscription RoleDefinitions")
-        .await?;
+    info!("Getting Azure Subscription RoleDefinitions");
     let subscription_role_definitions = azure_rest.azure_role_definitions().await?;
     splunk
         .send_batch((&subscription_role_definitions).to_hec_events()?)
         .await?;
 
-    splunk
-        .log("Getting Azure Subscription RoleAssignments")
-        .await?;
+    info!("Getting Azure Subscription RoleAssignments");
     let subscription_role_assignments = azure_rest.azure_role_assignments().await?;
     splunk
         .send_batch((&subscription_role_assignments).to_hec_events()?)
         .await?;
 
-    splunk
-        .log("Getting AAD Conditional access policies")
-        .await?;
+    info!("Getting AAD Conditional access policies");
     let caps = ms_graph.list_conditional_access_policies().await?;
     splunk.send_batch((&caps).to_hec_events()?).await?;
 
-    splunk.log("Getting AAD roles definitions").await?;
+    info!("Getting AAD roles definitions");
     let aad_role_definitions = ms_graph.list_role_definitions().await?;
     splunk
         .send_batch((&aad_role_definitions).to_hec_events()?)

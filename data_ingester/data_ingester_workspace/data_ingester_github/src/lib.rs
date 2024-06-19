@@ -12,6 +12,7 @@ use octocrab::Octocrab;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use tokio::sync::OnceCell;
+use tracing::error;
 
 /// NewType for Octocrab provide additonal data source.
 #[derive(Clone)]
@@ -158,8 +159,11 @@ impl OctocrabGit {
             let body = match serde_json::from_slice(&body).context("Deserialize body") {
                 Ok(ok) => ok,
                 Err(err) => {
-                    let s = String::from_utf8_lossy(&body);
-                    dbg!(s);
+                    let body_as_string = String::from_utf8_lossy(&body);
+                    error!(
+                        "Error deserialising body from Github {}: {}",
+                        err, body_as_string
+                    );
                     anyhow::bail!(err);
                 }
             };
@@ -405,13 +409,11 @@ mod test {
             for repo in self.repos.inner.iter() {
                 let repo_name = self.repo_name(&repo.name);
                 let result = func(&repo_name).await.unwrap();
-                dbg!(&result);
 
                 let events = result
                     .borrow()
                     .to_hec_events()
                     .context("ToHecEvents Serialize")?;
-                dbg!(&events);
 
                 self.splunk
                     .send_batch(events)
@@ -428,13 +430,11 @@ mod test {
             for<'a> &'a H: ToHecEvents,
         {
             let result = func(&self.org_name).await.unwrap();
-            dbg!(&result);
 
             let events = result
                 .borrow()
                 .to_hec_events()
                 .context("ToHecEvents Serialize")?;
-            dbg!(&events);
 
             self.splunk
                 .send_batch(events)
@@ -521,7 +521,6 @@ mod test {
     async fn test_github_graphql() -> Result<()> {
         let client = TestClient::new().await;
         let result = client.client.graphql_org_members_query("403ind").await?;
-        dbg!(result);
         assert!(false);
         Ok(())
     }
@@ -600,19 +599,6 @@ impl ToHecEvents for &GithubResponses {
         "github"
     }
 }
-
-// impl GithubResponses {
-//     fn to_vec<T>(&self) -> Vec<T> {
-//         self.inner.into_iter().filter_map(|response| {
-//             match response.response {
-//                 SingleOrVec::Vec(vec) => Some(vec),
-//                 SingleOrVec::Single(_) => None,
-//             }
-//         }).flat_map(|vec| vec.into_iter())
-//             .filter_map(|value| serde_json::from_value::(value).ok())
-//             .collect::<Vec<T>>()
-//     }
-// }
 
 /// An  API responses from Github
 #[derive(Serialize, Debug)]

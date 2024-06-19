@@ -366,8 +366,10 @@ impl ReturnType {
         match self {
             ReturnType::Collection { value, next_link } => {
                 if let Some(next_link) = next_link {
-                    dbg!(self);
-                    dbg!(&next_link);
+                    error!(
+                        "`ReturnType::Collection shouldn't have a `next_link`: {:?}",
+                        self
+                    );
                     unimplemented!();
                 }
                 for v in value.iter() {

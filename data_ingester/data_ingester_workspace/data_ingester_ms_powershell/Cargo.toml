@@ -11,6 +11,7 @@ data_ingester_splunk = { path = "../data_ingester_splunk"}
 data_ingester_supporting = { path = "../data_ingester_supporting"}
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "*"
+tracing = "*"
 
 [dev-dependencies]
 data_ingester_supporting = { path = "../data_ingester_supporting" }
