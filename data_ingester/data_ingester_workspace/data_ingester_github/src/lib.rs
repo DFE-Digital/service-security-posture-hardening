@@ -62,6 +62,65 @@ impl OctocrabGit {
         self.get_collection(&uri).await
     }
 
+    /// Get Teams for org
+    pub(crate) async fn org_teams(&self, org: &str) -> Result<GithubResponses> {
+        let uri = format!("/orgs/{org}/teams");
+        self.get_collection(&uri).await
+    }
+
+    /// Get the Teams for an org with child objects
+    ///
+    /// This will get the members for each team and the child teams for each team
+    ///
+    pub async fn org_teams_with_chilren(&self, org: &str) -> Result<GithubResponses> {
+        let mut teams = self
+            .org_teams(org)
+            .await
+            .context("Getting teams for {org_name}")?;
+
+        let mut members = vec![];
+        let mut team_teams = vec![];
+
+        for team in teams.inner.iter().flat_map(|ghr| match &ghr.response {
+            crate::SingleOrVec::Vec(ref vec) => vec.to_vec(),
+            crate::SingleOrVec::Single(single) => vec![single.clone()],
+        }) {
+            let team_name = team
+                .as_object()
+                .context("Getting team as HashMap")?
+                .get("name")
+                .context("Getting `name` from team")?
+                .as_str()
+                .context("Getting `name` as &str")?;
+
+            members = self
+                .org_team_members(org, team_name)
+                .await
+                .context("Getting team members")?
+                .inner;
+            team_teams = self
+                .org_team_teams(org, team_name)
+                .await
+                .context("Getting team members")?
+                .inner;
+        }
+        teams.inner.extend(members);
+        teams.inner.extend(team_teams);
+        Ok(teams)
+    }
+
+    /// Get Members for org Team
+    pub(crate) async fn org_team_members(&self, org: &str, team: &str) -> Result<GithubResponses> {
+        let uri = format!("/orgs/{org}/teams/{team}/members");
+        self.get_collection(&uri).await
+    }
+
+    /// Get Members for org Team
+    pub(crate) async fn org_team_teams(&self, org: &str, team: &str) -> Result<GithubResponses> {
+        let uri = format!("/orgs/{org}/teams/{team}/teams");
+        self.get_collection(&uri).await
+    }
+
     /// Get branch protection for a specific repo & branch
     pub(crate) async fn repo_branch_protection(
         &self,
@@ -69,6 +128,20 @@ impl OctocrabGit {
         branch: &str,
     ) -> Result<GithubResponses> {
         let uri = format!("/repos/{repo}/branches/{branch}/protection");
+        self.get_collection(&uri).await
+    }
+
+    /// Get Collaborators for Repo
+    #[allow(dead_code)]
+    pub(crate) async fn repo_collaborators(&self, repo: &str) -> Result<GithubResponses> {
+        let uri = format!("/repos/{repo}/collaborators");
+        self.get_collection(&uri).await
+    }
+
+    /// Get Collaborators for Repo
+    #[allow(dead_code)]
+    pub(crate) async fn repo_teams(&self, repo: &str) -> Result<GithubResponses> {
+        let uri = format!("/repos/{repo}/teams");
         self.get_collection(&uri).await
     }
 
