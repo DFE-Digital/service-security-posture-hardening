@@ -80,7 +80,7 @@ async fn github_collect_installation_org(
     let org_repos = github_client
         .org_repos(org_name)
         .await
-        .context("Getting repos for org")?;
+        .context("Getting repos for {org_name}")?;
     info!("Retreived {} repos for {}", org_repos.inner.len(), org_name);
 
     let events = (&org_repos)
@@ -91,12 +91,33 @@ async fn github_collect_installation_org(
         .await
         .context("Sending events to Splunk")?;
 
+    try_collect_send(
+        &format!("Getting Teams for {org_name}"),
+        github_client.org_teams_with_chilren(org_name),
+        splunk,
+    )
+    .await?;
+
     for repo in org_repos.inner {
         let repo_name = format!(
             "{}/{}",
             &repo.owner.as_ref().expect("checked owner").login,
             &repo.name
         );
+
+        try_collect_send(
+            &format!("Collaborators for {repo_name}"),
+            github_client.repo_collaborators(&repo_name),
+            splunk,
+        )
+        .await?;
+
+        try_collect_send(
+            &format!("Teams for {repo_name}"),
+            github_client.repo_teams(&repo_name),
+            splunk,
+        )
+        .await?;
 
         try_collect_send(
             &format!("Code scanning for {repo_name}"),
