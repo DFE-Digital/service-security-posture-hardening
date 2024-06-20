@@ -132,14 +132,12 @@ impl OctocrabGit {
     }
 
     /// Get Collaborators for Repo
-    #[allow(dead_code)]
     pub(crate) async fn repo_collaborators(&self, repo: &str) -> Result<GithubResponses> {
         let uri = format!("/repos/{repo}/collaborators");
         self.get_collection(&uri).await
     }
 
     /// Get Collaborators for Repo
-    #[allow(dead_code)]
     pub(crate) async fn repo_teams(&self, repo: &str) -> Result<GithubResponses> {
         let uri = format!("/repos/{repo}/teams");
         self.get_collection(&uri).await
