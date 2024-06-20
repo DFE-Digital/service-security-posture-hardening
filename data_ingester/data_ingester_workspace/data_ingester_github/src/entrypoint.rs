@@ -5,7 +5,7 @@ use crate::OctocrabGit;
 use anyhow::{Context, Result};
 use data_ingester_splunk::splunk::{set_ssphp_run, try_collect_send, Splunk, ToHecEvents};
 use data_ingester_supporting::keyvault::{GitHubApp, Secrets};
-use tracing::info;
+use tracing::{error, info};
 
 /// Public entry point
 pub async fn github_octocrab_entrypoint(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
@@ -133,16 +133,6 @@ async fn github_collect_installation_org(
         )
         .await?;
 
-        try_collect_send(
-            &format!("Branch Protection for {repo_name}"),
-            github_client.repo_branch_protection(
-                &repo_name,
-                &repo.default_branch.unwrap_or_else(|| "main".to_string()),
-            ),
-            splunk,
-        )
-        .await?;
-
         let dependabot_status = github_client
             .repo_dependabot_status(&repo_name)
             .await
@@ -151,6 +141,7 @@ async fn github_collect_installation_org(
         let events = (&dependabot_status)
             .to_hec_events()
             .context("Serialize dependabot status events")?;
+
         splunk
             .send_batch(events)
             .await
@@ -159,6 +150,38 @@ async fn github_collect_installation_org(
         try_collect_send(
             &format!("Dependabot Alerts for {repo_name}"),
             github_client.repo_dependabot_alerts(&repo_name),
+            splunk,
+        )
+        .await?;
+
+        // Don't get rulesets for a repository.
+        // Only get rules for the default branch
+        //
+        // try_collect_send(
+        //     &format!("Repo Rulesets for {repo_name}"),
+        //     github_client.repo_rulesets(&repo_name),
+        //     splunk,
+        // )
+        // .await?;
+
+        let default_branch = match repo.default_branch.as_deref() {
+            Some(default_branch) => default_branch,
+            None => {
+                error!("Unable to get default branch for {repo_name}");
+                continue;
+            }
+        };
+
+        try_collect_send(
+            &format!("Branch Protection for {repo_name}/{default_branch}"),
+            github_client.repo_branch_protection(&repo_name, default_branch),
+            splunk,
+        )
+        .await?;
+
+        try_collect_send(
+            &format!("Rules for {repo_name}/{default_branch}"),
+            github_client.repo_branch_rules(&repo_name, default_branch),
             splunk,
         )
         .await?;

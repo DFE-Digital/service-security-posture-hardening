@@ -72,6 +72,23 @@ impl OctocrabGit {
         self.get_collection(&uri).await
     }
 
+    /// Get GitHub Rulesets for repo
+    #[allow(dead_code)]
+    pub(crate) async fn repo_rulesets(&self, repo: &str) -> Result<GithubResponses> {
+        let uri = format!("/repos/{repo}/rulesets");
+        self.get_collection(&uri).await
+    }
+
+    /// Get GitHub Rules for a specific repo & branch
+    pub(crate) async fn repo_branch_rules(
+        &self,
+        repo: &str,
+        branch: &str,
+    ) -> Result<GithubResponses> {
+        let uri = format!("/repos/{repo}/rules/branches/{branch}");
+        self.get_collection(&uri).await
+    }
+
     /// Get Dependabot alerts for a repo
     pub(crate) async fn repo_dependabot_alerts(&self, repo: &str) -> Result<GithubResponses> {
         let uri = format!("/repos/{repo}/dependabot/alerts");
@@ -545,7 +562,7 @@ impl ToHecEvents for &Repos {
     }
 
     fn sourcetype(&self) -> &str {
-        "github:repository"
+        "github"
     }
 
     fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
