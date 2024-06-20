@@ -113,7 +113,7 @@ async fn github_collect_installation_org(
         .await?;
 
         try_collect_send(
-            &format!("Collaborators for {repo_name}"),
+            &format!("Teams for {repo_name}"),
             github_client.repo_teams(&repo_name),
             splunk,
         )
