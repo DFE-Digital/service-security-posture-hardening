@@ -178,12 +178,12 @@ async fn github_collect_installation_org(
         // Don't get rulesets for a repository.
         // Only get rules for the default branch
         //
-        // try_collect_send(
-        //     &format!("Repo Rulesets for {repo_name}"),
-        //     github_client.repo_rulesets(&repo_name),
-        //     splunk,
-        // )
-        // .await?;
+        try_collect_send(
+            &format!("Repo Rulesets for {repo_name}"),
+            github_client.repo_rulesets_full(&repo_name),
+            splunk,
+        )
+        .await?;
 
         let default_branch = match repo.default_branch.as_deref() {
             Some(default_branch) => default_branch,

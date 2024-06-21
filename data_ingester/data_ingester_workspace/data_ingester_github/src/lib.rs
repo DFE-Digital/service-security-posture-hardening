@@ -12,7 +12,7 @@ use octocrab::Octocrab;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use tokio::sync::OnceCell;
-use tracing::error;
+use tracing::{error, info};
 
 /// NewType for Octocrab provide additonal data source.
 #[derive(Clone)]
@@ -93,16 +93,19 @@ impl OctocrabGit {
                 .as_str()
                 .context("Getting `name` as &str")?;
 
-            members = self
-                .org_team_members(org, team_name)
-                .await
-                .context("Getting team members")?
-                .inner;
-            team_teams = self
-                .org_team_teams(org, team_name)
-                .await
-                .context("Getting team members")?
-                .inner;
+            info!("Getting team members for {org} {team_name}");
+            members.extend(
+                self.org_team_members(org, team_name)
+                    .await
+                    .context("Getting team members")?
+                    .inner,
+            );
+            team_teams.extend(
+                self.org_team_teams(org, team_name)
+                    .await
+                    .context("Getting team members")?
+                    .inner,
+            );
         }
         teams.inner.extend(members);
         teams.inner.extend(team_teams);
@@ -112,6 +115,7 @@ impl OctocrabGit {
     /// Get Members for org Team
     pub(crate) async fn org_team_members(&self, org: &str, team: &str) -> Result<GithubResponses> {
         let uri = format!("/orgs/{org}/teams/{team}/members");
+        dbg!(&uri);
         self.get_collection(&uri).await
     }
 
@@ -143,10 +147,49 @@ impl OctocrabGit {
         self.get_collection(&uri).await
     }
 
+    /// Repo rulesets
+    pub async fn repo_rulesets_full(&self, repo: &str) -> Result<GithubResponses> {
+        let mut rulesets = self
+            .repo_rulesets(repo)
+            .await
+            .context("Getting Rulesets for {repo}")?;
+
+        let mut ruleset_details = vec![];
+
+        for ruleset in rulesets.inner.iter().flat_map(|ghr| match &ghr.response {
+            crate::SingleOrVec::Vec(ref vec) => vec.to_vec(),
+            crate::SingleOrVec::Single(single) => vec![single.clone()],
+        }) {
+            let ruleset_id = ruleset
+                .get("id")
+                .context("Getting `id` from team")?
+                .as_u64()
+                .context("Getting `id` as u64")?;
+
+            info!("Getting Ruleset for {repo} {ruleset_id}");
+            ruleset_details.extend(
+                self.repo_ruleset_by_id(repo, ruleset_id)
+                    .await
+                    .context("Getting team members")?
+                    .inner,
+            );
+        }
+        rulesets.inner.extend(ruleset_details);
+        Ok(rulesets)
+    }
+
     /// Get GitHub Rulesets for repo
-    #[allow(dead_code)]
     pub(crate) async fn repo_rulesets(&self, repo: &str) -> Result<GithubResponses> {
         let uri = format!("/repos/{repo}/rulesets");
+        self.get_collection(&uri).await
+    }
+
+    pub(crate) async fn repo_ruleset_by_id(
+        &self,
+        repo: &str,
+        ruleset_id: u64,
+    ) -> Result<GithubResponses> {
+        let uri = format!("/repos/{repo}/rulesets/{ruleset_id}");
         self.get_collection(&uri).await
     }
 
