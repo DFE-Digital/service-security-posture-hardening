@@ -317,6 +317,7 @@ where
 /// Run a future to completion and send the results to Splunk.
 ///
 /// Logs the start / end / error messages of the collection to Splunk.
+/// TODO Fix this so logging is not excluded.
 pub async fn try_collect_send<T>(
     name: &str,
     future: impl Future<Output = Result<T>>,
