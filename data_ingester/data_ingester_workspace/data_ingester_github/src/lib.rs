@@ -184,6 +184,10 @@ impl OctocrabGit {
         self.get_collection(&uri).await
     }
 
+    /// Get the details for a specific ruleset
+    ///
+    /// Doesn't seem to get the 'bypass_actors' property listed at
+    /// https://docs.github.com/en/rest/repos/rules?apiVersion=2022-11-28#get-a-repository-ruleset
     pub(crate) async fn repo_ruleset_by_id(
         &self,
         repo: &str,
