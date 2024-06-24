@@ -120,7 +120,7 @@ impl OctocrabGit {
     /// use the numeric ID or requests can fail with non URL
     /// compatible team names
     ///
-    pub(crate) async fn org_team_members<'a, T :ToString>(&self, org: &str, team_id: T) -> Result<GithubResponses> {
+    pub(crate) async fn org_team_member<T :ToString>(&self, org: &str, team_id: T) -> Result<GithubResponses> {
         let uri = format!("/orgs/{org}/teams/{}/members", team_id.to_string());
         dbg!(&uri);
         self.get_collection(&uri).await
@@ -134,7 +134,7 @@ impl OctocrabGit {
     /// the numeric ID or requests can fail with non URL compatible
     /// team names
     ///
-    pub(crate) async fn org_team_teams<'a, T: ToString>(&self, org: &str, team_id: T) -> Result<GithubResponses> {
+    pub(crate) async fn org_team_teams<T: ToString>(&self, org: &str, team_id: T) -> Result<GithubResponses> {
         let uri = format!("/orgs/{org}/teams/{}/teams", team_id.to_string());
         self.get_collection(&uri).await
     }
