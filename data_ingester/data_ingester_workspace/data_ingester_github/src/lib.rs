@@ -114,9 +114,11 @@ impl OctocrabGit {
 
     /// Get Members for org Team
     ///
-    /// `org` - The GitHub Organisation to query.  `team_id`, the name /
-    /// `team_id` - ID of the team. Prefer to use the numeric ID or requests can
-    /// fail with non URL compatible team names
+    /// `org` - The GitHub Organisation to query.
+    ///
+    /// `team_id`, the name / `team_id` - ID of the team. Prefer to
+    /// use the numeric ID or requests can fail with non URL
+    /// compatible team names
     ///
     pub(crate) async fn org_team_members<'a, T :ToString>(&self, org: &str, team_id: T) -> Result<GithubResponses> {
         let uri = format!("/orgs/{org}/teams/{}/members", team_id.to_string());
@@ -126,9 +128,11 @@ impl OctocrabGit {
 
     /// Get Members for org Team
     ///
-    /// `org` - The GitHub Organisation to query.  `team_id`, the name /
-    /// `team_id` - ID of the team. Prefer to use the numeric ID or requests can
-    /// fail with non URL compatible team names
+    /// `org` - The GitHub Organisation to query.
+    ///
+    ///`team_id`, the name / `team_id` - ID of the team. Prefer to use
+    /// the numeric ID or requests can fail with non URL compatible
+    /// team names
     ///
     pub(crate) async fn org_team_teams<'a, T: ToString>(&self, org: &str, team_id: T) -> Result<GithubResponses> {
         let uri = format!("/orgs/{org}/teams/{}/teams", team_id.to_string());
