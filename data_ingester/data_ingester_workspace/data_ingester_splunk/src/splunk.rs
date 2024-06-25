@@ -31,10 +31,10 @@ static SSPHP_RUN_NEW: LazyLock<RwLock<HashMap<String, u64>>> = LazyLock::new(|| 
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct HecEvent {
-    source: String,
-    sourcetype: String,
-    host: String,
-    event: String,
+    pub source: String,
+    pub sourcetype: String,
+    pub host: String,
+    pub event: String,
 }
 
 impl HecEvent {

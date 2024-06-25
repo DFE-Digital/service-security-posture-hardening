@@ -91,12 +91,26 @@ async fn github_collect_installation_org(
         .await
         .context("Sending events to Splunk")?;
 
-    try_collect_send(
-        &format!("Getting Teams for {org_name}"),
-        github_client.org_teams_with_chilren(org_name),
-        splunk,
-    )
-    .await?;
+    let (teams, mut teams_org) = github_client
+        .org_teams_with_children(org_name)
+        .await
+        .context("Getting Teams for {org_name}")?;
+
+    let teams_events = (&teams)
+        .to_hec_events()
+        .context("Serialize GitHub Teams and members")?;
+    splunk
+        .send_batch(teams_events)
+        .await
+        .context("Sending Github teams and members to Splunk")?;
+
+    let team_member_events = teams_org
+        .team_members_hec_events()
+        .context("Creating HEC events for calculated team members")?;
+    splunk
+        .send_batch(&team_member_events)
+        .await
+        .context("Sending Calculated teams and members to Splunk")?;
 
     for repo in org_repos.inner {
         let repo_name = format!(
