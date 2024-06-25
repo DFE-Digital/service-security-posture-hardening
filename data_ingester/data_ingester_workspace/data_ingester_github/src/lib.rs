@@ -74,7 +74,7 @@ impl OctocrabGit {
     ///
     /// This will get the members for each team and the child teams for each team
     ///
-    pub async fn org_teams_with_chilren(
+    pub async fn org_teams_with_children(
         &self,
         org: &str,
     ) -> Result<(GithubResponses, GitHubTeamsOrg)> {

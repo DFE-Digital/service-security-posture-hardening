@@ -92,7 +92,7 @@ async fn github_collect_installation_org(
         .context("Sending events to Splunk")?;
 
     let (teams, mut teams_org) = github_client
-        .org_teams_with_chilren(org_name)
+        .org_teams_with_children(org_name)
         .await
         .context("Getting Teams for {org_name}")?;
 
