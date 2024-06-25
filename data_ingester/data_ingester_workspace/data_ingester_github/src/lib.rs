@@ -1,6 +1,7 @@
 //! Pull Security posture data from the Github API and send it to a Splunk HEC.
 //! Uses [Octocrab] for most operations.
 pub mod entrypoint;
+mod teams;
 use anyhow::{Context, Result};
 use data_ingester_splunk::splunk::ToHecEvents;
 use data_ingester_supporting::keyvault::GitHubApp;
@@ -11,6 +12,7 @@ use octocrab::models::{InstallationId, Repository};
 use octocrab::Octocrab;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
+use teams::GitHubTeamsOrg;
 use tokio::sync::OnceCell;
 use tracing::{error, info};
 
@@ -72,20 +74,27 @@ impl OctocrabGit {
     ///
     /// This will get the members for each team and the child teams for each team
     ///
-    pub async fn org_teams_with_chilren(&self, org: &str) -> Result<GithubResponses> {
+    pub async fn org_teams_with_chilren(
+        &self,
+        org: &str,
+    ) -> Result<(GithubResponses, GitHubTeamsOrg)> {
         let mut teams = self
             .org_teams(org)
             .await
             .context("Getting teams for {org_name}")?;
 
-        let mut members = vec![];
-        let mut team_teams = vec![];
+        let mut raw = vec![];
+        let mut teams_org = crate::teams::GitHubTeamsOrg::new(org);
 
         for team in teams.inner.iter().flat_map(|ghr| match &ghr.response {
             crate::SingleOrVec::Vec(ref vec) => vec.to_vec(),
             crate::SingleOrVec::Single(single) => vec![single.clone()],
         }) {
-            let team_name = team
+            teams_org
+                .push_team_value(&team)
+                .context("Adding team to org")?;
+
+            let team_id = team
                 .as_object()
                 .context("Getting team as HashMap")?
                 .get("id")
@@ -93,23 +102,32 @@ impl OctocrabGit {
                 .as_u64()
                 .context("Getting `name` as &str")?;
 
-            info!("Getting team members for {org} {team_name}");
-            members.extend(
-                self.org_team_members(org, team_name)
-                    .await
-                    .context("Getting team members")?
-                    .inner,
-            );
-            team_teams.extend(
-                self.org_team_teams(org, team_name)
-                    .await
-                    .context("Getting team members")?
-                    .inner,
-            );
+            info!("Getting team members for {org} {team_id}");
+
+            let team_members = self
+                .org_team_members(org, team_id)
+                .await
+                .context("Getting team members")?;
+
+            teams_org
+                .push_team_members_responses(team_id, &team_members)
+                .context("Adding members to team&org")?;
+
+            raw.extend(team_members.inner);
+
+            let team_teams = self
+                .org_team_teams(org, team_id)
+                .await
+                .context("Getting team members")?;
+
+            teams_org
+                .push_team_teams_responses(team_id, &team_teams)
+                .context("Adding teams to org")?;
+
+            raw.extend(team_teams.inner);
         }
-        teams.inner.extend(members);
-        teams.inner.extend(team_teams);
-        Ok(teams)
+        teams.inner.extend(raw);
+        Ok((teams, teams_org))
     }
 
     /// Get Members for org Team
@@ -120,8 +138,12 @@ impl OctocrabGit {
     /// use the numeric ID or requests can fail with non URL
     /// compatible team names
     ///
-    pub(crate) async fn org_team_members<T :ToString>(&self, org: &str, team_id: T) -> Result<GithubResponses> {
-        let uri = format!("/orgs/{org}/teams/{}/members", team_id.to_string());
+    pub(crate) async fn org_team_members<T: ToString>(
+        &self,
+        org: &str,
+        team_id: T,
+    ) -> Result<GithubResponses> {
+        let uri = format!("/orgs/{org}/team/{}/members", team_id.to_string());
         self.get_collection(&uri).await
     }
 
@@ -133,8 +155,12 @@ impl OctocrabGit {
     /// the numeric ID or requests can fail with non URL compatible
     /// team names
     ///
-    pub(crate) async fn org_team_teams<T: ToString>(&self, org: &str, team_id: T) -> Result<GithubResponses> {
-        let uri = format!("/orgs/{org}/teams/{}/teams", team_id.to_string());
+    pub(crate) async fn org_team_teams<T: ToString>(
+        &self,
+        org: &str,
+        team_id: T,
+    ) -> Result<GithubResponses> {
+        let uri = format!("/orgs/{org}/team/{}/teams", team_id.to_string());
         self.get_collection(&uri).await
     }
 
