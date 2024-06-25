@@ -88,9 +88,9 @@ impl OctocrabGit {
             let team_name = team
                 .as_object()
                 .context("Getting team as HashMap")?
-                .get("name")
+                .get("id")
                 .context("Getting `name` from team")?
-                .as_str()
+                .as_u64()
                 .context("Getting `name` as &str")?;
 
             info!("Getting team members for {org} {team_name}");
@@ -113,15 +113,28 @@ impl OctocrabGit {
     }
 
     /// Get Members for org Team
-    pub(crate) async fn org_team_members(&self, org: &str, team: &str) -> Result<GithubResponses> {
-        let uri = format!("/orgs/{org}/teams/{team}/members");
-        dbg!(&uri);
+    ///
+    /// `org` - The GitHub Organisation to query.
+    ///
+    /// `team_id`, the name / `team_id` - ID of the team. Prefer to
+    /// use the numeric ID or requests can fail with non URL
+    /// compatible team names
+    ///
+    pub(crate) async fn org_team_members<T :ToString>(&self, org: &str, team_id: T) -> Result<GithubResponses> {
+        let uri = format!("/orgs/{org}/teams/{}/members", team_id.to_string());
         self.get_collection(&uri).await
     }
 
     /// Get Members for org Team
-    pub(crate) async fn org_team_teams(&self, org: &str, team: &str) -> Result<GithubResponses> {
-        let uri = format!("/orgs/{org}/teams/{team}/teams");
+    ///
+    /// `org` - The GitHub Organisation to query.
+    ///
+    ///`team_id`, the name / `team_id` - ID of the team. Prefer to use
+    /// the numeric ID or requests can fail with non URL compatible
+    /// team names
+    ///
+    pub(crate) async fn org_team_teams<T: ToString>(&self, org: &str, team_id: T) -> Result<GithubResponses> {
+        let uri = format!("/orgs/{org}/teams/{}/teams", team_id.to_string());
         self.get_collection(&uri).await
     }
 
@@ -188,6 +201,7 @@ impl OctocrabGit {
     ///
     /// Doesn't seem to get the 'bypass_actors' property listed at
     /// https://docs.github.com/en/rest/repos/rules?apiVersion=2022-11-28#get-a-repository-ruleset
+    ///
     pub(crate) async fn repo_ruleset_by_id(
         &self,
         repo: &str,
