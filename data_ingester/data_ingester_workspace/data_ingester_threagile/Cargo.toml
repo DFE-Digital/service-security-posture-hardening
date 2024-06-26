@@ -6,17 +6,17 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-anyhow = "*"
+anyhow = "1"
 serde = { version = "1", features = ["derive"] }
 serde_yaml = "0"
-serde_with = "*"
-serde_json = "*"
+serde_with = "3"
+serde_json = "1"
 data_ingester_splunk_search = { path = "../data_ingester_splunk_search" }
 data_ingester_splunk = { path = "../data_ingester_splunk" }
 data_ingester_supporting = { path = "../data_ingester_supporting" }
 tokio = { version = "1", features = ["full"] }
-tracing = "*"
-tracing-subscriber = "*"
+tracing = "0"
+tracing-subscriber = "0"
 
 [lints]
 workspace = true

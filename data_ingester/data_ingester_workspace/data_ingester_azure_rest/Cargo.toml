@@ -6,7 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-async-recursion = "1.1"
+async-recursion = "1"
 anyhow = { version = "1", features=["backtrace"]}
 azure_core = { version = "0.19", default-features = false, features = ["enable_reqwest_rustls"]}
 azure_identity = { version = "0.19", default-features = false, features = ["enable_reqwest_rustls", "client_certificate"]}
@@ -14,14 +14,14 @@ azure_mgmt_authorization = { version = "0.19", default-features = false, feature
 azure_mgmt_subscription = { version = "0.19", default-features = false, features = ["enable_reqwest_rustls", "package-2021-10"]}
 data_ingester_splunk = { path = "../data_ingester_splunk" }
 data_ingester_supporting = { path = "../data_ingester_supporting" }
-dyn-fmt = "0.4"
-futures = "*"
+dyn-fmt = "0"
+futures = "0"
 reqwest = {version = "0", features = ["rustls-tls", "http2"], default-features = false}
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tokio = { version = "1", features = ["full"] }
 url = "2"
-tracing = "*"
+tracing = "0"
 
 [lints]
 workspace = true

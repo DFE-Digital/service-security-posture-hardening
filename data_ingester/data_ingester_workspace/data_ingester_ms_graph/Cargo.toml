@@ -6,33 +6,33 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-anyhow = { version = "*", features=["backtrace"]}
+anyhow = { version = "1", features=["backtrace"]}
 azure_mgmt_authorization = { version = "0.19", default-features = false, features = ["enable_reqwest_rustls", "package-2022-04-01"]}
 data_ingester_azure_rest = { path = "../data_ingester_azure_rest" }
 data_ingester_splunk = { path = "../data_ingester_splunk" }
 data_ingester_supporting = { path = "../data_ingester_supporting" }
-futures = "*"
+futures = "0"
 graph-core = { git = "https://github.com/akinnane/graph-rs-sdk.git"}
 graph-http = { git = "https://github.com/akinnane/graph-rs-sdk.git", features = ["rustls-tls"], default-features = false }
 graph-rs-sdk = { git = "https://github.com/akinnane/graph-rs-sdk.git", features = ["rustls-tls"], default-features = false }
-regex = "*"
-reqwest = {version = "*", features = ["rustls-tls", "json"], default-features = false}
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "*"
-serde_with = "*"
-tokio = { version = "1.25.0", features = ["full"] }
-toml = "*"
-hickory-proto = "*"
-hickory-resolver = { version = "*", features = ["dns-over-rustls"] }
-url = "*"
-tracing = "*"
+regex = "1"
+reqwest = {version = "0", features = ["rustls-tls", "json"], default-features = false}
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+serde_with = "3"
+tokio = { version = "1", features = ["full"] }
+toml = "0"
+hickory-proto = "0"
+hickory-resolver = { version = "0", features = ["dns-over-rustls"] }
+url = "2"
+tracing = "0"
 
 [build-dependencies]
-toml = "*"
+toml = "0"
 
 [dev-dependencies]
 data_ingester_supporting = { path = "../data_ingester_supporting" }
-tokio = { version = "1.25.0", features = ["full"] }
+tokio = { version = "1", features = ["full"] }
 
 [lints]
 workspace = true

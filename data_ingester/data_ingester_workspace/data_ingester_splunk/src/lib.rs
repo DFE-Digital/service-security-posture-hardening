@@ -1,5 +1,4 @@
 #![feature(async_closure)]
-#![feature(lazy_cell)]
 pub mod splunk;
 mod thread;
 mod tracing;

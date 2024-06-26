@@ -138,7 +138,7 @@ impl SplunkApiClient {
         ];
         let result = self
             .client
-            .post(&self.search_url())
+            .post(self.search_url())
             .form(&form)
             .send()
             .await
