@@ -13,7 +13,7 @@ name: "CodeQL"
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "test-codeql" ]
   pull_request:
     # The branches below must be a subset of the branches above
     types: [ opened, reopened ]
@@ -51,3 +51,8 @@ jobs:
       uses: github/codeql-action/analyze@v3
       with:
         category: "/language:${{matrix.language}}"
+
+    - uses: actions/upload-artifact@v4
+      with:  
+        name: sarif-semgrep
+        path: /home/runner/work/service-security-posture-hardening/results/*.sarif
