@@ -54,7 +54,7 @@ pub struct RoleDefinitions {
 fn index_by_id<'de, D, T>(d: D) -> Result<HashMap<String, T>, D::Error>
 where
     D: Deserializer<'de>,
-    T: ?Sized + Indexable + Deserialize<'de>,
+    T: Indexable + Deserialize<'de>,
 {
     let data = <Vec<T>>::deserialize(d)?;
     let mapped = data.into_iter().map(|elem| (elem.get_id(), elem)).collect();

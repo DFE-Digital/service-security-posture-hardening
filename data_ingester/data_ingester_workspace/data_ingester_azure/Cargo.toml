@@ -12,7 +12,7 @@ data_ingester_ms_graph = { path = "../data_ingester_ms_graph" }
 data_ingester_splunk = { path = "../data_ingester_splunk" }
 data_ingester_supporting = { path = "../data_ingester_supporting" }
 tokio = { version = "1", features = ["full"] }
-tracing = "*"
+tracing = "0"
 
 [lints]
 workspace = true

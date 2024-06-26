@@ -4,14 +4,14 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-anyhow = { version = "*", features=["backtrace"]}
+anyhow = { version = "1", features=["backtrace"]}
 data_ingester_splunk = { path = "../data_ingester_splunk" }
 data_ingester_supporting = { path = "../data_ingester_supporting" }
-reqwest = {version = "*", features = ["rustls-tls", "json"], default-features = false}
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "*"
-tokio = { version = "1.25.0", features = ["full"] }
-tracing = "*"
+reqwest = {version = "0", features = ["rustls-tls", "json"], default-features = false}
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["full"] }
+tracing = "0"
 
 [lints]
 workspace = true
