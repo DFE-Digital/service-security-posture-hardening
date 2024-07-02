@@ -1,4 +1,4 @@
-<dashboard version="1.1" theme="light" hideFilters="true" script="js/route.js">
+<dashboard version="1.1" theme="dark" hideFilters="true" script="js/route.js">
   <label>DCAP HOME</label>
 
     <row depends="$never_show$">
@@ -20,10 +20,16 @@
                                     dfe_ssphp_service_user_aad, aad, 02
                                     dfe_ssphp_service_user_aws, dns, 03
                                     dfe_ssphp_service_user_azure, azure, 04"]
-| eval service=coalesce('service',"m365")
+| eval service=coalesce('service',"-"),
+       priority=if('service'="-",99,'priority'),
+       link_target=if('service'="-",
+                      "/en-GB/app/{{app}}{{environment}}/ssphp_foundational_systems_posture",
+                      "/en-GB/app/{{app}}{{environment}}/ssphp_foundational_systems_service?form.tkn__service=".'service')
+
 | sort 1 priority
-| eval link_target="/en-GB/app/{{app}}{{environment}}/ssphp_foundational_systems_service?form.tkn__service=".'service'
+
 | table link_target
+
                     </query>
                 </search>
             </table>
