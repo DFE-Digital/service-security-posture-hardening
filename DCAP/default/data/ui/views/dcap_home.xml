@@ -1,4 +1,4 @@
-<dashboard version="1.1" theme="light" hideFilters="true" script="js/route.js">
+<dashboard version="1.1" theme="dark" hideFilters="true" script="js/route.js">
   <label>DCAP HOME</label>
 
     <row depends="$never_show$">
@@ -7,34 +7,29 @@
                 <search>
                     <query>
 | rest splunk_server=local /services/authentication/current-context
+| rename roles as user_roles
 
-| eval roles=mvappend("dfe_ssphp_service_user_aad",
-                      "dfe_ssphp_service_user_m365",
-                      'roles',
-                      "dfe_ssphp_service_user_s184",
-                      "dfe_ssphp_service_user_s284",
-                      "dfe_ssphp_service_user_dns")
-| mvexpand roles
+```| eval user_roles="dfe_ssphp_service_user_m365"```
 
-| rex field=roles "^dfe_ssphp_service_user_(?&lt;service&gt;[s][0-9]{3})$"
-| rex field=roles "^dfe_ssphp_service_user_(?&lt;fs&gt;m365|aad|azure|dns)$"
+| fields username, user_roles
+| mvexpand user_roles
 
-| eval param=coalesce('service','fs','roles')
+| join type=outer user_roles
+    [| makeresults format=csv data="user_roles, service, priority
+                                    dfe_ssphp_service_user_m365, m365, 01
+                                    dfe_ssphp_service_user_aad, aad, 02
+                                    dfe_ssphp_service_user_aws, dns, 03
+                                    dfe_ssphp_service_user_azure, azure, 04"]
+| eval service=coalesce('service',"-"),
+       priority=if('service'="-",99,'priority'),
+       link_target=if('service'="-",
+                      "/en-GB/app/{{app}}{{environment}}/ssphp_foundational_systems_posture",
+                      "/en-GB/app/{{app}}{{environment}}/ssphp_foundational_systems_service?form.tkn__service=".'service')
 
-| eval order=case(param="m365","a",
-                  param="azure","b",
-                  param="aad","c",
-                  param="dns","d",
-                  param="sc_admin","v",
-                  param="power","v",
-                  1==1,"p")
-| eval dashboard=case(isnotnull('fs'),"ssphp_foundational_systems_service",
-                      isnotnull('service'),"ssphp_dfe_service",
-                      1==1,"ssphp_foundational_systems_posture")
+| sort 1 priority
 
-| sort 1 order, service
-| eval link_target="/en-GB/app/{{app}}{{environment}}/".'dashboard'."?form.tkn__service=".'param'
-| table link_target```, dashboard, param, roles, service, fs, order```
+| table link_target
+
                     </query>
                 </search>
             </table>
