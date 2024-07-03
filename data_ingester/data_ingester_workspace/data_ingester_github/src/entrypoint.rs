@@ -111,13 +111,20 @@ async fn github_collect_installation_org(
         .send_batch(&team_member_events)
         .await
         .context("Sending Calculated teams and members to Splunk")?;
-
     for repo in org_repos.inner {
         let repo_name = format!(
             "{}/{}",
             &repo.owner.as_ref().expect("checked owner").login,
             &repo.name
         );
+        info!("Getting GitHub data for: {}", repo_name);
+
+        try_collect_send(
+            &format!("Getting Semgrep artifacts for {repo_name}"),
+            github_client.repo_get_sarif_artifacts(repo_name.as_str(), "semgrep"),
+            splunk,
+        )
+        .await?;
 
         try_collect_send(
             &format!("Collaborators for {repo_name}"),
@@ -134,8 +141,15 @@ async fn github_collect_installation_org(
         .await?;
 
         try_collect_send(
-            &format!("Code scanning for {repo_name}"),
+            &format!("Code scanning setup for {repo_name}"),
             github_client.repo_code_scanning_default_setup(&repo_name),
+            splunk,
+        )
+        .await?;
+
+        try_collect_send(
+            &format!("Code scanning alerts for {repo_name}"),
+            github_client.repo_code_scanning_alerts(&repo_name),
             splunk,
         )
         .await?;

@@ -1,14 +1,20 @@
+#![feature(iter_collect_into)]
 //! Pull Security posture data from the Github API and send it to a Splunk HEC.
 //! Uses [Octocrab] for most operations.
+mod artifacts;
 pub mod entrypoint;
 mod teams;
 use anyhow::{Context, Result};
+use artifacts::{Artifact, Artifacts};
+use bytes::Bytes;
+use data_ingester_sarif::{Sarif, SarifHecs};
 use data_ingester_splunk::splunk::ToHecEvents;
 use data_ingester_supporting::keyvault::GitHubApp;
 use graphql_client::{GraphQLQuery, Response};
 use http_body_util::BodyExt;
 use itertools::Itertools;
-use octocrab::models::{InstallationId, Repository};
+use octocrab::models::{ArtifactId, InstallationId, Repository};
+use octocrab::params::actions::ArchiveFormat;
 use octocrab::Octocrab;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
@@ -273,6 +279,87 @@ impl OctocrabGit {
         self.get_collection(&uri).await
     }
 
+    pub(crate) async fn repo_code_scanning_alerts(&self, repo: &str) -> Result<GithubResponses> {
+        let uri = format!("/repos/{repo}/code-scanning/alerts");
+        self.get_collection(&uri).await
+    }
+
+    pub(crate) async fn repo_artifacts(&self, repo: &str) -> Result<Artifacts> {
+        let uri = format!("/repos/{repo}/actions/artifacts");
+        let result = self.get_collection(&uri).await?;
+        let artifacts =
+            Artifacts::try_from(&result).context("Convert GitHubResponses to artifacts")?;
+        Ok(artifacts)
+    }
+
+    /// Download an artifact from Github
+    ///
+    /// https://medium.com/@DiggerHQ/chasing-a-nasty-bug-a-tale-of-excessive-auth-40d8bf5cf192
+    pub(crate) async fn repo_artifact_download(&self, artifact: &Artifact) -> Result<Bytes> {
+        let owner_name = &artifact
+            .org_name()
+            .context("Unable to get owner name for artifact")?;
+        let repo_name = &artifact
+            .repo_name()
+            .context("Unable to get repo name for artifact")?;
+        self.client
+            .actions()
+            .download_artifact(
+                owner_name,
+                repo_name,
+                ArtifactId::from(artifact.id),
+                ArchiveFormat::Zip,
+            )
+            .await
+            .context("Getting artifact")
+    }
+
+    pub(crate) async fn repo_get_sarif_artifacts<'a, 'b, S1: Into<&'a str>, S2: Into<&'b str>>(
+        &self,
+        repo: S1,
+        filter: S2,
+    ) -> Result<SarifHecs> {
+        let mut artifacts = self
+            .repo_artifacts(repo.into())
+            .await
+            .expect("Getting Artifacts");
+
+        artifacts.dedup();
+
+        let filter = filter.into();
+        let mut semgrep_artifacts = artifacts
+            .artifacts
+            .iter()
+            .filter(|artifact| artifact.name.contains(filter))
+            .collect::<Vec<&Artifact>>();
+
+        semgrep_artifacts.dedup();
+
+        let mut sarif_hecs = vec![];
+
+        for artifact in semgrep_artifacts {
+            let semgrep_zip = self
+                .repo_artifact_download(artifact)
+                .await
+                .with_context(|| {
+                    format!("Downloading artifact {}", artifact.archive_download_url)
+                })?;
+
+            let sarifs = Sarif::from_zip_bytes(semgrep_zip).with_context(|| {
+                format!(
+                    "Failed to extract Sarif file from zipfile from: {}",
+                    artifact.archive_download_url
+                )
+            })?;
+
+            let _ = sarifs
+                .into_iter()
+                .map(|sarif| sarif.to_sarif_hec(&artifact.archive_download_url, "github", "github"))
+                .collect_into(&mut sarif_hecs);
+        }
+        Ok(SarifHecs { inner: sarif_hecs })
+    }
+
     pub(crate) async fn repo_codeowners(&self, repo: &str) -> Result<GithubResponses> {
         let uri = format!("/repos/{repo}/codeowners/errors");
         self.get_collection(&uri).await
@@ -487,7 +574,7 @@ impl Default for org_member_query::OrganizationMemberRole {
 pub struct OrgMemberQuery;
 
 /// Custom DateTime struct for the GitHub API
-#[derive(Clone, Default, Debug, Serialize, Deserialize)]
+#[derive(Clone, Default, Debug, Serialize, Deserialize, PartialOrd, Eq, PartialEq)]
 struct DateTime(String);
 
 #[cfg(test)]
@@ -495,11 +582,12 @@ mod test {
     use std::{borrow::Borrow, env};
 
     use anyhow::{Context, Result};
+    use data_ingester_sarif::Sarif;
     use data_ingester_splunk::splunk::{Splunk, ToHecEvents};
     use data_ingester_supporting::keyvault::get_keyvault_secrets;
     use futures::future::{BoxFuture, FutureExt};
 
-    use crate::{OctocrabGit, Repos};
+    use crate::{artifacts::Artifact, OctocrabGit, Repos};
 
     use tokio::sync::OnceCell;
 
@@ -695,6 +783,37 @@ mod test {
         let _result = client.client.graphql_org_members_query("403ind").await?;
         Ok(())
     }
+
+    #[tokio::test]
+    async fn test_github_repo_artifacts() -> Result<()> {
+        let client = TestClient::new().await;
+        let _result = client
+            .repo_iter(|repo_name| client.client.repo_artifacts(repo_name).boxed())
+            .await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_github_download_artifact() -> Result<()> {
+        let client = TestClient::new().await;
+        let mut total_hec_events = vec![];
+        for repo in client.repos.inner.iter() {
+            let repo_name = client.repo_name(&repo.name);
+            let sarif_hecs = client
+                .client
+                .repo_get_sarif_artifacts(repo_name.as_str(), "semgrep")
+                .await?;
+
+            let hec_events = (&sarif_hecs)
+                .to_hec_events()
+                .context("Convert SarifHec to HecEvents")?;
+
+            client.splunk.send_batch(&hec_events).await?;
+            total_hec_events.extend(hec_events);
+        }
+        assert!(total_hec_events.len() > 0);
+        Ok(())
+    }
 }
 
 #[derive(Serialize, Debug, Clone)]
@@ -737,6 +856,36 @@ struct GithubResponses {
     inner: Vec<GithubResponse>,
 }
 
+impl<'a> IntoIterator for &'a GithubResponses {
+    type Item = &'a GithubResponse;
+
+    type IntoIter = GithubResponsesIterator<'a>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        Self::IntoIter {
+            current: 0,
+            collection: &self.inner,
+        }
+    }
+}
+
+struct GithubResponsesIterator<'a> {
+    current: usize,
+    collection: &'a [GithubResponse],
+}
+
+impl<'a> Iterator for GithubResponsesIterator<'a> {
+    type Item = &'a GithubResponse;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let value = self.collection.get(self.current);
+        if value.is_some() {
+            self.current = 1;
+        }
+        value
+    }
+}
+
 impl ToHecEvents for &GithubResponses {
     type Item = GithubResponse;
 
@@ -766,6 +915,7 @@ impl ToHecEvents for &GithubResponses {
             .flatten()
             .collect())
     }
+
     fn ssphp_run_key(&self) -> &str {
         "github"
     }
@@ -773,12 +923,48 @@ impl ToHecEvents for &GithubResponses {
 
 /// An  API responses from Github
 #[derive(Serialize, Debug)]
-struct GithubResponse {
+pub(crate) struct GithubResponse {
     #[serde(flatten)]
     response: SingleOrVec,
     #[serde(skip)]
     source: String,
     ssphp_http_status: u16,
+}
+
+impl<'a> IntoIterator for &'a GithubResponse {
+    type Item = &'a serde_json::Value;
+
+    type IntoIter = GithubResponseIterator<'a>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        match &self.response {
+            SingleOrVec::Vec(vec) => Self::IntoIter {
+                current: 0,
+                collection: vec.iter().collect(),
+            },
+            SingleOrVec::Single(single) => Self::IntoIter {
+                current: 0,
+                collection: vec![&single],
+            },
+        }
+    }
+}
+
+pub(crate) struct GithubResponseIterator<'a> {
+    current: usize,
+    collection: Vec<&'a serde_json::Value>,
+}
+
+impl<'a> Iterator for GithubResponseIterator<'a> {
+    type Item = &'a serde_json::Value;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let value = self.collection.get(self.current);
+        if value.is_some() {
+            self.current += 1;
+        }
+        value.copied()
+    }
 }
 
 /// Descriminator type to help [serde::Deserialize] deal with API endpoints that return a '{}' or a '[{}]'

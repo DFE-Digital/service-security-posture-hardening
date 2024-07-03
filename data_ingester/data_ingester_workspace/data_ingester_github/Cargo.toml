@@ -5,7 +5,9 @@ edition = "2021"
 
 [dependencies]
 anyhow = { version = "1", features=["backtrace"]}
+bytes = "1"
 data_ingester_splunk = { path = "../data_ingester_splunk" }
+data_ingester_sarif = { path = "../data_ingester_sarif" }
 data_ingester_supporting = { path = "../data_ingester_supporting" }
 octocrab = "0"
 serde = {version = "1", features = ["derive"]}
