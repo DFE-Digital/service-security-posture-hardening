@@ -279,11 +279,14 @@ impl OctocrabGit {
         self.get_collection(&uri).await
     }
 
+    /// Get GitHub code scanning alerts for `repo`
     pub(crate) async fn repo_code_scanning_alerts(&self, repo: &str) -> Result<GithubResponses> {
         let uri = format!("/repos/{repo}/code-scanning/alerts");
         self.get_collection(&uri).await
     }
 
+    /// Get a list of Artifacts for a repo
+    ///
     pub(crate) async fn repo_artifacts(&self, repo: &str) -> Result<Artifacts> {
         let uri = format!("/repos/{repo}/actions/artifacts");
         let result = self.get_collection(&uri).await?;
@@ -314,6 +317,13 @@ impl OctocrabGit {
             .context("Getting artifact")
     }
 
+    /// Get artifact zips from a repo where the `name` matches
+    /// `filter` and convert the contained files into `SarifHecs` for
+    /// submission to Splunk
+    ///
+    /// `repo` - The owner/repo to get the Artifacts from
+    /// `filter` - A simple text patten to match against the Artifact name
+    ///
     pub(crate) async fn repo_get_sarif_artifacts<'a, 'b, S1: Into<&'a str>, S2: Into<&'b str>>(
         &self,
         repo: S1,
@@ -582,12 +592,11 @@ mod test {
     use std::{borrow::Borrow, env};
 
     use anyhow::{Context, Result};
-    use data_ingester_sarif::Sarif;
     use data_ingester_splunk::splunk::{Splunk, ToHecEvents};
     use data_ingester_supporting::keyvault::get_keyvault_secrets;
     use futures::future::{BoxFuture, FutureExt};
 
-    use crate::{artifacts::Artifact, OctocrabGit, Repos};
+    use crate::{OctocrabGit, Repos};
 
     use tokio::sync::OnceCell;
 
@@ -784,15 +793,17 @@ mod test {
         Ok(())
     }
 
+    /// Get a list of Artifacts for all github repos
     #[tokio::test]
     async fn test_github_repo_artifacts() -> Result<()> {
         let client = TestClient::new().await;
-        let _result = client
+        client
             .repo_iter(|repo_name| client.client.repo_artifacts(repo_name).boxed())
             .await?;
         Ok(())
     }
 
+    /// Download a sarif Artifact from GitHub
     #[tokio::test]
     async fn test_github_download_artifact() -> Result<()> {
         let client = TestClient::new().await;
@@ -811,7 +822,7 @@ mod test {
             client.splunk.send_batch(&hec_events).await?;
             total_hec_events.extend(hec_events);
         }
-        assert!(total_hec_events.len() > 0);
+        assert!(!total_hec_events.is_empty());
         Ok(())
     }
 }

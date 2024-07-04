@@ -84,20 +84,27 @@ impl ToHecEvents for SarifHec {
         unimplemented!()
     }
 
+    /// In order to convert full Sarif result to HEC events we need to
+    /// match the result with the Tool`s rule for that result.
     fn to_hec_events(&self) -> Result<Vec<data_ingester_splunk::splunk::HecEvent>> {
         let mut hec_events = Vec::new();
-        for run in &self.inner.runs {
-            let tool = Tool::from(run);
 
+        for run in &self.inner.runs {
             let results = if let Some(results) = run.results.as_ref() {
                 results
             } else {
                 continue;
             };
+
+            let tool = Tool::from(run);
+
             for result in results {
-                
-                let rule = result.rule_id.as_ref().and_then(|rule_id| tool.rules.get(rule_id)).cloned();
-                
+                let rule = result
+                    .rule_id
+                    .as_ref()
+                    .and_then(|rule_id| tool.rules.get(rule_id))
+                    .cloned();
+
                 let for_hec = SarifHecEvent {
                     inner: SarifResultSerialize {
                         result: result.clone(),
@@ -107,9 +114,11 @@ impl ToHecEvents for SarifHec {
                     sourcetype: self.sourcetype.to_string(),
                     ssphp_run_key: self.ssphp_run_key.to_string(),
                 };
+
                 let sarif_hec_event = for_hec
                     .to_hec_events()
                     .context("Convert SarifHecEvent to HevEvents")?;
+
                 hec_events.extend(sarif_hec_event);
             }
         }
@@ -126,6 +135,7 @@ pub struct SarifHecs {
 impl ToHecEvents for &SarifHecs {
     type Item = SarifHec;
 
+    /// Defer conversion of HEC events to each `SarifHec`
     fn to_hec_events(&self) -> Result<Vec<data_ingester_splunk::splunk::HecEvent>> {
         Ok(self
             .inner
@@ -160,32 +170,32 @@ struct Tool {
     rules: HashMap<String, ReportingDescriptor>,
 }
 
-impl From<&Vec<ReportingDescriptor>> for Tool {
-    fn from(value: &Vec<ReportingDescriptor>) -> Self {
-        let mut rules = HashMap::new();
-        for rule in value {
-            let _ = rules.insert(rule.id.to_string(), rule.clone());
-        }
-        Tool { rules }
-    }
-}
+// impl From<&Vec<ReportingDescriptor>> for Tool {
+//     fn from(value: &Vec<ReportingDescriptor>) -> Self {
+//         let mut rules = HashMap::new();
+//         for rule in value {
+//             let _ = rules.insert(rule.id.to_string(), rule.clone());
+//         }
+//         Tool { rules }
+//     }
+// }
 
 impl From<&Run> for Tool {
     fn from(value: &Run) -> Self {
         let mut rules: HashMap<String, ReportingDescriptor> = HashMap::new();
 
+        // Semgrep Rules
         if let Some(driver_rules) = value.tool.driver.rules.as_ref() {
             for rule in driver_rules {
-                dbg!(&rule);
                 let _ = rules.insert(rule.id.to_string(), rule.clone());
             }
         }
 
+        // CodeQL Rules
         if let Some(extensions) = value.tool.extensions.as_ref() {
             for extension in extensions {
                 if let Some(extension_rules) = extension.rules.as_ref() {
                     for rule in extension_rules {
-                        dbg!(&rule);
                         let _ = rules.insert(rule.id.to_string(), rule.clone());
                     }
                 }
@@ -196,12 +206,14 @@ impl From<&Run> for Tool {
     }
 }
 
+/// A struct to hold a Sarif Result with its Rule
 #[derive(Debug, Serialize)]
 pub struct SarifResultSerialize {
     result: SarifResult,
     rule: Option<ReportingDescriptor>,
 }
 
+/// Add Splunk HEC metadata to a SarifResultSerialize
 #[derive(Debug, Serialize)]
 pub struct SarifHecEvent {
     inner: SarifResultSerialize,
@@ -232,11 +244,14 @@ impl ToHecEvents for SarifHecEvent {
 
 #[cfg(test)]
 mod tests {
+    use std::{env, fs};
+
     use data_ingester_splunk::splunk::{set_ssphp_run, Splunk};
     use data_ingester_supporting::keyvault::get_keyvault_secrets;
 
     use super::*;
 
+    #[allow(dead_code)]
     pub async fn setup() -> Result<Splunk> {
         let secrets = get_keyvault_secrets(&env::var("KEY_VAULT_NAME")?).await?;
         set_ssphp_run("default")?;
@@ -276,89 +291,6 @@ mod tests {
             let _hec_events = sarif_hec.to_hec_events()?;
             dbg!(_hec_events);
         }
-        assert!(false);
         Ok(())
     }
 }
-
-// async fn load_codeql_sarif(splunk: Splunk) -> Result<()> {
-//     // let contents =
-//     //     fs::read_to_string("codeql.sarif").expect("Should have been able to read the file");
-//     // let sarif: Sarif = serde_json::from_str(&contents)?;
-//     // dbg!(&sarif.inner.properties);
-//     // dbg!(&sarif.inner.inline_external_properties);
-//     // dbg!(&sarif.inner.runs.len());
-//     // dbg!(&sarif.inner.runs);
-//     //    dbg!(&sarif);
-//     // dbg!(&sarif.runs[0].results.as_ref().unwrap()[0]);
-//     for run in &self.inner.runs {
-//         //let tool_rules = run.tool.driver.rules.as_ref().context("No tool in run")?;
-//         let tool = Tool::from(run);
-//         dbg!(&tool);
-//         //dbg!(&run.results);
-//         let results = if let Some(results) = run.results.as_ref() {
-//             results
-//         } else {
-//             continue;
-//         };
-//         for result in results {
-//             // dbg!(&result.properties);
-//             let for_hec = SarifHecEvent {
-//                 inner: SarifResultSerialize {
-//                     result: result.clone(),
-//                     rule: tool
-//                         .rules
-//                         .get(dbg!(result.rule_id.as_ref().unwrap()))
-//                         .unwrap()
-//                         .clone(),
-//                 },
-//                 source: "codeql_sarif_test".to_string(),
-//                 sourcetype: "codeql_sarif_test".to_string(),
-//                 ssphp_run_key: "codeql_sarif_test".to_string(),
-//             };
-//             let hec_events = for_hec.to_hec_events()?;
-//             //dbg!(&hec_events);
-//             splunk.send_batch(hec_events).await?;
-//         }
-//     }
-//     Ok(())
-// }
-
-// async fn load_semgrep_sarif(splunk: Splunk) -> Result<()> {
-//     let contents =
-//         fs::read_to_string("semgrep.sarif").expect("Should have been able to read the file");
-//     let sarif: Sarif = serde_json::from_str(&contents)?;
-//     dbg!(&sarif.inner.properties);
-//     dbg!(&sarif.inner.inline_external_properties);
-//     dbg!(&sarif.inner.runs.len());
-//     dbg!(&sarif.inner.runs[0].results.as_ref().unwrap()[0]);
-//     for run in &sarif.inner.runs {
-//         let results = if let Some(results) = run.results.as_ref() {
-//             results
-//         } else {
-//             continue;
-//         };
-//         let tool_rules = run.tool.driver.rules.as_ref().context("No tool in run")?;
-//         let tool = Tool::from(tool_rules);
-//         for result in results {
-//             dbg!(&result.properties);
-//             let for_hec = SarifHecEvent {
-//                 inner: SarifResultSerialize {
-//                     result: result.clone(),
-//                     rule: tool
-//                         .rules
-//                         .get(result.rule_id.as_ref().unwrap())
-//                         .unwrap()
-//                         .clone(),
-//                 },
-//                 source: "semgrep_sarif_test".to_string(),
-//                 sourcetype: "semgrep_sarif_test".to_string(),
-//                 ssphp_run_key: "semgrep_sarif_test".to_string(),
-//             };
-//             let hec_events = for_hec.to_hec_events()?;
-//             dbg!(&hec_events);
-//             splunk.send_batch(hec_events).await?;
-//         }
-//     }
-//     Ok(())
-// }

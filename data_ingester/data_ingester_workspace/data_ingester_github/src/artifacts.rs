@@ -41,7 +41,7 @@ impl ToHecEvents for &Artifacts {
     }
 }
 
-/// Convert a `&GitHubResponses` into Artifacts
+/// Convert a `&GitHubResponses` into `Artifacts`
 impl TryFrom<&GithubResponses> for Artifacts {
     type Error = anyhow::Error;
 
@@ -66,7 +66,7 @@ impl TryFrom<&GithubResponses> for Artifacts {
     }
 }
 
-/// Convert a `&GitHubResponse` into Artifacts
+/// Convert a `&GitHubResponse` into `Artifacts`
 impl TryFrom<&GithubResponse> for Artifacts {
     type Error = anyhow::Error;
     fn try_from(value: &GithubResponse) -> Result<Self, Self::Error> {
@@ -121,6 +121,7 @@ impl PartialOrd for Artifact {
 }
 
 impl Ord for Artifact {
+    /// Order by name, created_at(newest first), updated_at(newist first)
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         match self.name.cmp(&other.name) {
             core::cmp::Ordering::Equal => {}
@@ -152,6 +153,7 @@ mod test {
 
     use super::Artifacts;
 
+    /// Artifact JSON as `Value`
     fn artifact_as_value() -> Value {
         let body = r#"{
   "total_count": 2,
@@ -196,10 +198,10 @@ mod test {
     }
   ]
 }"#;
-        let value = serde_json::from_str(body).expect("Artifact JSON to parse correctly");
-        value
+        serde_json::from_str(body).expect("Artifact JSON to parse correctly")
     }
 
+    /// `Artifacts` loaded from JSON
     fn artifacts() -> Artifacts {
         let value = artifact_as_value();
         let github_response = GithubResponse {
@@ -210,6 +212,7 @@ mod test {
         Artifacts::try_from(&github_response).expect("Artifacts to Parse from GitHubResponse")
     }
 
+    /// A GitHubResponse should convert info `Artifacts`
     #[test]
     fn artifacts_try_from_github_response() {
         let value = artifact_as_value();
@@ -220,10 +223,10 @@ mod test {
         };
         let artifacts =
             Artifacts::try_from(&github_response).expect("Artifacts to Parse from GitHubResponse");
-        dbg!(&artifacts);
         assert_eq!(artifacts.artifacts.len(), 2);
     }
 
+    /// `GithubResponses` should convert into `Artifacts
     #[test]
     fn artifacts_try_from_github_responses() {
         let value = artifact_as_value();
@@ -237,19 +240,19 @@ mod test {
         };
         let artifacts = Artifacts::try_from(&github_responses)
             .expect("Artifacts to Parse from GitHubResponses");
-        dbg!(&artifacts);
         assert_eq!(artifacts.artifacts.len(), 2);
     }
 
+    /// The sort order of `Artifacts` should be name, created_at(newist first)
     #[test]
     fn artifacts_sort() {
         let mut artifacts = artifacts();
-        dbg!(&artifacts.artifacts);
         artifacts.artifacts.sort();
         assert_eq!(artifacts.artifacts[0].created_at.0, "2024-07-02T17:28:48Z");
         assert_eq!(artifacts.artifacts[1].created_at.0, "2024-07-01T17:29:07Z");
     }
 
+    /// When `.dedup`ing `Artifacts` the most recent entry should be kept
     #[test]
     fn artifacts_dedup() {
         let mut artifacts = artifacts();
@@ -258,15 +261,17 @@ mod test {
         assert_eq!(artifacts.artifacts[0].created_at.0, "2024-07-02T17:28:48Z");
     }
 
+    /// The `Artifact` owner`s name
     #[test]
     fn artifacts_org_name() {
-        let mut artifacts = artifacts();
+        let artifacts = artifacts();
         assert_eq!(artifacts.artifacts[0].org_name(), Some("testorg"));
     }
 
+    /// The `Artifact` respo name
     #[test]
     fn artifacts_repo_name() {
-        let mut artifacts = artifacts();
+        let artifacts = artifacts();
         assert_eq!(artifacts.artifacts[0].repo_name(), Some("testrepo"));
     }
 }
