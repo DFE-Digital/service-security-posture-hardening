@@ -1,0 +1,19 @@
+[package]
+name = "data_ingester_sarif"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow = "1"
+bytes = "1"
+data_ingester_splunk = { path = "../data_ingester_splunk" }
+data_ingester_supporting = { path = "../data_ingester_supporting" }
+serde = { version = "1", features = ["derive"] }
+serde-sarif = "0"
+serde_json = "1"
+tracing = "0"
+tokio = "1"
+zip = "2"
+
+[lints]
+workspace = true

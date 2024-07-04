@@ -447,7 +447,7 @@ mod test {
                     assert!(team.parent.unwrap().id == TeamId(3));
                 }
                 _ => {
-                    assert!(false)
+                    unreachable!()
                 }
             }
         }
