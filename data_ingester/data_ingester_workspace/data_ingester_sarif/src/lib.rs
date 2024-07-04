@@ -170,16 +170,6 @@ struct Tool {
     rules: HashMap<String, ReportingDescriptor>,
 }
 
-// impl From<&Vec<ReportingDescriptor>> for Tool {
-//     fn from(value: &Vec<ReportingDescriptor>) -> Self {
-//         let mut rules = HashMap::new();
-//         for rule in value {
-//             let _ = rules.insert(rule.id.to_string(), rule.clone());
-//         }
-//         Tool { rules }
-//     }
-// }
-
 impl From<&Run> for Tool {
     fn from(value: &Run) -> Self {
         let mut rules: HashMap<String, ReportingDescriptor> = HashMap::new();
