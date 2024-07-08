@@ -12,7 +12,7 @@ from jinja2 import Environment, PackageLoader, select_autoescape, FileSystemLoad
 from git import Repo
 from copy import deepcopy
 from datetime import datetime
-from distutils.dir_util import copy_tree
+from shutil import copytree
 from pathlib import Path
 from pathlib import PurePath
 from pprint import pprint
@@ -187,7 +187,7 @@ class SplunkAppInspect:
         except FileNotFoundError:
             pass
 
-        copy_tree(app_directory, target_dir)
+        copytree(app_directory, target_dir)
 
         return target_dir
 
