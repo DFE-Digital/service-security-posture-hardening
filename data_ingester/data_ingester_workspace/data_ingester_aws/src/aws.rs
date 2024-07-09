@@ -2016,18 +2016,26 @@ impl ToHecEvents for &CredentialReport {
     }
 }
 
+#[cfg(feature = "live_tests")]
 #[cfg(test)]
-mod test {
+mod live_tests {
     use std::env;
     use std::sync::Arc;
 
-    use super::{aws, AwsClient};
+    use super::AwsClient;
 
-    use data_ingester_splunk::splunk::{set_ssphp_run, Splunk, ToHecEvents};
+    #[cfg(feature = "live_tests")]
+    use super::aws;
+
+    #[cfg(feature = "live_tests")]
+    use data_ingester_splunk::splunk::ToHecEvents;
+
+    use data_ingester_splunk::splunk::{set_ssphp_run, Splunk};
     use data_ingester_supporting::keyvault::get_keyvault_secrets;
 
     use anyhow::{Context, Result};
 
+    #[cfg(feature = "live_tests")]
     pub async fn setup() -> Result<(Splunk, AwsClient)> {
         let secrets = get_keyvault_secrets(&env::var("KEY_VAULT_NAME")?).await?;
         set_ssphp_run("default")?;
@@ -2041,6 +2049,7 @@ mod test {
         Ok((splunk, aws))
     }
 
+    #[cfg(feature = "live_tests")]
     #[tokio::test]
     async fn test_aws_full() -> Result<()> {
         let secrets = get_keyvault_secrets(&env::var("KEY_VAULT_NAME")?).await?;
@@ -2053,12 +2062,7 @@ mod test {
         Ok(())
     }
 
-    #[tokio::test]
-    async fn test_aws_config() -> Result<()> {
-        let (_splunk, _aws) = setup().await?;
-        Ok(())
-    }
-
+    #[cfg(feature = "live_tests")]
     #[tokio::test]
     async fn test_aws_1_1() -> Result<()> {
         let (splunk, aws) = setup().await?;
@@ -2068,6 +2072,7 @@ mod test {
         Ok(())
     }
 
+    #[cfg(feature = "live_tests")]
     #[tokio::test]
     async fn test_aws_1_2() -> Result<()> {
         let (splunk, aws) = setup().await?;
@@ -2078,6 +2083,7 @@ mod test {
         Ok(())
     }
 
+    #[cfg(feature = "live_tests")]
     #[tokio::test]
     async fn test_aws_1_4() -> Result<()> {
         let (splunk, aws) = setup().await?;
@@ -2093,6 +2099,7 @@ mod test {
         Ok(())
     }
 
+    #[cfg(feature = "live_tests")]
     #[tokio::test]
     async fn test_aws_1_6() -> Result<()> {
         let (splunk, aws) = setup().await?;
@@ -2104,6 +2111,7 @@ mod test {
         Ok(())
     }
 
+    #[cfg(feature = "live_tests")]
     #[tokio::test]
     async fn test_aws_1_8() -> Result<()> {
         let (splunk, aws) = setup().await?;
@@ -2114,6 +2122,7 @@ mod test {
         Ok(())
     }
 
+    #[cfg(feature = "live_tests")]
     #[tokio::test]
     async fn test_aws_1_10() -> Result<()> {
         let (splunk, aws) = setup().await?;
@@ -2125,6 +2134,7 @@ mod test {
         Ok(())
     }
 
+    #[cfg(feature = "live_tests")]
     #[tokio::test]
     async fn test_aws_1_13() -> Result<()> {
         let (splunk, aws) = setup().await?;
@@ -2136,6 +2146,7 @@ mod test {
         Ok(())
     }
 
+    #[cfg(feature = "live_tests")]
     #[tokio::test]
     async fn test_aws_1_15() -> Result<()> {
         let (splunk, aws) = setup().await?;
@@ -2148,6 +2159,7 @@ mod test {
         Ok(())
     }
 
+    #[cfg(feature = "live_tests")]
     #[tokio::test]
     async fn test_aws_1_16() -> Result<()> {
         let (splunk, aws) = setup().await?;
@@ -2163,6 +2175,7 @@ mod test {
         Ok(())
     }
 
+    #[cfg(feature = "live_tests")]
     #[tokio::test]
     async fn test_aws_1_17() -> Result<()> {
         let (splunk, aws) = setup().await?;
@@ -2175,6 +2188,7 @@ mod test {
         Ok(())
     }
 
+    #[cfg(feature = "live_tests")]
     #[tokio::test]
     async fn test_aws_1_19() -> Result<()> {
         let (splunk, aws) = setup().await?;
@@ -2185,6 +2199,7 @@ mod test {
         Ok(())
     }
 
+    #[cfg(feature = "live_tests")]
     #[tokio::test]
     async fn test_aws_1_20() -> Result<()> {
         let (splunk, aws) = setup().await?;
@@ -2195,6 +2210,7 @@ mod test {
         Ok(())
     }
 
+    #[cfg(feature = "live_tests")]
     #[tokio::test]
     async fn test_aws_1_22() -> Result<()> {
         let (splunk, aws) = setup().await?;
@@ -2206,6 +2222,7 @@ mod test {
         Ok(())
     }
 
+    #[cfg(feature = "live_tests")]
     #[tokio::test]
     async fn test_aws_2_1_1() -> Result<()> {
         let (splunk, aws) = setup().await?;
@@ -2221,6 +2238,7 @@ mod test {
         Ok(())
     }
 
+    #[cfg(feature = "live_tests")]
     #[tokio::test]
     async fn test_aws_2_1_2() -> Result<()> {
         let (splunk, aws) = setup().await?;
@@ -2239,6 +2257,7 @@ mod test {
         Ok(())
     }
 
+    #[cfg(feature = "live_tests")]
     #[tokio::test]
     async fn test_aws_2_1_4() -> Result<()> {
         let (splunk, aws) = setup().await?;
@@ -2257,6 +2276,7 @@ mod test {
         Ok(())
     }
 
+    #[cfg(feature = "live_tests")]
     #[tokio::test]
     async fn test_aws_2_1_4_accounts() -> Result<()> {
         let (splunk, aws) = setup().await?;
@@ -2332,6 +2352,7 @@ mod test {
         Ok(())
     }
 
+    #[cfg(feature = "live_tests")]
     #[tokio::test]
     async fn test_aws_3_8() -> Result<()> {
         let (splunk, aws) = setup().await?;

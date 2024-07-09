@@ -1036,8 +1036,9 @@ pub async fn m365(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
     Ok(())
 }
 
+#[cfg(feature = "live_tests")]
 #[cfg(test)]
-pub(crate) mod test {
+pub(crate) mod live_tests {
     use std::env;
 
     use super::{login, MsGraph};

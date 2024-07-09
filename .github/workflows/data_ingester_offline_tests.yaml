@@ -1,0 +1,45 @@
+---
+name: Data Ingester Azure Terraform
+
+on:
+  pull_requst:
+    paths:
+      - data_ingester/**
+  workflow_dispatch:
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+
+        # Rust
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly-2024-06-12
+          target: x86_64-unknown-linux-musl
+          default: true
+          components: rust-src, clippy
+
+      - uses: awalsh128/cache-apt-pkgs-action@v1
+        with:
+          packages: musl-tools
+          version: 1.0
+
+      - name: cargo audit
+        run: cargo install cargo-audit; cd data_ingester/data_ingester_workspace; cargo audit
+
+      - name: Cache build artifacts
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            data_ingester/data_ingester_workspace/target
+          key: cache-rust-target-${{ hashFiles('data_ingester/data_ingester_workspace/Cargo.lock') }}
+
+      - name: cargo build
+        run: cd data_ingester/data_ingester_workspace; cargo test

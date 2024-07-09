@@ -144,6 +144,7 @@ pub async fn threagile(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()>
     Ok(())
 }
 
+#[cfg(feature = "live_tests")]
 #[cfg(test)]
 mod test {
     use std::sync::Arc;

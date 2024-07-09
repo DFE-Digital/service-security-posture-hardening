@@ -34,3 +34,6 @@ features = [
 
 [lints]
 workspace = true
+
+[features]
+live_tests = []

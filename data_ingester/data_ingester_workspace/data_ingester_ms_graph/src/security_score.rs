@@ -36,6 +36,7 @@ impl ToHecEvents for &SecurityScores {
     }
 }
 
+#[cfg(feature = "live_tests")]
 #[cfg(test)]
 mod test {
     use crate::ms_graph::test::setup;

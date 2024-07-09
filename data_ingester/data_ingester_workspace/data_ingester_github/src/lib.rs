@@ -587,6 +587,7 @@ pub struct OrgMemberQuery;
 #[derive(Clone, Default, Debug, Serialize, Deserialize, PartialOrd, Eq, PartialEq)]
 struct DateTime(String);
 
+#[cfg(feature = "live_tests")]
 #[cfg(test)]
 mod test {
     use std::{borrow::Borrow, env};

@@ -289,16 +289,16 @@ mod test {
         Ok(())
     }
 
+    #[cfg(feature = "live_tests")]
     #[tokio::test]
-    #[ignore]
     async fn test_client_add_ip_to_allow_list() -> Result<()> {
         let acs = Acs::new("foo", "tokenbar")?;
         acs.add_search_api_ip_allow_list("1.2.3.4").await?;
         Ok(())
     }
 
+    #[cfg(feature = "live_tests")]
     #[tokio::test]
-    //    #[ignore]
     async fn test_client_grant_access_for_current_ip() -> Result<()> {
         let mut acs = Acs::new("foo", "tokenbar")?;
         acs.grant_access_for_current_ip().await?;

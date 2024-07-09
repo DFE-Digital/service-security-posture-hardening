@@ -127,6 +127,21 @@ impl MsGraphSource {
 
 #[cfg(test)]
 mod test {
+
+    use crate::msgraph_data::load_m365_toml;
+    use anyhow::Result;
+
+    #[test]
+    fn test_toml_load() -> Result<()> {
+        let sources = load_m365_toml()?;
+        assert!(!sources.is_empty());
+        Ok(())
+    }
+}
+
+#[cfg(feature = "live_tests")]
+#[cfg(test)]
+mod live_tests {
     use std::{env, sync::Arc};
 
     use crate::{ms_graph::login, msgraph_data::load_m365_toml};
@@ -134,15 +149,8 @@ mod test {
     use data_ingester_splunk::splunk::Splunk;
     use data_ingester_supporting::keyvault::get_keyvault_secrets;
 
-    #[test]
-    fn test_toml() -> Result<()> {
-        let sources = load_m365_toml()?;
-        assert!(!sources.is_empty());
-        Ok(())
-    }
-
     #[tokio::test]
-    async fn test_toml1() -> Result<()> {
+    async fn test_toml_live() -> Result<()> {
         let sources = load_m365_toml()?;
 
         let secrets = get_keyvault_secrets(&env::var("KEY_VAULT_NAME")?).await?;
