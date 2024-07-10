@@ -28,6 +28,5 @@ graphql_client = "0"
 [lints]
 workspace = true
 
-# [lints.rust]
-# missing_docs = "warn"
-# single-use-lifetimes = "warn"
+[features]
+live_tests = []

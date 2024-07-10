@@ -88,8 +88,13 @@ pub struct ContributingFactors {
 
 #[cfg(test)]
 mod test {
+    use std::collections::HashMap;
+
     use super::Qvs;
     use anyhow::Result;
+    use serde_json::{json, Value};
+
+    /// Checks that serialization and deserialization use the correct formats
     #[test]
     fn test_qvs_deserialization_serialization() -> Result<()> {
         let data = r#"
@@ -124,32 +129,50 @@ mod test {
     }
   }
 }"#;
+        // Deserialize into QVS
         let output = serde_json::from_str::<Qvs>(data)?;
+
+        // Serialize
         let result = serde_json::to_string_pretty(&output)?;
-        let expected = r#"{
-  "CVE-2021-36765": {
-    "id": "CVE-2021-36765",
-    "idType": "CVE",
-    "qvs": "28",
-    "qvsLastChangedDate": 1642032000,
-    "nvdPublishedDate": 1628086500,
-    "cvss": "5",
-    "cvssVersion": "v2"
-  },
-  "CVE-2021-36798": {
-    "id": "CVE-2021-36798",
-    "idType": "CVE",
-    "qvs": "78",
-    "qvsLastChangedDate": 1642550400,
-    "nvdPublishedDate": 1628514900,
-    "cvss": "5",
-    "cvssVersion": "v2",
-    "exploitMaturity": [
-      "poc"
-    ]
-  }
-}"#;
-        assert_eq!(expected, result);
+
+        // Deserialize into Value
+        let qvs = serde_json::from_str::<HashMap<String, Value>>(&result)?;
+        for (id, qv) in qvs.iter() {
+            match id.as_str() {
+                "CVE-2021-36765" => {
+                    let expected_data = vec![
+                        ("id", json!("CVE-2021-36765")),
+                        ("idType", json!("CVE")),
+                        ("qvs", json!("28")),
+                        ("qvsLastChangedDate", json!(1642032000)),
+                        ("nvdPublishedDate", json!(1628086500)),
+                        ("cvss", json!("5")),
+                        ("cvssVersion", json!("v2")),
+                    ];
+                    for (field, value) in expected_data.iter() {
+                        dbg!(field, value);
+                        assert_eq!(qv.get(field).expect("Field should exist"), value);
+                    }
+                }
+                "CVE-2021-36798" => {
+                    let expected_data = vec![
+                        ("id", json!("CVE-2021-36798")),
+                        ("idType", json!("CVE")),
+                        ("qvs", json!("78")),
+                        ("qvsLastChangedDate", json!(1642550400)),
+                        ("nvdPublishedDate", json!(1628514900)),
+                        ("cvss", json!("5")),
+                        ("cvssVersion", json!("v2")),
+                        ("exploitMaturity", json!(vec!["poc"])),
+                    ];
+                    for (field, value) in expected_data.iter() {
+                        dbg!(field, value);
+                        assert_eq!(qv.get(field).expect("Field should exist"), value);
+                    }
+                }
+                _ => unreachable!("Should be unreachable"),
+            }
+        }
         Ok(())
     }
 }

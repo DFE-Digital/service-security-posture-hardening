@@ -469,13 +469,6 @@ pub struct ReturnTypes {
     collection: Vec<ReturnTypeWrapper>,
 }
 
-impl ReturnTypes {
-    #[cfg(test)]
-    fn is_empty(&self) -> bool {
-        self.collection.is_empty()
-    }
-}
-
 impl ToHecEvents for &ReturnTypes {
     fn to_hec_events(&self) -> Result<Vec<HecEvent>> {
         Ok(self
@@ -505,8 +498,16 @@ impl ToHecEvents for &ReturnTypes {
     }
 }
 
+#[cfg(feature = "live_tests")]
+impl ReturnTypes {
+    fn is_empty(&self) -> bool {
+        self.collection.is_empty()
+    }
+}
+
+#[cfg(feature = "live_tests")]
 #[cfg(test)]
-pub(crate) mod test {
+pub(crate) mod live_tests {
     use std::env;
 
     use crate::azure_rest::Subscriptions;
@@ -674,20 +675,6 @@ impl ToHecEvents for &RoleAssignments {
         "azure_resource_graph"
     }
 }
-
-// impl ToHecEvents for &HashMap<String, RoleAssignment> {
-//     type Item = RoleAssignment;
-//     fn source(&self) -> &str {
-//         "azure_rest"
-//     }
-
-//     fn sourcetype(&self) -> &str {
-//         "SSPHP.azure.role_assignment"
-//     }
-//     fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
-//         Box::new(self.values())
-//     }
-// }
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct RoleDefinition(SDKRoleDefinition);

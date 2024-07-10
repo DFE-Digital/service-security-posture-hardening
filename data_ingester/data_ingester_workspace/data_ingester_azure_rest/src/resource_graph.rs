@@ -350,6 +350,7 @@ impl RateLimit {
     }
 }
 
+#[cfg(feature = "live_tests")]
 #[cfg(test)]
 #[tokio::test]
 async fn test_azure_resource_graph() -> Result<()> {

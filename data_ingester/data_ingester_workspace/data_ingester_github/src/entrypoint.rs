@@ -238,6 +238,7 @@ async fn github_collect_installation_org(
     Ok(())
 }
 
+#[cfg(feature = "live_tests")]
 #[cfg(test)]
 mod test {
     use std::{env, sync::Arc};

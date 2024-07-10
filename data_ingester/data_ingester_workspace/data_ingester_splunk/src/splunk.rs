@@ -252,30 +252,37 @@ impl Splunk {
 }
 
 // Needs Splunk Creds
-#[ignore]
-#[tokio::test]
-async fn send_to_splunk() {
-    let splunk = Splunk::new("", "").unwrap();
-    let data = std::collections::HashMap::from([("aktest", "fromrust")]);
-    let he = HecEvent::new(&data, "msgraph_rust", "test_event").unwrap();
-    splunk.send(&he).await;
-}
 
-// Needs Splunk Creds
-#[ignore]
-#[tokio::test]
-async fn send_batch_to_splunk() {
-    use std::collections::HashMap;
-    let splunk = Splunk::new("", "").unwrap();
-    let mut events = Vec::new();
-    let data = HashMap::from([("aktest0", "fromrust")]);
-    let he = HecEvent::new(&data, "msgraph_rust", "test_event").unwrap();
-    events.push(he);
+#[cfg(feature = "live_tests")]
+#[cfg(test)]
+pub(crate) mod live_tests {
 
-    let data1 = HashMap::from([("aktest1", "fromrust")]);
-    let he1 = HecEvent::new(&data1, "msgraph_rust", "test_event").unwrap();
-    events.push(he1);
-    splunk.send_batch(&events[..]).await.unwrap();
+    #[tokio::test]
+    async fn send_to_splunk() {
+        let splunk = Splunk::new(
+            secrets.splunk_host.as_ref().context("No value")?,
+            secrets.splunk_token.as_ref().context("No value")?,
+        )?;
+        let splunk = Splunk::new("", "").unwrap();
+        let data = std::collections::HashMap::from([("aktest", "fromrust")]);
+        let he = HecEvent::new(&data, "msgraph_rust", "test_event").unwrap();
+        splunk.send(&he).await;
+    }
+
+    #[tokio::test]
+    async fn send_batch_to_splunk() {
+        use std::collections::HashMap;
+        let splunk = Splunk::new("", "").unwrap();
+        let mut events = Vec::new();
+        let data = HashMap::from([("aktest0", "fromrust")]);
+        let he = HecEvent::new(&data, "msgraph_rust", "test_event").unwrap();
+        events.push(he);
+
+        let data1 = HashMap::from([("aktest1", "fromrust")]);
+        let he1 = HecEvent::new(&data1, "msgraph_rust", "test_event").unwrap();
+        events.push(he1);
+        splunk.send_batch(&events[..]).await.unwrap();
+    }
 }
 
 fn batch_lines<I, T: Serialize>(it: &mut I) -> Option<String>

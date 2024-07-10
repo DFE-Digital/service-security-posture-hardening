@@ -59,6 +59,7 @@ impl<S: Subscriber> Layer<S> for SplunkLayer {
     }
 }
 
+#[cfg(feature = "live_tests")]
 #[cfg(test)]
 mod test {
     use crate::splunk::Splunk;

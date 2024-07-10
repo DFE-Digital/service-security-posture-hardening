@@ -177,7 +177,7 @@ mod test {
         index: String,
     }
 
-    #[ignore]
+    #[cfg(feature = "live_tests")]
     #[tokio::test]
     async fn test_splunk_search() -> Result<()> {
         let client = SplunkApiClient::new(

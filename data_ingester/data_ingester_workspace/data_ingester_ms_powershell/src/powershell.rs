@@ -1013,6 +1013,7 @@ $pfx = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2
     }
 }
 
+#[cfg(feature = "live_tests")]
 #[cfg(test)]
 mod test {
 
