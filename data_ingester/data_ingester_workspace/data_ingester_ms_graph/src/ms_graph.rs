@@ -346,15 +346,18 @@ impl MsGraph {
             .users()
             .list_user()
             .select(&[
-                "id",
+                "account_enabled",
+                "assignedPlans",
+                "description",
                 "displayName",
                 "givenName",
-                "surname",
-                "description",
-                "userPrincipalName",
-                "transitiveMemberOf",
-                "assignedPlans",
+                "id",
+                "mail",
+                "onPremisesSamAccountName",
                 "onPremisesSyncEnabled",
+                "surname",
+                "transitiveMemberOf",
+                "userPrincipalName",
                 "userType",
                 // TODO Needs AuditLog.Read.All MS Graph permission
                 // "signInActivity",
