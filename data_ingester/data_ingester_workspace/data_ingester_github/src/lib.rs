@@ -271,12 +271,23 @@ impl OctocrabGit {
         self.get_collection(&uri).await
     }
 
+    /// Get thet default code scanning setup for a repo
     pub(crate) async fn repo_code_scanning_default_setup(
         &self,
         repo: &str,
     ) -> Result<GithubResponses> {
         let uri = format!("/repos/{repo}/code-scanning/default-setup");
         self.get_collection(&uri).await
+    }
+
+    /// Get 30 most recent code scanning analyses for a repo
+    ///
+    /// https://docs.github.com/en/rest/code-scanning/code-scanning?apiVersion=2022-11-28#list-code-scanning-analyses-for-a-repository
+    pub(crate) async fn repo_code_scanning_analyses(&self, repo: &str) -> Result<GithubResponses> {
+        let uri = format!("/repos/{repo}/code-scanning/analyses?per_page=1");
+        self.get_single_page(&uri)
+            .await
+            .with_context(|| format!("Using Octocrab to get url: {}", uri))
     }
 
     /// Get GitHub code scanning alerts for `repo`
@@ -401,6 +412,51 @@ impl OctocrabGit {
         Ok(GithubResponses { inner: responses })
     }
 
+    /// Get a relative uri from api.github.com.
+    ///
+    /// Only gets the first page of results
+    async fn get_single_page(&self, uri: &str) -> Result<GithubResponses> {
+        let next_link = GithubNextLink::from_str(uri);
+
+        let response = self
+            .client
+            ._get(next_link.next.context("no link available")?)
+            .await
+            .with_context(|| format!("Using Octocrab to get url: {}", uri))?;
+
+        let status = response.status().as_u16();
+        let mut body = response
+            .collect()
+            .await
+            .context("collect body")?
+            .to_bytes()
+            .slice(0..);
+
+        if body.is_empty() {
+            body = "{}".into();
+        }
+
+        let body = match serde_json::from_slice(&body).context("Deserialize body") {
+            Ok(ok) => ok,
+            Err(err) => {
+                let body_as_string = String::from_utf8_lossy(&body);
+                error!(
+                    "Error deserialising body from Github {} {}: {}",
+                    uri, err, body_as_string
+                );
+                anyhow::bail!(err);
+            }
+        };
+
+        let responses = vec![GithubResponse {
+            response: body,
+            source: uri.to_string(),
+            ssphp_http_status: status,
+        }];
+
+        Ok(GithubResponses { inner: responses })
+    }
+
     /// Get a relative uri from api.github.com and exhaust all next links.
     ///
     /// Returns all requests as seperate entries complete with status codes
@@ -410,7 +466,11 @@ impl OctocrabGit {
         let mut responses = vec![];
 
         while let Some(next) = next_link.next {
-            let response = self.client._get(next).await.context("Get url")?;
+            let response = self
+                .client
+                ._get(next)
+                .await
+                .with_context(|| format!("Using Octocrab to get url: {}", uri))?;
 
             next_link = GithubNextLink::from_response(&response)
                 .await
@@ -433,8 +493,8 @@ impl OctocrabGit {
                 Err(err) => {
                     let body_as_string = String::from_utf8_lossy(&body);
                     error!(
-                        "Error deserialising body from Github {}: {}",
-                        err, body_as_string
+                        "Error deserialising body from Github {} {}: {}",
+                        uri, err, body_as_string
                     );
                     anyhow::bail!(err);
                 }
@@ -718,7 +778,7 @@ mod test {
     }
 
     #[tokio::test]
-    async fn test_github_repo_code_scanning() -> Result<()> {
+    async fn test_github_repo_code_scanning_default_setup() -> Result<()> {
         let client = TestClient::new().await;
         client
             .repo_iter(|repo_name: &str| {
@@ -726,6 +786,17 @@ mod test {
                     .client
                     .repo_code_scanning_default_setup(repo_name)
                     .boxed()
+            })
+            .await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_github_repo_code_scanning_analyses() -> Result<()> {
+        let client = TestClient::new().await;
+        client
+            .repo_iter(|repo_name: &str| {
+                client.client.repo_code_scanning_analyses(repo_name).boxed()
             })
             .await?;
         Ok(())
