@@ -24,32 +24,33 @@ use std::ops::Deref;
 #[derive(Debug, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct User<'a> {
-    pub(crate) id: String,
+    account_enabled: Option<bool>,
     #[serde(skip_serializing_if = "Vec::is_empty")]
     assigned_plans: Vec<AssignedPlan>,
     // business_phones: Option<Vec<String>>,
+    description: Option<String>,
     pub(crate) display_name: Option<String>,
     given_name: Option<String>,
-    description: Option<String>,
+    pub(crate) id: String,
     //job_title: Option<String>,
     mail: Option<String>,
     //mobile_phone: Option<String>,
     //office_location: Option<String>,
+    on_premises_sam_account_name: Option<String>,
+    pub(crate) on_premises_sync_enabled: Option<bool>,
     //preferred_language: Option<String>,
     surname: Option<String>,
+    pub(crate) transitive_member_of: Option<Vec<GroupOrRole>>,
     user_principal_name: Option<String>,
     // Requires scope: AuditLog.Read.All
     sign_in_activity: Option<Value>,
-    account_enabled: Option<bool>,
-    pub(crate) transitive_member_of: Option<Vec<GroupOrRole>>,
+    user_type: Option<String>,
+
+    // Custom attributes
+    pub azure_roles: Option<UserAzureRoles>,
     #[serde(skip_deserializing)]
     conditional_access_policies: Option<Vec<UserConditionalAccessPolicy<'a>>>,
-    // TODO!
     is_privileged: Option<bool>,
-    // TODO! This might expand the json too much?
-    pub azure_roles: Option<UserAzureRoles>,
-    pub(crate) on_premises_sync_enabled: Option<bool>,
-    user_type: Option<String>,
 }
 
 /// Used to represent an AAD users roles in Azure (Cloud) subscriptions
@@ -109,26 +110,22 @@ impl User<'_> {
     #[cfg(test)]
     pub fn new(id: String, display_name: String) -> Self {
         Self {
-            id,
+            account_enabled: None,
             assigned_plans: vec![],
-            //business_phones: None,
+            azure_roles: None,
+            conditional_access_policies: None,
+            description: None,
             display_name: Some(display_name),
             given_name: None,
-            //job_title: None,
-            description: None,
-            mail: None,
-            //mobile_phone: None,
-            //office_location: None,
-            //preferred_language: None,
-            surname: None,
-            user_principal_name: None,
-            sign_in_activity: None,
-            account_enabled: None,
-            transitive_member_of: None,
-            conditional_access_policies: None,
+            id,
             is_privileged: None,
-            azure_roles: None,
+            mail: None,
+            on_premises_sam_account_name: None,
             on_premises_sync_enabled: None,
+            sign_in_activity: None,
+            surname: None,
+            transitive_member_of: None,
+            user_principal_name: None,
             user_type: None,
         }
     }
