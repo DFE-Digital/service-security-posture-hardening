@@ -148,6 +148,13 @@ async fn github_collect_installation_org(
         .await?;
 
         try_collect_send(
+            &format!("Code scanning setup for {repo_name}"),
+            github_client.repo_code_scanning_analyses(&repo_name),
+            splunk,
+        )
+        .await?;
+
+        try_collect_send(
             &format!("Code scanning alerts for {repo_name}"),
             github_client.repo_code_scanning_alerts(&repo_name),
             splunk,
