@@ -2,7 +2,7 @@
   
 
   <label>Foundational Systems : Security Posture Compliance Dashboard</label>
-  <description>_DEV v5.1.0</description>
+  <description>{{environment}} v5.1.0</description>
 
   <init>
     <unset token="tkn_ready"></unset>
@@ -73,7 +73,7 @@
           <query>
   | makeresults
 
-  `ssphp_metrics_eval_field_colors_DEV`
+  `ssphp_metrics_eval_field_colors{{environment}}`
 
   | table tkn_*
           </query>
@@ -237,7 +237,7 @@
       <table>
         <search>
           <query>
-| loadjob savedsearch="nobody:$tkn_current_app$:ssphp_create_dashboard_dataset_posture_DEV"
+| loadjob savedsearch="nobody:$tkn_current_app$:ssphp_create_dashboard_dataset_posture{{environment}}"
 | search line_type="summary" AND ssphp.source.foundational_system="*"
 | eval compliant_perc='compliant_perc'."%"
 | table ssphp.source.foundational_system, compliant_perc, compliant_abs, compliant_color
@@ -311,7 +311,7 @@
             <table>
                 <search>
                     <query>
-    | tstats max(_time) as last_run where `ssphp_metrics_data_index_DEV` by index, sourcetype
+    | tstats max(_time) as last_run where `ssphp_metrics_data_index{{environment}}` by index, sourcetype
     | eval last_run=strftime('last_run',"%Y-%m-%d %H:%M:%S")
     | table index, sourcetype, last_run
     | sort 0 - last_run
@@ -326,7 +326,7 @@
             <table>
                 <search>
                     <query>
-`ssphp_summary_index_DEV` earliest=-30d@d latest=now ssphp.use_case.savedsearch="*_DEV"
+`ssphp_summary_index{{environment}}` earliest=-30d@d latest=now ssphp.use_case.savedsearch="*{{environment}}"
 | stats values(ssphp.use_case.savedsearch) as ssphp.use_case.savedsearch, max(SSPHP_RUN) as SSPHP_RUN by ssphp.use_case.id
 | eval last_run=strftime('SSPHP_RUN',"%Y-%m-%d %H:%M:%S")
 | table ssphp.use_case.id, ssphp.use_case.savedsearch, last_run, SSPHP_RUN
