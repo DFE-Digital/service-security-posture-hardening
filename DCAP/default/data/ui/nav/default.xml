@@ -7,6 +7,7 @@
       <a href="ssphp_foundational_systems_service?form.tkn__service=dns">DNS</a>
       <a href="ssphp_foundational_systems_service?form.tkn__service=aad">Entra AAD</a>
       <a href="ssphp_foundational_systems_service?form.tkn__service=m365">M365</a>
+      <a href="ssphp_foundational_systems_service?form.tkn__service=github">GitHub</a>
     </collection>
     <a href="ssphp_foundational_systems_dashboard_help">Dashboard Help</a>
   </collection>
