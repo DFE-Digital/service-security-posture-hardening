@@ -1,11 +1,8 @@
-{% if environment=="_DEV" %}
-  <dashboard version="1.1" theme="light" hideFilters="true" script="js/table_cell_color.js">
-{% else %}
-  <dashboard version="1.1" theme="dark" hideFilters="true" script="js/table_cell_color.js">
-{% endif %}  
+<dashboard version="1.1" theme="light" hideFilters="true" script="js/table_cell_color.js">
+  
 
-  <label>Foundational Systems : Security Posture Dashboard</label>
-  <description>{{environment}} v5.0.3</description>
+  <label>Foundational Systems : Security Posture Compliance Dashboard</label>
+  <description>{{environment}} v5.1.0</description>
 
   <init>
     <unset token="tkn_ready"></unset>
@@ -30,7 +27,22 @@
       </change>
     </input>
 
-{% include 'default/data/ui/views/ssphp_dashboard_templates.d/ssphp_footer_menu_template.xml' %}
+<input type="radio" token="tkn_footer" searchWhenChanged="true">
+    <label>Show Dashboard Details</label>
+    <choice value="s">Show</choice>
+    <choice value="h">Hide</choice>
+    <default>h</default>
+    <initialValue>h</initialValue>
+    <change>
+      <condition value="s">
+        <set token="tkn_show_footer">true</set>
+      </condition>
+      <condition>
+        <unset token="tkn_show_footer"></unset>
+      </condition>
+    </change>
+  </input>
+  
 
   </fieldset>
 
@@ -150,20 +162,33 @@
         <div class="absolute" style="background:$tkn_AAD_color$;"><a href="ssphp_foundational_systems_service?form.tkn__service=aad" target="_blank">$tkn_AAD_score_abs$</a></div>
         <div class="undervalue" style="background:$tkn_AAD_color$;"><a href="ssphp_foundational_systems_service?form.tkn__service=aad" target="_blank">AAD Entra</a></div>
       </html>
-    
+  </row>
+
+  <row depends="$tkn_ready$,$tkn_show_abs$">
       <html>
         <div class="absolute" style="background:$tkn_AZURE_color$;"><a href="ssphp_foundational_systems_service?form.tkn__service=azure" target="_blank">$tkn_AZURE_score_abs$</a></div>
         <div class="undervalue" style="background:$tkn_AZURE_color$;"><a href="ssphp_foundational_systems_service?form.tkn__service=azure" target="_blank">AZURE</a></div>
       </html>
+  </row>
 
+  <row depends="$tkn_ready$,$tkn_show_abs$">
       <html>
         <div class="absolute" style="background:$tkn_DNS_color$;"><a href="ssphp_foundational_systems_service?form.tkn__service=dns" target="_blank">$tkn_DNS_score_abs$</a></div>
-        <div class="undervalue" style="background:$tkn_DNS_color$;"><a href="ssphp_foundational_systems_service?form.tkn__service=dns" target="_blank">DNS</a></div>
+        <div class="undervalue" style="background:$tkn_DNS_color$;"><a href="ssphp_foundational_systems_service?form.tkn__service=dns" target="_blank">DNS [AWS]</a></div>
       </html>
+  </row>
 
+  <row depends="$tkn_ready$,$tkn_show_abs$">
       <html>
         <div class="absolute" style="background:$tkn_M365_color$;"><a href="ssphp_foundational_systems_service?form.tkn__service=m365" target="_blank">$tkn_M365_score_abs$</a></div>
         <div class="undervalue" style="background:$tkn_M365_color$;"><a href="ssphp_foundational_systems_service?form.tkn__service=m365" target="_blank">M365</a></div>
+      </html>
+  </row>
+
+  <row depends="$tkn_ready$,$tkn_show_abs$">
+      <html>
+        <div class="absolute" style="background:$tkn_GITHUB_color$;"><a href="ssphp_foundational_systems_service?form.tkn__service=github" target="_blank">$tkn_GITHUB_score_abs$</a></div>
+        <div class="undervalue" style="background:$tkn_GITHUB_color$;"><a href="ssphp_foundational_systems_service?form.tkn__service=github" target="_blank">GITHUB</a></div>
       </html>
   </row>
   
@@ -173,20 +198,33 @@
         <div class="absolute" style="background:$tkn_AAD_color$;"><a href="ssphp_foundational_systems_service?form.tkn__service=aad" target="_blank">$tkn_AAD_score_perc$</a></div>
         <div class="undervalue" style="background:$tkn_AAD_color$;"><a href="ssphp_foundational_systems_service?form.tkn__service=aad" target="_blank">AAD Entra</a></div>
       </html>
-    
+  </row>
+  
+  <row depends="$tkn_ready$,$tkn_show_perc$">
       <html>
         <div class="absolute" style="background:$tkn_AZURE_color$;"><a href="ssphp_foundational_systems_service?form.tkn__service=azure" target="_blank">$tkn_AZURE_score_perc$</a></div>
         <div class="undervalue" style="background:$tkn_AZURE_color$;"><a href="ssphp_foundational_systems_service?form.tkn__service=azure" target="_blank">AZURE</a></div>
       </html>
-
+  </row>
+  
+  <row depends="$tkn_ready$,$tkn_show_perc$">
       <html>
         <div class="absolute" style="background:$tkn_DNS_color$;"><a href="ssphp_foundational_systems_service?form.tkn__service=dns" target="_blank">$tkn_DNS_score_perc$</a></div>
-        <div class="undervalue" style="background:$tkn_DNS_color$;"><a href="ssphp_foundational_systems_service?form.tkn__service=dns" target="_blank">DNS</a></div>
+        <div class="undervalue" style="background:$tkn_DNS_color$;"><a href="ssphp_foundational_systems_service?form.tkn__service=dns" target="_blank">DNS [AWS]</a></div>
       </html>
-
+  </row>
+  
+  <row depends="$tkn_ready$,$tkn_show_perc$">
       <html>
         <div class="absolute" style="background:$tkn_M365_color$;"><a href="ssphp_foundational_systems_service?form.tkn__service=m365" target="_blank">$tkn_M365_score_perc$</a></div>
         <div class="undervalue" style="background:$tkn_M365_color$;"><a href="ssphp_foundational_systems_service?form.tkn__service=m365" target="_blank">M365</a></div>
+      </html>
+  </row>
+  
+  <row depends="$tkn_ready$,$tkn_show_perc$">
+      <html>
+        <div class="absolute" style="background:$tkn_GITHUB_color$;"><a href="ssphp_foundational_systems_service?form.tkn__service=github" target="_blank">$tkn_GITHUB_score_perc$</a></div>
+        <div class="undervalue" style="background:$tkn_GITHUB_color$;"><a href="ssphp_foundational_systems_service?form.tkn__service=github" target="_blank">GITHUB</a></div>
       </html>
   </row>
   
@@ -223,6 +261,10 @@
             <set token="tkn_M365_color">$result.M365_compliant_color$</set>
             <set token="tkn_M365_score_abs">$result.M365_compliant_abs$</set>
             <set token="tkn_M365_score_perc">$result.M365_compliant_perc$</set>
+            
+            <set token="tkn_GITHUB_color">$result.GITHUB_compliant_color$</set>
+            <set token="tkn_GITHUB_score_abs">$result.GITHUB_compliant_abs$</set>
+            <set token="tkn_GITHUB_score_perc">$result.GITHUB_compliant_perc$</set>
 
             <set token="tkn_ready">true</set>
           </done>
@@ -231,8 +273,69 @@
     </panel>
   </row>
 
-{% include 'default/data/ui/views/ssphp_dashboard_templates.d/ssphp_footer_template.xml' %}
+<row depends="$tkn_show_footer$">
+    <panel depends="$never_show$">
+        <table>
+            <search>
+                <query>
+| rest /services/authentication/current-context splunk_server=local 
+| table username, roles
+| eval roles=case(username="ian.pearl@education.gov.uk",mvappend('roles',"dfe_ssphp_service_user_s194"),
+                    username="alex.kinnane@education.gov.uk",mvappend('roles',"dfe_ssphp_service_user_s194"),
+                    username="sam.pritchard@education.gov.uk",mvappend('roles',"dfe_ssphp_service_user_s194"),
+                    1==1,'roles')
+| eval roles=mvfilter(match('roles',"dfe_ssphp_service_user_s\d{3}"))
+| where isnotnull('roles')
+| rex field=roles "dfe_ssphp_service_user_(?&lt;service&gt;s\d{3})$"
+| eval app=$env:app|s$
+| table username, service, app
+                </query>
+                <done>
+                    <set token="tkn__current_user_name">$result.username$</set>
+                    <set token="tkn__current_user_service">$result.service$</set>
+                    <set token="tkn__current_application">$result.app$</set>
+                </done>
+            </search>
+        </table>
+    </panel>
 
-{% include 'default/data/ui/views/ssphp_dashboard_templates.d/ssphp_footer_debug_template.xml' %}
+    <panel>
+        <html>Current User : $tkn__current_user_name$&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;Current App : $tkn__current_application$&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;User Service : $tkn__current_user_service$&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;Version : b8426922ff920f75f2db6b3f72dcbd42795a75f6</html>
+    </panel>
+</row>
+
+
+    <row depends="$show_debug$">
+        <panel>
+            <title>DEBUG DATA : Data Sources</title>
+            <table>
+                <search>
+                    <query>
+    | tstats max(_time) as last_run where `ssphp_metrics_data_index{{environment}}` by index, sourcetype
+    | eval last_run=strftime('last_run',"%Y-%m-%d %H:%M:%S")
+    | table index, sourcetype, last_run
+    | sort 0 - last_run
+                    </query>
+                </search>
+                <option name="count">50</option>
+            </table>
+        </panel>
+
+        <panel>
+            <title>DEBUG DATA : Use Cases</title>
+            <table>
+                <search>
+                    <query>
+`ssphp_summary_index{{environment}}` earliest=-30d@d latest=now ssphp.use_case.savedsearch="*{{environment}}"
+| stats values(ssphp.use_case.savedsearch) as ssphp.use_case.savedsearch, max(SSPHP_RUN) as SSPHP_RUN by ssphp.use_case.id
+| eval last_run=strftime('SSPHP_RUN',"%Y-%m-%d %H:%M:%S")
+| table ssphp.use_case.id, ssphp.use_case.savedsearch, last_run, SSPHP_RUN
+| sort 0 - last_run
+                    </query>
+                </search>
+                <option name="count">50</option>
+            </table>
+        </panel>
+    </row>
 
 </dashboard>

@@ -5,7 +5,7 @@
 {% endif %}  
 
   <label>Security Posture Continuous Assurance : Service Dashboard</label>
-  <description>{{environment}} v2.0.25</description>
+  <description>{{environment}} v2.0.26</description>
 
   
   <init>
@@ -23,6 +23,7 @@
       <choice value="dns">DNS</choice>
       <choice value="aad">Entra AAD</choice>
       <choice value="m365">M365</choice>
+      <choice value="github">GitHub</choice>
       <selectFirstChoice>true</selectFirstChoice>
     </input>
 

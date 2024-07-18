@@ -5,7 +5,7 @@
 {% endif %}
 
   <label>Security Posture Continuous Assurance : Control Detail Dashboard</label>
-  <description>{{environment}} v3.1.3</description>
+  <description>{{environment}} v3.1.7</description>
   
   <init>
     <unset token="tkn_show_dashboard"></unset>
@@ -21,6 +21,9 @@
 
     <set token="tkn_aws_2_cis_doc_link">https://educationgovuk-my.sharepoint.com/:b:/r/personal/ian_pearl_education_gov_uk/Documents/CIS%20BENCHMARK%20DOCS/CIS_Amazon_Web_Services_Foundations_Benchmark_v2.0.0.pdf?csf=1&amp;web=1&amp;e=fwOaIK</set>
     <set token="tkn_aws_2_cis_doc_name">CIS_Amazon_Web_Services_Foundations_Benchmark_v2.0.0.pdf</set>
+
+    <set token="tkn_github_1_cis_doc_link">https://educationgovuk-my.sharepoint.com/personal/ian_pearl_education_gov_uk/Documents/CIS%20BENCHMARK%20DOCS/CIS%20GitHub%20Benchmark%20v1.0.0.pdf</set>
+    <set token="tkn_github_1_cis_doc_name">CIS GitHub Benchmark v1.0.0.pdf</set>
   </init>
 
   <fieldset submitButton="false">
@@ -58,8 +61,8 @@
       <table>
         <search>
           <query>
-`ssphp_summary_index{{environment}}` ssphp.use_case.id=$tkn_use_case_id$
-    [| search `ssphp_summary_index{{environment}}` ssphp.use_case.id=$tkn_use_case_id$
+`ssphp_summary_index{{environment}}` ssphp.use_case.id=$tkn_use_case_id$ NOT ssphp.use_case.savedsearch="*_svc*"
+    [| search `ssphp_summary_index{{environment}}` ssphp.use_case.id=$tkn_use_case_id$ NOT ssphp.use_case.savedsearch="*_svc*"
       | stats max(SSPHP_RUN) as SSPHP_RUN
       | return SSPHP_RUN]
 
@@ -109,10 +112,12 @@
 | eval doc_link=case('fs'="M365",$tkn_m365_2_cis_doc_link|s$,
                      'fs'="DNS",$tkn_aws_2_cis_doc_link|s$,
                      'fs'="AZURE",$tkn_azure_2_cis_doc_link|s$,
+                     upper('fs')="GITHUB",$tkn_github_1_cis_doc_link|s$,
                      1==1,"Document not Available"),
        doc_name=case('fs'="M365",$tkn_m365_2_cis_doc_name|s$,
                      'fs'="DNS",$tkn_aws_2_cis_doc_name|s$,
                      'fs'="AZURE",$tkn_azure_2_cis_doc_name|s$,
+                     upper('fs')="GITHUB",$tkn_github_1_cis_doc_name|s$,
                      1==1,"Document not Available")
 
 | table ssphp*, fs, notfs, control, safeguard, asset_type, title, description, score_color, compliance_status, last_run, doc_link, doc_name
