@@ -174,7 +174,7 @@
   <row depends="$tkn_ready$,$tkn_show_abs$">
       <html>
         <div class="absolute" style="background:$tkn_DNS_color$;"><a href="ssphp_foundational_systems_service?form.tkn__service=dns" target="_blank">$tkn_DNS_score_abs$</a></div>
-        <div class="undervalue" style="background:$tkn_DNS_color$;"><a href="ssphp_foundational_systems_service?form.tkn__service=dns" target="_blank">AWS</a></div>
+        <div class="undervalue" style="background:$tkn_DNS_color$;"><a href="ssphp_foundational_systems_service?form.tkn__service=dns" target="_blank">DNS [AWS]</a></div>
       </html>
   </row>
 
@@ -210,7 +210,7 @@
   <row depends="$tkn_ready$,$tkn_show_perc$">
       <html>
         <div class="absolute" style="background:$tkn_DNS_color$;"><a href="ssphp_foundational_systems_service?form.tkn__service=dns" target="_blank">$tkn_DNS_score_perc$</a></div>
-        <div class="undervalue" style="background:$tkn_DNS_color$;"><a href="ssphp_foundational_systems_service?form.tkn__service=dns" target="_blank">AWS</a></div>
+        <div class="undervalue" style="background:$tkn_DNS_color$;"><a href="ssphp_foundational_systems_service?form.tkn__service=dns" target="_blank">DNS [AWS]</a></div>
       </html>
   </row>
   
