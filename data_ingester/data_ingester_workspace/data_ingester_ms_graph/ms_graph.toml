@@ -71,7 +71,7 @@ permission_grant_policies = { endpoint = "/v1.0/policies/permissionGrantPolicies
 ] }
 
 # Azure support recommended using the beta endpoint
-role_eligiblity_schedule = { endpoint = "/beta/roleManagement/directory/roleAssignmentScheduleInstances?$skip=3&$top=2&$expand=activatedUsing,appScope,directoryScope,principal,roleDefinition", permissions_required = [
+role_eligiblity_schedule = { endpoint = "/beta/roleManagement/directory/roleAssignmentScheduleInstances?$expand=activatedUsing,appScope,directoryScope,principal,roleDefinition", permissions_required = [
   "",
 ], cis_controls = [
   { filename = "CIS_Microsoft_365_Foundations_Benchmark_v2.0.0.pdf", control_id = "1.1.15" },
