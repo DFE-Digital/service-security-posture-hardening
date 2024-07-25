@@ -4,6 +4,7 @@
   <dashboard theme="dark" version="1.1" hideFilters="true">
 {% endif %}
 
+
 <label>Security Posture Continuous Assurance : Failed Control Dashboard</label>
 <description>{{environment}} v1.0.1</description>
 
@@ -12,12 +13,15 @@
       <table>
         <search>
           <query>
+
 `ssphp_summary_index{{environment}}` earliest=-2d@d latest=now
+
       (ssphp.use_case.id="azure*" OR ssphp.use_case.id="dns*" OR ssphp.use_case.id="m365*" OR ssphp.use_case.id="aad*" OR (ssphp.use_case.id="github*" AND ssphp.use_case.savedsearch="*_fs*"))
       ssphp.use_case.id!="*_000"
       ssphp.error.no_records="true"
 
       [| search `ssphp_summary_index{{environment}}` earliest=-2d@d latest=now 
+
           (ssphp.use_case.id="azure*" OR ssphp.use_case.id="dns*" OR ssphp.use_case.id="m365*" OR ssphp.use_case.id="aad*" OR (ssphp.use_case.id="github*" AND ssphp.use_case.savedsearch="*_fs*")) ssphp.use_case.id!="*_000" 
           ssphp.error.no_records="true"
           

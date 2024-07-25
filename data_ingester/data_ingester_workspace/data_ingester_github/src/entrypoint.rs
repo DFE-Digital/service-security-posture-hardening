@@ -39,6 +39,8 @@ async fn github_app(github_app: &GitHubApp, splunk: &Arc<Splunk>) -> Result<()> 
         .send()
         .await
         .context("Getting installations for github app")?;
+
+    let mut tasks = vec![];
     for installation in installations {
         info!("Installation ID: {}", installation.id);
         if installation.account.r#type != "Organization" {
@@ -48,37 +50,44 @@ async fn github_app(github_app: &GitHubApp, splunk: &Arc<Splunk>) -> Result<()> 
             .for_installation_id(installation.id)
             .await
             .context("build octocrabgit client")?;
-        let org_name = &installation.account.login.to_string();
+        let org_name = installation.account.login.to_string();
         info!("Installation org name: {}", &org_name);
-        github_collect_installation_org(&installation_client, org_name, splunk)
-            .await
-            .context("Collect data for installation")?;
+        tasks.push(tokio::spawn(github_collect_installation_org(
+            installation_client,
+            org_name,
+            splunk.clone(),
+        )));
+    }
+
+    for task in tasks {
+        let _ = task.await
+            .context("Running GitHub collection for all installations")?;
     }
     Ok(())
 }
 
 async fn github_collect_installation_org(
-    github_client: &OctocrabGit,
-    org_name: &str,
-    splunk: &Arc<Splunk>,
+    github_client: OctocrabGit,
+    org_name: String,
+    splunk: Arc<Splunk>,
 ) -> Result<()> {
     info!("Starting collection for {}", org_name);
     try_collect_send(
         &format!("Org Settings for {org_name}"),
-        github_client.org_settings(org_name),
-        splunk,
+        github_client.org_settings(&org_name),
+        &splunk,
     )
     .await?;
 
     try_collect_send(
         &format!("Org Settings for {org_name}"),
-        github_client.graphql_org_members_query(org_name),
-        splunk,
+        github_client.graphql_org_members_query(&org_name),
+        &splunk,
     )
     .await?;
 
     let org_repos = github_client
-        .org_repos(org_name)
+        .org_repos(&org_name)
         .await
         .context("Getting repos for {org_name}")?;
     info!("Retreived {} repos for {}", org_repos.inner.len(), org_name);
@@ -92,7 +101,7 @@ async fn github_collect_installation_org(
         .context("Sending events to Splunk")?;
 
     let (teams, mut teams_org) = github_client
-        .org_teams_with_children(org_name)
+        .org_teams_with_children(&org_name)
         .await
         .context("Getting Teams for {org_name}")?;
 
@@ -122,70 +131,70 @@ async fn github_collect_installation_org(
         try_collect_send(
             &format!("Getting Semgrep artifacts for {repo_name}"),
             github_client.repo_get_sarif_artifacts(repo_name.as_str(), "semgrep"),
-            splunk,
+            &splunk,
         )
         .await?;
 
         try_collect_send(
             &format!("Collaborators for {repo_name}"),
             github_client.repo_collaborators(&repo_name),
-            splunk,
+            &splunk,
         )
         .await?;
 
         try_collect_send(
             &format!("Teams for {repo_name}"),
             github_client.repo_teams(&repo_name),
-            splunk,
+            &splunk,
         )
         .await?;
 
         try_collect_send(
             &format!("Code scanning setup for {repo_name}"),
             github_client.repo_code_scanning_default_setup(&repo_name),
-            splunk,
+            &splunk,
         )
         .await?;
 
         try_collect_send(
             &format!("Code scanning analyses for {repo_name}"),
             github_client.repo_code_scanning_analyses(&repo_name),
-            splunk,
+            &splunk,
         )
         .await?;
 
         try_collect_send(
             &format!("Code scanning alerts for {repo_name}"),
             github_client.repo_code_scanning_alerts(&repo_name),
-            splunk,
+            &splunk,
         )
         .await?;
 
         try_collect_send(
             &format!("Secret Scanning Alerts for {repo_name}"),
             github_client.repo_secret_scanning_alerts(&repo_name),
-            splunk,
+            &splunk,
         )
         .await?;
 
         try_collect_send(
             &format!("Security txt {repo_name}"),
             github_client.repo_security_txt(&repo_name),
-            splunk,
+            &splunk,
         )
         .await?;
 
         try_collect_send(
             &format!("Codeowners for {repo_name}"),
             github_client.repo_codeowners(&repo_name),
-            splunk,
+            &splunk,
         )
         .await?;
 
         try_collect_send(
             &format!("Deploy keys {repo_name}"),
             github_client.repo_deploy_keys(&repo_name),
-            splunk,
+            &splunk,
         )
         .await?;
 
@@ -206,7 +215,7 @@ async fn github_collect_installation_org(
         try_collect_send(
             &format!("Dependabot Alerts for {repo_name}"),
             github_client.repo_dependabot_alerts(&repo_name),
-            splunk,
+            &splunk,
         )
         .await?;
 
@@ -216,7 +225,7 @@ async fn github_collect_installation_org(
         try_collect_send(
             &format!("Repo Rulesets for {repo_name}"),
             github_client.repo_rulesets_full(&repo_name),
-            splunk,
+            &splunk,
         )
         .await?;
 
@@ -231,14 +240,14 @@ async fn github_collect_installation_org(
         try_collect_send(
             &format!("Branch Protection for {repo_name}/{default_branch}"),
             github_client.repo_branch_protection(&repo_name, default_branch),
-            splunk,
+            &splunk,
         )
         .await?;
 
         try_collect_send(
             &format!("Rules for {repo_name}/{default_branch}"),
             github_client.repo_branch_rules(&repo_name, default_branch),
-            splunk,
+            &splunk,
         )
         .await?;
     }

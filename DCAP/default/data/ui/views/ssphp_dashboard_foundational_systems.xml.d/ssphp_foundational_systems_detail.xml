@@ -5,7 +5,7 @@
 {% endif %}
 
   <label>Security Posture Continuous Assurance : Control Detail Dashboard</label>
-  <description>{{environment}} v3.1.7</description>
+  <description>{{environment}} v3.1.9</description>
   
   <init>
     <unset token="tkn_show_dashboard"></unset>
@@ -96,10 +96,12 @@
        ssphp_control_impact=if('ssphp_control_impact'="","-",'ssphp_control_impact')
        
 | eval last_run=strftime(SSPHP_RUN,"%Y-%m-%d %H:%M:%S"),
+       last_run_status=if('ssphp.error.no_records'="true","Fail","OK"),
        score_color=case('ssphp.score.color'="red",$tkn_colour_red|s$,
                         'ssphp.score.color'="green",$tkn_colour_green|s$,
                         'ssphp.score.color'="orange",$tkn_colour_orange|s$,
                         1==1,$tkn_colour_blue|s$),
+       ssphp.score.score=if('ssphp.error.no_records'="true","-",'ssphp.score.score'),
        compliance_status=if('ssphp.score.score'=100,"Compliant","Non-Compliant"),
        nl="
 ",
@@ -120,7 +122,7 @@
                      upper('fs')="GITHUB",$tkn_github_1_cis_doc_name|s$,
                      1==1,"Document not Available")
 
-| table ssphp*, fs, notfs, control, safeguard, asset_type, title, description, score_color, compliance_status, last_run, doc_link, doc_name
+| table ssphp*, fs, notfs, control, safeguard, asset_type, title, description, score_color, compliance_status, last_run, last_run_status, doc_link, doc_name
           </query>
           <earliest>-2d@d</earliest>
           <latest>now</latest>
@@ -170,6 +172,7 @@
             <set token="tkn_score_color">$result.score_color$</set>
             <set token="tkn_compliance_status">$result.compliance_status$</set>
             <set token="tkn_last_run">$result.last_run$</set>
+            <set token="tkn_last_run_status">$result.last_run_status$</set>
 
             <set token="tkn_doc_link">$result.doc_link$</set>
             <set token="tkn_doc_name">$result.doc_name$</set>
@@ -263,6 +266,9 @@
         <br></br>
         <span class="header_r1" style="color:	darkcyan">Last Evaluated</span>
         <span class="header_r2">$tkn_last_run$</span>
+        <br></br>
+        <span class="header_r1" style="color:	darkcyan">Status Last Evaluated</span>
+        <span class="header_r2">$tkn_last_run_status$</span>
       </html>
     </panel>
   </row>
