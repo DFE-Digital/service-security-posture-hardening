@@ -5,7 +5,7 @@
 {% endif %}  
 
   <label>Security Posture Continuous Assurance : Service Dashboard</label>
-  <description>{{environment}} v2.0.26</description>
+  <description>{{environment}} v2.0.28</description>
 
   
   <init>
@@ -268,6 +268,7 @@
 | eval ssphp.score.ciso_priority=case('ssphp.score.ciso_priority'=1,"DfE Mandated",
                                       'ssphp.score.ciso_priority'=2,"Recommended",
                                       1==1,"Desirable"),
+       ssphp.score.score=if('ssphp.error.no_records'="true","-",'ssphp.score.score'),
        ssphp.score.score='ssphp.score.score'."|".'ssphp.score.color'
 
 
