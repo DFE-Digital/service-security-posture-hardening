@@ -302,8 +302,22 @@ require([
             if (typeof cell.value == 'string') {
                 cell.value = [cell.value];
             }
+            if (typeof cell.value != 'object') {
+                return;
+            }
             
-            var arrlen = cell.value.length;
+            let arrlen = 0;
+            try {
+              arrlen = cell.value.length;
+            }
+            catch(err) {
+              console.log(err);
+              return;
+            }
+             
+            if (arrlen == 0) {
+               return; 
+            }
             
             // Extract custom CSS class from last element.
             // What happens when the last value doesn't have a '¬'?

@@ -413,6 +413,14 @@
 | eval search_text=replace('search_text',"\|\s*fields","| table"),
         search_text='search_text'."| sort 0 - ssphp.score.score | fields - temp_total_count"
 
+``` Added this logic as a way of fillnulling all the fields used in the use case becuae sometimes the fields do not exist as opposed to being null, but fixed the issue of fields not existing by making the javascript deal with it. So keeping in case I need the logic later, but not required.
+| rex field=search_text max_match=0 ".*\| table (?<table_line>[^\|]*)"
+| eval table_line=mvindex('table_line',-1)
+| rex field=table_line "^(?<table_fields>.*), ssphp\.score\.score"
+| eval search_text=search_text."
+
+"."| fillnull value=\"\" ".table_fields
+```
 | table title, search, search_text
           </query>
           <done>
