@@ -6,7 +6,7 @@
 
 
   <label>Foundational Systems : Security Posture Compliance Dashboard</label>
-  <description>{{environment}} v5.1.0</description>
+  <description>{{environment}} v5.2.8</description>
 
   <init>
     <unset token="tkn_ready"></unset>
@@ -158,80 +158,480 @@
 # --> 
 
 
+
+
 <!-- ################### DISPLAY ROWS - Foundational Services ################### -->   
 
 
-  <row depends="$tkn_ready$,$tkn_show_abs$">
+<!-- ######### AAD ROW ######### -->   
+  <row depends="$tkn_ready$">
+
+    <panel depends="$never_show$">
+      <html>
+        <style>
+          #LeftPanel_abs_aad{
+            width:70% !important;
+          }
+          #LeftPanel_perc_aad{
+            width:70% !important;
+          }
+          #RightPanel_aad{
+            width:30% !important;
+          }
+        </style>
+      </html>
+    </panel>
+
+    <panel id="LeftPanel_abs_aad" depends="$tkn_show_abs$">
       <html>
         <div class="absolute" style="background:$tkn_AAD_color$;"><a href="ssphp_foundational_systems_service?form.tkn__service=aad" target="_blank">$tkn_AAD_score_abs$</a></div>
         <div class="undervalue" style="background:$tkn_AAD_color$;"><a href="ssphp_foundational_systems_service?form.tkn__service=aad" target="_blank">AAD Entra</a></div>
       </html>
-  </row>
+    </panel>
 
-  <row depends="$tkn_ready$,$tkn_show_abs$">
-      <html>
-        <div class="absolute" style="background:$tkn_AZURE_color$;"><a href="ssphp_foundational_systems_service?form.tkn__service=azure" target="_blank">$tkn_AZURE_score_abs$</a></div>
-        <div class="undervalue" style="background:$tkn_AZURE_color$;"><a href="ssphp_foundational_systems_service?form.tkn__service=azure" target="_blank">AZURE</a></div>
-      </html>
-  </row>
-
-  <row depends="$tkn_ready$,$tkn_show_abs$">
-      <html>
-        <div class="absolute" style="background:$tkn_DNS_color$;"><a href="ssphp_foundational_systems_service?form.tkn__service=dns" target="_blank">$tkn_DNS_score_abs$</a></div>
-        <div class="undervalue" style="background:$tkn_DNS_color$;"><a href="ssphp_foundational_systems_service?form.tkn__service=dns" target="_blank">DNS [AWS]</a></div>
-      </html>
-  </row>
-
-  <row depends="$tkn_ready$,$tkn_show_abs$">
-      <html>
-        <div class="absolute" style="background:$tkn_M365_color$;"><a href="ssphp_foundational_systems_service?form.tkn__service=m365" target="_blank">$tkn_M365_score_abs$</a></div>
-        <div class="undervalue" style="background:$tkn_M365_color$;"><a href="ssphp_foundational_systems_service?form.tkn__service=m365" target="_blank">M365</a></div>
-      </html>
-  </row>
-
-  <row depends="$tkn_ready$,$tkn_show_abs$">
-      <html>
-        <div class="absolute" style="background:$tkn_GITHUB_color$;"><a href="ssphp_foundational_systems_service?form.tkn__service=github" target="_blank">$tkn_GITHUB_score_abs$</a></div>
-        <div class="undervalue" style="background:$tkn_GITHUB_color$;"><a href="ssphp_foundational_systems_service?form.tkn__service=github" target="_blank">GITHUB</a></div>
-      </html>
-  </row>
-  
-  
-  <row depends="$tkn_ready$,$tkn_show_perc$">
+    <panel id="LeftPanel_perc_aad" depends="$tkn_show_perc$">
       <html>
         <div class="absolute" style="background:$tkn_AAD_color$;"><a href="ssphp_foundational_systems_service?form.tkn__service=aad" target="_blank">$tkn_AAD_score_perc$</a></div>
         <div class="undervalue" style="background:$tkn_AAD_color$;"><a href="ssphp_foundational_systems_service?form.tkn__service=aad" target="_blank">AAD Entra</a></div>
       </html>
+    </panel>
+
+    <panel id="RightPanel_aad">
+      <chart>
+        <search>
+          <query>
+`ssphp_summary_index_DEV` earliest=-30d latest=now ssphp.use_case.id="aad*" ```ssphp.error.no_records="false"```
+      ssphp.use_case.id!="*_000"
+      ```ssphp.score.ciso_priority=1```
+
+| eval date=strftime('SSPHP_RUN',"%Y-%m-%d")
+| fields _time, SSPHP_RUN, date, ssphp.source.foundational_system, ssphp.use_case.id, ssphp.use_case.title, ssphp.score.score, ssphp.score.color, ssphp.score.ciso_priority, ssphp.benchmark.origin, ssphp.benchmark.control.title, ssphp.error.no_records
+| sort 0 ssphp.use_case.id, - SSPHP_RUN
+| dedup ssphp.use_case.id, date
+| stats count as denominator, values(ssphp.use_case.id) as ssphp.use_case.id, sum(eval(if('ssphp.score.score'="100",1,0))) as numerator by date
+| eval day_score=floor('numerator'*100/'denominator')
+| table date, denominator, numerator
+| rename denominator as "Not Compliant", numerator as Compliant
+          </query>
+          <earliest>0</earliest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
+        <option name="charting.axisTitleX.text">AAD Entra</option>
+        <option name="charting.axisTitleX.visibility">visible</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.abbreviation">none</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.abbreviation">none</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.abbreviation">none</option>
+        <option name="charting.axisY2.enabled">0</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">column</option>
+        <option name="charting.chart.bubbleMaximumSize">50</option>
+        <option name="charting.chart.bubbleMinimumSize">10</option>
+        <option name="charting.chart.bubbleSizeBy">area</option>
+        <option name="charting.chart.nullValueMode">gaps</option>
+        <option name="charting.chart.showDataLabels">none</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.stackMode">stacked</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">none</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.layout.splitSeries.allowIndependentYRanges">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.mode">standard</option>
+        <option name="charting.legend.placement">right</option>
+        <option name="charting.lineWidth">2</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+        <option name="charting.seriesColors">[$tkn_colour_red$, $tkn_colour_green$]</option>
+        <option name="height">190</option>
+      </chart>
+    </panel>
   </row>
-  
-  <row depends="$tkn_ready$,$tkn_show_perc$">
+
+
+
+
+
+<!-- ######### AZURE ROW ######### -->   
+  <row depends="$tkn_ready$">
+
+    <panel depends="$never_show$">
+      <html>
+        <style>
+          #LeftPanel_abs_azure{
+            width:70% !important;
+          }
+          #LeftPanel_perc_azure{
+            width:70% !important;
+          }
+          #RightPanel_azure{
+            width:30% !important;
+          }
+        </style>
+      </html>
+    </panel>
+
+    <panel id="LeftPanel_abs_azure" depends="$tkn_show_abs$">
+      <html>
+        <div class="absolute" style="background:$tkn_AZURE_color$;"><a href="ssphp_foundational_systems_service?form.tkn__service=azure" target="_blank">$tkn_AZURE_score_abs$</a></div>
+        <div class="undervalue" style="background:$tkn_AZURE_color$;"><a href="ssphp_foundational_systems_service?form.tkn__service=azure" target="_blank">AZURE</a></div>
+      </html>
+    </panel>
+
+    <panel id="LeftPanel_perc_azure" depends="$tkn_show_perc$">
       <html>
         <div class="absolute" style="background:$tkn_AZURE_color$;"><a href="ssphp_foundational_systems_service?form.tkn__service=azure" target="_blank">$tkn_AZURE_score_perc$</a></div>
         <div class="undervalue" style="background:$tkn_AZURE_color$;"><a href="ssphp_foundational_systems_service?form.tkn__service=azure" target="_blank">AZURE</a></div>
       </html>
+    </panel>
+
+    <panel id="RightPanel_azure">
+      <chart>
+        <search>
+          <query>
+`ssphp_summary_index_DEV` earliest=-30d latest=now ssphp.use_case.id="azure*" ```ssphp.error.no_records="false"```
+      ssphp.use_case.id!="*_000"
+      ```ssphp.score.ciso_priority=1```
+
+| eval date=strftime('SSPHP_RUN',"%Y-%m-%d")
+| fields _time, SSPHP_RUN, date, ssphp.source.foundational_system, ssphp.use_case.id, ssphp.use_case.title, ssphp.score.score, ssphp.score.color, ssphp.score.ciso_priority, ssphp.benchmark.origin, ssphp.benchmark.control.title, ssphp.error.no_records
+| sort 0 ssphp.use_case.id, - SSPHP_RUN
+| dedup ssphp.use_case.id, date
+| stats count as denominator, values(ssphp.use_case.id) as ssphp.use_case.id, sum(eval(if('ssphp.score.score'="100",1,0))) as numerator by date
+| eval day_score=floor('numerator'*100/'denominator')
+| table date, denominator, numerator
+| rename denominator as "Not Compliant", numerator as Compliant
+          </query>
+          <earliest>0</earliest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
+        <option name="charting.axisTitleX.text">AZURE</option>
+        <option name="charting.axisTitleX.visibility">visible</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.abbreviation">none</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.abbreviation">none</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.abbreviation">none</option>
+        <option name="charting.axisY2.enabled">0</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">column</option>
+        <option name="charting.chart.bubbleMaximumSize">50</option>
+        <option name="charting.chart.bubbleMinimumSize">10</option>
+        <option name="charting.chart.bubbleSizeBy">area</option>
+        <option name="charting.chart.nullValueMode">gaps</option>
+        <option name="charting.chart.showDataLabels">none</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.stackMode">stacked</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">none</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.layout.splitSeries.allowIndependentYRanges">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.mode">standard</option>
+        <option name="charting.legend.placement">right</option>
+        <option name="charting.lineWidth">2</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+        <option name="charting.seriesColors">[$tkn_colour_red$, $tkn_colour_green$]</option>
+        <option name="height">190</option>
+      </chart>
+    </panel>
   </row>
-  
-  <row depends="$tkn_ready$,$tkn_show_perc$">
+
+
+
+
+
+<!-- ######### AWS DNS ROW ######### -->   
+  <row depends="$tkn_ready$">
+
+    <panel depends="$never_show$">
+      <html>
+        <style>
+          #LeftPanel_abs_dns{
+            width:70% !important;
+          }
+          #LeftPanel_perc_dns{
+            width:70% !important;
+          }
+          #RightPanel_dns{
+            width:30% !important;
+          }
+        </style>
+      </html>
+    </panel>
+
+    <panel id="LeftPanel_abs_dns" depends="$tkn_show_abs$">
+      <html>
+        <div class="absolute" style="background:$tkn_DNS_color$;"><a href="ssphp_foundational_systems_service?form.tkn__service=dns" target="_blank">$tkn_DNS_score_abs$</a></div>
+        <div class="undervalue" style="background:$tkn_DNS_color$;"><a href="ssphp_foundational_systems_service?form.tkn__service=dns" target="_blank">DNS [AWS]</a></div>
+      </html>
+    </panel>
+
+    <panel id="LeftPanel_perc_dns" depends="$tkn_show_perc$">
       <html>
         <div class="absolute" style="background:$tkn_DNS_color$;"><a href="ssphp_foundational_systems_service?form.tkn__service=dns" target="_blank">$tkn_DNS_score_perc$</a></div>
         <div class="undervalue" style="background:$tkn_DNS_color$;"><a href="ssphp_foundational_systems_service?form.tkn__service=dns" target="_blank">DNS [AWS]</a></div>
       </html>
+    </panel>
+
+    <panel id="RightPanel_dns">
+      <chart>
+        <search>
+          <query>
+`ssphp_summary_index_DEV` earliest=-30d latest=now ssphp.use_case.id="dns*" ```ssphp.error.no_records="false"```
+      ssphp.use_case.id!="*_000"
+      ```ssphp.score.ciso_priority=1```
+
+| eval date=strftime('SSPHP_RUN',"%Y-%m-%d")
+| fields _time, SSPHP_RUN, date, ssphp.source.foundational_system, ssphp.use_case.id, ssphp.use_case.title, ssphp.score.score, ssphp.score.color, ssphp.score.ciso_priority, ssphp.benchmark.origin, ssphp.benchmark.control.title, ssphp.error.no_records
+| sort 0 ssphp.use_case.id, - SSPHP_RUN
+| dedup ssphp.use_case.id, date
+| stats count as denominator, values(ssphp.use_case.id) as ssphp.use_case.id, sum(eval(if('ssphp.score.score'="100",1,0))) as numerator by date
+| eval day_score=floor('numerator'*100/'denominator')
+| table date, denominator, numerator
+| rename denominator as "Not Compliant", numerator as Compliant
+          </query>
+          <earliest>0</earliest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
+        <option name="charting.axisTitleX.text">DNS [AWS]</option>
+        <option name="charting.axisTitleX.visibility">visible</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.abbreviation">none</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.abbreviation">none</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.abbreviation">none</option>
+        <option name="charting.axisY2.enabled">0</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">column</option>
+        <option name="charting.chart.bubbleMaximumSize">50</option>
+        <option name="charting.chart.bubbleMinimumSize">10</option>
+        <option name="charting.chart.bubbleSizeBy">area</option>
+        <option name="charting.chart.nullValueMode">gaps</option>
+        <option name="charting.chart.showDataLabels">none</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.stackMode">stacked</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">none</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.layout.splitSeries.allowIndependentYRanges">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.mode">standard</option>
+        <option name="charting.legend.placement">right</option>
+        <option name="charting.lineWidth">2</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+        <option name="charting.seriesColors">[$tkn_colour_red$, $tkn_colour_green$]</option>
+        <option name="height">190</option>
+      </chart>
+    </panel>
   </row>
-  
-  <row depends="$tkn_ready$,$tkn_show_perc$">
+
+
+
+<!-- ######### M365 ROW ######### -->   
+  <row depends="$tkn_ready$">
+
+    <panel depends="$never_show$">
+      <html>
+        <style>
+          #LeftPanel_abs_m365{
+            width:70% !important;
+          }
+          #LeftPanel_perc_m365{
+            width:70% !important;
+          }
+          #RightPanel_m365{
+            width:30% !important;
+          }
+        </style>
+      </html>
+    </panel>
+
+    <panel id="LeftPanel_abs_m365" depends="$tkn_show_abs$">
+      <html>
+        <div class="absolute" style="background:$tkn_M365_color$;"><a href="ssphp_foundational_systems_service?form.tkn__service=m365" target="_blank">$tkn_M365_score_abs$</a></div>
+        <div class="undervalue" style="background:$tkn_M365_color$;"><a href="ssphp_foundational_systems_service?form.tkn__service=m365" target="_blank">M365</a></div>
+      </html>
+    </panel>
+
+    <panel id="LeftPanel_perc_m365" depends="$tkn_show_perc$">
       <html>
         <div class="absolute" style="background:$tkn_M365_color$;"><a href="ssphp_foundational_systems_service?form.tkn__service=m365" target="_blank">$tkn_M365_score_perc$</a></div>
         <div class="undervalue" style="background:$tkn_M365_color$;"><a href="ssphp_foundational_systems_service?form.tkn__service=m365" target="_blank">M365</a></div>
       </html>
+    </panel>
+
+    <panel id="RightPanel_m365">
+      <chart>
+        <search>
+          <query>
+`ssphp_summary_index_DEV` earliest=-30d latest=now ssphp.use_case.id="m365*" ```ssphp.error.no_records="false"```
+      ssphp.use_case.id!="*_000"
+      ```ssphp.score.ciso_priority=1```
+
+| eval date=strftime('SSPHP_RUN',"%Y-%m-%d")
+| fields _time, SSPHP_RUN, date, ssphp.source.foundational_system, ssphp.use_case.id, ssphp.use_case.title, ssphp.score.score, ssphp.score.color, ssphp.score.ciso_priority, ssphp.benchmark.origin, ssphp.benchmark.control.title, ssphp.error.no_records
+| sort 0 ssphp.use_case.id, - SSPHP_RUN
+| dedup ssphp.use_case.id, date
+| stats count as denominator, values(ssphp.use_case.id) as ssphp.use_case.id, sum(eval(if('ssphp.score.score'="100",1,0))) as numerator by date
+| eval day_score=floor('numerator'*100/'denominator')
+| table date, denominator, numerator
+| rename denominator as "Not Compliant", numerator as Compliant
+          </query>
+          <earliest>0</earliest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
+        <option name="charting.axisTitleX.text">M365</option>
+        <option name="charting.axisTitleX.visibility">visible</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.abbreviation">none</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.abbreviation">none</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.abbreviation">none</option>
+        <option name="charting.axisY2.enabled">0</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">column</option>
+        <option name="charting.chart.bubbleMaximumSize">50</option>
+        <option name="charting.chart.bubbleMinimumSize">10</option>
+        <option name="charting.chart.bubbleSizeBy">area</option>
+        <option name="charting.chart.nullValueMode">gaps</option>
+        <option name="charting.chart.showDataLabels">none</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.stackMode">stacked</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">none</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.layout.splitSeries.allowIndependentYRanges">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.mode">standard</option>
+        <option name="charting.legend.placement">right</option>
+        <option name="charting.lineWidth">2</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+        <option name="charting.seriesColors">[$tkn_colour_red$, $tkn_colour_green$]</option>
+        <option name="height">190</option>
+      </chart>
+    </panel>
   </row>
-  
-  <row depends="$tkn_ready$,$tkn_show_perc$">
+
+
+
+<!-- ######### GITHUB ROW ######### -->   
+  <row depends="$tkn_ready$">
+
+    <panel depends="$never_show$">
+      <html>
+        <style>
+          #LeftPanel_abs_github{
+            width:70% !important;
+          }
+          #LeftPanel_perc_github{
+            width:70% !important;
+          }
+          #RightPanel_github{
+            width:30% !important;
+          }
+        </style>
+      </html>
+    </panel>
+
+    <panel id="LeftPanel_abs_github" depends="$tkn_show_abs$">
+      <html>
+        <div class="absolute" style="background:$tkn_GITHUB_color$;"><a href="ssphp_foundational_systems_service?form.tkn__service=github" target="_blank">$tkn_GITHUB_score_abs$</a></div>
+        <div class="undervalue" style="background:$tkn_GITHUB_color$;"><a href="ssphp_foundational_systems_service?form.tkn__service=github" target="_blank">GITHUB</a></div>
+      </html>
+    </panel>
+
+    <panel id="LeftPanel_perc_github" depends="$tkn_show_perc$">
       <html>
         <div class="absolute" style="background:$tkn_GITHUB_color$;"><a href="ssphp_foundational_systems_service?form.tkn__service=github" target="_blank">$tkn_GITHUB_score_perc$</a></div>
         <div class="undervalue" style="background:$tkn_GITHUB_color$;"><a href="ssphp_foundational_systems_service?form.tkn__service=github" target="_blank">GITHUB</a></div>
       </html>
+    </panel>
+
+    <panel id="RightPanel_github">
+      <chart>
+        <search>
+          <query>
+`ssphp_summary_index_DEV` earliest=-30d latest=now ssphp.use_case.id="github*" ```ssphp.error.no_records="false"```
+      ssphp.use_case.id!="*_000"
+      ```ssphp.score.ciso_priority=1```
+
+| eval date=strftime('SSPHP_RUN',"%Y-%m-%d")
+| fields _time, SSPHP_RUN, date, ssphp.source.foundational_system, ssphp.use_case.id, ssphp.use_case.title, ssphp.score.score, ssphp.score.color, ssphp.score.ciso_priority, ssphp.benchmark.origin, ssphp.benchmark.control.title, ssphp.error.no_records
+| sort 0 ssphp.use_case.id, - SSPHP_RUN
+| dedup ssphp.use_case.id, date
+| stats count as denominator, values(ssphp.use_case.id) as ssphp.use_case.id, sum(eval(if('ssphp.score.score'="100",1,0))) as numerator by date
+| eval day_score=floor('numerator'*100/'denominator')
+| table date, denominator, numerator
+| rename denominator as "Not Compliant", numerator as Compliant
+          </query>
+          <earliest>0</earliest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
+        <option name="charting.axisTitleX.text">GITHUB</option>
+        <option name="charting.axisTitleX.visibility">visible</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.abbreviation">none</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.abbreviation">none</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.abbreviation">none</option>
+        <option name="charting.axisY2.enabled">0</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">column</option>
+        <option name="charting.chart.bubbleMaximumSize">50</option>
+        <option name="charting.chart.bubbleMinimumSize">10</option>
+        <option name="charting.chart.bubbleSizeBy">area</option>
+        <option name="charting.chart.nullValueMode">gaps</option>
+        <option name="charting.chart.showDataLabels">none</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.stackMode">stacked</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">none</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.layout.splitSeries.allowIndependentYRanges">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.mode">standard</option>
+        <option name="charting.legend.placement">right</option>
+        <option name="charting.lineWidth">2</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+        <option name="charting.seriesColors">[$tkn_colour_red$, $tkn_colour_green$]</option>
+        <option name="height">190</option>
+      </chart>
+    </panel>
   </row>
-  
+
+
+
 
 
 <!-- ################### DATA ROW - Foundational Services ################### -->   
