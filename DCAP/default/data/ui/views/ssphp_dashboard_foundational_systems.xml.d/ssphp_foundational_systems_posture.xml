@@ -6,7 +6,7 @@
 
 
   <label>Foundational Systems : Security Posture Compliance Dashboard</label>
-  <description>{{environment}} v5.2.8</description>
+  <description>{{environment}} v5.2.9</description>
 
   <init>
     <unset token="tkn_ready"></unset>
@@ -202,7 +202,7 @@
           <query>
 `ssphp_summary_index_DEV` earliest=-30d latest=now ssphp.use_case.id="aad*" ```ssphp.error.no_records="false"```
       ssphp.use_case.id!="*_000"
-      ```ssphp.score.ciso_priority=1```
+      ssphp.score.ciso_priority=1
 
 | eval date=strftime('SSPHP_RUN',"%Y-%m-%d")
 | fields _time, SSPHP_RUN, date, ssphp.source.foundational_system, ssphp.use_case.id, ssphp.use_case.title, ssphp.score.score, ssphp.score.color, ssphp.score.ciso_priority, ssphp.benchmark.origin, ssphp.benchmark.control.title, ssphp.error.no_records
@@ -297,7 +297,7 @@
           <query>
 `ssphp_summary_index_DEV` earliest=-30d latest=now ssphp.use_case.id="azure*" ```ssphp.error.no_records="false"```
       ssphp.use_case.id!="*_000"
-      ```ssphp.score.ciso_priority=1```
+      ssphp.score.ciso_priority=1
 
 | eval date=strftime('SSPHP_RUN',"%Y-%m-%d")
 | fields _time, SSPHP_RUN, date, ssphp.source.foundational_system, ssphp.use_case.id, ssphp.use_case.title, ssphp.score.score, ssphp.score.color, ssphp.score.ciso_priority, ssphp.benchmark.origin, ssphp.benchmark.control.title, ssphp.error.no_records
@@ -392,7 +392,7 @@
           <query>
 `ssphp_summary_index_DEV` earliest=-30d latest=now ssphp.use_case.id="dns*" ```ssphp.error.no_records="false"```
       ssphp.use_case.id!="*_000"
-      ```ssphp.score.ciso_priority=1```
+      ssphp.score.ciso_priority=1
 
 | eval date=strftime('SSPHP_RUN',"%Y-%m-%d")
 | fields _time, SSPHP_RUN, date, ssphp.source.foundational_system, ssphp.use_case.id, ssphp.use_case.title, ssphp.score.score, ssphp.score.color, ssphp.score.ciso_priority, ssphp.benchmark.origin, ssphp.benchmark.control.title, ssphp.error.no_records
@@ -485,7 +485,7 @@
           <query>
 `ssphp_summary_index_DEV` earliest=-30d latest=now ssphp.use_case.id="m365*" ```ssphp.error.no_records="false"```
       ssphp.use_case.id!="*_000"
-      ```ssphp.score.ciso_priority=1```
+      ssphp.score.ciso_priority=1
 
 | eval date=strftime('SSPHP_RUN',"%Y-%m-%d")
 | fields _time, SSPHP_RUN, date, ssphp.source.foundational_system, ssphp.use_case.id, ssphp.use_case.title, ssphp.score.score, ssphp.score.color, ssphp.score.ciso_priority, ssphp.benchmark.origin, ssphp.benchmark.control.title, ssphp.error.no_records
@@ -578,7 +578,7 @@
           <query>
 `ssphp_summary_index_DEV` earliest=-30d latest=now ssphp.use_case.id="github*" ```ssphp.error.no_records="false"```
       ssphp.use_case.id!="*_000"
-      ```ssphp.score.ciso_priority=1```
+      ssphp.score.ciso_priority=1
 
 | eval date=strftime('SSPHP_RUN',"%Y-%m-%d")
 | fields _time, SSPHP_RUN, date, ssphp.source.foundational_system, ssphp.use_case.id, ssphp.use_case.title, ssphp.score.score, ssphp.score.color, ssphp.score.ciso_priority, ssphp.benchmark.origin, ssphp.benchmark.control.title, ssphp.error.no_records
