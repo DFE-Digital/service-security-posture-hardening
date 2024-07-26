@@ -6,7 +6,7 @@
 
 
   <label>Foundational Systems : Security Posture Compliance Dashboard</label>
-  <description>{{environment}} v5.2.11</description>
+  <description>{{environment}} v5.2.12</description>
 
   <init>
     <unset token="tkn_ready"></unset>
@@ -572,10 +572,21 @@
       <chart>
         <search>
           <query>
-`ssphp_summary_index_DEV` earliest=-30d latest=now ssphp.use_case.id="github*" ```ssphp.error.no_records="false"```
+`ssphp_summary_index_DEV` earliest=-30d latest=now ssphp.use_case.id="github*" NOT ssphp.error.no_records="true"
       ssphp.use_case.id!="*_000"
       ssphp.score.ciso_priority=1
-
+      
+    [|  search `ssphp_summary_index_DEV` earliest=-30d latest=now ssphp.use_case.id="github*" NOT ssphp.error.no_records="true"
+      ssphp.use_case.id!="*_000"
+      ssphp.score.ciso_priority=1
+     | eval date=strftime('SSPHP_RUN',"%Y-%m-%d")
+     | stats max(SSPHP_RUN) as SSPHP_RUN by date, ssphp.use_case.id
+     | stats values(SSPHP_RUN) as SSPHP_RUN by ssphp.use_case.id
+     | eval search_txt="(ssphp.use_case.id=\"".'ssphp.use_case.id'."\" AND (SSPHP_RUN=\"".mvjoin('SSPHP_RUN',"\" OR SSPHP_RUN=\"")."\"))"
+     | stats values(search_txt) as search_txt
+     | eval search_txt=mvjoin('search_txt'," OR ")
+     | return $search_txt]
+     
 | eval date=strftime('SSPHP_RUN',"%Y-%m-%d")
 | fields _time, SSPHP_RUN, date, ssphp.source.foundational_system, ssphp.use_case.id, ssphp.use_case.title, ssphp.score.score, ssphp.score.color, ssphp.score.ciso_priority, ssphp.benchmark.origin, ssphp.benchmark.control.title, ssphp.error.no_records
 | sort 0 ssphp.use_case.id, - SSPHP_RUN
