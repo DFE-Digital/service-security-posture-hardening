@@ -5,7 +5,7 @@
 {% endif %}  
 
   <label>Security Posture Continuous Assurance : DfE Service Dashboard</label>
-  <description>{{environment}} v2.5.0</description>
+  <description>_DEV v3.0.0</description>
   
   <init>
     <set token="form.tkn_fields">C</set>
@@ -14,17 +14,20 @@
     <set token="tkn_font_size_2">400</set>
     <set token="tkn_padding_1">60</set>
     <set token="tkn_padding_2">30</set>
+    <set token="tkn__service">das</set>
     <unset token="tkn_ready"></unset>
   </init>
 
+
   <fieldset submitButton="false">
+<!-- #
     <input type="dropdown" token="tkn__service" searchWhenChanged="true">
       <label>Service</label>
       <fieldForLabel>ssphp.service.name</fieldForLabel>
       <fieldForValue>ssphp.service.id</fieldForValue>
       <search>
         <query>
-`ssphp_summary_index{{environment}}` earliest=-2d@d latest=now
+`ssphp_summary_index_DEV` earliest=-2d@d latest=now
 | fields ssphp.service.id, ssphp.service.name
 | dedup ssphp.service.id
 | sort 0 ssphp.service.id
@@ -35,7 +38,7 @@
         <unset token="tkn_ready"></unset>
       </change>
     </input>
-    
+### -->     
     
     
     <input type="radio" token="tkn_view" searchWhenChanged="true">
@@ -59,25 +62,19 @@
 
 
 
-<!-- ################### GET THE BASE DATA FOR THE OTHER QUERIES ################### --> 
+<!-- ################### GET THE BASE SUMMARY INDEX DATA FOR THE OTHER QUERIES ################### --> 
   <row depends="$never_show$">
     <panel>
       <table>
         <search id="bs_1">
           <query>
-`ssphp_summary_index{{environment}}` earliest=-2d@d latest=now
+`ssphp_summary_index_DEV` earliest=-2d@d latest=now
        ssphp.service.id=$tkn__service|s$
     ```ssphp.score.ciso_priority=1```
 
-    [| search `ssphp_summary_index{{environment}}` earliest=-2d@d latest=now 
-           ssphp.service.id=$tkn__service|s$
-        ```ssphp.score.ciso_priority=1```
-        
-      | stats max(SSPHP_RUN) as SSPHP_RUN by ssphp.use_case.id
-      | eval search_text="(\"ssphp.use_case.id\"=\"".'ssphp.use_case.id'."\" AND SSPHP_RUN=\"".SSPHP_RUN."\")"
-      | stats values(search_text) as search_text
-      | eval search_text="(".mvjoin(search_text," OR ").")"
-      | return $search_text]
+| eventstats values(SSPHP_RUN) as vals_SSPHP_RUN, max(SSPHP_RUN) as max_SSPHP_RUN by ssphp.use_case.id
+| where SSPHP_RUN='max_SSPHP_RUN'
+| fields - vals_SSPHP_RUN, max_SSPHP_RUN
 
 | eval ssphp.assessment.categories=mvappend('ssphp.assessment.categories','ssphp.assessment.categories{}'),
        ssphp.assessment.tactics=mvappend('ssphp.assessment.tactics','ssphp.assessment.tactics{}'),
@@ -89,12 +86,17 @@
 | fields ssphp.*
             </query>
           <done>
+            <set token="tkn_service_name">$result.ssphp.service.name$</set>
+            <set token="tkn_current_service">$result.ssphp.service.name$</set>
             <set token="tkn_ready">true</set>
           </done>
         </search>
       </table>
     </panel>
   </row>
+
+
+  
 
 <!-- ################### Set Target Service and other Tokens ################### --> 
 
@@ -121,7 +123,7 @@
           <query>
   | makeresults
 
-  `ssphp_metrics_eval_field_colors{{environment}}`
+  `ssphp_metrics_eval_field_colors_DEV`
 
   | table tkn_*
           </query>
@@ -137,59 +139,7 @@
     </panel>
   </row>
   
-  
 
-<!-- ################### TOP Overall Score Row ################### --> 
-
-
-  <row depends="$tkn_ready$,$never_show$">
-    <panel>
-      <table>
-        <search base="bs_1">
-          <query>
-
-| search ssphp.score.ciso_priority=1
-        
-| stats values(ssphp.service.name) as ssphp.service.name, count as ssphp.score.denominator, sum(eval(if('ssphp.score.score'="100",1,0))) as ssphp.score.numerator
-
-`ssphp_metrics_eval_field_colors{{environment}}`
-
-| eval service_compliant_perc=floor('ssphp.score.numerator'*100/'ssphp.score.denominator'),
-        service_compliant_abs='ssphp.score.numerator'." of ". 'ssphp.score.denominator',
-        service_compliant_perc='service_compliant_perc'."%",
-        service_compliant_color=case(isnull('service_compliant_perc') OR 'service_compliant_perc'="",'tkn_colour_splunk_grey',
-                                  'service_compliant_perc'=100,'tkn_colour_green',
-                                  1==1,'tkn_colour_red')
-          </query>
-          <done>
-            <set token="tkn_service_name">$result.ssphp.service.name$</set>
-            <set token="tkn_current_service">$result.ssphp.service.name$</set>
-            <set token="tkn_color">$result.service_compliant_color$</set>
-            <set token="tkn_score_abs">$result.service_compliant_abs$</set>
-            <set token="tkn_score_perc">$result.service_compliant_perc$</set>
-          </done>
-        </search>
-      </table>
-    </panel>
-  </row>
-
-  <row>
-    <panel depends="$tkn_ready$,$tkn_show_abs$">
-      <html>
-        <div id="div_header" style="background:$tkn_color$;color:white;font-weight:bold;font-size:$tkn_font_size_1$%;text-align:center;padding:$tkn_padding_1$">$tkn_score_abs$</div> 
-        <div id="div_header" style="background:$tkn_color$;color:white;font-size:100%;text-align:center">$tkn_service_name$ Compliant of # DfE Mandated Controls</div> 
-      </html>
-    </panel>
-
-    <panel depends="$tkn_ready$,$tkn_show_perc$">
-      <html>
-        <div id="div_header" style="background:$tkn_color$;color:white;font-weight:bold;font-size:$tkn_font_size_1$%;text-align:center;padding:$tkn_padding_1$">$tkn_score_perc$</div> 
-        <div id="div_header" style="background:$tkn_color$;color:white;font-size:100%;text-align:center">Percentage $tkn_service_name$ Compliant of DfE Mandated Controls</div> 
-      </html>
-    </panel>
-  </row>
-  
-  
 
 <!-- ################### Middle by Category Score Row ################### --> 
 
@@ -199,114 +149,115 @@
       <table>
         <search base="bs_1">
           <query>
+| rex field=ssphp.score.score "^(?&lt;count_score&gt;[^|]*)|"
+         
+| stats count as number_controls_total,
+             dc(eval(if('ssphp.use_case.category'="POSTURE" AND 'count_score'&lt;100,'ssphp.resource.id',null()))) as posture_number_failed_resources, dc(eval(if('ssphp.use_case.category'="POSTURE" AND 'count_score'=100,'ssphp.resource.id',null()))) as posture_number_passed_resources,
+             dc(eval(if('ssphp.use_case.category'="VULNERABILITY" AND 'count_score'&lt;100,'ssphp.resource.id',null()))) as vulnerability_number_failed_resources, dc(eval(if('ssphp.use_case.category'="VULNERABILITY" AND 'count_score'=100,'ssphp.resource.id',null()))) as vulnerability_number_passed_resources,
+             dc(eval(if('ssphp.use_case.category'="SDLC" AND 'count_score'&lt;100,'ssphp.resource.id',null()))) as sdlc_number_failed_resources, dc(eval(if('ssphp.use_case.category'="SDLC" AND 'count_score'=100,'ssphp.resource.id',null()))) as sdlc_number_passed_resources
 
-| search ssphp.score.ciso_priority=1
-        
-| stats values(ssphp.service.name) as ssphp.service.name, count as ssphp.score.denominator, sum(eval(if('ssphp.score.score'="100",1,0))) as ssphp.score.numerator by ssphp.use_case.category
+| eval posture_number_total_resources='posture_number_failed_resources'+'posture_number_passed_resources',
+       vulnerability_number_total_resources='vulnerability_number_failed_resources'+'vulnerability_number_passed_resources',
+       sdlc_number_total_resources='sdlc_number_failed_resources'+'sdlc_number_passed_resources',
+       
+       posture_perc_passed_resources=coalesce(floor('posture_number_passed_resources'*100/'posture_number_total_resources'),"0"),
+       vulnerability_perc_passed_resources=coalesce(floor('vulnerability_number_passed_resources'*100/'vulnerability_number_total_resources'),"0"),
+       sdlc_perc_passed_resources=coalesce(floor('sdlc_number_passed_resources'*100/'sdlc_number_total_resources'),"0")
 
-`ssphp_metrics_eval_field_colors{{environment}}`
+| eval posture_color=case(isnull('posture_perc_passed_resources') OR 'posture_perc_passed_resources'="","$tkn_colour_splunk_grey$",
+                                  'posture_perc_passed_resources'=100,"$tkn_colour_green$",
+                                  1==1,"$tkn_colour_red$"),
+       vulnerability_color=case(isnull('vulnerability_perc_passed_resources') OR 'vulnerability_perc_passed_resources'="","$tkn_colour_splunk_grey$",
+                                  'vulnerability_perc_passed_resources'=100,"$tkn_colour_green$",
+                                  1==1,"$tkn_colour_red$"),
+       sdlc_color=case(isnull('sdlc_perc_passed_resources') OR 'sdlc_perc_passed_resources'="","$tkn_colour_splunk_grey$",
+                                  'sdlc_perc_passed_resources'=100,"$tkn_colour_green$",
+                                  1==1,"$tkn_colour_red$")
+                                  
+| eval posture_perc_passed_resources='posture_perc_passed_resources'."%",
+       vulnerability_perc_passed_resources='vulnerability_perc_passed_resources'."%",
+       sdlc_perc_passed_resources='sdlc_perc_passed_resources'."%"
+       
+| eval number_controls_total=tostring('number_controls_total', "commas"), 
+       posture_number_failed_resources=tostring('posture_number_failed_resources', "commas"), posture_number_passed_resources=tostring('posture_number_passed_resources', "commas"), posture_number_total_resources=tostring('posture_number_total_resources', "commas"),
+       vulnerability_number_failed_resources=tostring('vulnerability_number_failed_resources', "commas"), vulnerability_number_passed_resources=tostring('vulnerability_number_passed_resources', "commas"), vulnerability_number_total_resources=tostring('vulnerability_number_total_resources', "commas"),
+       sdlc_number_failed_resources=tostring('sdlc_number_failed_resources', "commas"), sdlc_number_passed_resources=tostring('sdlc_number_passed_resources', "commas"), sdlc_number_total_resources=tostring('sdlc_number_total_resources', "commas")
+       
+| eval posture_abs='posture_number_passed_resources'." / ".'posture_number_total_resources',
+       vulnerability_abs='vulnerability_number_passed_resources'." / ".'vulnerability_number_total_resources',
+       sdlc_abs='sdlc_number_passed_resources'." / ".'sdlc_number_total_resources'
 
-| eval service_compliant_perc=floor('ssphp.score.numerator'*100/'ssphp.score.denominator'),
-       service_compliant_abs='ssphp.score.numerator'." of ". 'ssphp.score.denominator',
-       service_compliant_perc='service_compliant_perc'."%",
-       service_compliant_color=case(isnull('service_compliant_perc') OR 'service_compliant_perc'="",'tkn_colour_splunk_grey',
-                                  'service_compliant_perc'=100,'tkn_colour_green',
-                                  1==1,'tkn_colour_red')
+| table posture_*, vulnerability_*, sdlc_*
 
-```==== Get the fields into a tokenable format ===```
-| rename ssphp.* as yy_ssphp.*, service_* as yy_service_*, yy_ssphp.use_case.category as zz_ssphp.use_case.category, yy_ssphp.source.service_name as zz_ssphp.source.service_name
-| foreach yy_* 
-    [| eval fn="xx_".'zz_ssphp.use_case.category'."_"."&lt;&lt;FIELD&gt;&gt;",
-            fn=replace('fn',"yy_",""),
-            {fn}=&lt;&lt;FIELD&gt;&gt;]
-| table xx_*
-| rename xx_* as *
-| stats values(*) as *
-
-`ssphp_metrics_eval_field_colors{{environment}}`
-
-| fillnull value="0" POSTURE_service_compliant_perc, DETECT_service_compliant_perc, VULN_service_compliant_perc, SDLC_service_compliant_perc 
-| fillnull value="0 / 0" POSTURE_service_compliant_abs, DETECT_service_compliant_abs, VULN_service_compliant_abs, SDLC_service_compliant_abs
-| eval POSTURE_service_compliant_color=coalesce(POSTURE_service_compliant_color,'tkn_colour_splunk_grey'), 
-       DETECT_service_compliant_color=coalesce(DETECT_service_compliant_color, 'tkn_colour_splunk_grey'), 
-       VULN_service_compliant_color=coalesce(VULN_service_compliant_color, 'tkn_colour_splunk_grey'), 
-       SDLC_service_compliant_color=coalesce(SDLC_service_compliant_color, 'tkn_colour_splunk_grey')
-          </query>
+            </query>
           <done>
-            <set token="tkn_color_posture">$result.POSTURE_service_compliant_color$</set>
-            <set token="tkn_score_abs_posture">$result.POSTURE_service_compliant_abs$</set>
-            <set token="tkn_score_perc_posture">$result.POSTURE_service_compliant_perc$</set>
-            
-            <set token="tkn_color_detect">$result.DETECT_service_compliant_color$</set>
-            <set token="tkn_score_abs_detect">$result.DETECT_service_compliant_abs$</set>
-            <set token="tkn_score_perc_detect">$result.DETECT_service_compliant_perc$</set>
-            
-            <set token="tkn_color_vuln">$result.VULN_service_compliant_color$</set>
-            <set token="tkn_score_abs_vuln">$result.VULN_service_compliant_abs$</set>
-            <set token="tkn_score_perc_vuln">$result.VULN_service_compliant_perc$</set>
-            
-            <set token="tkn_color_sdlc">$result.SDLC_service_compliant_color$</set>
-            <set token="tkn_score_abs_sdlc">$result.SDLC_service_compliant_abs$</set>
-            <set token="tkn_score_perc_sdlc">$result.SDLC_service_compliant_perc$</set>
+            <set token="tkn_posture_perc_passed_resources">$result.posture_perc_passed_resources$</set>
+            <set token="tkn_vulnerability_perc_passed_resources">$result.vulnerability_perc_passed_resources$</set>
+            <set token="tkn_sdlc_perc_passed_resources">$result.sdlc_perc_passed_resources$</set>
+
+            <set token="tkn_posture_number_total_resources">$result.posture_number_total_resources$</set>
+            <set token="tkn_vulnerability_number_total_resources">$result.vulnerability_number_total_resources$</set>
+            <set token="tkn_sdlc_number_total_resources">$result.sdlc_number_total_resources$</set>
+
+            <set token="tkn_posture_number_passed_resources">$result.posture_number_passed_resources$</set>
+            <set token="tkn_vulnerability_number_passed_resources">$result.vulnerability_number_passed_resources$</set>
+            <set token="tkn_sdlc_number_passed_resources">$result.sdlc_number_passed_resources$</set>
+
+            <set token="tkn_posture_color">$result.posture_color$</set>
+            <set token="tkn_vulnerability_color">$result.vulnerability_color$</set>
+            <set token="tkn_sdlc_color">$result.sdlc_color$</set>
+
+            <set token="tkn_posture_abs">$result.posture_abs$</set>
+            <set token="tkn_vulnerability_abs">$result.vulnerability_abs$</set>
+            <set token="tkn_sdlc_abs">$result.sdlc_abs$</set>
+
+            <set token="tkn_ready">true</set>
           </done>
         </search>
       </table>
     </panel>
   </row>
+  
 
   <row>
     <panel depends="$tkn_ready$,$tkn_show_abs$">
       <html>
-        <div id="div_header" style="background:$tkn_color_posture$;color:white;font-weight:bold;font-size:$tkn_font_size_2$%;text-align:center;padding:$tkn_padding_2$">$tkn_score_abs_posture$</div> 
-        <div id="div_header" style="background:$tkn_color_posture$;color:white;font-size:100%;text-align:center">POSTURE</div> 
+        <div id="div_header" style="background:$tkn_posture_color$;color:white;font-weight:bold;font-size:$tkn_font_size_2$%;text-align:center;padding:$tkn_padding_2$">$tkn_posture_abs$</div> 
+        <div id="div_header" style="background:$tkn_posture_color$;color:white;font-size:100%;text-align:center">POSTURE</div> 
       </html>
     </panel>
     <panel depends="$tkn_ready$,$tkn_show_perc$">
       <html>
-        <div id="div_header" style="background:$tkn_color_posture$;color:white;font-weight:bold;font-size:$tkn_font_size_2$%;text-align:center;padding:$tkn_padding_2$">$tkn_score_perc_posture$</div> 
-        <div id="div_header" style="background:$tkn_color_posture$;color:white;font-size:100%;text-align:center">POSTURE</div> 
+        <div id="div_header" style="background:$tkn_posture_color$;color:white;font-weight:bold;font-size:$tkn_font_size_2$%;text-align:center;padding:$tkn_padding_2$">$tkn_posture_perc_passed_resources$</div> 
+        <div id="div_header" style="background:$tkn_posture_color$;color:white;font-size:100%;text-align:center">POSTURE</div> 
       </html>
     </panel>
     
 
     <panel depends="$tkn_ready$,$tkn_show_abs$">
       <html>
-        <div id="div_header" style="background:$tkn_color_detect$;color:white;font-weight:bold;font-size:$tkn_font_size_2$%;text-align:center;padding:$tkn_padding_2$">$tkn_score_abs_detect$</div> 
-        <div id="div_header" style="background:$tkn_color_detect$;color:white;font-size:100%;text-align:center">DETECT</div> 
+        <div id="div_header" style="background:$tkn_vulnerability_color$;color:white;font-weight:bold;font-size:$tkn_font_size_2$%;text-align:center;padding:$tkn_padding_2$">$tkn_vulnerability_abs$</div> 
+        <div id="div_header" style="background:$tkn_vulnerability_color$;color:white;font-size:100%;text-align:center">VM VULNERABILITY</div> 
       </html>
     </panel>
     <panel depends="$tkn_ready$,$tkn_show_perc$">
       <html>
-        <div id="div_header" style="background:$tkn_color_detect$;color:white;font-weight:bold;font-size:$tkn_font_size_2$%;text-align:center;padding:$tkn_padding_2$">$tkn_score_perc_detect$</div> 
-        <div id="div_header" style="background:$tkn_color_detect$;color:white;font-size:100%;text-align:center">DETECT</div> 
+        <div id="div_header" style="background:$tkn_vulnerability_color$;color:white;font-weight:bold;font-size:$tkn_font_size_2$%;text-align:center;padding:$tkn_padding_2$">$tkn_vulnerability_perc_passed_resources$</div> 
+        <div id="div_header" style="background:$tkn_vulnerability_color$;color:white;font-size:100%;text-align:center">VM VULNERABILITY</div> 
       </html>
     </panel>
     
 
     <panel depends="$tkn_ready$,$tkn_show_abs$">
       <html>
-        <div id="div_header" style="background:$tkn_color_vuln$;color:white;font-weight:bold;font-size:$tkn_font_size_2$%;text-align:center;padding:$tkn_padding_2$">$tkn_score_abs_vuln$</div> 
-        <div id="div_header" style="background:$tkn_color_vuln$;color:white;font-size:100%;text-align:center">VULNERABILITY</div> 
+        <div id="div_header" style="background:$tkn_sdlc_color$;color:white;font-weight:bold;font-size:$tkn_font_size_2$%;text-align:center;padding:$tkn_padding_2$">$tkn_sdlc_abs$</div> 
+        <div id="div_header" style="background:$tkn_sdlc_color$;color:white;font-size:100%;text-align:center">SDLC</div> 
       </html>
     </panel>
     <panel depends="$tkn_ready$,$tkn_show_perc$">
       <html>
-        <div id="div_header" style="background:$tkn_color_vuln$;color:white;font-weight:bold;font-size:$tkn_font_size_2$%;text-align:center;padding:$tkn_padding_2$">$tkn_score_perc_vuln$</div> 
-        <div id="div_header" style="background:$tkn_color_vuln$;color:white;font-size:100%;text-align:center">VULNERABILITY</div> 
-      </html>
-    </panel>
-    
-
-    <panel depends="$tkn_ready$,$tkn_show_abs$">
-      <html>
-        <div id="div_header" style="background:$tkn_color_sdlc$;color:white;font-weight:bold;font-size:$tkn_font_size_2$%;text-align:center;padding:$tkn_padding_2$">$tkn_score_abs_sdlc$</div> 
-        <div id="div_header" style="background:$tkn_color_sdlc$;color:white;font-size:100%;text-align:center">SDLC</div> 
-      </html>
-    </panel>
-    <panel depends="$tkn_ready$,$tkn_show_perc$">
-      <html>
-        <div id="div_header" style="background:$tkn_color_sdlc$;color:white;font-weight:bold;font-size:$tkn_font_size_2$%;text-align:center;padding:$tkn_padding_2$">$tkn_score_perc_sdlc$</div> 
-        <div id="div_header" style="background:$tkn_color_sdlc$;color:white;font-size:100%;text-align:center">SDLC</div> 
+        <div id="div_header" style="background:$tkn_sdlc_color$;color:white;font-weight:bold;font-size:$tkn_font_size_2$%;text-align:center;padding:$tkn_padding_2$">$tkn_sdlc_perc_passed_resources$</div> 
+        <div id="div_header" style="background:$tkn_sdlc_color$;color:white;font-size:100%;text-align:center">SDLC</div> 
       </html>
     </panel>
   </row>
@@ -339,11 +290,10 @@
       <input type="multiselect" token="tkn_category" searchWhenChanged="true">
         <label>Show</label>
         <choice value="POSTURE">Posture</choice>
-        <choice value="DETECT">Detect</choice>
-        <choice value="VULN">Vulnerabilities</choice>
+        <choice value="VULNERABILITY">Vulnerabilities</choice>
         <choice value="SDLC">SDLC</choice>
-        <default>POSTURE,DETECT,VULN,SDLC</default>
-        <initialValue>POSTURE,DETECT,VULN,SDLC</initialValue>
+        <default>POSTURE,VULNERABILITY,SDLC</default>
+        <initialValue>POSTURE,VULNERABILITY,SDLC</initialValue>
         <delimiter> OR </delimiter>
         <prefix>| search (</prefix>
         <suffix>)</suffix>
@@ -491,6 +441,13 @@
           <query>
 $tkn_category$
 
+| eval ssphp.assessment.consequence=replace('ssphp.assessment.consequence',"\&lt;P\&gt;",""),
+       ssphp.assessment.description=if('ssphp.use_case.category'="VULNERABILITY",mvappend('ssphp.assessment.consequence','ssphp.assessment.cve'),'ssphp.assessment.description'),
+       ssphp.assessment.description=if('ssphp.use_case.category'="POSTURE",replace('ssphp.assessment.description',"\&lt;(\/)?a|A\&gt;",""),'ssphp.assessment.description'),
+       ssphp.assessment.description=if('ssphp.use_case.category'="POSTURE",replace('ssphp.assessment.description',"\&lt;br\&gt;",""),'ssphp.assessment.description'),
+       ssphp.assessment.description=if('ssphp.use_case.category'="POSTURE",replace('ssphp.assessment.description'," target=\"_blank\" href=",""),'ssphp.assessment.description')
+       
+       
 | eval ssphp.score.compliance_status=if('ssphp.score.score'="100","Compliant","Non-Compliant"),
        ssphp.score.ciso_priority=case('ssphp.score.ciso_priority'=1,"DfE Mandated",
                                       'ssphp.score.ciso_priority'=2,"Recommended",
@@ -498,11 +455,7 @@ $tkn_category$
        ssphp.score.score='ssphp.score.score'."|".'ssphp.score.color',
        ssphp.score.compliance_status='ssphp.score.compliance_status'."|".'ssphp.score.color'
 
-| eval ssphp_norm_azure_resource_display=mvappend("Tenant = ".'ssphp.resource.tenant_id',
-                                                  "Subscription = ".'ssphp.resource.subscription_id',
-                                                  "Resource Group = ".'ssphp.resource.resource_group_id',
-                                                  "Resource Name = ".'ssphp.resource.name')
-`ssphp_add_display_colours{{environment}}`
+`ssphp_add_display_colours_DEV`
 
 ``` sort the lines properly ```
 | fillnull value=0 n3
@@ -511,20 +464,23 @@ $tkn_category$
         sort_field='n4'.'n5'
 | sort 0 sort_field, ssphp.use_case.id
 
-| table ssphp.service.id, ssphp.use_case.id, ssphp.use_case.title, ssphp.benchmark.control.title, ssphp.score.score, ssphp.score.compliance_status, ssphp.score.ciso_priority, ssphp.benchmark.control.description, ssphp.score.color, ssphp_norm_azure_resource_display
+| table ssphp.service.id, ssphp.use_case.id, ssphp.use_case.title, ssphp.assessment.display_name, ```ssphp.benchmark.control.title,``` ssphp.score.score, ssphp.score.compliance_status, ssphp.score.ciso_priority, ssphp.assessment.description, ```ssphp.benchmark.control.description,``` ssphp.score.color, ssphp.resource.id
 
 $tkn_search_filter$
 
 | eval "DfE Service"='ssphp.service.id'
+| rex field=ssphp.score.score "^^(?&lt;count_score&gt;[^|]*)|"
+
 | rename ssphp.use_case.title as "Use Case",
-         ssphp.benchmark.control.title  as "Control Title", 
+         ssphp.assessment.display_name  as "Control Title", 
          ssphp.score.score as "Score",
          ssphp.score.compliance_status as "Compliance Status",
          ssphp.score.ciso_priority as "Control Type",
-         ssphp.benchmark.control.description as "Description",
-         ssphp_norm_azure_resource_display as "Resource Details"
-         
+         ssphp.assessment.description as "Description",
+         ssphp.resource.id as "Resource Details"
+
 | eventstats count as number_controls_total
+| eval number_controls_total=tostring('number_controls_total', "commas")
           </query>
           <done>
             <eval token="tkn_controls_total">if(isnotnull($result.number_controls_total$),$result.number_controls_total$,"0")</eval>
@@ -545,6 +501,35 @@ $tkn_search_filter$
     </panel>
   </row>
 
-{% include 'default/data/ui/views/ssphp_dashboard_templates.d/ssphp_footer_template.xml' %}
+<row depends="$tkn_show_footer$">
+    <panel depends="$never_show$">
+        <table>
+            <search>
+                <query>
+| rest /services/authentication/current-context splunk_server=local 
+| table username, roles
+| eval roles=case(username="ian.pearl@education.gov.uk",mvappend('roles',"dfe_ssphp_service_user_s194"),
+                    username="alex.kinnane@education.gov.uk",mvappend('roles',"dfe_ssphp_service_user_s194"),
+                    username="sam.pritchard@education.gov.uk",mvappend('roles',"dfe_ssphp_service_user_s194"),
+                    1==1,'roles')
+| eval roles=mvfilter(match('roles',"dfe_ssphp_service_user_s\d{3}"))
+| where isnotnull('roles')
+| rex field=roles "dfe_ssphp_service_user_(?&lt;service&gt;s\d{3})$"
+| eval app=$env:app|s$
+| table username, service, app
+                </query>
+                <done>
+                    <set token="tkn__current_user_name">$result.username$</set>
+                    <set token="tkn__current_user_service">$result.service$</set>
+                    <set token="tkn__current_application">$result.app$</set>
+                </done>
+            </search>
+        </table>
+    </panel>
+
+    <panel>
+        <html>Current User : $tkn__current_user_name$&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;Current App : $tkn__current_application$&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;User Service : $tkn__current_user_service$&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;Version : 5d9adba8cb2408f9193f00c611ddf74a974241ae</html>
+    </panel>
+</row>
 
 </dashboard>
