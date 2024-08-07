@@ -41,7 +41,7 @@
 
   <!-- ################### Set Target App ################### --> 
   
-  <row depends="$never_show$">
+  <row depends="$debug$">
     <panel>
       <table>
         <search>
@@ -202,7 +202,7 @@
 
 <!-- ################### Main Data Table ################### --> 
 
-  <row depends="$never_show$">
+  <row depends="$debug$">
     <panel>
       <table>
         <search>

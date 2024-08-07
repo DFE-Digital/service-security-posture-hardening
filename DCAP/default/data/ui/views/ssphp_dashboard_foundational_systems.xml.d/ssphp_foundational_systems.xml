@@ -39,8 +39,8 @@
 
   
 <!-- ################### What app are we running in ################### -->   
-  <row depends="$never_show$">
-    <panel depends="$never_show$">
+  <row depends="$debug$">
+    <panel depends="$debug$">
       <table>
         <search>
           <query>

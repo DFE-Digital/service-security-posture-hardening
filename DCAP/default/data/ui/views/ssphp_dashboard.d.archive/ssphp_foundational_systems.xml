@@ -241,7 +241,7 @@
   </row>
 
 
-  <row depends="$never_show$">
+  <row depends="$debug$">
     <html>
       <style>
          .css_for_green{ 
@@ -277,7 +277,7 @@
   </row>
 
   <row>
-    <panel depends="$never_show$">
+    <panel depends="$debug$">
       <table>
         <search>
           <query>

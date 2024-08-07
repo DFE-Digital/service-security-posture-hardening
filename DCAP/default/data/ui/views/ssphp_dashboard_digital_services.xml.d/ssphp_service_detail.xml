@@ -26,7 +26,7 @@
     <set token="tkn_github_2_cis_doc_name">CIS GitHub Benchmark v1.0.0 PDF.pdf</set>
   </init>
 
-  <row depends="$never_show$">
+  <row depends="$debug$">
     <html>
       <style>
         .header_r0{
@@ -84,7 +84,7 @@
     </html>
   </row>
 
-  <row depends="$never_show$">
+  <row depends="$debug$">
     <panel>
       <table>
         <search>
@@ -110,7 +110,7 @@
 
 
 <!-- ########################################################################## DATA Row ########################################################################## --> 
-  <row depends="$never_show$">
+  <row depends="$debug$">
     <panel>
       <table>
         <search>
@@ -300,7 +300,7 @@
 
 
 <!-- ################### Should this dashboard be showing the DfE Control Panels or the CIS Control Panels? ################### --> 
-  <row depends="$never_show$">
+  <row depends="$debug$">
     <panel>
       <table>
         <search>
@@ -410,7 +410,7 @@
       </html>
     </panel>
     
-    <panel depends="$never_show$">
+    <panel depends="$debug$">
       <table>
         <search>
           <query>
@@ -463,7 +463,7 @@
     </panel>
   </row>
 
-  <row depends="$never_show$">
+  <row depends="$debug$">
     <panel>
       <table>
         <search>
@@ -496,7 +496,7 @@
 
 <!-- ########################################################################## UNDERLYING DATA Row ########################################################################## --> 
     
-  <row depends="$never_show$">
+  <row depends="$debug$">
     <html>
       <style>
          .css_for_green{ 

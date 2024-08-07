@@ -54,7 +54,7 @@
 
 <!-- ################### Set Target Service and other Tokens ################### --> 
 
-  <row depends="$never_show$">
+  <row depends="$debug$">
     <panel>
       <table>
         <search>
@@ -97,7 +97,7 @@
 
 <!-- ################### STYLE ROW ################### -->   
 
-  <row depends="$never_show$">
+  <row depends="$debug$">
       <html>
         <style>
           .absolute {
@@ -236,7 +236,7 @@
 
 <!-- ################### DATA ROW - Foundational Services ################### -->   
 
-  <row depends="$never_show$">
+  <row depends="$debug$">
     <panel>
       <table>
         <search>
@@ -278,7 +278,7 @@
   </row>
 
 <row depends="$tkn_show_footer$">
-    <panel depends="$never_show$">
+    <panel depends="$debug$">
         <table>
             <search>
                 <query>

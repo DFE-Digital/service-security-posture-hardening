@@ -9,7 +9,7 @@
     <set token="c_blue">"0x0000FF"</set>
   </init>
 
-  <row depends="$never_show$">
+  <row depends="$debug$">
     <html>
       <style>
         .header_r0{
@@ -68,7 +68,7 @@
   </row>
 
 <!-- ################### Data Row ################### --> 
-  <row depends="$never_show$">
+  <row depends="$debug$">
     <panel>
       <table>
         <search>
@@ -289,7 +289,7 @@
 
     <!-- ## Panel to find the name of the macro that the savedsearch uses to get it's data. Some savedsearches re-use a different macro ## -->
   <row>
-    <panel depends="$never_show$">
+    <panel depends="$debug$">
       <table>
         <title>test</title>
         <search>

@@ -85,7 +85,7 @@
     
     
 <!-- ###****************** Auto calculate panel widths and height **********************### -->
-  <row depends="$never_show$">
+  <row depends="$debug$">
     <panel>
       <table>
         <search>

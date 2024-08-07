@@ -96,7 +96,7 @@
 
 <!-- ## Panel to find timezone related stuff to display ## -->
   <row>
-    <panel depends="$never_show$">
+    <panel depends="$debug$">
       <table>
         <title>timezones</title>
         <search>
@@ -116,7 +116,7 @@
     
 
 <!-- ## Panel to find the name of the macro that the savedsearch uses to get it's data. Some savedsearches re-use a different macro ## -->
-    <panel depends="$never_show$">
+    <panel depends="$debug$">
       <table>
         <title>test</title>
         <search>
@@ -265,7 +265,7 @@
       </html>
     </panel>
     
-    <panel depends="$never_show$">
+    <panel depends="$debug$">
       <table>
         <search>
           <query>

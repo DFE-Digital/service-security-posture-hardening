@@ -73,7 +73,7 @@
 
 <!-- ################### Set Target Service and other Tokens ################### --> 
 
-  <row depends="$never_show$">
+  <row depends="$debug$">
     <panel>
       <table>
         <search>
@@ -130,7 +130,7 @@
     </panel>
     
 <!-- Search to build filter text --> 
-    <panel depends="$never_show$">
+    <panel depends="$debug$">
       <table>
         <search>
           <query>
@@ -156,7 +156,7 @@
 
 <!-- ################### Main Data Table ################### --> 
 
-  <row depends="$never_show$">
+  <row depends="$debug$">
     <html>
       <style>
          .css_for_green{ 

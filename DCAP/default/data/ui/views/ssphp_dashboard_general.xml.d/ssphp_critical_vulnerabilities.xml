@@ -58,7 +58,7 @@
   
 <!-- ################### Set Target Service and other Tokens ################### --> 
 
-  <row depends="$never_show$">
+  <row depends="$debug$">
     <panel>
       <table>
         <search>

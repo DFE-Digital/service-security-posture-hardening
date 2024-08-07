@@ -69,7 +69,7 @@
   </fieldset>
 
 
-  <row depends="$never_show$">
+  <row depends="$debug$">
     <panel>
       <table>
         <search>
@@ -90,7 +90,7 @@
 
 <!-- ################### Set Colour and other Tokens ################### --> 
 
-<row depends="$never_show$"> 
+<row depends="$debug$"> 
   <panel>
     <table>
       <search>

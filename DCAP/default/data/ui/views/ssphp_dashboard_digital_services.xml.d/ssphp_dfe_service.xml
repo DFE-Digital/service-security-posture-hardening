@@ -63,7 +63,7 @@
 
 
 <!-- ################### GET THE BASE SUMMARY INDEX DATA FOR THE OTHER QUERIES ################### --> 
-  <row depends="$never_show$">
+  <row depends="$debug$">
     <panel>
       <table>
         <search id="bs_1">
@@ -100,7 +100,7 @@
 
 <!-- ################### Set Target Service and other Tokens ################### --> 
 
-  <row depends="$never_show$">
+  <row depends="$debug$">
     <panel>
       <table>
         <search>
@@ -144,7 +144,7 @@
 <!-- ################### Middle by Category Score Row ################### --> 
 
 
-  <row depends="$tkn_ready$,$never_show$">
+  <row depends="$tkn_ready$,$debug$">
     <panel>
       <table>
         <search base="bs_1">
@@ -309,7 +309,7 @@
     </panel>
     
 <!-- Search to build filter text --> 
-    <panel depends="$never_show$">
+    <panel depends="$debug$">
       <table>
         <search>
           <query>
@@ -335,7 +335,7 @@
 
 <!-- ################### Main Data Table ################### --> 
 
-  <row depends="$never_show$">
+  <row depends="$debug$">
     <html>
       <style>
          .css_for_green{ 
@@ -502,7 +502,7 @@ $tkn_search_filter$
   </row>
 
 <row depends="$tkn_show_footer$">
-    <panel depends="$never_show$">
+    <panel depends="$debug$">
         <table>
             <search>
                 <query>
