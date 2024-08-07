@@ -36,7 +36,7 @@
 
 <!-- ################### Set Target Service and other Tokens ################### --> 
 
-  <row depends="$never_show$">
+  <row depends="$debug$">
     <panel>
       <table>
         <search>
@@ -79,7 +79,7 @@
 
 <!-- ################### STYLE ROW ################### -->   
 
-  <row depends="$never_show$">
+  <row depends="$debug$">
       <html>
         <style>
           .absolute {
@@ -192,12 +192,12 @@
 
 <!-- ################### DATA ROW - Foundational Services ################### -->   
 
-  <row depends="$never_show$">
+  <row depends="$debug$">
     <panel>
       <table>
         <search>
           <query>
-| loadjob savedsearch="nobody:$tkn_current_app$:ssphp_create_dashboard_dataset_posture{{environment}}"
+| loadjob savedsearch="{{splunk_user}}:$tkn_current_app$:ssphp_create_dashboard_dataset_posture{{environment}}"
 | search line_type="summary" AND ssphp.source.foundational_system="*"
 | eval compliant_perc='compliant_perc'."%"
 | table ssphp.source.foundational_system, compliant_perc, compliant_abs, compliant_color
@@ -281,7 +281,7 @@
 
 <!-- ################### DATA ROW - Regular Services ################### -->   
 
-  <row depends="$never_show$">
+  <row depends="$debug$">
     <panel>
       <table>
         <search>

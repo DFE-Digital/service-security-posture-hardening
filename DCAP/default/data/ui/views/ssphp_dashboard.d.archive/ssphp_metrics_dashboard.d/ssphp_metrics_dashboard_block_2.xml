@@ -35,7 +35,7 @@
     </html>
   </panel>
   
-  <panel depends="$never_show$">
+  <panel depends="$debug$">
     <table>
       <search>
         <query>
@@ -52,7 +52,7 @@
   
   
 <!-- ###****************** Show ^^^^ row? **********************### -->
-  <panel depends="$never_show$">
+  <panel depends="$debug$">
     <table>
       <search>
         <query>
@@ -75,7 +75,7 @@
   
   
 <!-- ###****************** Panel Heading Values **********************### -->
-  <panel depends="$never_show$">
+  <panel depends="$debug$">
     <table>
       <search>
         <query>
@@ -170,7 +170,7 @@
 
 <!-- ###****************** Check that all data feeds have been sending data **********************### -->
 <row>
-  <panel depends="$never_show$">
+  <panel depends="$debug$">
     <table>
       <search>
         <query>
@@ -204,7 +204,7 @@ BY index, sourcetype
   
   
 <!-- ###****************** Panel Values **********************### -->
-  <panel depends="$never_show$">
+  <panel depends="$debug$">
     <table>
       <search>
         <query>
@@ -234,7 +234,7 @@ BY index, sourcetype
 
 
 <!-- ###****************** Panel Colours **********************### -->
-  <panel depends="$never_show$">
+  <panel depends="$debug$">
     <table>
       <search>
         <query>
@@ -265,7 +265,7 @@ BY index, sourcetype
 
 
 <!-- ###****************** Panel visible **********************### -->
-  <panel depends="$never_show$">>
+  <panel depends="$debug$">>
     <table>
       <search>
         <query>

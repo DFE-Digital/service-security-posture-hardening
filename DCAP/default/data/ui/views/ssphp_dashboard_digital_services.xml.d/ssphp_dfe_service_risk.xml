@@ -22,7 +22,7 @@
   
   <search id="bs_1">
     <query>
-| loadjob savedsearch="nobody:$tkn_current_app$:ssphp_show_defender_assessments_with_static_data{{environment}}"
+| loadjob savedsearch="{{splunk_user}}:$tkn_current_app$:ssphp_show_defender_assessments_with_static_data{{environment}}"
 | search properties.status.code=$tkn_show_status|s$
 | table *
     </query>
@@ -69,7 +69,7 @@
   </fieldset>
 
 
-  <row depends="$never_show$">
+  <row depends="$debug$">
     <panel>
       <table>
         <search>
@@ -90,7 +90,7 @@
 
 <!-- ################### Set Colour and other Tokens ################### --> 
 
-<row depends="$never_show$"> 
+<row depends="$debug$"> 
   <panel>
     <table>
       <search>

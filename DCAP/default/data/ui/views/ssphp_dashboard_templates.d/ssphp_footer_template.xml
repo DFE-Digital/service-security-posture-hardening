@@ -1,5 +1,5 @@
 <row depends="$tkn_show_footer$">
-    <panel depends="$never_show$">
+    <panel depends="$debug$">
         <table>
             <search>
                 <query>

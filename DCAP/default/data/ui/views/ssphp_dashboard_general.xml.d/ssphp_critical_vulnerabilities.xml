@@ -11,7 +11,7 @@
   
   <search id="bs_1">
     <query>
-| loadjob savedsearch="nobody:$tkn_current_app$:ssphp_vulnerabilities_create_data{{environment}}"
+| loadjob savedsearch="{{splunk_user}}:$tkn_current_app$:ssphp_vulnerabilities_create_data{{environment}}"
 | table *
     </query>
   </search>
@@ -58,7 +58,7 @@
   
 <!-- ################### Set Target Service and other Tokens ################### --> 
 
-  <row depends="$never_show$">
+  <row depends="$debug$">
     <panel>
       <table>
         <search>

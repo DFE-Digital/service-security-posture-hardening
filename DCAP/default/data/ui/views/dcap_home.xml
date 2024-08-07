@@ -1,7 +1,7 @@
 <dashboard version="1.1" theme="dark" hideFilters="true" script="js/route.js">
   <label>DCAP HOME</label>
 
-    <row depends="$never_show$">
+    <row depends="$debug$">
         <panel>
             <table id="routing_table">
                 <search>

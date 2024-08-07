@@ -41,7 +41,7 @@
 
   <!-- ################### Set Target App ################### --> 
   
-  <row depends="$never_show$">
+  <row depends="$debug$">
     <panel>
       <table>
         <search>
@@ -202,12 +202,12 @@
 
 <!-- ################### Main Data Table ################### --> 
 
-  <row depends="$never_show$">
+  <row depends="$debug$">
     <panel>
       <table>
         <search>
           <query>
-| loadjob savedsearch="nobody:$tkn_current_app$:ssphp_create_dashboard_dataset_maturity{{environment}}"
+| loadjob savedsearch="{{splunk_user}}:$tkn_current_app$:ssphp_create_dashboard_dataset_maturity{{environment}}"
 
 $tkn_type$
 

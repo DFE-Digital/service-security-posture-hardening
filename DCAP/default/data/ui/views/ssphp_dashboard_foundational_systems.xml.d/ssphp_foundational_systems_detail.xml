@@ -30,7 +30,7 @@
     {% include 'default/data/ui/views/ssphp_dashboard_templates.d/ssphp_footer_menu_template.xml' %}
   </fieldset>
 
-  <row depends="$never_show$">
+  <row depends="$debug$">
     <panel>
       <table>
         <search>
@@ -56,7 +56,7 @@
 
 
 <!-- ########################################################################## DATA Row ########################################################################## --> 
-  <row depends="$never_show$">
+  <row depends="$debug$">
     <panel>
       <table>
         <search>
@@ -276,7 +276,7 @@
 
 
 <!-- ################### Should this dashboard be showing the DfE Control Panels or the CIS Control Panels? ################### --> 
-  <row depends="$never_show$">
+  <row depends="$debug$">
     <panel>
       <table>
         <search>
@@ -406,7 +406,7 @@
     </panel>
   </row>
 
-  <row depends="$never_show$">
+  <row depends="$debug$">
     <panel>
       <table>
         <search>
@@ -440,7 +440,7 @@
 
 <!-- ########################################################################## UNDERLYING DATA Row ########################################################################## --> 
     
-  <row depends="$never_show$">
+  <row depends="$debug$">
     <html>
       <style>
          .css_for_green{ 
