@@ -5,7 +5,7 @@
 {% endif %}  
 
   <label>Security Posture Continuous Assurance : DfE Service Dashboard</label>
-  <description>{{environment}} v3.0.0</description>
+  <description>{{environment}} v3.0.2</description>
   
   <init>
     <set token="form.tkn_fields">C</set>
@@ -153,63 +153,65 @@
          
 | stats count as number_controls_total,
              dc(eval(if('ssphp.use_case.category'="POSTURE" AND 'count_score'&lt;100,'ssphp.resource.id',null()))) as posture_number_failed_resources, dc(eval(if('ssphp.use_case.category'="POSTURE" AND 'count_score'=100,'ssphp.resource.id',null()))) as posture_number_passed_resources,
+
              dc(eval(if('ssphp.use_case.category'="VULNERABILITY" AND 'count_score'&lt;100,'ssphp.resource.id',null()))) as vulnerability_number_failed_resources, dc(eval(if('ssphp.use_case.category'="VULNERABILITY" AND 'count_score'=100,'ssphp.resource.id',null()))) as vulnerability_number_passed_resources,
-             dc(eval(if('ssphp.use_case.category'="SDLC" AND 'count_score'&lt;100,'ssphp.resource.id',null()))) as sdlc_number_failed_resources, dc(eval(if('ssphp.use_case.category'="SDLC" AND 'count_score'=100,'ssphp.resource.id',null()))) as sdlc_number_passed_resources
+             
+             dc(eval(if('ssphp.use_case.category'="REPOS" AND 'count_score'&lt;100,'ssphp.resource.id',null()))) as repos_number_failed_resources,
+             dc(eval(if('ssphp.use_case.category'="REPOS",'ssphp.resource.id',null()))) as repos_number_total_resources
 
 | eval posture_number_total_resources='posture_number_failed_resources'+'posture_number_passed_resources',
        vulnerability_number_total_resources='vulnerability_number_failed_resources'+'vulnerability_number_passed_resources',
-       sdlc_number_total_resources='sdlc_number_failed_resources'+'sdlc_number_passed_resources',
+       repos_number_passed_resources='repos_number_total_resources'-'repos_number_failed_resources',
        
        posture_perc_passed_resources=coalesce(floor('posture_number_passed_resources'*100/'posture_number_total_resources'),"0"),
        vulnerability_perc_passed_resources=coalesce(floor('vulnerability_number_passed_resources'*100/'vulnerability_number_total_resources'),"0"),
-       sdlc_perc_passed_resources=coalesce(floor('sdlc_number_passed_resources'*100/'sdlc_number_total_resources'),"0")
+       repos_perc_passed_resources=coalesce(floor('repos_number_passed_resources'*100/'repos_number_total_resources'),"0")
 
-| eval posture_color=case(isnull('posture_perc_passed_resources') OR 'posture_perc_passed_resources'="","$tkn_colour_splunk_grey$",
-                                  'posture_perc_passed_resources'=100,"$tkn_colour_green$",
-                                  1==1,"$tkn_colour_red$"),
-       vulnerability_color=case(isnull('vulnerability_perc_passed_resources') OR 'vulnerability_perc_passed_resources'="","$tkn_colour_splunk_grey$",
-                                  'vulnerability_perc_passed_resources'=100,"$tkn_colour_green$",
-                                  1==1,"$tkn_colour_red$"),
-       sdlc_color=case(isnull('sdlc_perc_passed_resources') OR 'sdlc_perc_passed_resources'="","$tkn_colour_splunk_grey$",
-                                  'sdlc_perc_passed_resources'=100,"$tkn_colour_green$",
-                                  1==1,"$tkn_colour_red$")
+| eval posture_color=case(isnull('posture_perc_passed_resources') OR 'posture_perc_passed_resources'="","#171D21",
+                                  'posture_perc_passed_resources'=100,"#6AB187",
+                                  1==1,"#D32D41"),
+       vulnerability_color=case(isnull('vulnerability_perc_passed_resources') OR 'vulnerability_perc_passed_resources'="","#171D21",
+                                  'vulnerability_perc_passed_resources'=100,"#6AB187",
+                                  1==1,"#D32D41"),
+       repos_color=case(isnull('repos_perc_passed_resources') OR 'repos_perc_passed_resources'="","#171D21",
+                                  'repos_perc_passed_resources'=100,"#6AB187",
+                                  1==1,"#D32D41")
                                   
 | eval posture_perc_passed_resources='posture_perc_passed_resources'."%",
        vulnerability_perc_passed_resources='vulnerability_perc_passed_resources'."%",
-       sdlc_perc_passed_resources='sdlc_perc_passed_resources'."%"
+       repos_perc_passed_resources='repos_perc_passed_resources'."%"
        
 | eval number_controls_total=tostring('number_controls_total', "commas"), 
        posture_number_failed_resources=tostring('posture_number_failed_resources', "commas"), posture_number_passed_resources=tostring('posture_number_passed_resources', "commas"), posture_number_total_resources=tostring('posture_number_total_resources', "commas"),
        vulnerability_number_failed_resources=tostring('vulnerability_number_failed_resources', "commas"), vulnerability_number_passed_resources=tostring('vulnerability_number_passed_resources', "commas"), vulnerability_number_total_resources=tostring('vulnerability_number_total_resources', "commas"),
-       sdlc_number_failed_resources=tostring('sdlc_number_failed_resources', "commas"), sdlc_number_passed_resources=tostring('sdlc_number_passed_resources', "commas"), sdlc_number_total_resources=tostring('sdlc_number_total_resources', "commas")
+       repos_number_failed_resources=tostring('repos_number_failed_resources', "commas"), repos_number_passed_resources=tostring('repos_number_passed_resources', "commas"), repos_number_total_resources=tostring('repos_number_total_resources', "commas")
        
 | eval posture_abs='posture_number_passed_resources'." / ".'posture_number_total_resources',
        vulnerability_abs='vulnerability_number_passed_resources'." / ".'vulnerability_number_total_resources',
-       sdlc_abs='sdlc_number_passed_resources'." / ".'sdlc_number_total_resources'
+       repos_abs='repos_number_passed_resources'." / ".'repos_number_total_resources'
 
-| table posture_*, vulnerability_*, sdlc_*
-
+| table posture_*, vulnerability_*, repos_*
             </query>
           <done>
             <set token="tkn_posture_perc_passed_resources">$result.posture_perc_passed_resources$</set>
             <set token="tkn_vulnerability_perc_passed_resources">$result.vulnerability_perc_passed_resources$</set>
-            <set token="tkn_sdlc_perc_passed_resources">$result.sdlc_perc_passed_resources$</set>
+            <set token="tkn_repos_perc_passed_resources">$result.repos_perc_passed_resources$</set>
 
             <set token="tkn_posture_number_total_resources">$result.posture_number_total_resources$</set>
             <set token="tkn_vulnerability_number_total_resources">$result.vulnerability_number_total_resources$</set>
-            <set token="tkn_sdlc_number_total_resources">$result.sdlc_number_total_resources$</set>
+            <set token="tkn_repos_number_total_resources">$result.repos_number_total_resources$</set>
 
             <set token="tkn_posture_number_passed_resources">$result.posture_number_passed_resources$</set>
             <set token="tkn_vulnerability_number_passed_resources">$result.vulnerability_number_passed_resources$</set>
-            <set token="tkn_sdlc_number_passed_resources">$result.sdlc_number_passed_resources$</set>
+            <set token="tkn_repos_number_passed_resources">$result.repos_number_passed_resources$</set>
 
             <set token="tkn_posture_color">$result.posture_color$</set>
             <set token="tkn_vulnerability_color">$result.vulnerability_color$</set>
-            <set token="tkn_sdlc_color">$result.sdlc_color$</set>
+            <set token="tkn_repos_color">$result.repos_color$</set>
 
             <set token="tkn_posture_abs">$result.posture_abs$</set>
             <set token="tkn_vulnerability_abs">$result.vulnerability_abs$</set>
-            <set token="tkn_sdlc_abs">$result.sdlc_abs$</set>
+            <set token="tkn_repos_abs">$result.repos_abs$</set>
 
             <set token="tkn_ready">true</set>
           </done>
@@ -250,14 +252,14 @@
 
     <panel depends="$tkn_ready$,$tkn_show_abs$">
       <html>
-        <div id="div_header" style="background:$tkn_sdlc_color$;color:white;font-weight:bold;font-size:$tkn_font_size_2$%;text-align:center;padding:$tkn_padding_2$">$tkn_sdlc_abs$</div> 
-        <div id="div_header" style="background:$tkn_sdlc_color$;color:white;font-size:100%;text-align:center">SDLC</div> 
+        <div id="div_header" style="background:$tkn_repos_color$;color:white;font-weight:bold;font-size:$tkn_font_size_2$%;text-align:center;padding:$tkn_padding_2$">$tkn_repos_abs$</div> 
+        <div id="div_header" style="background:$tkn_repos_color$;color:white;font-size:100%;text-align:center">REPOS</div> 
       </html>
     </panel>
     <panel depends="$tkn_ready$,$tkn_show_perc$">
       <html>
-        <div id="div_header" style="background:$tkn_sdlc_color$;color:white;font-weight:bold;font-size:$tkn_font_size_2$%;text-align:center;padding:$tkn_padding_2$">$tkn_sdlc_perc_passed_resources$</div> 
-        <div id="div_header" style="background:$tkn_sdlc_color$;color:white;font-size:100%;text-align:center">SDLC</div> 
+        <div id="div_header" style="background:$tkn_repos_color$;color:white;font-weight:bold;font-size:$tkn_font_size_2$%;text-align:center;padding:$tkn_padding_2$">$tkn_repos_perc_passed_resources$</div> 
+        <div id="div_header" style="background:$tkn_repos_color$;color:white;font-size:100%;text-align:center">REPOS</div> 
       </html>
     </panel>
   </row>
@@ -291,9 +293,9 @@
         <label>Show</label>
         <choice value="POSTURE">Posture</choice>
         <choice value="VULNERABILITY">Vulnerabilities</choice>
-        <choice value="SDLC">SDLC</choice>
-        <default>POSTURE,VULNERABILITY,SDLC</default>
-        <initialValue>POSTURE,VULNERABILITY,SDLC</initialValue>
+        <choice value="REPOS">Repos</choice>
+        <default>POSTURE,VULNERABILITY,REPOS</default>
+        <initialValue>POSTURE,VULNERABILITY,REPOS</initialValue>
         <delimiter> OR </delimiter>
         <prefix>| search (</prefix>
         <suffix>)</suffix>
@@ -443,9 +445,13 @@ $tkn_category$
 
 | eval ssphp.assessment.consequence=replace('ssphp.assessment.consequence',"\&lt;P\&gt;",""),
        ssphp.assessment.description=if('ssphp.use_case.category'="VULNERABILITY",mvappend('ssphp.assessment.consequence','ssphp.assessment.cve'),'ssphp.assessment.description'),
+
        ssphp.assessment.description=if('ssphp.use_case.category'="POSTURE",replace('ssphp.assessment.description',"\&lt;(\/)?a|A\&gt;",""),'ssphp.assessment.description'),
        ssphp.assessment.description=if('ssphp.use_case.category'="POSTURE",replace('ssphp.assessment.description',"\&lt;br\&gt;",""),'ssphp.assessment.description'),
-       ssphp.assessment.description=if('ssphp.use_case.category'="POSTURE",replace('ssphp.assessment.description'," target=\"_blank\" href=",""),'ssphp.assessment.description')
+       ssphp.assessment.description=if('ssphp.use_case.category'="POSTURE",replace('ssphp.assessment.description'," target=\"_blank\" href=",""),'ssphp.assessment.description'),
+
+       ssphp.assessment.display_name=if('ssphp.use_case.category'="REPOS",'ssphp.benchmark.control.title','ssphp.assessment.display_name'),
+       ssphp.assessment.description=if('ssphp.use_case.category'="REPOS",'ssphp.benchmark.control.description','ssphp.assessment.description')
        
        
 | eval ssphp.score.compliance_status=if('ssphp.score.score'="100","Compliant","Non-Compliant"),
