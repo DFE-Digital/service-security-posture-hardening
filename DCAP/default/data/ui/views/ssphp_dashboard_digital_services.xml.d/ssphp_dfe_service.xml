@@ -5,7 +5,7 @@
 {% endif %}  
 
   <label>Security Posture Continuous Assurance : DfE Service Dashboard</label>
-  <description>_DEV v3.0.0</description>
+  <description>{{environment}} v3.0.0</description>
   
   <init>
     <set token="form.tkn_fields">C</set>
@@ -27,7 +27,7 @@
       <fieldForValue>ssphp.service.id</fieldForValue>
       <search>
         <query>
-`ssphp_summary_index_DEV` earliest=-2d@d latest=now
+`ssphp_summary_index_{{environment}}` earliest=-2d@d latest=now
 | fields ssphp.service.id, ssphp.service.name
 | dedup ssphp.service.id
 | sort 0 ssphp.service.id
@@ -68,7 +68,7 @@
       <table>
         <search id="bs_1">
           <query>
-`ssphp_summary_index_DEV` earliest=-2d@d latest=now
+`ssphp_summary_index{{environment}}` earliest=-2d@d latest=now
        ssphp.service.id=$tkn__service|s$
     ```ssphp.score.ciso_priority=1```
 
@@ -123,7 +123,7 @@
           <query>
   | makeresults
 
-  `ssphp_metrics_eval_field_colors_DEV`
+  `ssphp_metrics_eval_field_colors{{environment}}`
 
   | table tkn_*
           </query>
@@ -455,7 +455,7 @@ $tkn_category$
        ssphp.score.score='ssphp.score.score'."|".'ssphp.score.color',
        ssphp.score.compliance_status='ssphp.score.compliance_status'."|".'ssphp.score.color'
 
-`ssphp_add_display_colours_DEV`
+`ssphp_add_display_colours{{environment}}`
 
 ``` sort the lines properly ```
 | fillnull value=0 n3

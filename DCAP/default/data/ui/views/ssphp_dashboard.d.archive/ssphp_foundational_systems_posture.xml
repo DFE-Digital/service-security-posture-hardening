@@ -178,7 +178,7 @@
       <table>
         <search>
           <query>
-| loadjob savedsearch="nobody:{{app}}{{environment}}:ssphp_create_dashboard_dataset_posture{{environment}}"
+| loadjob savedsearch="{{splunk_user}}:{{app}}{{environment}}:ssphp_create_dashboard_dataset_posture{{environment}}"
 | search line_type="summary" AND ssphp.use_case.foundational_system="*"
 | eval compliant_perc='compliant_perc'."%"
 | table ssphp.use_case.foundational_system, compliant_perc, compliant_abs, compliant_color

@@ -1,4 +1,5 @@
 REPLACEMENT_DICT = {'app' : 'DCAP',
                     'environment' : '',
-                    'version' : ''
+                    'version' : '',
+                    'splunk_user' : 'ssphp_app_account',
                     }
