@@ -5,7 +5,7 @@
 {% endif %}  
 
   <label>Security Posture Continuous Assurance : DfE Service Dashboard</label>
-  <description>{{environment}} v3.0.2</description>
+  <description>{{environment}} v3.0.7</description>
   
   <init>
     <set token="form.tkn_fields">C</set>
@@ -72,9 +72,9 @@
        ssphp.service.id=$tkn__service|s$
     ```ssphp.score.ciso_priority=1```
 
-| eventstats values(SSPHP_RUN) as vals_SSPHP_RUN, max(SSPHP_RUN) as max_SSPHP_RUN by ssphp.use_case.id
+| eventstats max(SSPHP_RUN) as max_SSPHP_RUN by ssphp.use_case.id
 | where SSPHP_RUN='max_SSPHP_RUN'
-| fields - vals_SSPHP_RUN, max_SSPHP_RUN
+| fields - max_SSPHP_RUN
 
 | eval ssphp.assessment.categories=mvappend('ssphp.assessment.categories','ssphp.assessment.categories{}'),
        ssphp.assessment.tactics=mvappend('ssphp.assessment.tactics','ssphp.assessment.tactics{}'),
@@ -449,6 +449,7 @@ $tkn_category$
        ssphp.assessment.description=if('ssphp.use_case.category'="POSTURE",replace('ssphp.assessment.description',"\&lt;(\/)?a|A\&gt;",""),'ssphp.assessment.description'),
        ssphp.assessment.description=if('ssphp.use_case.category'="POSTURE",replace('ssphp.assessment.description',"\&lt;br\&gt;",""),'ssphp.assessment.description'),
        ssphp.assessment.description=if('ssphp.use_case.category'="POSTURE",replace('ssphp.assessment.description'," target=\"_blank\" href=",""),'ssphp.assessment.description'),
+       ssphp.resource.id=if('ssphp.use_case.category'="POSTURE",mvdedup(mvappend('ssphp.resource.NativeResourceId', 'ssphp.resource.id', 'ssphp.resource.ResourceId')),'ssphp.resource.id'),
 
        ssphp.assessment.display_name=if('ssphp.use_case.category'="REPOS",'ssphp.benchmark.control.title','ssphp.assessment.display_name'),
        ssphp.assessment.description=if('ssphp.use_case.category'="REPOS",'ssphp.benchmark.control.description','ssphp.assessment.description')
