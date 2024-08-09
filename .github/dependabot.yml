@@ -4,18 +4,62 @@ updates:
     directory: "/data_ingester/data_ingester_workspace"
     schedule:
       interval: "weekly"
+    commit-message: 
+      prefix: "Dependabot (rust): "
+    groups: 
+      cargo:
+        applies-to: version-updates
+        patterns:
+          - "*"
+      cargo-security:
+        applies-to: security-updates
+        patterns:
+          - "*"
 
   - package-ecosystem: "pip"
     directory: "/"
     schedule:
       interval: "weekly"
+    commit-message: 
+      prefix: "Dependabot (python): "
+    groups: 
+      pip:
+        applies-to: version-updates
+        patterns:
+          - "*"
+      pip-security:
+        applies-to: security-updates
+        patterns:
+          - "*"
 
   - package-ecosystem: "terraform"
-    directory: "/data_ingester/data_ingester_workspace/terraform/red"
+    directory: "/data_ingester/terraform/red"
     schedule:
       interval: "weekly"
+    commit-message: 
+      prefix: "Dependabot (terraform): "
+    groups: 
+      terraform:
+        applies-to: version-updates
+        patterns:
+          - "*"
+      terraform-security:
+        applies-to: security-updates
+        patterns:
+          - "*"
 
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
+    commit-message: 
+      prefix: "Dependabot (github actions): "
+    groups: 
+      gh-actions:
+        applies-to: version-updates
+        patterns:
+          - "*"
+      gh-actions-security:
+        applies-to: security-updates
+        patterns:
+          - "*"
