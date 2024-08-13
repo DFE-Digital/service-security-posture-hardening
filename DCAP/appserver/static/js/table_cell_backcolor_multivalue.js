@@ -10,6 +10,8 @@ require([
         canRender: function (cell) {
             //return true;
             return _(['state',
+                      'Compliance Status',
+                      'Score',
                       'schedule',
                       'dismissal_restrictions_branch_protect',
                       'admins',
