@@ -253,37 +253,7 @@ impl Splunk {
 
 // Needs Splunk Creds
 
-#[cfg(feature = "live_tests")]
-#[cfg(test)]
-pub(crate) mod live_tests {
 
-    #[tokio::test]
-    async fn send_to_splunk() {
-        let splunk = Splunk::new(
-            secrets.splunk_host.as_ref().context("No value")?,
-            secrets.splunk_token.as_ref().context("No value")?,
-        )?;
-        let splunk = Splunk::new("", "").unwrap();
-        let data = std::collections::HashMap::from([("aktest", "fromrust")]);
-        let he = HecEvent::new(&data, "msgraph_rust", "test_event").unwrap();
-        splunk.send(&he).await;
-    }
-
-    #[tokio::test]
-    async fn send_batch_to_splunk() {
-        use std::collections::HashMap;
-        let splunk = Splunk::new("", "").unwrap();
-        let mut events = Vec::new();
-        let data = HashMap::from([("aktest0", "fromrust")]);
-        let he = HecEvent::new(&data, "msgraph_rust", "test_event").unwrap();
-        events.push(he);
-
-        let data1 = HashMap::from([("aktest1", "fromrust")]);
-        let he1 = HecEvent::new(&data1, "msgraph_rust", "test_event").unwrap();
-        events.push(he1);
-        splunk.send_batch(&events[..]).await.unwrap();
-    }
-}
 
 fn batch_lines<I, T: Serialize>(it: &mut I) -> Option<String>
 where
@@ -362,4 +332,46 @@ where
         }
     };
     Ok(())
+}
+
+
+#[cfg(feature = "live_tests")]
+#[cfg(test)]
+pub(crate) mod live_tests {
+    use crate::splunk::{HecEvent, Splunk};
+    use anyhow::{Context, Result};
+    use data_ingester_supporting::keyvault::get_keyvault_secrets;
+    use std::{collections::HashMap, env};
+
+    #[tokio::test]
+    async fn send_to_splunk() -> Result<()> {
+        let secrets = get_keyvault_secrets(&env::var("KEY_VAULT_NAME")?).await?;
+        let splunk = Splunk::new(
+            secrets.splunk_host.as_ref().context("No value")?,
+            secrets.splunk_token.as_ref().context("No value")?,
+        )?;
+        let data = std::collections::HashMap::from([("aktest", "fromrust")]);
+        let he = HecEvent::new(&data, "msgraph_rust", "test_event").unwrap();
+        splunk.send(&he).await;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn send_batch_to_splunk() -> Result<()> {
+        let secrets = get_keyvault_secrets(&env::var("KEY_VAULT_NAME")?).await?;
+        let splunk = Splunk::new(
+            secrets.splunk_host.as_ref().context("No value")?,
+            secrets.splunk_token.as_ref().context("No value")?,
+        )?;
+        let mut events = Vec::new();
+        let data = HashMap::from([("aktest0", "fromrust")]);
+        let he = HecEvent::new(&data, "msgraph_rust", "test_event").unwrap();
+        events.push(he);
+
+        let data1 = HashMap::from([("aktest1", "fromrust")]);
+        let he1 = HecEvent::new(&data1, "msgraph_rust", "test_event").unwrap();
+        events.push(he1);
+        splunk.send_batch(&events[..]).await.unwrap();
+        Ok(())
+    }
 }

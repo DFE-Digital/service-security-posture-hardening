@@ -354,7 +354,7 @@ impl RateLimit {
 #[cfg(test)]
 #[tokio::test]
 async fn test_azure_resource_graph() -> Result<()> {
-    let (azure_rest, splunk) = crate::azure_rest::test::setup().await?;
+    let (azure_rest, splunk) = crate::azure_rest::live_tests::setup().await?;
     resource_graph_all(azure_rest, &splunk).await?;
     Ok(())
 }
