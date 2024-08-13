@@ -39,7 +39,7 @@ impl ToHecEvents for &SecurityScores {
 #[cfg(feature = "live_tests")]
 #[cfg(test)]
 mod test {
-    use crate::ms_graph::test::setup;
+    use crate::ms_graph::live_tests::setup;
 
     use data_ingester_splunk::splunk::ToHecEvents;
 

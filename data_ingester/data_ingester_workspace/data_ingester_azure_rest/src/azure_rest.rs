@@ -500,6 +500,7 @@ impl ToHecEvents for &ReturnTypes {
 
 #[cfg(feature = "live_tests")]
 impl ReturnTypes {
+    #[allow(dead_code)]
     fn is_empty(&self) -> bool {
         self.collection.is_empty()
     }
