@@ -172,7 +172,7 @@ async fn github_collect_installation_org(
         .await?;
 
         try_collect_send(
-            &format!("Code scanning alerts for {repo_name}"),
+            &format!("GitHub actions workflow files for {repo_name}"),
             github_client.repo_actions_get_workflow_files(&repo_name),
             &splunk,
         )

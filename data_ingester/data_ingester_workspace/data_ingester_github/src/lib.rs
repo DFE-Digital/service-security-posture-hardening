@@ -928,7 +928,7 @@ mod test {
         Ok(())
     }
 
-    /// Get a list of Artifacts for all github repos
+    /// Get a list of workflows for all GitHub repos
     #[tokio::test]
     async fn test_repo_actions_list_workflows() -> Result<()> {
         let client = TestClient::new().await;
@@ -938,6 +938,7 @@ mod test {
         Ok(())
     }
 
+    /// Get all workflow files for all GitHub repos
     #[tokio::test]
     async fn test_repo_actions_get_workflow_files() -> Result<()> {
         let client = TestClient::new().await;

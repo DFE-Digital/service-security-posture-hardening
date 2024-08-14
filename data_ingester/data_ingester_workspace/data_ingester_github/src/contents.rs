@@ -42,14 +42,14 @@ struct Links {
 impl Content {
     /// Content from GitHub is Base64 decoded
     ///
-    /// We are after the maching readable version of the data so try
+    /// We are after the machine readable version of the data so try
     /// YAML and JSON decoding before adding the data to the Content
     /// object
     fn decode_content(&mut self) -> Result<()> {
         let cleaned = self
             .content
             .chars()
-            .filter(|chr| !b" \n\t\r\x0b\x0c".contains(&(*chr as u8)))
+            .filter(|chr| !" \n\t\r\x0b\x0c".contains(*chr))
             .collect::<String>();
 
         let decoded_bytes = BASE64_STANDARD
