@@ -115,8 +115,8 @@
       <table>
         <search>
           <query>
-`ssphp_summary_index{{environment}}` ssphp.use_case.id=$tkn_use_case_id|s$ ssphp.source.service=$tkn__service|s$
-    [| search `ssphp_summary_index{{environment}}` ssphp.use_case.id=$tkn_use_case_id|s$ ssphp.source.service=$tkn__service|s$
+`ssphp_summary_index{{environment}}` SSPHP_UID=$tkn__uid|s$
+    [| search `ssphp_summary_index{{environment}}` SSPHP_UID=$tkn__uid|s$
       | stats max(SSPHP_RUN) as SSPHP_RUN
       | return SSPHP_RUN]
       
