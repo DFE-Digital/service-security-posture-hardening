@@ -5,7 +5,7 @@
 {% endif %}  
 
   <label>Security Posture Continuous Assurance : DfE Service Dashboard</label>
-  <description>{{environment}} v3.0.23</description>
+  <description>{{environment}} v3.0.24</description>
   
   <init>
     <set token="form.tkn_fields">C</set>
@@ -86,7 +86,7 @@
        ssphp.benchmark.control.rationale=mvappend('ssphp.benchmark.control.rationale','ssphp.benchmark.control.rationale{}')
 | fields - ssphp.assessment.categories{}, ssphp.assessment.tactics{}, ssphp.assessment.techniques{}, ssphp.assessment.threats{}, ssphp.benchmark.control.rationale{}
 
-| fields ssphp.*
+| fields ssphp.*, SSPHP_UID
             </query>
           <done>
             <set token="tkn_service_name">$result.ssphp.service.name$</set>
@@ -540,7 +540,7 @@ $tkn_category$
         sort_field='n4'.'n5'
 | sort 0 sort_field, ssphp.use_case.id
 
-| table ssphp.service.id, ssphp.use_case.id, ssphp.use_case.title, ssphp.assessment.display_name, ```ssphp.benchmark.control.title,``` ssphp.score.score, ssphp.score.compliance_status, ssphp.score.ciso_priority, ssphp.assessment.description, ```ssphp.benchmark.control.description,``` ssphp.score.color, ssphp.resource.id
+| table ssphp.service.id, ssphp.use_case.id, ssphp.use_case.title, ssphp.assessment.display_name, ```ssphp.benchmark.control.title,``` ssphp.score.score, ssphp.score.compliance_status, ssphp.score.ciso_priority, ssphp.assessment.description, ```ssphp.benchmark.control.description,``` ssphp.score.color, ssphp.resource.id, SSPHP_UID
 
 $tkn_search_filter$
 
@@ -573,7 +573,7 @@ $tkn_resource_search$
         <option name="drilldown">row</option>
         <fields>"Use Case","Control Title","Score","Compliance Status","Control Type","Description","Resource Details"</fields>
         <drilldown>
-          <link target="_blank">/app/$tkn_current_app$/ssphp_service_detail?tkn__service=$row.ssphp.service.id$&amp;tkn_use_case_id=$row.ssphp.use_case.id$</link>
+          <link target="_blank">/app/$tkn_current_app$/ssphp_service_detail?tkn__uid=$row.SSPHP_UID$</link>
         </drilldown>
       </table>
     </panel>
@@ -613,7 +613,7 @@ $tkn_category$
        ssphp.score.compliance_status='ssphp.score.compliance_status'."|".'ssphp.score.color'
 
 
-| fields ssphp.service.id, ssphp.use_case.id, ssphp.use_case.title, ssphp.assessment.display_name, ```ssphp.benchmark.control.title,``` ssphp.score.score, ssphp.score.compliance_status, ssphp.score.ciso_priority, ssphp.assessment.description, ```ssphp.benchmark.control.description,``` ssphp.score.color, ssphp.resource.id
+| fields ssphp.service.id, ssphp.use_case.id, ssphp.use_case.title, ssphp.assessment.display_name, ```ssphp.benchmark.control.title,``` ssphp.score.score, ssphp.score.compliance_status, ssphp.score.ciso_priority, ssphp.assessment.description, ```ssphp.benchmark.control.description,``` ssphp.score.color, ssphp.resource.id, SSPHP_UID
 
 $tkn_search_filter$
 
