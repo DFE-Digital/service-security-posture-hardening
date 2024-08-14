@@ -60,7 +60,8 @@ async fn github_app(github_app: &GitHubApp, splunk: &Arc<Splunk>) -> Result<()> 
     }
 
     for task in tasks {
-        let _ = task.await
+        let _ = task
+            .await
             .context("Running GitHub collection for all installations")?;
     }
     Ok(())
@@ -166,6 +167,13 @@ async fn github_collect_installation_org(
         try_collect_send(
             &format!("Code scanning alerts for {repo_name}"),
             github_client.repo_code_scanning_alerts(&repo_name),
+            &splunk,
+        )
+        .await?;
+
+        try_collect_send(
+            &format!("GitHub actions workflow files for {repo_name}"),
+            github_client.repo_actions_get_workflow_files(&repo_name),
             &splunk,
         )
         .await?;

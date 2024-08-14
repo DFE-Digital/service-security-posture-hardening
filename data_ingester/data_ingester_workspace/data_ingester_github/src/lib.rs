@@ -2,11 +2,15 @@
 //! Pull Security posture data from the Github API and send it to a Splunk HEC.
 //! Uses [Octocrab] for most operations.
 mod artifacts;
+mod contents;
 pub mod entrypoint;
 mod teams;
+mod workflows;
+use crate::workflows::Workflows;
 use anyhow::{Context, Result};
 use artifacts::{Artifact, Artifacts};
 use bytes::Bytes;
+use contents::Contents;
 use data_ingester_sarif::{Sarif, SarifHecs};
 use data_ingester_splunk::splunk::ToHecEvents;
 use data_ingester_supporting::keyvault::GitHubApp;
@@ -251,6 +255,32 @@ impl OctocrabGit {
     ) -> Result<GithubResponses> {
         let uri = format!("/repos/{repo}/rules/branches/{branch}");
         self.get_collection(&uri).await
+    }
+
+    /// List repository workflows
+    pub(crate) async fn repo_actions_list_workflows(&self, repo: &str) -> Result<Workflows> {
+        let uri = format!("/repos/{repo}/actions/workflows");
+        let result = self.get_collection(&uri).await?;
+        let workflows =
+            Workflows::try_from(&result).context("Convert GitHubResponses to artifacts")?;
+        Ok(workflows)
+    }
+
+    /// Get all GitHub Actions workflow files
+    pub(crate) async fn repo_actions_get_workflow_files(&self, repo: &str) -> Result<Contents> {
+        let workflows = self.repo_actions_list_workflows(repo).await?;
+        let mut responses = vec![];
+        for workflow in workflows.workflows {
+            let uri = format!("/repos/{repo}/contents/{0}", workflow.path);
+            let result = self.get_collection(&uri).await?;
+            let contents =
+                Contents::try_from(&result).context("Convert GitHubResponses to artifacts")?;
+            responses.extend(contents.contents);
+        }
+
+        Ok(Contents {
+            contents: responses,
+        })
     }
 
     /// Get Dependabot alerts for a repo
@@ -895,6 +925,31 @@ mod test {
             total_hec_events.extend(hec_events);
         }
         assert!(!total_hec_events.is_empty());
+        Ok(())
+    }
+
+    /// Get a list of workflows for all GitHub repos
+    #[tokio::test]
+    async fn test_repo_actions_list_workflows() -> Result<()> {
+        let client = TestClient::new().await;
+        client
+            .repo_iter(|repo_name| client.client.repo_actions_list_workflows(repo_name).boxed())
+            .await?;
+        Ok(())
+    }
+
+    /// Get all workflow files for all GitHub repos
+    #[tokio::test]
+    async fn test_repo_actions_get_workflow_files() -> Result<()> {
+        let client = TestClient::new().await;
+        client
+            .repo_iter(|repo_name| {
+                client
+                    .client
+                    .repo_actions_get_workflow_files(repo_name)
+                    .boxed()
+            })
+            .await?;
         Ok(())
     }
 }

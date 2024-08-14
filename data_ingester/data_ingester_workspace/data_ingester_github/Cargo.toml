@@ -5,25 +5,27 @@ edition = "2021"
 
 [dependencies]
 anyhow = { version = "1", features=["backtrace"]}
+base64 = "0.22"
 bytes = "1"
-data_ingester_splunk = { path = "../data_ingester_splunk" }
 data_ingester_sarif = { path = "../data_ingester_sarif" }
+data_ingester_splunk = { path = "../data_ingester_splunk" }
 data_ingester_supporting = { path = "../data_ingester_supporting" }
+futures = "0"
+graphql_client = "0"
+http = "1"
+http-body-util = "0"
+itertools = "0"
+jsonwebtoken = "9"
 octocrab = "0"
+regex = "1"
+secrecy = "0"
 serde = {version = "1", features = ["derive"]}
 serde_json = "1"
+serde_yaml = "0.9"
+tokio = { version = "1", features = ["full"] }
 tracing = "0"
 tracing-subscriber = { version = "0", features = ["env-filter", "std", "alloc", "fmt", "registry", "ansi"], default-features = false }
-tokio = { version = "1", features = ["full"] }
-http = "1"
-jsonwebtoken = "9"
-secrecy = "0"
-http-body-util = "0"
-futures = "0"
-itertools = "0"
-regex = "1"
 url = "2"
-graphql_client = "0"
 
 [lints]
 workspace = true
