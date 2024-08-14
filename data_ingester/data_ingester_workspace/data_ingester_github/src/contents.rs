@@ -147,9 +147,6 @@ impl TryFrom<&GithubResponse> for Contents {
         let contents = value
             .into_iter()
             .filter_map(|value| serde_json::from_value::<Content>(value.clone()).ok())
-            .inspect(|value| {
-                dbg!(value);
-            })
             .map(|mut content| {
                 let _ = content.decode_content();
                 content
