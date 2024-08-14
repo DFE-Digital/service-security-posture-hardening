@@ -54,7 +54,7 @@ impl Content {
 
         let decoded_bytes = BASE64_STANDARD
             .decode(cleaned)
-            .context("Base64 decode GitHub private key")?;
+            .context("Base64 decode GitHub Content")?;
 
         let decoded_string = String::from_utf8(decoded_bytes.clone())?;
 
@@ -140,7 +140,7 @@ impl TryFrom<&GithubResponses> for Contents {
     }
 }
 
-/// Convert a `&GitHubResponse` into `Content`
+/// Convert a `&GitHubResponse` into `Contents`
 impl TryFrom<&GithubResponse> for Contents {
     type Error = anyhow::Error;
     fn try_from(value: &GithubResponse) -> Result<Self, Self::Error> {
