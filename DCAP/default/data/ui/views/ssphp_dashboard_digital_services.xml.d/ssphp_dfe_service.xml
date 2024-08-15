@@ -5,7 +5,7 @@
 {% endif %}  
 
   <label>Security Posture Continuous Assurance : DfE Service Dashboard</label>
-  <description>{{environment}} v3.1.5</description>
+  <description>{{environment}} v3.1.6</description>
   
   <init>
     <set token="form.tkn_fields">C</set>
@@ -94,6 +94,7 @@
             <set token="tkn_ready">true</set>
           </done>
         </search>
+        <option name="count">1</option>
       </table>
     </panel>
   </row>
