@@ -5,7 +5,7 @@
 {% endif %}  
 
   <label>Security Posture Continuous Assurance : DfE Service Dashboard</label>
-  <description>{{environment}} v3.1.6</description>
+  <description>{{environment}} v3.2.1</description>
   
   <init>
     <set token="form.tkn_fields">C</set>
@@ -27,7 +27,7 @@
       <fieldForValue>ssphp.service.id</fieldForValue>
       <search>
         <query>
-`ssphp_summary_index_{{environment}}` earliest=-2d@d latest=now
+`ssphp_summary_index{{environment}}` earliest=-2d@d latest=now
 | fields ssphp.service.id, ssphp.service.name
 | dedup ssphp.service.id
 | sort 0 ssphp.service.id
@@ -75,7 +75,7 @@
        ssphp.service.id=$tkn__service|s$
     ```ssphp.score.ciso_priority=1```
 
-| eventstats max(SSPHP_RUN) as max_SSPHP_RUN by ssphp.use_case.id
+| eventstats max(SSPHP_RUN) as max_SSPHP_RUN by ssphp.use_case.savedsearch
 | where SSPHP_RUN='max_SSPHP_RUN'
 | fields - max_SSPHP_RUN
 
@@ -342,7 +342,7 @@
       <html>
         <style>
           #w2{
-            width:50% !important;
+            width:75% !important;
           }
         </style>
       </html>
@@ -389,6 +389,35 @@
         <valueSuffix>"</valueSuffix>
       </input>
 
+
+      <input type="multiselect" token="tkn_code_tools">
+        <label>Code Scanning Tools</label>
+        <choice value="*">ALL</choice>
+        <default>*</default>
+        <initialValue>*</initialValue>
+        <prefix>| search ssphp.use_case.category!="CODE_SCAN" OR (ssphp.use_case.category="CODE_SCAN" AND (</prefix>
+        <suffix>)) </suffix>
+        <valuePrefix>ssphp.assessment.source="</valuePrefix>
+        <valueSuffix>"</valueSuffix>
+        <delimiter> OR </delimiter>
+        <fieldForLabel>tools</fieldForLabel>
+        <fieldForValue>tools</fieldForValue>
+        <search>
+          <query>
+`ssphp_summary_index{{environment}}` earliest=-2d@d latest=now ssphp.use_case.category="CODE_SCAN"
+| fields ssphp.assessment.source
+| dedup ssphp.assessment.source
+| eval tools=case('ssphp.assessment.source'="DEPENDABOT","Dependabot",
+                  'ssphp.assessment.source'="NO TOOL","No Tool",
+                  1==1,'ssphp.assessment.source')
+| table tools
+| sort tools
+          </query>
+          <earliest>-2d@d</earliest>
+          <latest>now</latest>
+        </search>
+      </input>
+
       <input type="text" token="tkn_resource_search" searchWhenChanged="true">
         <label>Search for Resource</label>
         <prefix> | search "Resource Details"="*</prefix>
@@ -398,7 +427,7 @@
       </input>
     </panel>
 
-
+<!-- #############################
     <panel id="w3">
       <html>
         <style>
@@ -409,7 +438,8 @@
         <div><span><a href="ssphp_foundational_systems_dashboard_help?tkn_service=true" class="btn btn-primary" style="color:black;background-color:grey;text-align:center;display:block;float:right;width:30%;" target="_blank">Dashboard Help</a></span></div> 
       </html>
     </panel>
-    
+ ############################# --> 
+ 
 <!-- Search to build filter text --> 
     <panel depends="$debug$">
       <table>
@@ -545,6 +575,8 @@
           <query>
 $tkn_category$
 
+$tkn_code_tools$
+
 | eval ssphp.assessment.consequence=replace('ssphp.assessment.consequence',"\&lt;P\&gt;",""),
        ssphp.assessment.description=if('ssphp.use_case.category'="VULNERABILITY",mvappend('ssphp.assessment.consequence','ssphp.assessment.cve'),'ssphp.assessment.description'),
 
@@ -632,6 +664,8 @@ $tkn_resource_search$
           <query>
 $tkn_category$
 
+$tkn_code_tools$
+
 | eval ssphp.assessment.consequence=replace('ssphp.assessment.consequence',"\&lt;P\&gt;",""),
        ssphp.assessment.description=if('ssphp.use_case.category'="VULNERABILITY",mvappend('ssphp.assessment.consequence','ssphp.assessment.cve'),'ssphp.assessment.description'),
 
@@ -650,8 +684,7 @@ $tkn_category$
        ssphp.score.score='ssphp.score.score'."|".'ssphp.score.color',
        ssphp.score.compliance_status='ssphp.score.compliance_status'."|".'ssphp.score.color'
 
-
-| fields ssphp.service.id, ssphp.use_case.id, ssphp.use_case.title, ssphp.assessment.display_name, ```ssphp.benchmark.control.title,``` ssphp.score.score, ssphp.score.compliance_status, ssphp.score.ciso_priority, ssphp.assessment.description, ```ssphp.benchmark.control.description,``` ssphp.score.color, ssphp.resource.id, SSPHP_UID
+| fields ssphp.service.id, ssphp.use_case.id, ssphp.use_case.title, ssphp.assessment.display_name, ```ssphp.benchmark.control.title,``` ssphp.score.score, ssphp.score.compliance_status, ssphp.score.ciso_priority, ssphp.assessment.description, ```ssphp.benchmark.control.description,``` ssphp.score.color, ssphp.resource.id, SSPHP_UID, ssphp.assessment.source
 
 $tkn_search_filter$
 
@@ -667,7 +700,9 @@ $tkn_search_filter$
          ssphp.resource.id as "Resource Details"
 
 
-| stats values(eval(if(like('Compliance Status',"Non-Compliant%"),'Control Title'." [".mvindex(split('Score',"|"),0)."]",null()))) as "Control Title" by "Resource Details"
+| stats values(eval(if(like('Compliance Status',"Non-Compliant%"),'ssphp.assessment.source'." :: ".'Control Title'." [".mvindex(split('Score',"|"),0)."]",null()))) as "Control Title" 
+        by "Resource Details"
+
 | where isnotnull('Control Title')
 
 $tkn_resource_search$
