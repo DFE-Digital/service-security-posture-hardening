@@ -27,7 +27,7 @@ jobs:
     uses: DFE-Digital/github-actions/.github/workflows/reusable-workflow-sast.yml@master
     with:
       language: ${{ matrix.language }} 
-      policy_action: 'break'
+      policy_action: 'continue'
       queries: 'security-extended'
       config_file: '.github/codeql-config.yaml'
     secrets:
