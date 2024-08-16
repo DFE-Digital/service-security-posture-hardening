@@ -1,6 +1,7 @@
 paths-ignore:
   - .github
-  - TA_github_reader # rust not supported
+  - data_ingester # rust not supported
+  - 'SSPHP Documentation'
 query-filters:
 - exclude:
     problem.severity:

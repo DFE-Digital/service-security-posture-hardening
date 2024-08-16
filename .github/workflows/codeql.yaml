@@ -1,53 +1,35 @@
-# For most projects, this workflow file will not need changing; you simply need
-# to commit it to your repository.
-#
-# You may wish to alter this file to override the set of languages analyzed,
-# or to provide custom queries or build logic.
-#
-# ******** NOTE ********
-# We have attempted to detect the languages in your repository. Please check
-# the `language` matrix defined below to confirm you have the correct set of
-# supported CodeQL languages.
-#
 name: "CodeQL"
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "improve-codeql" ]
+    paths:
+      - 'DCAP/appserver/static/js/**'
+      - '*.py'
   pull_request:
     # The branches below must be a subset of the branches above
     types: [ opened, reopened ]
+    paths:
+      - 'DCAP/appserver/static/js/**'
+      - '**.py'
   schedule:
     - cron: '0 8 * * *'
   workflow_dispatch:
 
 jobs:
-  analyze:
-    name: Analyze
-    runs-on: 'ubuntu-latest'
-    permissions:
-      actions: read
-      contents: read
-      security-events: write
 
+  run-codeql:
     strategy:
       fail-fast: false
       matrix:
         language: [ 'python', 'javascript' ]
-
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-
-    # Initializes the CodeQL tools for scanning.
-    - name: Initialize CodeQL
-      uses: github/codeql-action/init@v3
-      with:
-        languages: ${{ matrix.language }}
-        config-file: .github/codeql-config.yaml
-        queries: +security-extended
-
-    - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@v3
-      with:
-        category: "/language:${{matrix.language}}"
+    
+    uses: DFE-Digital/github-actions/.github/workflows/reusable-workflow-sast.yml@master
+    with:
+      language: ${{ matrix.language }} 
+      policy_action: 'break'
+      queries: 'security-extended'
+      config_file: '.github/codeql-config.yaml'
+    secrets:
+      CODEQL_APP_ID: ${{ secrets.CODEQL_APP_ID }}
+      CODEQL_AUTHENTICATION_PRIVATE_KEY: ${{ secrets.CODEQL_AUTHENTICATION_PRIVATE_KEY }} 
