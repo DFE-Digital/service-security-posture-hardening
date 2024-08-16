@@ -2,7 +2,7 @@
 name: Data Ingester Azure Terraform
 
 on:
-  pull_requst:
+  pull_request:
     paths:
       - data_ingester/**
   workflow_dispatch:
