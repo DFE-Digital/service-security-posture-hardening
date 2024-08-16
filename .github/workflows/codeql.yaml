@@ -22,7 +22,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        language: [ 'python', 'javascript' ]
+        language: [ 'python' ]
     
     uses: DFE-Digital/github-actions/.github/workflows/reusable-workflow-sast.yml@update-policy-as-code
     with:
