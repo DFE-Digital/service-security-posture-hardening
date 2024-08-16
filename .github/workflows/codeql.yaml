@@ -24,7 +24,7 @@ jobs:
       matrix:
         language: [ 'python', 'javascript']
     
-    uses: DFE-Digital/github-actions/.github/workflows/reusable-workflow-sast.yml@main
+    uses: DFE-Digital/github-actions/.github/workflows/reusable-workflow-sast.yml@master
     with:
       language: ${{ matrix.language }} 
       policy_action: 'break'
