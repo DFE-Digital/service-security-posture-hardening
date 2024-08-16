@@ -22,9 +22,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        language: [ 'python' ]
+        language: [ 'python', 'javascript']
     
-    uses: DFE-Digital/github-actions/.github/workflows/reusable-workflow-sast.yml@update-policy-as-code
+    uses: DFE-Digital/github-actions/.github/workflows/reusable-workflow-sast.yml@main
     with:
       language: ${{ matrix.language }} 
       policy_action: 'break'
