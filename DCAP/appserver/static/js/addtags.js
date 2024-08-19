@@ -14,7 +14,7 @@ let change = (mutationList, observer) => {
 
                 tds[tdsIter].innerHTML = tds[tdsIter].innerHTML.replace(/~~(.*?)~~(.*?)~~/g, '<span class="$2">$1</span>');
 
-                tds[tdsIter].innerHTML = tds[tdsIter].innerHTML.replace(/~!(.*?)~!(.*?)~!(.*?)~!/g, '<$1>$2<$3>');
+                tds[tdsIter].innerHTML = tds[tdsIter].innerHTML.replace(/~!(.*?)~!(.*?)~!(.*?)~!/gs, '<$1>$2<$3>');
 
                 tds[tdsIter].classList.add("ssphp_modified");
 
