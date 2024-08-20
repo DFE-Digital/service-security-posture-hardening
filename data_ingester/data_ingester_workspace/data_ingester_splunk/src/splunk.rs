@@ -253,8 +253,6 @@ impl Splunk {
 
 // Needs Splunk Creds
 
-
-
 fn batch_lines<I, T: Serialize>(it: &mut I) -> Option<String>
 where
     I: Iterator<Item = T>,
@@ -333,7 +331,6 @@ where
     };
     Ok(())
 }
-
 
 #[cfg(feature = "live_tests")]
 #[cfg(test)]

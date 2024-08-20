@@ -1,6 +1,7 @@
 #![feature(iter_collect_into)]
 //! Pull Security posture data from the Github API and send it to a Splunk HEC.
 //! Uses [Octocrab] for most operations.
+mod action_runs;
 mod artifacts;
 mod contents;
 pub mod entrypoint;
@@ -25,6 +26,7 @@ use serde::{Deserialize, Serialize};
 use teams::GitHubTeamsOrg;
 use tokio::sync::OnceCell;
 use tracing::{error, info};
+use workflows::{WorkflowRunJobs, WorkflowRuns};
 
 /// NewType for Octocrab provide additonal data source.
 #[derive(Clone)]
@@ -262,15 +264,49 @@ impl OctocrabGit {
         let uri = format!("/repos/{repo}/actions/workflows");
         let result = self.get_collection(&uri).await?;
         let workflows =
-            Workflows::try_from(&result).context("Convert GitHubResponses to artifacts")?;
+            Workflows::try_from(&result).context("Convert GitHubResponses to Workflows")?;
         Ok(workflows)
     }
 
+    pub(crate) async fn repo_actions_list_workflow_runs(&self, repo: &str) -> Result<WorkflowRuns> {
+        let uri = format!("/repos/{repo}/actions/runs");
+        let result = self.get_collection(&uri).await?;
+        let workflow_runs =
+            WorkflowRuns::try_from(&result).context("Convert GitHubResponses to Workflows")?;
+        Ok(workflow_runs)
+    }
+
+    pub(crate) async fn repo_actions_list_workflow_run_jobs(
+        &self,
+        repo: &str,
+        workflow_runs: &WorkflowRuns,
+    ) -> Result<WorkflowRunJobs> {
+        let mut jobs = vec![];
+        for run in workflow_runs.workflow_runs.iter() {
+            let uri = format!(
+                "/repos/{repo}/actions/runs/{}/attempts/{}/jobs",
+                run.id, run.run_attempt
+            );
+            let result = self.get_collection(&uri).await?;
+            let workflow_run_jobs = WorkflowRunJobs::try_from(&result)?;
+            jobs.extend(workflow_run_jobs.jobs);
+        }
+        Ok(WorkflowRunJobs {
+            total_count: jobs.len(),
+            jobs,
+            source: "".into(),
+            sourcetype: "".into(),
+        })
+    }
+
     /// Get all GitHub Actions workflow files
-    pub(crate) async fn repo_actions_get_workflow_files(&self, repo: &str) -> Result<Contents> {
-        let workflows = self.repo_actions_list_workflows(repo).await?;
+    pub(crate) async fn repo_actions_get_workflow_files(
+        &self,
+        repo: &str,
+        workflows: &Workflows,
+    ) -> Result<Contents> {
         let mut responses = vec![];
-        for workflow in workflows.workflows {
+        for workflow in workflows.workflows.iter() {
             let uri = format!("/repos/{repo}/contents/{0}", workflow.path);
             let result = self.get_collection(&uri).await?;
             let contents =
@@ -942,14 +978,70 @@ mod test {
     #[tokio::test]
     async fn test_repo_actions_get_workflow_files() -> Result<()> {
         let client = TestClient::new().await;
-        client
-            .repo_iter(|repo_name| {
-                client
-                    .client
-                    .repo_actions_get_workflow_files(repo_name)
-                    .boxed()
-            })
-            .await?;
+        for repo in client.repos.inner.iter() {
+            let repo_name = client.repo_name(&repo.name);
+            let workflows = client
+                .client
+                .repo_actions_list_workflows(&repo_name)
+                .await?;
+            let workflow_files = client
+                .client
+                .repo_actions_get_workflow_files(&repo_name, &workflows)
+                .await?;
+            let hec_events = (&workflow_files)
+                .to_hec_events()
+                .context("Convert SarifHec to HecEvents")?;
+
+            client.splunk.send_batch(&hec_events).await?;
+        }
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_repo_actions_list_workflow_runs() -> Result<()> {
+        let client = TestClient::new().await;
+        for repo in client.repos.inner.iter() {
+            let repo_name = client.repo_name(&repo.name);
+            let workflow_runs = client
+                .client
+                .repo_actions_list_workflow_runs(&repo_name)
+                .await?;
+            let workflow_files = client
+                .client
+                .repo_actions_list_workflow_runs(&repo_name)
+                .await?;
+
+            let hec_events = (&workflow_files)
+                .to_hec_events()
+                .context("Convert SarifHec to HecEvents")?;
+
+            client.splunk.send_batch(&hec_events).await?;
+        }
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_repo_actions_list_workflow_run_jobs() -> Result<()> {
+        let client = TestClient::new().await;
+        for repo in client.repos.inner.iter() {
+            let repo_name = client.repo_name(&repo.name);
+
+            let workflow_runs = client
+                .client
+                .repo_actions_list_workflow_runs(&repo_name)
+                .await?;
+
+            let workflow_run_jobs = client
+                .client
+                .repo_actions_list_workflow_run_jobs(&repo_name, &workflow_runs)
+                .await?;
+
+            let hec_events = (&workflow_run_jobs)
+                .to_hec_events()
+                .context("Convert SarifHec to HecEvents")?;
+
+            client.splunk.send_batch(&hec_events).await?;
+        }
         Ok(())
     }
 }
