@@ -171,12 +171,45 @@ async fn github_collect_installation_org(
         )
         .await?;
 
+        let workflows = github_client
+            .repo_actions_list_workflows(&repo_name)
+            .await
+            .context("Getting repo workflow actions for {org_name}")?;
+
         try_collect_send(
             &format!("GitHub actions workflow files for {repo_name}"),
-            github_client.repo_actions_get_workflow_files(&repo_name),
+            github_client.repo_actions_get_workflow_files(&repo_name, &workflows),
             &splunk,
         )
         .await?;
+
+        let workflows_hec = (&workflows)
+            .to_hec_events()
+            .context("Creating HEC events for workflows")?;
+        splunk
+            .send_batch(&workflows_hec)
+            .await
+            .context("Sending Workflows Splunk")?;
+
+        let workflow_runs = github_client
+            .repo_actions_list_workflow_runs(&repo_name)
+            .await
+            .context("Getting repo workflow actions for {org_name}")?;
+
+        try_collect_send(
+            &format!("GitHub Actions WorkflowRunJobs for {repo_name}"),
+            github_client.repo_actions_list_workflow_run_jobs(&repo_name, &workflow_runs),
+            &splunk,
+        )
+        .await?;
+
+        let workflow_runs_hec = (&workflow_runs)
+            .to_hec_events()
+            .context("Creating HEC events for workflows")?;
+        splunk
+            .send_batch(&workflow_runs_hec)
+            .await
+            .context("Sending Workflows Splunk")?;
 
         try_collect_send(
             &format!("Secret Scanning Alerts for {repo_name}"),
