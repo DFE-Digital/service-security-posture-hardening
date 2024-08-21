@@ -5,7 +5,7 @@
 {% endif %}  
 
 <label>Security Posture Continuous Assurance : Service Control Detail Dashboard</label>
-<description>{{environment}} v4.1.0</description>
+<description>{{environment}} v4.1.1</description>
   
   <search id="bs_1">
     <query>
@@ -249,9 +249,13 @@ ssphp.score.threshold.red,Threshold Red,9"]
 
 | eval start_text="(\\\"",
        end_text="\\\")",
+       start_text_nob="\\\"",
+       end_text_nob="\\\"",
        div_text="\\\" AND \\\"",
        search_string=case(lower('ssphp.assessment.source')="dependabot",
-                          'start_text'.'cve_id'.'div_text'.'manifest'.'div_text'.'resource_id'.'div_text'.'use_case'.'end_text',
+                                'start_text'.'cve_id'.'div_text'.'manifest'.'div_text'.'resource_id'.'div_text'.'use_case'.'end_text',
+                          lower('ssphp.assessment.source')="secrets",
+                                "(source=".'start_text_nob'.'ssphp.assessment.url'.'end_text_nob'." OR ".'start_text_nob'.'ssphp.assessment.url'.'end_text_nob'.")",
                           1==1,"oops")
 
 | table search_string

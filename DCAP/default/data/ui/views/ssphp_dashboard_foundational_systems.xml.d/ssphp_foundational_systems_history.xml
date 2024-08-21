@@ -1,7 +1,7 @@
 <dashboard theme="dark" version="1.1" hideFilters="true">
 
 <label>DCAP Control Monthly History</label>
-<description>{{environment}} 1.0.5</description>
+<description>{{environment}} 1.0.6</description>
   
   <search id="bs_1">
     <query>
@@ -70,7 +70,7 @@ ssphp.source.foundational_system="*"
         <option name="drilldown">none</option>
         <format type="color">
           <colorPalette type="list">[#a70000,#ff0000,#ff5252,#ff7b7b,#ffbaba,#53A051]</colorPalette>
-          <scale type="threshold">20,40,60,80,99</scale>
+          <scale type="threshold">20,40,60,80,100</scale>
         </format>
       </table>
     </panel>
@@ -124,7 +124,7 @@ ssphp.source.foundational_system="*"
         <option name="drilldown">none</option>
         <format type="color">
           <colorPalette type="list">[#a70000,#ff0000,#ff5252,#ff7b7b,#ffbaba,#53A051]</colorPalette>
-          <scale type="threshold">20,40,60,80,99</scale>
+          <scale type="threshold">20,40,60,80,100</scale>
         </format>
       </table>
     </panel>
