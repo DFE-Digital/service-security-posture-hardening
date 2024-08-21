@@ -1,0 +1,132 @@
+<dashboard theme="dark" version="1.1" hideFilters="true">
+
+<label>DCAP Control Monthly History</label>
+<description>{{environment}} 1.0.6</description>
+  
+  <search id="bs_1">
+    <query>
+`ssphp_summary_index{{environment}}` earliest=-6mon@mon latest=now
+ssphp.source.foundational_system="*"
+      (ssphp.use_case.id="azure*" OR ssphp.use_case.id="dns*" OR ssphp.use_case.id="m365*" OR ssphp.use_case.id="aad*" OR (ssphp.use_case.id="github*" AND ssphp.use_case.savedsearch="*_fs*"))
+      ssphp.use_case.id!="*_000"
+      ssphp.score.ciso_priority=1
+      ```ssphp.use_case.id="m365_001_cis_1-1-5"```
+      
+| eval run_month=strftime('SSPHP_RUN',"%Y-%m"),
+       run_date=strftime('SSPHP_RUN',"%Y-%m-%d")
+
+| eventstats max(SSPHP_RUN) as max_SSPHP_RUN by ssphp.use_case.id, run_month
+| where SSPHP_RUN='max_SSPHP_RUN'
+| sort 0 - run_month
+
+| eval score_{run_month}='ssphp.score.score'
+
+| stats values(*) as * by ssphp.use_case.id
+
+| fields SSPHP_RUN, run_month, run_date, ssphp.source.foundational_system, ssphp.use_case.id, ssphp.use_case.title, ssphp.benchmark.control.title, ssphp.score.ciso_priority, score_*
+
+| eventstats count as event_count
+    </query>
+    <done>
+      <set token="tkn_event_count">$result.event_count$</set>
+    </done>
+  </search>
+  
+  
+  <row>
+    <panel>
+      <title>Foundational Systems</title>
+      <table>
+        <search>
+          <query>
+`ssphp_summary_index{{environment}}` earliest=-6mon@mon latest=now
+ssphp.source.foundational_system="*"
+      (ssphp.use_case.id="azure*" OR ssphp.use_case.id="dns*" OR ssphp.use_case.id="m365*" OR ssphp.use_case.id="aad*" OR (ssphp.use_case.id="github*" AND ssphp.use_case.savedsearch="*_fs*"))
+      ssphp.use_case.id!="*_000"
+      ssphp.score.ciso_priority=1
+      ```ssphp.use_case.id="m365_001_cis_1-1-5"```
+      
+| eval run_month=strftime('SSPHP_RUN',"%Y-%m"),
+       run_date=strftime('SSPHP_RUN',"%Y-%m-%d")
+
+| eventstats max(SSPHP_RUN) as max_SSPHP_RUN by ssphp.use_case.id, run_month
+| where SSPHP_RUN='max_SSPHP_RUN'
+| sort 0 - run_month
+
+| table SSPHP_RUN, run_month, run_date, ssphp.source.foundational_system, ssphp.use_case.id, ssphp.use_case.title, ssphp.benchmark.control.title, ssphp.score.ciso_priority, ssphp.score.score
+
+| stats count as number_controls_total, sum(eval(if('ssphp.score.score'="100",1,0))) as number_controls_compliant by ssphp.source.foundational_system, run_month
+
+| eval score_{run_month}=floor('number_controls_compliant'*100/'number_controls_total')
+
+| stats values(*) as * by ssphp.source.foundational_system
+
+| table ssphp.source.foundational_system, score_*
+| rename score_* as *, ssphp.source.foundational_system as "Foundational System"
+          </query>
+        </search>
+        <option name="count">100</option>
+        <option name="dataOverlayMode">none</option>
+        <option name="drilldown">none</option>
+        <format type="color">
+          <colorPalette type="list">[#a70000,#ff0000,#ff5252,#ff7b7b,#ffbaba,#53A051]</colorPalette>
+          <scale type="threshold">20,40,60,80,100</scale>
+        </format>
+      </table>
+    </panel>
+  </row>
+
+
+  <row>
+    <panel>
+      <html>
+        <h1>
+          <center />
+        </h1>
+      </html>
+    </panel>
+  </row>
+  
+  <row>
+    <panel>
+      <html>
+        <style>
+          #table1 th:nth-child(1) {
+            width: 300px;
+          }
+          #table1 th:nth-child(2) {
+            width: 500px;
+          }
+        </style>
+      </html>
+
+      <title>All DfE Mandated Controls [$tkn_event_count$]</title>
+      <table id="table1">
+        <search base="bs_1">
+          <query>
+
+  | eval control=mvindex(split('ssphp.use_case.id',"_"),-1),
+        c1=mvindex(split('control',"-"),0),
+        c2=mvindex(split('control',"-"),1),
+        c3=mvindex(split('control',"-"),2)
+  | fillnull value=0 c1, c2, c3
+  | eval c1="00".'c1', c1=substr('c1',len(c1)-1,2),
+        c2="00".'c2', c2=substr('c2',len(c2)-1,2),
+        c3="00".'c3', c3=substr('c3',len(c3)-1,2)
+  | sort ssphp.source.foundational_system, c1, c2, c3
+
+  | table ssphp.use_case.title, ssphp.benchmark.control.title, score_*
+  |rename score_* as *
+          </query>
+        </search>
+        <option name="count">100</option>
+        <option name="dataOverlayMode">none</option>
+        <option name="drilldown">none</option>
+        <format type="color">
+          <colorPalette type="list">[#a70000,#ff0000,#ff5252,#ff7b7b,#ffbaba,#53A051]</colorPalette>
+          <scale type="threshold">20,40,60,80,100</scale>
+        </format>
+      </table>
+    </panel>
+  </row>
+</dashboard>

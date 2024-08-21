@@ -4,60 +4,27 @@
   <dashboard theme="dark" version="1.1" script="js/addtags.js, js/table_cell_backcolor_multivalue.js">
 {% endif %}  
 
-  <label>Security Posture Continuous Assurance : Service Control Detail Dashboard</label>
-  <description>{{environment}} v3.0.25</description>
+<label>Security Posture Continuous Assurance : Service Control Detail Dashboard</label>
+<description>{{environment}} v4.1.1</description>
   
-  <init>
-    <unset token="tkn_show_dashboard"></unset>
-
-    <set token="tkn_m365_2_cis_doc_link">https://educationgovuk-my.sharepoint.com/:b:/r/personal/ian_pearl_education_gov_uk/Documents/CIS%20BENCHMARK%20DOCS/CIS_Microsoft_365_Foundations_Benchmark_v2.0.0.pdf?csf=1&amp;web=1&amp;e=XeRhCK</set>
-    <set token="tkn_m365_2_cis_doc_name">CIS_Microsoft_365_Foundations_Benchmark_v2.0.0.pdf</set>
+  <search id="bs_1">
+    <query>
+`ssphp_summary_index{{environment}}` SSPHP_UID=$tkn__uid|s$
+    [| search `ssphp_summary_index{{environment}}` SSPHP_UID=$tkn__uid|s$
+      | stats max(SSPHP_RUN) as SSPHP_RUN
+      | return SSPHP_RUN]
     
-    <set token="tkn_m365_3_cis_doc_link">https://educationgovuk-my.sharepoint.com/:b:/r/personal/ian_pearl_education_gov_uk/Documents/CIS%20BENCHMARK%20DOCS/CIS_Microsoft_365_Foundations_Benchmark_v3.0.0.pdf?csf=1&amp;web=1&amp;e=Qi9mSc</set>    
-    <set token="tkn_m365_3_cis_doc_name">CIS_Microsoft_365_Foundations_Benchmark_v3.0.0.pdf</set>
-    
-    <set token="tkn_azure_2_cis_doc_link">https://educationgovuk-my.sharepoint.com/:b:/r/personal/ian_pearl_education_gov_uk/Documents/CIS%20BENCHMARK%20DOCS/CIS_Microsoft_Azure_Foundations_Benchmark_v2.0.0.pdf?csf=1&amp;web=1&amp;e=U6Ewq4</set>    
-    <set token="tkn_azure_2_cis_doc_name">CIS_Microsoft_Azure_Foundations_Benchmark_v2.0.0.pdf</set>
-
-    <set token="tkn_aws_2_cis_doc_link">https://educationgovuk-my.sharepoint.com/:b:/r/personal/ian_pearl_education_gov_uk/Documents/CIS%20BENCHMARK%20DOCS/CIS_Amazon_Web_Services_Foundations_Benchmark_v2.0.0.pdf?csf=1&amp;web=1&amp;e=fwOaIK</set>
-    <set token="tkn_aws_2_cis_doc_name">CIS_Amazon_Web_Services_Foundations_Benchmark_v2.0.0.pdf</set>
-    
-    <set token="tkn_github_2_cis_doc_link">https://educationgovuk-my.sharepoint.com/:b:/r/personal/ian_pearl_education_gov_uk/Documents/CIS%20GitHub%20Benchmark%20v1.0.0%20PDF.pdf?csf=1&amp;web=1&amp;e=KdQi4P</set>
-    <set token="tkn_github_2_cis_doc_name">CIS GitHub Benchmark v1.0.0 PDF.pdf</set>
-  </init>
-
+| fields ssphp.assessment.*, ssphp.benchmark.*, ssphp.use_case.*, ssphp.service.*, ssphp.resource.*, ssphp.score.*, _raw
+    </query>
+      <done>
+        <set token="tkn_source">$result.ssphp.assessment.source$</set>
+      </done>
+  </search>
+  
+  
   <row depends="$debug$">
-    <html>
-      <style>
-        .header_r0{
-            height: auto; 
-            margin: 0px auto 0px auto;
-            font-size: 1.7em;
-            font-family: Arial, Helvetica, sans-serif;
-            color: #0000FF; 
-        }
-        .header_r1{
-            height: auto; 
-            margin: 0px auto 0px auto;
-            font-size: 1.1em;
-            font-family: Arial, Helvetica, sans-serif;
-            color: #AAAAAA; 
-        }
-        .header_r2{
-            height: auto; 
-            margin: 0px auto 0px auto;
-            font-size: 1em;
-            font-family: Arial, Helvetica, sans-serif;
-            color: #FFFFFF; 
-            display: block;
-        }
-        .dashboard-cell.dashboard-layout-panel.last-visible div:empty {
-            background: #171d21;
-        }
-      </style>
-    </html>
-
-    <html>
+    <panel>
+      <html>
       <style>
         .green{
           color:green !important;
@@ -78,415 +45,250 @@
           color:gray !important;
         }
         .lightblue{
-          color:#485959 !important;
+          color:#ADD8E6 !important;
         }
       </style>
     </html>
+    </panel>
+    
+    <panel>
+      <html>
+      <style>
+        #table1 th:nth-child(1) {
+          width: $tkn_col_width$ !important;
+        }
+        #table1 th:nth-child(2) {
+          width: $tkn_col_width$ !important;
+        }
+        #table1 th:nth-child(3) {
+          width: $tkn_col_width$ !important;
+        }
+        #table1 th:nth-child(4) {
+          width: $tkn_col_width$ !important;
+        }
+        #table1 th:nth-child(5) {
+          width: $tkn_col_width$ !important;
+        }
+        #table1 th:nth-child(6) {
+          width: $tkn_col_width$ !important;
+        }
+      </style>
+    </html>
+    </panel>
   </row>
+  
+  
+  <row>
+    <panel>
+      <single>
+        <search base="bs_1">
+          <query>
+| fields ssphp.score.score
+          </query>
+        </search>
+        <option name="colorMode">block</option>
+        <option name="rangeColors">["0xd41f1f","0x118832"]</option>
+        <option name="rangeValues">[99]</option>
+        <option name="showSparkline">0</option>
+        <option name="showTrendIndicator">0</option>
+        <option name="useColors">1</option>
+      </single>
+    </panel>
+  </row>
+  
+  
+  <row>
+    <panel>
+      <table id="table1">
+        <search base="bs_1">
+          <query>
+| fields - _raw, ssphp.score.score, ssphp.score.color, ssphp.use_case.version.last_changed*, ssphp.use_case.savedsearch
 
+| eval ssphp.score.ciso_priority=case('ssphp.score.ciso_priority'="1","DfE Mandated",
+                                      'ssphp.score.ciso_priority'="2","Recommended",
+                                      'ssphp.score.ciso_priority'="3","Desirable")
+
+| foreach * [| eval field=if('&lt;&lt;FIELD&gt;&gt;'!="",mvappend('field',"&lt;&lt;FIELD&gt;&gt;"." :: ".'&lt;&lt;FIELD&gt;&gt;'),'field')]
+
+| fields field
+
+| mvexpand field
+| eval Field=mvindex(split('field'," :: "),0),
+       Value=mvindex(split('field'," :: "),1)
+| table Field, Value
+
+| append 
+    [| makeresults format=csv data="Field,display_text,order
+ssphp.assessment.description,Description,3
+ssphp.assessment.source,Source,1
+ssphp.assessment.state,State,4
+ssphp.assessment.status,Status,5
+ssphp.assessment.title,Title,2
+ssphp.use_case.category,Category,1
+ssphp.use_case.group,Group,2
+ssphp.use_case.group_name,Group Name,3
+ssphp.use_case.id,Use Case ID,4
+ssphp.use_case.savedsearch,Saved Search,10
+ssphp.use_case.severity,Severity,6
+ssphp.use_case.title,Title,5
+ssphp.use_case.version.last_changed_by,Last Changed By,8
+ssphp.use_case.version.last_changed_date,Last Changed Date,9
+ssphp.use_case.version.number,Version,7
+ssphp.service.display_name,Service Name,3
+ssphp.service.division,Division,6
+ssphp.service.group,Group,5
+ssphp.service.id,Service ID,1
+ssphp.service.name,Service,2
+ssphp.service.portfolio,Portfolio,4
+ssphp.resource.id,Resource ID,1
+ssphp.resource.name,Resource Name,2
+ssphp.resource.type,Resource Type,3
+ssphp.resource.dependency.ecosystem,Ecosystem,6
+ssphp.resource.dependency.manifest_path,Manifest Path,5
+ssphp.resource.dependency.package_name,Package Name,4
+ssphp.score.ciso_priority,Control Type,3
+ssphp.score.color,Score Color,2
+ssphp.score.denominator,Score Denominator,4
+ssphp.score.numerator,Score Numerator,5
+ssphp.score.score,Score,1
+ssphp.score.scoring_narrative,Scoring Narrative,6
+ssphp.score.threshold.green,Threshold Green,7
+ssphp.score.threshold.orange,Thrshold Orange,8
+ssphp.score.threshold.red,Threshold Red,9"]
+
+| stats values(*) as * by Field
+
+| eval display_text=if(isnull('display_text'),'Field','display_text'),
+           order=if(isnull('order'),99,'order')
+
+| eval h_start="~!span class=\"green\"~!",
+       d_start="~!span class=\"lightblue\"~!",
+       end="~!/span~!", 
+       br="~!br~!"
+| eval Out_Text='h_start'.'display_text'.'br'.end.'d_start'.'Value'.'end'.'br'
+```| eval Out_Text="~!span class=\"green\"~!".'display_text'."~!br~!~!/span~!".Value."~!br~!~!br~!"```
+
+| eval Source=mvindex(split('Field',"."),1)
+| fields - Field, start, end, br
+
+| sort Source, order
+
+| where Value!="-"
+
+| stats list(Out_Text) as Out_Text by Source
+| eval {Source}='Out_Text'
+| fields - Source, val
+| stats list(*) as *
+| fields - Out_Text
+
+| rename assessment as Assessment, benchmark as Benchmark, use_case as "Use Case", service as Service, resource as Resource, score as Score
+
+| makemv col_names
+| foreach * [| eval "&lt;&lt;FIELD&gt;&gt;"=mvjoin('&lt;&lt;FIELD&gt;&gt;',"
+"),
+                    col_names=mvappend('col_names',"&lt;&lt;FIELD&gt;&gt;")]
+
+          </query>
+          <done>
+            <set token="tkn_col_names">$result.col_names$</set>
+          </done>
+        </search>
+        <fields>$tkn_col_fields$</fields>
+      </table>
+    </panel>
+  </row>
+  
+  
   <row depends="$debug$">
     <panel>
       <table>
         <search>
           <query>
-  | makeresults
-
-  `ssphp_metrics_eval_field_colors{{environment}}`
-
-  | table tkn_*
+| makeresults
+| eval col_names=$tkn_col_names|s$,
+       no_cols=mvcount(split(col_names,",")),
+       col_fields="\"".mvjoin(split(col_names,","),"\",\"")."\"",
+       col_width=100/no_cols,
+       col_width='col_width'."%"
+| table no_cols, col_names, col_fields, col_width
           </query>
           <done>
-            <set token="tkn_colour_splunk_grey">$result.tkn_colour_splunk_grey$</set>
-            <set token="tkn_colour_red">$result.tkn_colour_red$</set>
-            <set token="tkn_colour_orange">$result.tkn_colour_orange$</set>
-            <set token="tkn_colour_green">$result.tkn_colour_green$</set>
-            <set token="tkn_colour_blue">$result.tkn_colour_blue$</set>
+            <set token="tkn_col_fields">$result.col_fields$</set>
+            <set token="tkn_col_width">$result.col_width$</set>
           </done>
         </search>
       </table>
     </panel>
   </row>
-
-
-
-<!-- ########################################################################## DATA Row ########################################################################## --> 
+  
+  
   <row depends="$debug$">
     <panel>
       <table>
-        <search>
+        <search base="bs_1">
           <query>
-`ssphp_summary_index{{environment}}` SSPHP_UID=$tkn__uid|s$
-    [| search `ssphp_summary_index{{environment}}` SSPHP_UID=$tkn__uid|s$
-      | stats max(SSPHP_RUN) as SSPHP_RUN
-      | return SSPHP_RUN]
-      
-      
-| eval ssphp.defender_assessments.control.rationale=mvappend('ssphp.defender_assessments.control.rationale','ssphp.defender_assessments.control.rationale{}')
-| fields - ssphp.defender_assessments.control.rationale{}
-| foreach *.control.title [| eval display_control_title=mvappend('display_control_title','&lt;&lt;FIELD&gt;&gt;')]
-| foreach *.control.description [| eval display_control_description=mvappend('display_control_description','&lt;&lt;FIELD&gt;&gt;')]
-| foreach *.control.rationale [| eval display_control_rationale=mvappend('display_control_rationale','&lt;&lt;FIELD&gt;&gt;')]
-| foreach *.control.impact [| eval display_control_impact=mvappend('display_control_impact','&lt;&lt;FIELD&gt;&gt;')]
-
-       
-| eval fs=upper('ssphp.source.foundational_system')." - ".'ssphp.source.foundational_system_name',
-       notfs='ssphp.use_case.id',
-       last_run=strftime(SSPHP_RUN,"%Y-%m-%d %H:%M:%S"),
-       score_color=case('ssphp.score.color'="red","#D32D41",
-                        'ssphp.score.color'="green","#6AB187",
-                        'ssphp.score.color'="orange","#EA6A47",
-                        1==1,"#A5D8DD"),
-       compliance_status=if('ssphp.score.score'=100,"Compliant","Non-Compliant"),
-       nl="
-",
-       ssphp.score.scoring_narrative=replace('ssphp.score.scoring_narrative',"~~",'nl'),
-       ssphp.score.scoring_narrative=mvjoin('ssphp.score.scoring_narrative',"+++"),
-       ssphp.score.scoring_narrative=replace('ssphp.score.scoring_narrative',"xxxxxxxxxx",'display_control_title'),
-       ssphp.score.scoring_narrative=split('ssphp.score.scoring_narrative',"+++")
-
-| eval ssphp.score.ciso_priority=case('ssphp.score.ciso_priority'=1,"DfE Mandated",
-       'ssphp.score.ciso_priority'=2,"Recommended",
-       1==1,"Desirable")
-       
-| eval doc_link=case('fs'="M365",$tkn_m365_2_cis_doc_link|s$,
-                     'fs'="DNS",$tkn_aws_2_cis_doc_link|s$,
-                     'fs'="AZURE",$tkn_azure_2_cis_doc_link|s$,
-                     like('fs',"GITHUB%"),$tkn_github_2_cis_doc_link|s$,
-                     1==1,"Document not Available"),
-       doc_name=case('fs'="M365",$tkn_m365_2_cis_doc_name|s$,
-                     'fs'="DNS",$tkn_aws_2_cis_doc_name|s$,
-                     'fs'="AZURE",$tkn_azure_2_cis_doc_name|s$,
-                     like('fs',"GITHUB%"),$tkn_github_2_cis_doc_name|s$,
-                     1==1,"Document not Available")
-
-| table SSPHP_RUN, display_*, ssphp.*, score_color, compliance_status, last_run, fs, notfs, doc_link, doc_name
+| table ssphp.use_case.savedsearch
           </query>
-          <earliest>-2d@d</earliest>
-          <latest>now</latest>
-          <sampleRatio>1</sampleRatio>
           <done>
-            <set token="tkn_display_title">$result.ssphp.use_case.title$</set>
-            <set token="tkn_control_title">$result.display_control_title$</set>
-            <set token="tkn_control_description">$result.display_control_description$</set>
-            <set token="tkn_control_rationale">$result.display_control_rationale$</set>
-            <set token="tkn_control_impact">$result.display_control_impact$</set>
-
-            <set token="tkn_savedsearch">$result.ssphp.use_case.savedsearch$</set>
-            
-            <set token="tkn_score">$result.ssphp.score.score$</set>
-            <set token="tkn_ciso_priority">$result.ssphp.score.ciso_priority$</set>
-            <set token="tkn_color">$result.ssphp.score.color$</set>            
-            
-            
-            <set token="tkn_fs">$result.fs$</set>
-            <set token="tkn_notfs">$result.notfs$</set>
-
-            <set token="tkn_display_short_description">$result.ssphp.use_case.short_description$</set>
-            <set token="tkn_display_description">$result.ssphp.use_case.description$</set>
-            <set token="tkn_numerator">$result.ssphp.score.numerator$</set>
-            <set token="tkn_denominator">$result.ssphp.score.denominator$</set>
-            <set token="tkn_scoring_narrative">$result.ssphp.score.scoring_narrative$</set>
-            <set token="tkn_red">$result.ssphp.score.threshold.red$</set>
-            <set token="tkn_orange">$result.ssphp.score.threshold.orange$</set>
-            <set token="tkn_green">$result.ssphp.score.threshold.green$</set>
-            <set token="tkn_ms_description">$result.ssphp.microsoft.desciption$</set>
-            <set token="tkn_ms_implementation_status">$result.ssphp.microsoft.implementation_status$</set>
-
-            <set token="tkn_cis_benchmark">$result.ssphp.cis_benchmark.document.name$ : $result.ssphp.cis_benchmark.document.version$ $result.ssphp.cis_benchmark.version$</set>
-            <set token="tkn_cis_profile">$result.ssphp.cis_benchmark.control.profile_applicability$</set>
-            <set token="tkn_cis_v3_control">$result.ssphp.cis_benchmark.document.v3.number$</set>
-            
-            <set token="tkn_cis_ig1">$result.ssphp.use_case.framework.ig_1$</set>
-            <set token="tkn_cis_ig2">$result.ssphp.use_case.framework.ig_2$</set>
-            <set token="tkn_cis_ig3">$result.ssphp.use_case.framework.ig_3$</set>
-
-            <set token="tkn_control">$result.control$</set>
-
-            <set token="tkn_risk_expectancy">$result.ssphp.risk.expectancy$</set>
-            <set token="tkn_risk_impact">$result.ssphp.risk.impact$</set>
-            
-            <set token="tkn_score_color">$result.score_color$</set>
-            <set token="tkn_compliance_status">$result.compliance_status$</set>
-            <set token="tkn_last_run">$result.last_run$</set>
-
-            <set token="tkn_doc_link">$result.doc_link$</set>
-            <set token="tkn_doc_name">$result.doc_name$</set>
-            
-            <set token="tkn_show_dashboard">show</set>
+            <set token="tkn_saved_search">$result.ssphp.use_case.savedsearch$</set>
           </done>
         </search>
       </table>
     </panel>
-  </row>
-
-
-
-<!-- ########################################################################## TOP Row ########################################################################## --> 
-
-  <row depends="$tkn_show_dashboard$">
-    <panel>
-      <html>
-        <span class="header_r0" style="color:	yellow">$tkn_fs$</span>
-        <br></br>
-        <span class="header_r1" style="color:	cyan">SERVICE : $tkn__service$</span>
-        <br></br>
-        <span class="header_r1" style="color:	cyan">$tkn_display_title$</span>
-        <br></br>
-        <span class="header_r1" style="color:	darkcyan">Use Case ID</span>
-        <span class="header_r2">$tkn_notfs$</span>
-        <br></br>
-        <span class="header_r1" style="color:	darkcyan">Title</span>
-        <span class="header_r2">$tkn_control_title$</span>
-        <br></br>
-        <span class="header_r1" style="color:	darkcyan">Description</span>
-        <span class="header_r2">$tkn_control_description$</span>
-        <br></br>
-        <span class="header_r1" style="color:	darkcyan">Rationale</span>
-        <span class="header_r2">$tkn_control_rationale$</span>
-        <br></br>
-        <span class="header_r1" style="color:	darkcyan">Impact</span>
-        <span class="header_r2">$tkn_control_impact$</span>
-        <br></br>
-      </html>
-    </panel>    
-    
-    
-    
-    
-
-    <panel>
-      <html>
-        <span class="header_r1" style="color:	darkcyan">Score</span>
-        <br></br>
-        <div id="div_header" style="background:$tkn_score_color$;color:white;font-weight:bold;font-size:800%;text-align:center;padding:50">$tkn_score$</div> 
-        <br></br>
-      </html>
-    </panel>
-
-    <panel>
-      <html>
-        <span class="header_r1" style="color:	darkcyan">Tests in this Control</span>
-        <span class="header_r2">$tkn_denominator$</span>
-        <br></br>
-        <span class="header_r1" style="color:	darkcyan">Tests Failed in this Control</span>
-        <span class="header_r2">$tkn_numerator$</span>
-        <br></br>
-        <span class="header_r1" style="color:	darkcyan">Control Type</span>
-        <span class="header_r2">$tkn_ciso_priority$</span>
-        <br></br>
-        <span class="header_r1" style="color:	darkcyan">Compliance Status</span>
-        <span class="header_r2" style="color:$tkn_score_color$">$tkn_compliance_status$</span>   
-        <br></br>
-      </html>
-    </panel>
-
-    <panel>
-      <html>
-        <span class="header_r1" style="color:	darkcyan">Thresholds</span>
-        <span class="header_r2">Red : $tkn_red$</span>
-        <span class="header_r2">Orange : $tkn_orange$</span>
-        <span class="header_r2">Green : $tkn_green$</span>
-        <br></br>
-        <span class="header_r1" style="color:	darkcyan">Score Weighting</span>
-        <span class="header_r2">Expectancy : $tkn_risk_expectancy$</span>
-        <span class="header_r2">Impact : $tkn_risk_impact$</span>
-        <br></br>
-        <span class="header_r1" style="color:	darkcyan">Last Evaluated</span>
-        <span class="header_r2">$tkn_last_run$</span>
-      </html>
-    </panel>
-  </row>
-
-
-
-<!-- ################### Should this dashboard be showing the DfE Control Panels or the CIS Control Panels? ################### --> 
+  </row>  
+  
   <row depends="$debug$">
     <panel>
       <table>
-        <search>
+        <search base="bs_1">
           <query>
-  | makeresults
-  | eval ucid=$tkn_use_case_id|s$,
-         show_dfe=if(match(lower('ucid'),"dfe"),"true","false"),
-         show_cis=if(match(lower('ucid'),"cis"),"true","false")
-  | table show_dfe, show_cis
+| eval resource_id=if(isnull(spath(_raw,"ssphp.resource.id")) OR spath(_raw,"ssphp.resource.id")="" OR spath(_raw,"ssphp.resource.id")="-","*",spath(_raw,"ssphp.resource.id")),
+       manifest=if(isnull(spath(_raw,"ssphp.resource.dependency.manifest_path")) OR spath(_raw,"ssphp.resource.dependency.manifest_path")="" OR spath(_raw,"ssphp.resource.dependency.manifest_path")="-","*",spath(_raw,"ssphp.resource.dependency.manifest_path")),
+       cve_id=if(isnull(spath(_raw,"ssphp.assessment.cve_id")) OR spath(_raw,"ssphp.assessment.cve_id")="" OR spath(_raw,"ssphp.assessment.cve_id")="-","*",spath(_raw,"ssphp.assessment.cve_id")),
+       use_case=if(isnull(spath(_raw,"ssphp.use_case.id")) OR spath(_raw,"ssphp.use_case.id")="" OR spath(_raw,"ssphp.use_case.id")="-","*",spath(_raw,"ssphp.use_case.id"))
+
+| eval start_text="(\\\"",
+       end_text="\\\")",
+       start_text_nob="\\\"",
+       end_text_nob="\\\"",
+       div_text="\\\" AND \\\"",
+       search_string=case(lower('ssphp.assessment.source')="dependabot",
+                                'start_text'.'cve_id'.'div_text'.'manifest'.'div_text'.'resource_id'.'div_text'.'use_case'.'end_text',
+                          lower('ssphp.assessment.source')="secrets",
+                                "(source=".'start_text_nob'.'ssphp.assessment.url'.'end_text_nob'." OR ".'start_text_nob'.'ssphp.assessment.url'.'end_text_nob'.")",
+                          1==1,"oops")
+
+| table search_string
           </query>
           <done>
-          <condition match="'result.show_dfe'==&quot;true&quot;">
-            <set token="tkn_show_dfe_panels">true</set>
-            <unset token="tkn_show_cis_panels"></unset>
-          </condition>
-          <condition match="'result.show_cis'==&quot;true&quot;">
-            <set token="tkn_show_cis_panels">true</set>
-            <unset token="tkn_show_dfe_panels"></unset>
-          </condition>
+            <set token="tkn_use_case_search_string">$result.search_string$</set>
           </done>
         </search>
       </table>
     </panel>
-  </row>
 
-
-<!-- ########################################################################## CIS Controls Row ########################################################################## --> 
-  <row depends="$tkn_show_dashboard$,$tkn_show_cis_panels$">
-    <panel id="panel1">
-      <html>
-        <style>
-          #panel1{
-            width:50% !important;
-          }
-        </style>
-        <span class="header_r1" style="color:	yellow">CIS Foundations Benchmark</span>
-        <br></br>
-        <span class="header_r1" style="color:	darkcyan">CIS Description</span>
-        <span class="header_r2">$tkn_control_description$</span>
-        <br></br>
-        <span class="header_r1" style="color:	darkcyan">CIS Rationale</span>
-        <span class="header_r2">$tkn_control_rationale$</span>
-        <br></br>
-        <span class="header_r1" style="color:	darkcyan">CIS Impact</span>
-        <span class="header_r2">$tkn_control_impact$</span>
-        <br></br>
-        <a href="$tkn_doc_link$" target="blank">$tkn_doc_name$</a>
-      </html>
-    </panel>
-
-
-    <panel id="panel2">
-      <html>
-        <style>
-          #panel2{
-            width:25% !important;
-          }
-        </style>
-        <span class="header_r1" style="color:	darkcyan">IG1 Controls</span>
-        <span class="header_r2">$tkn_cis_ig1$</span>
-        <br></br>
-        <span class="header_r1" style="color:	darkcyan">IG2 Controls</span>
-        <span class="header_r2">$tkn_cis_ig2$</span>
-        <br></br>
-        <span class="header_r1" style="color:	darkcyan">IG3 Controls</span>
-        <span class="header_r2">$tkn_cis_ig3$</span>
-      </html>
-    </panel>
-
-
-    <panel id="panel3">
-      <input type="dropdown" token="tkn_cis_v8" searchWhenChanged="true">
-        <label>CIS Navigator Critical Security Controls</label>
-        <fieldForLabel>display_title</fieldForLabel>
-        <fieldForValue>safeguard</fieldForValue>
-        <selectFirstChoice>true</selectFirstChoice>
-        <search>
-          <query>| inputlookup ssphp_cis_critical_security_controls_v8_all.csv
-  | eval display_title='safeguard'." : ".'title'
-  | table display_title, safeguard, title
-  | search safeguard=$tkn_cis_ig3|s$
-          </query>
-        </search>
-      </input>
-      
-      
-      <html>
-        <style>
-          #panel3{
-            width:25% !important;
-          }
-        </style>
-        <span class="header_r1" style="color:	darkcyan">Safeguard</span>
-        <span class="header_r2">$tkn_safeguard$</span>
-        <br></br>
-        <span class="header_r1" style="color:	darkcyan">Asset Type</span>
-        <span class="header_r2">$tkn_asset_type$</span>
-        <br></br>
-        <span class="header_r1" style="color:	darkcyan">IG Level</span>
-        <span class="header_r2">$tkn_ig$</span>
-        <br></br>
-        <span class="header_r1" style="color:	darkcyan">Title</span>
-        <span class="header_r2">$tkn_title$</span>
-        <br></br>
-        <span class="header_r1" style="color:	darkcyan">Description</span>
-        <span class="header_r2">$tkn_description$</span>
-      </html>
-    </panel>
-    
-    <panel depends="$debug$">
-      <table>
-        <search>
-          <query>
-| inputlookup ssphp_cis_critical_security_controls_v8_all.csv
-| eval display_title='safeguard'." : ".'title'
-| table safeguard, control, ig, asset_type, title, description
-| search safeguard=$tkn_cis_v8|s$
-          </query>
-          <done>
-            <set token="tkn_safeguard">$result.safeguard$</set>
-            <set token="tkn_ig">$result.ig$</set>
-            <set token="tkn_asset_type">$result.asset_type$</set>
-            <set token="tkn_title">$result.title$</set>
-            <set token="tkn_description">$result.description$</set>
-          </done>
-        </search>
-      </table>
-    </panel>
-  </row>
-
-
-
-
-<!-- ########################################################################## SCORING EXPLANATION DATA Row ########################################################################## --> 
-
-  <row depends="$tkn_show_dashboard$">
-    <panel id="panel99a">
-      <html>
-        <style>
-          #panel99a{
-            width:75% !important;
-          }
-        </style>
-        <!-- ## <span class="header_r1" style="color:	darkcyan">Scoring Narrative</span>## -->
-        <span class="header_r1" style="color:	darkcyan">Compliance</span>
-        <span class="header_r2" style="white-space:pre-line">$tkn_scoring_narrative$</span>
-        <br></br>
-      </html>
-    </panel>
-
-    <panel id="panel99b">
-      <html>
-        <style>
-          #panel99b{
-            width:25% !important;
-          }
-        </style>
-        <div><span><a href="ssphp_foundational_systems_dashboard_help?tkn_detail=true" class="btn btn-primary" style="color:black;background-color:grey;text-align:center;display:block;float:right;width:30%;" target="_blank">Dashboard Help</a></span></div> 
-      </html>
-    </panel>
-  </row>
-
-  <row depends="$debug$">
     <panel>
       <table>
         <search>
           <query>
 | rest /servicesNS/-/-/saved/searches splunk_server=local
-| rename title as uc_id
-| search eai:acl.app="SSPHP_metrics" AND uc_id=$tkn_savedsearch|s$
-| rex field=search "^(?&lt;search_text&gt;[\s\S]*?)``` ##################### end dashboard query ##################### ```"
-| eval search_text=replace('search_text',"\| fields ","| table ")
 
-| table uc_id, search, search_text
+| search eai:acl.app="DCAP{{environment}}" AND title=$tkn_saved_search|s$
+
+| rex field=search "^(?&lt;search_text&gt;[\s\S]*?)``` ##################### end dashboard query ##################### ```"
+| eval search_text=replace('search_text',"\|\s*fields","| table"),
+        search_text='search_text'."| sort 0 - ssphp.score.score | fields - temp_total_count"
+
+| eval search_text=replace('search_text',"
+    \["," 
+     $tkn_use_case_search_string$ "."
+     
+    [")
+    
+| table title, search, search_text
           </query>
           <done>
-            <condition match="$result.uc_id$==&quot;ssphp_use_case_defender_assessments&quot;">
-              <set token="tkn_show_MS">true</set>
-              <unset token="tkn_show_other"></unset>
-              <set token="tkn_use_case_search_text">$result.search_text$</set>
-            </condition>
-            <condition>
-              <set token="tkn_show_other">true</set>
-              <unset token="tkn_show_MS"></unset>
-              <set token="tkn_use_case_search_text">$result.search_text$</set>
-            </condition>
+            <set token="tkn_use_case_search_text">$result.search_text$</set>
           </done>
         </search>
       </table>
@@ -494,122 +296,18 @@
   </row>
 
 
-<!-- ########################################################################## UNDERLYING DATA Row ########################################################################## --> 
-    
-  <row depends="$debug$">
-    <html>
-      <style>
-         .css_for_green{ 
-         background-color: $tkn_colour_green$ !important;
-         color:#000000 !important;
-         font-size: 100% !important;
-         }
-         .css_for_orange{ 
-         background-color: $tkn_colour_orange$ !important;
-         color:#000000 !important;
-         font-size: 100% !important;
-         }
-         .css_for_red{
-         background-color: $tkn_colour_red$ !important;
-         color:#000000 !important;
-         font-size: 100% !important;
-         }
-         .css_for_blue{
-         background-color: $tkn_colour_blue$ !important;
-         color:#000000 !important;
-         font-size: 100% !important;
-         }
-      </style>
-    </html>
-  </row>
-    
-  <row depends="$tkn_show_dashboard$,$tkn_show_MS$">
-    <panel>
-      <title>Underlying MS Data</title>
-      <table id="table3">
-        <search>
-          <query>
-$tkn_use_case_search_text$
-
-| fields - _raw, _time
-| eval created_at_age='created_at_age'." days ago"
-| search ssphp.use_case.id="$tkn_notfs$" ssphp.source.service="$tkn__service$"
-| eval properties.resourceDetails.ResourceName=if('properties.status.code'="Unhealthy",'properties.resourceDetails.ResourceName'."¬red",'properties.resourceDetails.ResourceName'),
-       properties.status.code=if('properties.status.code'="Unhealthy",'properties.status.code'."¬red",'properties.status.code')
-| table azure.tenant_id, azure.subscription_id, azure.resource_group_id, properties.resourceDetails.ResourceType, properties.resourceDetails.ResourceName, properties.status.code
-          </query>
-          <earliest>0</earliest>
-          <latest>now</latest>
-          <sampleRatio>1</sampleRatio>
-        </search>
-        <option name="count">100</option>
-        <option name="dataOverlayMode">none</option>
-        <option name="drilldown">none</option>
-        <option name="percentagesRow">false</option>
-        <option name="rowNumbers">false</option>
-        <option name="totalsRow">false</option>
-        <option name="wrap">true</option>
-      </table>
-    </panel>
-  </row>
   
-    
-  <row depends="$tkn_show_dashboard$,$tkn_show_other$">
+  
+  <row>
     <panel>
-      <title>Underlying OTHER Data</title>
-      <table id="table4">
+      <title>Underlying Data</title>
+      <event>
         <search>
           <query>
 $tkn_use_case_search_text$
-
-```| fields - _raw, _time
-| eval created_at_age='created_at_age'." days ago"
-
-| eval properties.resourceDetails.ResourceName=if('properties.status.code'="Unhealthy",'properties.resourceDetails.ResourceName'."¬red",'properties.resourceDetails.ResourceName'),
-       properties.status.code=if('properties.status.code'="Unhealthy",'properties.status.code'."¬red",'properties.status.code')
-       
-| table azure.tenant_id, azure.subscription_id, azure.resource_group_id, properties.resourceDetails.ResourceType, properties.resourceDetails.ResourceName, properties.status.code
-```
-
-```
-| rename *{} as *¬¬
-| rename *{}* as *__*
-| rename * as z_*
-| rename z_ssphp* as ssphp*
-| foreach z_* 
-       [| eval fld_val='&lt;&lt;FIELD&gt;&gt;',
-               fld_val=mvjoin('fld_val',"~~"),
-               fld_val=case(isnull('fld_val'),"-",
-                            trim('fld_val')="","-",
-                            len('fld_val')&lt;2 AND !match('fld_val',"[a-zA-Z0-9]+") AND !match('fld_val',"^\*$"),"-",
-                            1==1,'fld_val'),
-               fld_name=replace(replace(replace("&lt;&lt;FIELD&gt;&gt;","¬¬","{}"),"__","{}"),"z_",""),
-               "&lt;&lt;FIELD&gt;&gt;"=if('ssphp.score.non_compliant_fields'='fld_name', 'fld_val'."¬red", 'fld_val')]
-
-| foreach * 
-  [| eval "&lt;&lt;FIELD&gt;&gt;"=if("&lt;&lt;FIELD&gt;&gt;" == "ssphp.score.non_compliant_fields", 'ssphp.score.non_compliant_fields', split('&lt;&lt;FIELD&gt;&gt;',"~~"))]
-               
-| rename z_* as *
-| rename *¬¬ as *{}
-| rename *__* as *{}*
-
-| eval sort_field=if('state'="*** FOR INFORMATION ONLY ***",1,2)
-| sort 0 sort_field, ssphp.score.score
-
-| fields - ssphp.score.score, ssphp.score.numerator, ssphp.score.denominator, fld_name, fld_val, ssphp.score.non_compliant_fields, sort_field```
           </query>
-          <earliest>0</earliest>
-          <latest>now</latest>
-          <sampleRatio>1</sampleRatio>
         </search>
-        <option name="count">100</option>
-        <option name="dataOverlayMode">none</option>
-        <option name="drilldown">none</option>
-        <option name="percentagesRow">false</option>
-        <option name="rowNumbers">false</option>
-        <option name="totalsRow">false</option>
-        <option name="wrap">true</option>
-      </table>
+      </event>
     </panel>
   </row>
 </dashboard>
