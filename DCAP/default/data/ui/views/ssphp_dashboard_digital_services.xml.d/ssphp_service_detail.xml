@@ -5,12 +5,13 @@
 {% endif %}  
 
 <label>Security Posture Continuous Assurance : Service Control Detail Dashboard</label>
-<description>{{environment}} v4.1.1</description>
-  
+<description>{{environment}} v4.2.0</description>
+
+
   <search id="bs_1">
     <query>
 `ssphp_summary_index{{environment}}` SSPHP_UID=$tkn__uid|s$
-    [| search `ssphp_summary_index{{environment}}` SSPHP_UID=$tkn__uid|s$
+    [| search `ssphp_summary_index_DEV` SSPHP_UID=$tkn__uid|s$
       | stats max(SSPHP_RUN) as SSPHP_RUN
       | return SSPHP_RUN]
     
@@ -256,12 +257,37 @@ ssphp.score.threshold.red,Threshold Red,9"]
                                 'start_text'.'cve_id'.'div_text'.'manifest'.'div_text'.'resource_id'.'div_text'.'use_case'.'end_text',
                           lower('ssphp.assessment.source')="secrets",
                                 "(source=".'start_text_nob'.'ssphp.assessment.url'.'end_text_nob'." OR ".'start_text_nob'.'ssphp.assessment.url'.'end_text_nob'.")",
-                          1==1,"oops")
+                          lower('ssphp.assessment.source')="no tool",
+                                "(source=".'start_text_nob'."*".'ssphp.resource.id'."*".'end_text_nob'.")",
+                          lower('ssphp.use_case.group_name')="sast",
+                                'start_text'.'ssphp.resource.id'.'div_text'.'ssphp.use_case.id'.'end_text',
+                          lower('ssphp.use_case.group_name')="qualys",
+                                "| search QID=".'start_text_nob'.'ssphp.use_case.id'.'end_text_nob'." AND "."HOSTNAME=".'start_text_nob'.'ssphp.resource.name'.'end_text_nob',
+                          lower('ssphp.use_case.group_name')="ms-defender",
+                                'start_text'.'ssphp.resource.id'.'div_text'.'ssphp.use_case.id'.'end_text',
+                          1==1,"oops"),
 
-| table search_string
+       output_panel=case(lower('ssphp.assessment.source')="dependabot",1,
+                          lower('ssphp.assessment.source')="secrets",1,
+                          lower('ssphp.assessment.source')="no tool",1,
+                          lower('ssphp.use_case.group_name')="sast",1,
+                          lower('ssphp.use_case.group_name')="qualys",2,
+                          lower('ssphp.use_case.group_name')="ms-defender",1,
+                          1==1,"oops")
+            
+| table search_string, output_panel
           </query>
           <done>
-            <set token="tkn_use_case_search_string">$result.search_string$</set>
+            <condition match="$result.output_panel$==2">
+              <set token="show_table_panel">true</set>
+              <unset token="show_event_panel"></unset>
+              <set token="tkn_use_case_search_string">$result.search_string$</set>
+            </condition>
+            <condition match="$result.output_panel$==1">
+              <set token="show_event_panel">true</set>
+              <unset token="show_table_panel"></unset>
+              <set token="tkn_use_case_search_string">$result.search_string$</set>
+            </condition>
           </done>
         </search>
       </table>
@@ -273,17 +299,14 @@ ssphp.score.threshold.red,Threshold Red,9"]
           <query>
 | rest /servicesNS/-/-/saved/searches splunk_server=local
 
-| search eai:acl.app="DCAP{{environment}}" AND title=$tkn_saved_search|s$
+| search eai:acl.app="DCAP_DEV" AND title=$tkn_saved_search|s$
 
 | rex field=search "^(?&lt;search_text&gt;[\s\S]*?)``` ##################### end dashboard query ##################### ```"
+
+| eval search_text=replace('search_text',"``` ##################### replace with dashboard filter ##################### ```","$tkn_use_case_search_string$")
+
 | eval search_text=replace('search_text',"\|\s*fields","| table"),
         search_text='search_text'."| sort 0 - ssphp.score.score | fields - temp_total_count"
-
-| eval search_text=replace('search_text',"
-    \["," 
-     $tkn_use_case_search_string$ "."
-     
-    [")
     
 | table title, search, search_text
           </query>
@@ -299,7 +322,7 @@ ssphp.score.threshold.red,Threshold Red,9"]
   
   
   <row>
-    <panel>
+    <panel depends="$show_event_panel$">
       <title>Underlying Data</title>
       <event>
         <search>
@@ -308,6 +331,18 @@ $tkn_use_case_search_text$
           </query>
         </search>
       </event>
+    </panel>
+
+
+    <panel depends="$show_table_panel$">
+      <title>Underlying Data</title>
+      <table>
+        <search>
+          <query>
+$tkn_use_case_search_text$
+          </query>
+        </search>
+      </table>
     </panel>
   </row>
 </dashboard>
