@@ -120,11 +120,26 @@
 
 | append 
     [| makeresults format=csv data="Field,display_text,order
-ssphp.assessment.description,Description,3
-ssphp.assessment.source,Source,1
-ssphp.assessment.state,State,4
-ssphp.assessment.status,Status,5
-ssphp.assessment.title,Title,2
+ssphp.assessment.source,Source,01
+ssphp.assessment.id,ID,02
+ssphp.assessment.title,Title,03
+ssphp.assessment.name,Name,04
+ssphp.assessment.display_name,Display Name,05
+ssphp.assessment.description,Description,06
+ssphp.assessment.state,State,07
+ssphp.assessment.status,Status,08
+ssphp.assessment.implementationEffort,Implementation Effort,09
+ssphp.assessment.managementProvider,Provider,10
+ssphp.assessment.policyDefinitionId,Policy Definition,11
+ssphp.assessment.remediationDescription,Remediation,12
+ssphp.assessment.userImpact,User Impact,13
+ssphp.assessment.securityIssue,Security Issue,14
+ssphp.assessment.severity,Severity,15
+ssphp.assessment.status.code,Status Code,16
+ssphp.assessment.status.firstEvaluationDate,First Evaluation Date,17
+ssphp.assessment.status.statusChangeDate,Stats Changed Date,18
+ssphp.assessment.type,Type,19
+ssphp.assessment.assessmentType,Assessment Type,20
 ssphp.use_case.category,Category,1
 ssphp.use_case.group,Group,2
 ssphp.use_case.group_name,Group Name,3

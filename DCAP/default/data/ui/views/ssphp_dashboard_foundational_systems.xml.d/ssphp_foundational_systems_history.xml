@@ -1,11 +1,15 @@
-<dashboard theme="dark" version="1.1" hideFilters="true">
+{% if environment=="_DEV" %}
+  <dashboard theme="light" version="1.1" hideFilters="true">
+{% else %}
+  <dashboard theme="dark" version="1.1" hideFilters="true">
+{% endif %}
 
-<label>DCAP Control Monthly History</label>
-<description>{{environment}} 1.0.6</description>
+<label>DCAP Control Progress</label>
+<description>_DEV 1.1.0</description>
   
   <search id="bs_1">
     <query>
-`ssphp_summary_index{{environment}}` earliest=-6mon@mon latest=now
+`ssphp_summary_index_DEV` earliest=-6mon@mon latest=now
 ssphp.source.foundational_system="*"
       (ssphp.use_case.id="azure*" OR ssphp.use_case.id="dns*" OR ssphp.use_case.id="m365*" OR ssphp.use_case.id="aad*" OR (ssphp.use_case.id="github*" AND ssphp.use_case.savedsearch="*_fs*"))
       ssphp.use_case.id!="*_000"
@@ -21,11 +25,30 @@ ssphp.source.foundational_system="*"
 
 | eval score_{run_month}='ssphp.score.score'
 
+| eval current_month="score_".strftime(now(),"%Y-%m")
+| foreach score_* [| eval current_month_score=if("&lt;&lt;FIELD&gt;&gt;"='current_month','&lt;&lt;FIELD&gt;&gt;','current_month_score')]
+
+| fields SSPHP_RUN, current_month, current_month_score, run_month, run_date, ssphp.source.foundational_system, ssphp.use_case.id, ssphp.use_case.title, ssphp.benchmark.control.title, ssphp.score.ciso_priority, score_*
+
+| appendpipe
+    [| stats max(run_month) as run_month by ssphp.use_case.id
+     | eval ry=mvindex(split('run_month',"-"),0),
+            rm=mvindex(split('run_month',"-"),1),
+            nml=mvrange('rm'+1,13)
+     | fields - run_month
+     | mvexpand nml
+     | eval run_month='ry'."-".substr("00".'nml',len("00".'nml')-1,2),
+            score_{run_month}=""
+    | fields - run_month, nml, rm, ry
+    ]
+
+
 | stats values(*) as * by ssphp.use_case.id
+| search current_month_score=*
 
-| fields SSPHP_RUN, run_month, run_date, ssphp.source.foundational_system, ssphp.use_case.id, ssphp.use_case.title, ssphp.benchmark.control.title, ssphp.score.ciso_priority, score_*
+| table ssphp.source.foundational_system, ssphp.use_case.id, ssphp.use_case.title, ssphp.benchmark.control.title, ssphp.score.ciso_priority, score_*
 
-| eventstats count as event_count
+| eventstats count as event_count 
     </query>
     <done>
       <set token="tkn_event_count">$result.event_count$</set>
@@ -35,11 +58,31 @@ ssphp.source.foundational_system="*"
   
   <row>
     <panel>
+      <html>
+        <style>
+          #table1 th:nth-child(1) {
+            width: 200px;
+          }
+          #table1 th:nth-child(2) {
+            width: 200px;
+          }
+        </style>
+      </html>
+      <html>
+        <style>
+        <style>
+          #table1 th {
+            text-align: right !important;
+          }
+        </style>
+        </style>
+      </html>
+      
       <title>Foundational Systems</title>
-      <table>
+      <table id="table1">
         <search>
           <query>
-`ssphp_summary_index{{environment}}` earliest=-6mon@mon latest=now
+`ssphp_summary_index_DEV` earliest=-6mon@mon latest=now
 ssphp.source.foundational_system="*"
       (ssphp.use_case.id="azure*" OR ssphp.use_case.id="dns*" OR ssphp.use_case.id="m365*" OR ssphp.use_case.id="aad*" OR (ssphp.use_case.id="github*" AND ssphp.use_case.savedsearch="*_fs*"))
       ssphp.use_case.id!="*_000"
@@ -57,11 +100,42 @@ ssphp.source.foundational_system="*"
 
 | stats count as number_controls_total, sum(eval(if('ssphp.score.score'="100",1,0))) as number_controls_compliant by ssphp.source.foundational_system, run_month
 
-| eval score_{run_month}=floor('number_controls_compliant'*100/'number_controls_total')
+
+| appendpipe
+    [| stats max(run_month) as run_month by ssphp.source.foundational_system
+     | eval ry=mvindex(split('run_month',"-"),0),
+            rm=mvindex(split('run_month',"-"),1),
+            nml=mvrange('rm'+1,13)
+     | fields - run_month
+     | mvexpand nml
+     | eval run_month='ry'."-".substr("00".'nml',len("00".'nml')-1,2)
+    | fields - nml, rm, ry
+    ]
+
+| eval score_{run_month}=coalesce(floor('number_controls_compliant'*100/'number_controls_total')," ")
 
 | stats values(*) as * by ssphp.source.foundational_system
 
-| table ssphp.source.foundational_system, score_*
+| fields ssphp.source.foundational_system, score_*
+
+| eval cm=strftime(now(),"score_"."%Y-%m"),
+       total_val=0,
+       no_vals=0
+| foreach score_* 
+    [| eval curr_val=if("&lt;&lt;FIELD&gt;&gt;"='cm','&lt;&lt;FIELD&gt;&gt;','curr_val'),
+            total_val=if(match('&lt;&lt;FIELD&gt;&gt;',"[0-9]+"),'total_val'+'&lt;&lt;FIELD&gt;&gt;','total_val'),
+            no_vals=if(match('&lt;&lt;FIELD&gt;&gt;',"[0-9]+"),'no_vals'+1,'no_vals')
+    ]
+| fillnull value=0 total_val
+
+| eval plus="++++++++++", minus="----------",
+       avg='total_val'/'no_vals',
+       delta=coalesce(floor(('curr_val'-'avg')*100/'avg'/10),0),
+       Trend=case('delta'&gt;0,substr('plus',0,'delta'),
+                  'delta'&lt;0,substr('minus',0,'delta'),
+                  1==1,null())
+
+| table ssphp.source.foundational_system, Trend, score_*
 | rename score_* as *, ssphp.source.foundational_system as "Foundational System"
           </query>
         </search>
@@ -72,6 +146,11 @@ ssphp.source.foundational_system="*"
           <colorPalette type="list">[#a70000,#ff0000,#ff5252,#ff7b7b,#ffbaba,#53A051]</colorPalette>
           <scale type="threshold">20,40,60,80,100</scale>
         </format>
+<!-- 
+        <format type="color" field="Trend">
+          <colorPalette type="map">{"+":#53A051, "-":#ff5252}</colorPalette>
+        </format>
+ -->
       </table>
     </panel>
   </row>
@@ -91,21 +170,20 @@ ssphp.source.foundational_system="*"
     <panel>
       <html>
         <style>
-          #table1 th:nth-child(1) {
-            width: 300px;
+          #table2 th:nth-child(1) {
+            width: 200px;
           }
-          #table1 th:nth-child(2) {
-            width: 500px;
+          #table2 th:nth-child(2) {
+            width: 700px;
           }
         </style>
       </html>
 
       <title>All DfE Mandated Controls [$tkn_event_count$]</title>
-      <table id="table1">
+      <table id="table2">
         <search base="bs_1">
           <query>
-
-  | eval control=mvindex(split('ssphp.use_case.id',"_"),-1),
+| eval control=mvindex(split('ssphp.use_case.id',"_"),-1),
         c1=mvindex(split('control',"-"),0),
         c2=mvindex(split('control',"-"),1),
         c3=mvindex(split('control',"-"),2)
@@ -115,8 +193,33 @@ ssphp.source.foundational_system="*"
         c3="00".'c3', c3=substr('c3',len(c3)-1,2)
   | sort ssphp.source.foundational_system, c1, c2, c3
 
-  | table ssphp.use_case.title, ssphp.benchmark.control.title, score_*
-  |rename score_* as *
+
+| streamstats count by ssphp.source.foundational_system
+| table ssphp.source.foundational_system, count, ssphp.use_case.title, ssphp.benchmark.control.title, score_*, ```
+```
+| appendpipe 
+    [| stats values(ssphp.source.foundational_system) as ssphp.source.foundational_system
+    | mvexpand ssphp.source.foundational_system
+    | eval count=0]
+| sort 0 ssphp.source.foundational_system, count
+
+| eval ssphp.use_case.title=if(count=0,'ssphp.source.foundational_system','ssphp.use_case.title')
+| rename score_* as *, ssphp.source.foundational_system as "Foundational System", ssphp.use_case.title as "Use Case", ssphp.benchmark.control.title as Control
+| fields - count, "Foundational System"
+
+| fields - count
+
+
+| eval Control=replace('Control',"Ensure that '","'"),
+       Control=replace('Control',"Ensure that an ",""),
+       Control=replace('Control',"Ensure that A ",""),
+       Control=replace('Control',"Ensure That '","'"),
+       Control=replace('Control',"Ensure ",""),
+       Control=replace('Control',"'",""),
+       Control=replace('Control',"`",""),
+       Control=replace('Control',"Guest invite restrictions is set to ","Guest invite restrictions is set"),
+       Control=replace('Control',"sendi ng","sending"),
+       Control=upper(substr('Control',0,1)).substr('Control',2,999)
           </query>
         </search>
         <option name="count">100</option>
