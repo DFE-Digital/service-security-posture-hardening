@@ -297,12 +297,13 @@ pub async fn try_collect_send<T>(
     name: &str,
     future: impl Future<Output = Result<T>>,
     splunk: &Splunk,
-) -> Result<()>
+) -> Result<T>
 where
     for<'a> &'a T: ToHecEvents + Debug,
 {
     info!("Getting {}", &name);
-    match future.await {
+    let result = future.await;
+    match &result {
         Ok(ref result) => {
             let hec_events = match result.to_hec_events() {
                 Ok(hec_events) => hec_events,
@@ -319,7 +320,9 @@ where
             };
 
             match splunk.send_batch(&hec_events).await {
-                Ok(()) => info!("Sent {}", &name),
+                Ok(()) => {
+                    info!("Sent {}", &name);
+                }
                 Err(e) => {
                     warn!("Failed Sending to Splunk: {e}");
                 }
@@ -329,7 +332,7 @@ where
             warn!("Failed to get {name}: {err:?}")
         }
     };
-    Ok(())
+    result
 }
 
 #[cfg(feature = "live_tests")]
