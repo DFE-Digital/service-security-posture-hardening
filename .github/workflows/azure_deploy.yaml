@@ -58,8 +58,7 @@ jobs:
       - name: Deploy terraform
         uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: 1.5.7
-
+          terraform_version: 1.9.5
 
       - name: Terraform version
         run: terraform -version
@@ -72,4 +71,4 @@ jobs:
           ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
           ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
           ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
-        run: cd data_ingester/terraform/red; terraform init; terraform apply -auto-approve
+        run: cd data_ingester/terraform/red; terraform init -upgrade; terraform apply -auto-approve

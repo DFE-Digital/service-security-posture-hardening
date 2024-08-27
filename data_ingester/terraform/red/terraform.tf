@@ -2,9 +2,11 @@ terraform {
   required_providers {
     azurerm = {
       source  = "hashicorp/azurerm"
-      version = "~>3.0"
+      version = "~>4.0"
     }
   }
+
+  required_version = "~> 1.9.5"  
 
   backend "azurerm" {
     resource_group_name  = "s194d00-SSPHP-Metrics"
@@ -30,6 +32,7 @@ locals {
     "7e53a6ad-8c94-4d82-a3b5-222882dffc29",
     "0870054a-44a7-4ddf-af8d-e48276f81df4",
     "14b985a0-2abe-4844-b1ac-82ca64943724",
+    "b7ecf1ae-c14f-4be8-a8d1-db7b5157d5d9",
   ] # 7e53 = GitHub Actions - TODO; check if still required
 }
 
