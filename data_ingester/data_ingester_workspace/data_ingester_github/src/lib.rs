@@ -531,18 +531,19 @@ impl OctocrabGit {
 
         let mut responses = vec![];
 
-        while let Some(next) = next_link.next {
+        while let Some(ref next) = next_link.next {
             let response = self
                 .client
                 ._get(next)
                 .await
                 .with_context(|| format!("Using Octocrab to get url: {}", uri))?;
 
-            next_link = GithubNextLink::from_response(&response)
+            let next_next_link = GithubNextLink::from_response(&response)
                 .await
                 .context("Failed getting response 'link'")?;
 
             let status = response.status().as_u16();
+
             let mut body = response
                 .collect()
                 .await
@@ -553,6 +554,14 @@ impl OctocrabGit {
             if body.is_empty() {
                 body = "{}".into();
             }
+
+            if status == 403 && body.starts_with(b"API rate limit exceeded") {
+                let sleep_duration = tokio::time::Duration::from_secs(5);
+                tokio::time::sleep(sleep_duration).await;
+                continue;
+            }
+
+            next_link = next_next_link;
 
             let body = match serde_json::from_slice(&body).context("Deserialize body") {
                 Ok(ok) => ok,

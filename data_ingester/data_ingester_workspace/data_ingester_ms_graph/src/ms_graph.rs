@@ -931,7 +931,7 @@ pub async fn m365(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
         .await?;
 
     // M365 1.1.17 V2
-    try_collect_send(
+    let _ = try_collect_send(
         "MS Graph List Role Eligibility Schedules",
         ms_graph.list_legacy_policies(),
         &splunk,
@@ -939,7 +939,7 @@ pub async fn m365(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
     .await?;
 
     // M365 1.1.15 V2
-    try_collect_send(
+    let _ = try_collect_send(
         "MS Graph List Role Eligibility Schedules",
         ms_graph.list_role_eligiblity_schedule_instance(),
         &splunk,
@@ -947,7 +947,7 @@ pub async fn m365(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
     .await?;
 
     // Azure Foundations 1.22 V2
-    try_collect_send(
+    let _ = try_collect_send(
         "MS Graph Device Registration Policy",
         ms_graph.get_device_registration_policy(),
         &splunk,
@@ -955,7 +955,7 @@ pub async fn m365(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
     .await?;
 
     // 5.1.1
-    try_collect_send(
+    let _ = try_collect_send(
         "MS Graph Access Reviews",
         ms_graph.get_access_reviews(),
         &splunk,
@@ -964,7 +964,7 @@ pub async fn m365(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
 
     // 1.1.9
     // 1.1.10
-    try_collect_send(
+    let _ = try_collect_send(
         "MS Graph Admin form settings",
         ms_graph.get_admin_form_settings(),
         &splunk,
@@ -973,7 +973,7 @@ pub async fn m365(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
 
     // 1.1.9
     // 1.1.10
-    try_collect_send(
+    let _ = try_collect_send(
         "MS Graph Group Settings",
         ms_graph.list_group_settings(),
         &splunk,
@@ -981,58 +981,58 @@ pub async fn m365(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
     .await?;
 
     // 1.2.1
-    try_collect_send(
+    let _ = try_collect_send(
         "MS Graph Named Locations",
         ms_graph.list_named_locations(),
         &splunk,
     )
     .await?;
 
-    try_collect_send(
+    let _ = try_collect_send(
         "MS Graph Security Secure Scores",
         ms_graph.get_security_secure_scores(),
         &splunk,
     )
     .await?;
 
-    try_collect_send(
+    let _ = try_collect_send(
         "MS Graph Authentication Methods Policy",
         ms_graph.get_authentication_methods_policy(),
         &splunk,
     )
     .await?;
 
-    try_collect_send(
+    let _ = try_collect_send(
         "MS Graph Authorization Policy",
         ms_graph.get_authorization_policy(),
         &splunk,
     )
     .await?;
 
-    try_collect_send(
+    let _ = try_collect_send(
         "MS Graph Admin RequestConsent Policy",
         ms_graph.get_admin_request_consent_policy(),
         &splunk,
     )
     .await?;
 
-    try_collect_send("MS Graph Domains", ms_graph.get_domains(), &splunk).await?;
+    let _ = try_collect_send("MS Graph Domains", ms_graph.get_domains(), &splunk).await?;
 
-    try_collect_send(
+    let _ = try_collect_send(
         "MS Graph Permission Grant Policy",
         ms_graph.list_permission_grant_policy(),
         &splunk,
     )
     .await?;
 
-    try_collect_send(
+    let _ = try_collect_send(
         "Exchange Get Security Default Policy",
         ms_graph.get_identity_security_defaults_enforcement_policy(),
         &splunk,
     )
     .await?;
 
-    try_collect_send("MS Graph Groups", ms_graph.list_groups(), &splunk).await?;
+    let _ = try_collect_send("MS Graph Groups", ms_graph.list_groups(), &splunk).await?;
 
     info!("M365 Collection Complete");
 
