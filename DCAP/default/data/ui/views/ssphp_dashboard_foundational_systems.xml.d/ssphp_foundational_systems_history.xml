@@ -1,11 +1,7 @@
-{% if environment=="_DEV" %}
-  <dashboard theme="light" version="1.1" hideFilters="true">
-{% else %}
-  <dashboard theme="dark" version="1.1" hideFilters="true">
-{% endif %}
+<dashboard theme="light" version="1.1" hideFilters="true">
 
 <label>DCAP Control Progress</label>
-<description>_DEV 1.1.3</description>
+<description>_DEV 1.1.4</description>
   
   <search id="bs_1">
     <query>
