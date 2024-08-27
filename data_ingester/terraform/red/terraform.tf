@@ -2,9 +2,11 @@ terraform {
   required_providers {
     azurerm = {
       source  = "hashicorp/azurerm"
-      version = "~>3.0"
+      version = "~>4.0"
     }
   }
+
+  required_version = "~> 1.9.5"  
 
   backend "azurerm" {
     resource_group_name  = "s194d00-SSPHP-Metrics"
