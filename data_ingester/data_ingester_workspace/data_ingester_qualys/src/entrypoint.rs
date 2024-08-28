@@ -82,7 +82,7 @@ pub async fn qualys_qvs(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()
         .collect::<Vec<String>>();
     let qualys_command = qualys_client.get_qvs(&cves);
 
-    let _ = try_collect_send("Qualys vulnerability score", qualys_command, &splunk).await?;
+    let _ = try_collect_send("Qualys vulnerability score", qualys_command, &splunk).await;
 
     info!("Done");
     Ok(())

@@ -25,7 +25,7 @@ use regex::Regex;
 use serde::{Deserialize, Serialize};
 use teams::GitHubTeamsOrg;
 use tokio::sync::OnceCell;
-use tracing::{error, info};
+use tracing::{error, info, warn};
 use workflows::{WorkflowRunJobs, WorkflowRuns};
 
 /// NewType for Octocrab provide additonal data source.
@@ -55,19 +55,40 @@ impl OctocrabGit {
 
     /// Get a full list of [Repos] for the provided organization
     pub(crate) async fn org_repos(&self, org: &str) -> Result<Repos> {
-        let page = self
-            .client
-            .orgs(org)
-            .list_repos()
-            .send()
-            .await
-            .context("getting org repos")?;
-        let repos = self
-            .client
-            .all_pages(page)
-            .await
-            .context("getting additional org repo pages")?;
-        Ok(Repos::new(repos, org))
+        let mut all_repos = vec![];
+        use octocrab::params::repos::Type;
+        for t in [
+            // Type::All,
+            // Type::Forks,
+            // Type::Internal,
+            // Type::Member,
+            Type::Private,
+            Type::Public,
+            // Type::Sources,
+        ] {
+            info!("Getting repo type: {:#?}", t);
+            let page = self
+                .client
+                .orgs(org)
+                .list_repos()
+                .repo_type(Some(t))
+                .per_page(100)
+                .send()
+                .await
+                .context("getting org repos")?;
+            let repos = self
+                .client
+                .all_pages(page)
+                .await
+                .context("getting additional org repo pages")?;
+            info!("Got {} repos for type: {:#?}", repos.len(), t);
+            all_repos.extend(repos);
+        }
+
+        all_repos.sort_by(|a, b| a.id.cmp(&b.id));
+        all_repos.dedup_by(|a, b| a.id.eq(&b.id));
+
+        Ok(Repos::new(all_repos, org))
     }
 
     /// Get the settings for the org
@@ -213,7 +234,7 @@ impl OctocrabGit {
         }) {
             let ruleset_id = ruleset
                 .get("id")
-                .context("Getting `id` from team")?
+                .with_context(|| format!("Getting `id` from ruleset: {:#?}", &ruleset))?
                 .as_u64()
                 .context("Getting `id` as u64")?;
 
@@ -269,7 +290,7 @@ impl OctocrabGit {
     }
 
     pub(crate) async fn repo_actions_list_workflow_runs(&self, repo: &str) -> Result<WorkflowRuns> {
-        let uri = format!("/repos/{repo}/actions/runs");
+        let uri = format!("/repos/{repo}/actions/runs?status=success&per_page=100");
         let result = self.get_collection(&uri).await?;
         let workflow_runs =
             WorkflowRuns::try_from(&result).context("Convert GitHubResponses to Workflows")?;
@@ -555,9 +576,13 @@ impl OctocrabGit {
                 body = "{}".into();
             }
 
-            if status == 403 && body.starts_with(b"API rate limit exceeded") {
-                let sleep_duration = tokio::time::Duration::from_secs(5);
-                tokio::time::sleep(sleep_duration).await;
+            let body_string = std::string::String::from_utf8(body.to_vec())?;
+            if status == 403 && body_string.contains("API rate limit exceeded") {
+                dbg!(&status);
+                dbg!(&body);
+                self.wait_for_rate_limit()
+                    .await
+                    .context("Waiting for rate limit")?;
                 continue;
             }
 
@@ -583,6 +608,45 @@ impl OctocrabGit {
         }
 
         Ok(GithubResponses { inner: responses })
+    }
+
+    pub(crate) async fn wait_for_rate_limit(&self) -> Result<()> {
+        let rate_limit = self
+            .client
+            .ratelimit()
+            .get()
+            .await
+            .context("Getting rate limit")?;
+        if rate_limit.resources.core.remaining == 0 {
+            let now = std::time::SystemTime::now()
+                .duration_since(std::time::SystemTime::UNIX_EPOCH)
+                .context("Getting current time")?;
+            let sleep_duration =
+                tokio::time::Duration::from_secs(rate_limit.resources.core.reset - now.as_secs());
+            warn!(
+                "Sleeping for {} seconds because of Core API rate limit",
+                sleep_duration.as_secs()
+            );
+            tokio::time::sleep(sleep_duration).await;
+        }
+
+        if let Some(graphql) = rate_limit.resources.graphql {
+            if graphql.remaining == 0 {
+                let now = std::time::SystemTime::now()
+                    .duration_since(std::time::SystemTime::UNIX_EPOCH)
+                    .context("Getting current time")?;
+                let sleep_duration = tokio::time::Duration::from_secs(
+                    rate_limit.resources.core.reset - now.as_secs(),
+                );
+                warn!(
+                    "Sleeping for {} seconds because of GraphQL API rate limit",
+                    sleep_duration.as_secs()
+                );
+                tokio::time::sleep(sleep_duration).await;
+            }
+        }
+
+        Ok(())
     }
 
     /// Get an Organizations list of members with their roles(ADMIN/MEMBER) from graph QL
