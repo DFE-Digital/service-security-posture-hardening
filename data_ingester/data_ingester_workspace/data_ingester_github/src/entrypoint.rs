@@ -76,7 +76,11 @@ async fn github_collect_installation_org(
     if org_name != "DFE-Digital" {
         return Ok(());
     }
-    
+    github_client.wait_for_rate_limit().await?;
+    let rate_limits = github_client.client.ratelimit().get().await?;
+    let rate_limits_json = serde_json::to_string(&rate_limits)?;
+    info!(name: "GitHub", org_name, rate_limits_json);
+
     info!("Starting collection for {}", org_name);
     let _org_settings = try_collect_send(
         &format!("Org Settings for {org_name}"),
@@ -130,8 +134,12 @@ async fn github_collect_installation_org(
         .context("Sending Calculated teams and members to Splunk")?;
 
     dbg!(org_repos.inner.len());
-    
+
     for repo in org_repos.inner {
+        let rate_limits = github_client.client.ratelimit().get().await?;
+        let rate_limits_json = serde_json::to_string(&rate_limits)?;
+        info!(name: "GitHub", org_name, rate_limits_json);
+
         let repo_name = format!(
             "{}/{}",
             &repo.owner.as_ref().expect("checked owner").login,

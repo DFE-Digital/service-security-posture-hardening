@@ -61,11 +61,10 @@ impl OctocrabGit {
             Type::Forks,
             Type::Internal,
             Type::Member,
-            Type::Private,                                    
+            Type::Private,
             Type::Public,
             Type::Sources,
-        ]
-        {
+        ] {
             let page = self
                 .client
                 .orgs(org)
@@ -570,10 +569,13 @@ impl OctocrabGit {
                 body = "{}".into();
             }
 
-            if status == 403 && body.starts_with(b"API rate limit exceeded") {
-                warn!("Sleeping because of API rate limit");
-                let sleep_duration = tokio::time::Duration::from_secs(5);
-                tokio::time::sleep(sleep_duration).await;
+            let body_string = std::string::String::from_utf8(body.to_vec())?;
+            if status == 403 && body_string.contains("API rate limit exceeded") {
+                dbg!(&status);
+                dbg!(&body);
+                self.wait_for_rate_limit()
+                    .await
+                    .context("Waiting for rate limit")?;
                 continue;
             }
 
@@ -599,6 +601,45 @@ impl OctocrabGit {
         }
 
         Ok(GithubResponses { inner: responses })
+    }
+
+    pub(crate) async fn wait_for_rate_limit(&self) -> Result<()> {
+        let rate_limit = self
+            .client
+            .ratelimit()
+            .get()
+            .await
+            .context("Getting rate limit")?;
+        if rate_limit.resources.core.remaining == 0 {
+            let now = std::time::SystemTime::now()
+                .duration_since(std::time::SystemTime::UNIX_EPOCH)
+                .context("Getting current time")?;
+            let sleep_duration =
+                tokio::time::Duration::from_secs(rate_limit.resources.core.reset - now.as_secs());
+            warn!(
+                "Sleeping for {} seconds because of Core API rate limit",
+                sleep_duration.as_secs()
+            );
+            tokio::time::sleep(sleep_duration).await;
+        }
+
+        if let Some(graphql) = rate_limit.resources.graphql {
+            if graphql.remaining == 0 {
+                let now = std::time::SystemTime::now()
+                    .duration_since(std::time::SystemTime::UNIX_EPOCH)
+                    .context("Getting current time")?;
+                let sleep_duration = tokio::time::Duration::from_secs(
+                    rate_limit.resources.core.reset - now.as_secs(),
+                );
+                warn!(
+                    "Sleeping for {} seconds because of GraphQL API rate limit",
+                    sleep_duration.as_secs()
+                );
+                tokio::time::sleep(sleep_duration).await;
+            }
+        }
+
+        Ok(())
     }
 
     /// Get an Organizations list of members with their roles(ADMIN/MEMBER) from graph QL
