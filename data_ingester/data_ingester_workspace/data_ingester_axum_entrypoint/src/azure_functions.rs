@@ -118,8 +118,9 @@ where
     let result = match func(state.secrets.clone(), state.splunk.clone()).await {
         Ok(_) => format!("{} Success", name),
         Err(e) => {
-            error!("{:?}", &e);
-            format!("Error {}: {:?}", name, e)
+            let error = format!("{} entrypoint failed with error: {:#?}", &name, &e);
+            error!(error);
+            error
         }
     };
     response.logs.push(result);

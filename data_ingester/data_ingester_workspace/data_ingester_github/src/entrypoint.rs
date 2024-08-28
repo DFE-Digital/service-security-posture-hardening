@@ -78,14 +78,14 @@ async fn github_collect_installation_org(
         github_client.org_settings(&org_name),
         &splunk,
     )
-    .await?;
+    .await;
 
     let _org_members = try_collect_send(
         &format!("Org Settings for {org_name}"),
         github_client.graphql_org_members_query(&org_name),
         &splunk,
     )
-    .await?;
+    .await;
 
     let org_repos = github_client
         .org_repos(&org_name)
@@ -109,6 +109,7 @@ async fn github_collect_installation_org(
     let teams_events = (&teams)
         .to_hec_events()
         .context("Serialize GitHub Teams and members")?;
+
     splunk
         .send_batch(teams_events)
         .await
@@ -117,6 +118,7 @@ async fn github_collect_installation_org(
     let team_member_events = teams_org
         .team_members_hec_events()
         .context("Creating HEC events for calculated team members")?;
+
     splunk
         .send_batch(&team_member_events)
         .await
@@ -135,113 +137,120 @@ async fn github_collect_installation_org(
             github_client.repo_get_sarif_artifacts(repo_name.as_str(), "semgrep"),
             &splunk,
         )
-        .await?;
+        .await;
 
         let _repo_collaborators = try_collect_send(
             &format!("Collaborators for {repo_name}"),
             github_client.repo_collaborators(&repo_name),
             &splunk,
         )
-        .await?;
+        .await;
 
         let _repo_teams = try_collect_send(
             &format!("Teams for {repo_name}"),
             github_client.repo_teams(&repo_name),
             &splunk,
         )
-        .await?;
+        .await;
 
         let _repo_code_scanning_default_setup = try_collect_send(
             &format!("Code scanning setup for {repo_name}"),
             github_client.repo_code_scanning_default_setup(&repo_name),
             &splunk,
         )
-        .await?;
+        .await;
 
         let _repo_code_scanning_analyses = try_collect_send(
             &format!("Code scanning analyses for {repo_name}"),
             github_client.repo_code_scanning_analyses(&repo_name),
             &splunk,
         )
-        .await?;
+        .await;
 
         let _code_scanning_alerts = try_collect_send(
             &format!("Code scanning alerts for {repo_name}"),
             github_client.repo_code_scanning_alerts(&repo_name),
             &splunk,
         )
-        .await?;
+        .await;
 
         let repo_actions_list_workflows = try_collect_send(
             &format!("Code scanning alerts for {repo_name}"),
             github_client.repo_actions_list_workflows(&repo_name),
             &splunk,
         )
-        .await?;
+        .await;
 
-        let _repo_actions_get_workflow_files = try_collect_send(
-            &format!("GitHub actions workflow files for {repo_name}"),
-            github_client.repo_actions_get_workflow_files(&repo_name, &repo_actions_list_workflows),
-            &splunk,
-        )
-        .await?;
+        if let Ok(repo_actions_list_workflows) = repo_actions_list_workflows {
+            let _repo_actions_get_workflow_files = try_collect_send(
+                &format!("GitHub actions workflow files for {repo_name}"),
+                github_client
+                    .repo_actions_get_workflow_files(&repo_name, &repo_actions_list_workflows),
+                &splunk,
+            )
+            .await;
+        }
 
         let repo_actions_list_workflow_runs = try_collect_send(
             &format!("GitHub actions workflow files for {repo_name}"),
             github_client.repo_actions_list_workflow_runs(&repo_name),
             &splunk,
         )
-        .await?;
+        .await;
 
-        let _repo_actions_list_workflow_run_jobs = try_collect_send(
-            &format!("GitHub Actions WorkflowRunJobs for {repo_name}"),
-            github_client
-                .repo_actions_list_workflow_run_jobs(&repo_name, &repo_actions_list_workflow_runs),
-            &splunk,
-        )
-        .await?;
+        if let Ok(repo_actions_list_workflow_runs) = repo_actions_list_workflow_runs {
+            let _repo_actions_list_workflow_run_jobs = try_collect_send(
+                &format!("GitHub Actions WorkflowRunJobs for {repo_name}"),
+                github_client.repo_actions_list_workflow_run_jobs(
+                    &repo_name,
+                    &repo_actions_list_workflow_runs,
+                ),
+                &splunk,
+            )
+            .await;
+        }
 
         let _repo_secret_scanning_alerts = try_collect_send(
             &format!("Secret Scanning Alerts for {repo_name}"),
             github_client.repo_secret_scanning_alerts(&repo_name),
             &splunk,
         )
-        .await?;
+        .await;
 
         let _repo_security_txt = try_collect_send(
             &format!("Security txt {repo_name}"),
             github_client.repo_security_txt(&repo_name),
             &splunk,
         )
-        .await?;
+        .await;
 
         let _repo_codeowners = try_collect_send(
             &format!("Codeowners for {repo_name}"),
             github_client.repo_codeowners(&repo_name),
             &splunk,
         )
-        .await?;
+        .await;
 
         let _repo_deploy_keys = try_collect_send(
             &format!("Deploy keys {repo_name}"),
             github_client.repo_deploy_keys(&repo_name),
             &splunk,
         )
-        .await?;
+        .await;
 
         let _dependabot_status = try_collect_send(
             &format!("Deploy keys {repo_name}"),
             github_client.repo_dependabot_status(&repo_name),
             &splunk,
         )
-        .await?;
+        .await;
 
         let _repo_dependabot_alerts = try_collect_send(
             &format!("Dependabot Alerts for {repo_name}"),
             github_client.repo_dependabot_alerts(&repo_name),
             &splunk,
         )
-        .await?;
+        .await;
 
         // Don't get rulesets for a repository.
         // Only get rules for the default branch
@@ -251,7 +260,7 @@ async fn github_collect_installation_org(
             github_client.repo_rulesets_full(&repo_name),
             &splunk,
         )
-        .await?;
+        .await;
 
         let default_branch = match repo.default_branch.as_deref() {
             Some(default_branch) => default_branch,
@@ -266,14 +275,14 @@ async fn github_collect_installation_org(
             github_client.repo_branch_protection(&repo_name, default_branch),
             &splunk,
         )
-        .await?;
+        .await;
 
         let _repo_branch_rules = try_collect_send(
             &format!("Rules for {repo_name}/{default_branch}"),
             github_client.repo_branch_rules(&repo_name, default_branch),
             &splunk,
         )
-        .await?;
+        .await;
     }
     Ok(())
 }

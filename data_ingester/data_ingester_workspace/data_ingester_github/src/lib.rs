@@ -25,7 +25,7 @@ use regex::Regex;
 use serde::{Deserialize, Serialize};
 use teams::GitHubTeamsOrg;
 use tokio::sync::OnceCell;
-use tracing::{error, info};
+use tracing::{error, info, warn};
 use workflows::{WorkflowRunJobs, WorkflowRuns};
 
 /// NewType for Octocrab provide additonal data source.
@@ -213,7 +213,7 @@ impl OctocrabGit {
         }) {
             let ruleset_id = ruleset
                 .get("id")
-                .context("Getting `id` from team")?
+                .with_context(|| format!("Getting `id` from ruleset: {:#?}", &ruleset))?
                 .as_u64()
                 .context("Getting `id` as u64")?;
 
@@ -556,6 +556,7 @@ impl OctocrabGit {
             }
 
             if status == 403 && body.starts_with(b"API rate limit exceeded") {
+                warn!("Sleeping because of API rate limit");
                 let sleep_duration = tokio::time::Duration::from_secs(5);
                 tokio::time::sleep(sleep_duration).await;
                 continue;
