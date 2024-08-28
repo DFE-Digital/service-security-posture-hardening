@@ -70,6 +70,7 @@ impl OctocrabGit {
                 .orgs(org)
                 .list_repos()
                 .repo_type(Some(t))
+                .per_page(100)
                 .send()
                 .await
                 .context("getting org repos")?;
@@ -81,8 +82,8 @@ impl OctocrabGit {
             all_repos.extend(repos);
         }
 
-        all_repos.sort_by(|a,b| a.name.cmp(&b.name));
-        all_repos.dedup_by(|a, b| a.name.eq_ignore_ascii_case(&b.name));
+        all_repos.sort_by(|a,b| a.id.cmp(&b.id));
+        all_repos.dedup_by(|a, b| a.id.eq(&b.id));
 
         Ok(Repos::new(all_repos, org))
     }
