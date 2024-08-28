@@ -58,13 +58,15 @@ impl OctocrabGit {
         let mut all_repos = vec![];
         use octocrab::params::repos::Type;
         for t in [
-            Type::Forks,
-            Type::Internal,
-            Type::Member,
+            // Type::All,
+            // Type::Forks,
+            // Type::Internal,
+            // Type::Member,
             Type::Private,
             Type::Public,
-            Type::Sources,
+            //            Type::Sources,
         ] {
+            info!("Getting repo type: {:#?}", t);            
             let page = self
                 .client
                 .orgs(org)
@@ -79,10 +81,11 @@ impl OctocrabGit {
                 .all_pages(page)
                 .await
                 .context("getting additional org repo pages")?;
+            info!("Got {} repos for type: {:#?}", repos.len(), t);
             all_repos.extend(repos);
         }
 
-        all_repos.sort_by(|a,b| a.id.cmp(&b.id));
+        all_repos.sort_by(|a, b| a.id.cmp(&b.id));
         all_repos.dedup_by(|a, b| a.id.eq(&b.id));
 
         Ok(Repos::new(all_repos, org))
