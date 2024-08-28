@@ -95,35 +95,35 @@ pub async fn azure_users(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<(
         azure_rest.get_security_contacts(),
         &splunk,
     )
-    .await?;
+    .await;
 
     let _ = try_collect_send(
         "Azure Security Center built in",
         azure_rest.get_security_center_built_in(),
         &splunk,
     )
-    .await?;
+    .await;
 
     let _ = try_collect_send(
         "Azure Security Auto Provisioning Settings",
         azure_rest.get_microsoft_security_auto_provisioning_settings(),
         &splunk,
     )
-    .await?;
+    .await;
 
     let _ = try_collect_send(
         "Azure Security Settings",
         azure_rest.get_microsoft_security_settings(),
         &splunk,
     )
-    .await?;
+    .await;
 
     let _ = try_collect_send(
         "Azure Security SQL Encryption protection",
         azure_rest.get_microsoft_sql_encryption_protection(),
         &splunk,
     )
-    .await?;
+    .await;
 
     let process_to_splunk = tokio::spawn(async move {
         while let Some(mut users) = reciever.recv().await {

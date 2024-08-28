@@ -58,42 +58,42 @@ pub async fn aws(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
         aws_client.aws_1_1_maintain_current_contact_details(),
         &splunk,
     )
-    .await?;
+    .await;
 
     let _ = try_collect_send(
         "aws_1_2_ensure_security_contact_information_is_registered",
         aws_client.aws_1_2_ensure_security_contact_information_is_registered(),
         &splunk,
     )
-    .await?;
+    .await;
 
     let _ = try_collect_send(
         "aws_1_4_ensure_no_root_user_account_access_key_exists()",
         aws_client.aws_1_4_ensure_no_root_user_account_access_key_exists(),
         &splunk,
     )
-    .await?;
+    .await;
 
     let _ = try_collect_send(
         "aws_1_8_ensure_iam_password_policy_requires_minimum_length_of_14",
         aws_client.aws_1_8_ensure_iam_password_policy_requires_minimum_length_of_14(),
         &splunk,
     )
-    .await?;
+    .await;
 
     let _ = try_collect_send(
         "aws_1_6_ensure_hardware_mfa_is_enabled_for_the_root_user_account",
         aws_client.aws_1_6_ensure_hardware_mfa_is_enabled_for_the_root_user_account(),
         &splunk,
     )
-    .await?;
+    .await;
 
     let _ = try_collect_send(
         "aws_1_10_ensure_mfa_is_enabled_for_all_iam_users_that_have_a_console_password",
         aws_client.aws_1_10_ensure_mfa_is_enabled_for_all_iam_users_that_have_a_console_password(),
         &splunk,
     )
-    .await?;
+    .await;
 
     let _ = try_collect_send(
         "aws_1_13_ensure_there_is_only_one_active_access_key_available_for_any_single_iam_user",
@@ -102,21 +102,21 @@ pub async fn aws(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
             ),
         &splunk,
     )
-    .await?;
+    .await;
 
     let _ = try_collect_send(
         "aws_1_15_ensure_iam_users_receive_permissions_only_through_groups",
         aws_client.aws_1_15_ensure_iam_users_receive_permissions_only_through_groups(),
         &splunk,
     )
-    .await?;
+    .await;
 
     let _ = try_collect_send(
         "aws_1_16_ensure_iam_policies_that_allow_full_administrative_privileges_are_not_attached",
         aws_client.aws_1_16_ensure_iam_policies_that_allow_full_administrative_privileges_are_not_attached(),
         &splunk,
     )
-        .await?;
+        .await;
 
     let _ = try_collect_send(
         "aws_1_17_ensure_a_support_role_has_been_created_to_manage_incidents_with_aws_support",
@@ -124,7 +124,7 @@ pub async fn aws(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
             .aws_1_17_ensure_a_support_role_has_been_created_to_manage_incidents_with_aws_support(),
         &splunk,
     )
-    .await?;
+    .await;
 
     let _ = try_collect_send(
         "aws_1_19_ensure_that_all_the_expired_tls_certificates_stored_in_aws_iam_are_removed",
@@ -132,42 +132,42 @@ pub async fn aws(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
             .aws_1_19_ensure_that_all_the_expired_tls_certificates_stored_in_aws_iam_are_removed(),
         &splunk,
     )
-    .await?;
+    .await;
 
     let _ = try_collect_send(
         "aws_1_20_ensure_that_iam_access_analyzer_is_enabled_for_all_regions",
         aws_client.aws_1_20_ensure_that_iam_access_analyzer_is_enabled_for_all_regions(),
         &splunk,
     )
-    .await?;
+    .await;
 
     let _ = try_collect_send(
         "aws_1_22_ensure_access_to_awscloudshellfullaccess_is_restricted",
         aws_client.aws_1_22_ensure_access_to_awscloudshellfullaccess_is_restricted(),
         &splunk,
     )
-    .await?;
+    .await;
 
     let _ = try_collect_send(
         "aws_2_1_1_ensure_s3_bucket_policy_is_set_to_deny_http_requests",
         aws_client.aws_2_1_1_ensure_s3_bucket_policy_is_set_to_deny_http_requests(),
         &splunk,
     )
-    .await?;
+    .await;
 
     let _ = try_collect_send(
         "aws_2_1_2_ensure_mfa_delete_is_enabled_on_s3_buckets",
         aws_client.aws_2_1_2_ensure_mfa_delete_is_enabled_on_s3_buckets(),
         &splunk,
     )
-    .await?;
+    .await;
 
     let _ = try_collect_send(
         "aws_2_1_4_ensure_that_s3_buckets_are_configured_with_block_public_access",
         aws_client.aws_2_1_4_ensure_that_s3_buckets_are_configured_with_block_public_access(),
         &splunk,
     )
-    .await?;
+    .await;
 
     let _ = try_collect_send(
         "aws_2_1_4_ensure_that_s3_buckets_are_configured_with_block_public_access_accounts",
@@ -175,14 +175,14 @@ pub async fn aws(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
             .aws_2_1_4_ensure_that_s3_buckets_are_configured_with_block_public_access_accounts(),
         &splunk,
     )
-    .await?;
+    .await;
 
     let _ = try_collect_send(
         "aws_3_1_ensure_cloudtrail_is_enabled_in_all_regions",
         aws_client.aws_3_1_ensure_cloudtrail_is_enabled_in_all_regions(),
         &splunk,
     )
-    .await?;
+    .await;
 
     let _ = try_collect_send(
         "aws_3_3_ensure_the_s3_bucket_used_to_store_cloudtrail_logs_is_not_publicly_accessible_acl",
@@ -191,7 +191,7 @@ pub async fn aws(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
             ),
         &splunk,
     )
-    .await?;
+    .await;
 
     let _ = try_collect_send(
         "aws_3_3_ensure_the_s3_bucket_used_to_store_cloudtrail_logs_is_not_publicly_accessible_bucket_policy",
@@ -200,59 +200,59 @@ pub async fn aws(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
             ),
         &splunk,
     )
-        .await?;
+        .await;
 
     let _ = try_collect_send(
         "aws_3_5_ensure_aws_config_is_enabled_in_all_regions",
         aws_client.aws_3_5_ensure_aws_config_is_enabled_in_all_regions(),
         &splunk,
     )
-    .await?;
+    .await;
 
     let _ = try_collect_send(
         "aws_3_6_ensure_s3_bucket_access_logging_is_enabled_on_the_cloudtrail_s3_bucket",
         aws_client.aws_3_6_ensure_s3_bucket_access_logging_is_enabled_on_the_cloudtrail_s3_bucket(),
         &splunk,
     )
-    .await?;
+    .await;
 
     let _ = try_collect_send(
         "aws_3_8_ensure_rotation_for_customer_created_symmetric_cmks_is_enabled",
         aws_client.aws_3_8_ensure_rotation_for_customer_created_symmetric_cmks_is_enabled(),
         &splunk,
     )
-    .await?;
+    .await;
 
     let _ = try_collect_send(
         "aws_3_9_ensure_vpc_flow_logging_is_enabled_in_all_vpcs_vpc",
         aws_client.aws_3_9_ensure_vpc_flow_logging_is_enabled_in_all_vpcs_vpc(),
         &splunk,
     )
-    .await?;
+    .await;
 
     let _ = try_collect_send(
         "aws_3_9_ensure_vpc_flow_logging_is_enabled_in_all_vpcs_flow_logs",
         aws_client.aws_3_9_ensure_vpc_flow_logging_is_enabled_in_all_vpcs_flow_logs(),
         &splunk,
     )
-    .await?;
+    .await;
 
     let _ = try_collect_send(
         "aws_4_16_ensure_aws_security_hub_is_enabled",
         aws_client.aws_4_16_ensure_aws_security_hub_is_enabled(),
         &splunk,
     )
-    .await?;
+    .await;
 
-    let _ = try_collect_send("aws_dfe_1x", aws_client.aws_dfe_1x(), &splunk).await?;
+    let _ = try_collect_send("aws_dfe_1x", aws_client.aws_dfe_1x(), &splunk).await;
 
-    let _ = try_collect_send("aws_dfe_2x", aws_client.aws_dfe_2x(), &splunk).await?;
+    let _ = try_collect_send("aws_dfe_2x", aws_client.aws_dfe_2x(), &splunk).await;
 
-    let _ = try_collect_send("aws_dfe_3x", aws_client.aws_dfe_3x(), &splunk).await?;
+    let _ = try_collect_send("aws_dfe_3x", aws_client.aws_dfe_3x(), &splunk).await;
 
-    let _ = try_collect_send("aws_dfe_4x", aws_client.aws_dfe_4x(), &splunk).await?;
+    let _ = try_collect_send("aws_dfe_4x", aws_client.aws_dfe_4x(), &splunk).await;
 
-    let _ = try_collect_send("aws_dfe_5x", aws_client.aws_dfe_5x(), &splunk).await?;
+    let _ = try_collect_send("aws_dfe_5x", aws_client.aws_dfe_5x(), &splunk).await;
 
     info!("AWS Collection Complete");
 
