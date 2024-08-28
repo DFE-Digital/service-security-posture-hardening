@@ -16,7 +16,7 @@ pub async fn github_octocrab_entrypoint(secrets: Arc<Secrets>, splunk: Arc<Splun
     info!("GIT_HASH: {}", env!("GIT_HASH"));
 
     if let Some(app) = secrets.github_app.as_ref() {
-        github_app(app, &splunk)
+        let _ = github_app(app, &splunk)
             .await
             .context("Running Collection for GitHub App")?;
     }
@@ -41,6 +41,7 @@ async fn github_app(github_app: &GitHubApp, splunk: &Arc<Splunk>) -> Result<()> 
         .context("Getting installations for github app")?;
 
     let mut tasks = vec![];
+
     for installation in installations {
         info!("Installation ID: {}", installation.id);
         if installation.account.r#type != "Organization" {
@@ -52,17 +53,22 @@ async fn github_app(github_app: &GitHubApp, splunk: &Arc<Splunk>) -> Result<()> 
             .context("build octocrabgit client")?;
         let org_name = installation.account.login.to_string();
         info!("Installation org name: {}", &org_name);
-        tasks.push(tokio::spawn(github_collect_installation_org(
-            installation_client,
-            org_name,
-            splunk.clone(),
-        )));
+        tasks.push((
+            org_name.clone(),
+            tokio::spawn(github_collect_installation_org(
+                installation_client,
+                org_name,
+                splunk.clone(),
+            )),
+        ));
     }
 
-    for task in tasks {
+    dbg!(&tasks);
+    for (org_name, task) in tasks {
         let _ = task
             .await
-            .context("Running GitHub collection for all installations")?;
+            .context("Tokio task has completed successfully")?
+            .with_context(|| format!("Running GitHub collection for {}", org_name))?;
     }
     Ok(())
 }

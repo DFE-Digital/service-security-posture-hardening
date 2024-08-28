@@ -114,7 +114,6 @@ where
             return response;
         }
     };
-
     let result = match func(state.secrets.clone(), state.splunk.clone()).await {
         Ok(_) => format!("{} Success", name),
         Err(e) => {

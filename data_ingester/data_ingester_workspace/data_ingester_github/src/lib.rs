@@ -66,7 +66,7 @@ impl OctocrabGit {
             // Type::Public,
             // Type::Sources,
         ] {
-            info!("Getting repo type: {:#?}", t);            
+            info!("Getting repo type: {:#?}", t);
             let page = self
                 .client
                 .orgs(org)
