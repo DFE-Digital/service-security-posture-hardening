@@ -72,6 +72,11 @@ async fn github_collect_installation_org(
     org_name: String,
     splunk: Arc<Splunk>,
 ) -> Result<()> {
+    // DO NOT MERGE TO MAIN
+    if org_name != "DFE-Digital" {
+        return Ok(());
+    }
+    
     info!("Starting collection for {}", org_name);
     let _org_settings = try_collect_send(
         &format!("Org Settings for {org_name}"),
