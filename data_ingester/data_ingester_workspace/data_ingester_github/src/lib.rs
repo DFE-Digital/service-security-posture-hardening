@@ -58,12 +58,12 @@ impl OctocrabGit {
         let mut all_repos = vec![];
         use octocrab::params::repos::Type;
         for t in [
-            Type::All,
+            // Type::All,
             // Type::Forks,
             // Type::Internal,
             // Type::Member,
-            // Type::Private,
-            // Type::Public,
+            Type::Private,
+            Type::Public,
             // Type::Sources,
         ] {
             info!("Getting repo type: {:#?}", t);
