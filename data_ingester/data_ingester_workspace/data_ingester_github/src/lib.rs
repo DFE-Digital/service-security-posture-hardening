@@ -290,7 +290,7 @@ impl OctocrabGit {
     }
 
     pub(crate) async fn repo_actions_list_workflow_runs(&self, repo: &str) -> Result<WorkflowRuns> {
-        let uri = format!("/repos/{repo}/actions/runs");
+        let uri = format!("/repos/{repo}/actions/runs?status=success&per_page=100");
         let result = self.get_collection(&uri).await?;
         let workflow_runs =
             WorkflowRuns::try_from(&result).context("Convert GitHubResponses to Workflows")?;

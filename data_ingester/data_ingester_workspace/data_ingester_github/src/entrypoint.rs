@@ -79,9 +79,10 @@ async fn github_collect_installation_org(
     splunk: Arc<Splunk>,
 ) -> Result<()> {
     // DO NOT MERGE TO MAIN
-    if org_name != "DFE-Digital" {
-        return Ok(());
-    }
+    // if org_name != "DFE-Digital" {
+    //     return Ok(());
+    // }
+    // anyhow::bail!("foo");
     github_client.wait_for_rate_limit().await?;
     let rate_limits = github_client.client.ratelimit().get().await?;
     let rate_limits_json = serde_json::to_string(&rate_limits)?;
@@ -213,7 +214,7 @@ async fn github_collect_installation_org(
         }
 
         let repo_actions_list_workflow_runs = try_collect_send(
-            &format!("GitHub actions workflow files for {repo_name}"),
+            &format!("GitHub actions workflow runs for {repo_name}"),
             github_client.repo_actions_list_workflow_runs(&repo_name),
             &splunk,
         )
