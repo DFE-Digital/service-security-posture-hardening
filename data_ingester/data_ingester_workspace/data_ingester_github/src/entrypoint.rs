@@ -129,6 +129,8 @@ async fn github_collect_installation_org(
         .await
         .context("Sending Calculated teams and members to Splunk")?;
 
+    dbg!(org_repos.inner.len());
+    
     for repo in org_repos.inner {
         let repo_name = format!(
             "{}/{}",

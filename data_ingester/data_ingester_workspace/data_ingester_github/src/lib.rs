@@ -55,19 +55,34 @@ impl OctocrabGit {
 
     /// Get a full list of [Repos] for the provided organization
     pub(crate) async fn org_repos(&self, org: &str) -> Result<Repos> {
-        let page = self
-            .client
-            .orgs(org)
-            .list_repos()
-            .send()
-            .await
-            .context("getting org repos")?;
-        let repos = self
-            .client
-            .all_pages(page)
-            .await
-            .context("getting additional org repo pages")?;
-        Ok(Repos::new(repos, org))
+        let mut all_repos = vec![];
+        use octocrab::params::repos::Type;
+        for t in [
+            Type::Forks,
+            Type::Internal,
+            Type::Member,
+            Type::Private,                                    
+            Type::Public,
+            Type::Sources,
+        ]
+        {
+            let page = self
+                .client
+                .orgs(org)
+                .list_repos()
+                .repo_type(Some(t))
+                .send()
+                .await
+                .context("getting org repos")?;
+            let repos = self
+                .client
+                .all_pages(page)
+                .await
+                .context("getting additional org repo pages")?;
+            all_repos.extend(repos);
+        }
+
+        Ok(Repos::new(all_repos, org))
     }
 
     /// Get the settings for the org
