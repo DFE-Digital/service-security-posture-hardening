@@ -81,6 +81,9 @@ impl OctocrabGit {
             all_repos.extend(repos);
         }
 
+        all_repos.sort_by(|a,b| a.name.cmp(&b.name));
+        all_repos.dedup_by(|a, b| a.name.eq_ignore_ascii_case(&b.name));
+
         Ok(Repos::new(all_repos, org))
     }
 

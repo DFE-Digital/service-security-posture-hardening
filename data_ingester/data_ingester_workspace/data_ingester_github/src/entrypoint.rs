@@ -90,7 +90,7 @@ async fn github_collect_installation_org(
     .await;
 
     let _org_members = try_collect_send(
-        &format!("Org Settings for {org_name}"),
+        &format!("Org Members for {org_name}"),
         github_client.graphql_org_members_query(&org_name),
         &splunk,
     )
