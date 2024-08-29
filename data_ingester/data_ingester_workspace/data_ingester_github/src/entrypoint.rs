@@ -16,7 +16,7 @@ pub async fn github_octocrab_entrypoint(secrets: Arc<Secrets>, splunk: Arc<Splun
     info!("GIT_HASH: {}", env!("GIT_HASH"));
 
     if let Some(app) = secrets.github_app.as_ref() {
-        let _ = github_app(app, &splunk)
+        github_app(app, &splunk)
             .await
             .context("Running Collection for GitHub App")?;
     }
@@ -65,8 +65,7 @@ async fn github_app(github_app: &GitHubApp, splunk: &Arc<Splunk>) -> Result<()> 
 
     dbg!(&tasks);
     for (org_name, task) in tasks {
-        let _ = task
-            .await
+        task.await
             .context("Tokio task has completed successfully")?
             .with_context(|| format!("Running GitHub collection for {}", org_name))?;
     }
