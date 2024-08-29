@@ -11,6 +11,11 @@ require([
             //return true;
             return _(['state',
                       'Compliance Status',
+                      'status',
+                      'conclusion',
+                      'days_pushed_to_run',
+                      'job_uses_codeql',
+                      'job_uses_reusable_workflow',
                       'Score',
                       'schedule',
                       'dismissal_restrictions_branch_protect',

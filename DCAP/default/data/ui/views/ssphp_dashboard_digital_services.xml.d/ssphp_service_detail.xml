@@ -1,16 +1,18 @@
 {% if environment=="_DEV" %}
-  <dashboard theme="light" version="1.1" script="js/addtags.js, js/table_cell_backcolor_multivalue.js">
+  <dashboard theme="light" version="1.1" hideFilters="true" stylesheet="ssphp_DEV.css" script="js/addtags.js, js/table_cell_backcolor_multivalue.js">
 {% else %}
-  <dashboard theme="dark" version="1.1" script="js/addtags.js, js/table_cell_backcolor_multivalue.js">
-{% endif %}  
+  <dashboard theme="dark" version="1.1" hideFilters="true" stylesheet="ssphp.css" script="js/addtags.js, js/table_cell_backcolor_multivalue.js">
+{% endif %}
+
 
 <label>Security Posture Continuous Assurance : Service Control Detail Dashboard</label>
-<description>{{environment}} v4.1.1</description>
-  
+<description>{{environment}} v4.3.3</description>
+
+
   <search id="bs_1">
     <query>
 `ssphp_summary_index{{environment}}` SSPHP_UID=$tkn__uid|s$
-    [| search `ssphp_summary_index{{environment}}` SSPHP_UID=$tkn__uid|s$
+    [| search `ssphp_summary_index_DEV` SSPHP_UID=$tkn__uid|s$
       | stats max(SSPHP_RUN) as SSPHP_RUN
       | return SSPHP_RUN]
     
@@ -23,6 +25,27 @@
   
   
   <row depends="$debug$">
+    <panel>
+      <table>
+        <search>
+          <query>
+  | makeresults
+
+  `ssphp_metrics_eval_field_colors{{environment}}`
+
+  | table tkn_*
+          </query>
+          <done>
+            <set token="tkn_colour_splunk_grey">$result.tkn_colour_splunk_grey$</set>
+            <set token="tkn_colour_red">$result.tkn_colour_red$</set>
+            <set token="tkn_colour_orange">$result.tkn_colour_orange$</set>
+            <set token="tkn_colour_green">$result.tkn_colour_green$</set>
+            <set token="tkn_colour_blue">$result.tkn_colour_blue$</set>
+          </done>
+        </search>
+      </table>
+    </panel>
+
     <panel>
       <html>
       <style>
@@ -53,27 +76,27 @@
     
     <panel>
       <html>
-      <style>
-        #table1 th:nth-child(1) {
-          width: $tkn_col_width$ !important;
-        }
-        #table1 th:nth-child(2) {
-          width: $tkn_col_width$ !important;
-        }
-        #table1 th:nth-child(3) {
-          width: $tkn_col_width$ !important;
-        }
-        #table1 th:nth-child(4) {
-          width: $tkn_col_width$ !important;
-        }
-        #table1 th:nth-child(5) {
-          width: $tkn_col_width$ !important;
-        }
-        #table1 th:nth-child(6) {
-          width: $tkn_col_width$ !important;
-        }
-      </style>
-    </html>
+        <style>
+          #table1 th:nth-child(1) {
+            width: $tkn_col_width$ !important;
+          }
+          #table1 th:nth-child(2) {
+            width: $tkn_col_width$ !important;
+          }
+          #table1 th:nth-child(3) {
+            width: $tkn_col_width$ !important;
+          }
+          #table1 th:nth-child(4) {
+            width: $tkn_col_width$ !important;
+          }
+          #table1 th:nth-child(5) {
+            width: $tkn_col_width$ !important;
+          }
+          #table1 th:nth-child(6) {
+            width: $tkn_col_width$ !important;
+          }
+        </style>
+      </html>
     </panel>
   </row>
   
@@ -119,11 +142,26 @@
 
 | append 
     [| makeresults format=csv data="Field,display_text,order
-ssphp.assessment.description,Description,3
-ssphp.assessment.source,Source,1
-ssphp.assessment.state,State,4
-ssphp.assessment.status,Status,5
-ssphp.assessment.title,Title,2
+ssphp.assessment.source,Source,01
+ssphp.assessment.id,ID,02
+ssphp.assessment.title,Title,03
+ssphp.assessment.name,Name,04
+ssphp.assessment.display_name,Display Name,05
+ssphp.assessment.description,Description,06
+ssphp.assessment.state,State,07
+ssphp.assessment.status,Status,08
+ssphp.assessment.implementationEffort,Implementation Effort,09
+ssphp.assessment.managementProvider,Provider,10
+ssphp.assessment.policyDefinitionId,Policy Definition,11
+ssphp.assessment.remediationDescription,Remediation,12
+ssphp.assessment.userImpact,User Impact,13
+ssphp.assessment.securityIssue,Security Issue,14
+ssphp.assessment.severity,Severity,15
+ssphp.assessment.status.code,Status Code,16
+ssphp.assessment.status.firstEvaluationDate,First Evaluation Date,17
+ssphp.assessment.status.statusChangeDate,Stats Changed Date,18
+ssphp.assessment.type,Type,19
+ssphp.assessment.assessmentType,Assessment Type,20
 ssphp.use_case.category,Category,1
 ssphp.use_case.group,Group,2
 ssphp.use_case.group_name,Group Name,3
@@ -154,7 +192,23 @@ ssphp.score.score,Score,1
 ssphp.score.scoring_narrative,Scoring Narrative,6
 ssphp.score.threshold.green,Threshold Green,7
 ssphp.score.threshold.orange,Thrshold Orange,8
-ssphp.score.threshold.red,Threshold Red,9"]
+ssphp.score.threshold.red,Threshold Red,9
+ssphp.benchmark.control.number, Control,01
+ssphp.benchmark.control.group, Control Group,02
+ssphp.benchmark.control.title,Title,03
+ssphp.benchmark.control.description,Description,04
+ssphp.benchmark.control.profile_applicability,Profile Applicability,05
+ssphp.benchmark.control.rationale,Rationale,06
+ssphp.benchmark.control.impact,Impact,07
+ssphp.benchmark.control.level,Level,08
+ssphp.benchmark.controls.ig1,IG1,09
+ssphp.benchmark.controls.ig2,IG2,10
+ssphp.benchmark.controls.ig3,IG3,11
+ssphp.benchmark.document.date,Document Date,12
+ssphp.benchmark.document.name,Document Name,13
+ssphp.benchmark.document.version,Document Version,14
+ssphp.benchmark.origin,Origin,15
+ssphp.benchmark.version,Version,16"]
 
 | stats values(*) as * by Field
 
@@ -256,12 +310,51 @@ ssphp.score.threshold.red,Threshold Red,9"]
                                 'start_text'.'cve_id'.'div_text'.'manifest'.'div_text'.'resource_id'.'div_text'.'use_case'.'end_text',
                           lower('ssphp.assessment.source')="secrets",
                                 "(source=".'start_text_nob'.'ssphp.assessment.url'.'end_text_nob'." OR ".'start_text_nob'.'ssphp.assessment.url'.'end_text_nob'.")",
-                          1==1,"oops")
+                          lower('ssphp.assessment.source')="github_actions",
+                                "| search repo_name=".'start_text_nob'.'ssphp.resource.id'.'end_text_nob',
+                          lower('ssphp.assessment.source')="no tool",
+                                "(source=".'start_text_nob'."*".'ssphp.resource.id'."*".'end_text_nob'.")",
+                          lower('ssphp.use_case.group_name')="sast",
+                                'start_text'.'ssphp.resource.id'.'div_text'.'ssphp.use_case.id'.'end_text',
+                          lower('ssphp.use_case.group_name')="qualys",
+                                "| search QID=".'start_text_nob'.'ssphp.use_case.id'.'end_text_nob'." AND "."HOSTNAME=".'start_text_nob'.'ssphp.resource.name'.'end_text_nob',
+                          lower('ssphp.use_case.group_name')="ms-defender",
+                                'start_text'.'ssphp.resource.id'.'div_text'.'ssphp.use_case.id'.'end_text',
+                          lower('ssphp.use_case.group_name')="repos",
+                                "| search ssphp.service.id=".'start_text_nob'.'ssphp.service.id'.'end_text_nob'." AND "."repo_name=".'start_text_nob'.'ssphp.resource.name'.'end_text_nob',
+                          1==1,"oops"),
 
-| table search_string
+       output_panel=case(lower('ssphp.assessment.source')="dependabot",1,
+                          lower('ssphp.assessment.source')="secrets",1,
+                          lower('ssphp.assessment.source')="github_actions",3,
+                          lower('ssphp.assessment.source')="no tool",1,
+                          lower('ssphp.use_case.group_name')="sast",1,
+                          lower('ssphp.use_case.group_name')="qualys",2,
+                          lower('ssphp.use_case.group_name')="ms-defender",1,
+                          lower('ssphp.use_case.group_name')="repos",3,
+                          1==1,"oops")
+            
+| table search_string, output_panel
           </query>
           <done>
-            <set token="tkn_use_case_search_string">$result.search_string$</set>
+            <condition match="$result.output_panel$==3">
+              <set token="show_highlight_panel">true</set>
+              <unset token="show_table_panel"></unset>
+              <unset token="show_event_panel"></unset>
+              <set token="tkn_use_case_search_string">$result.search_string$</set>
+            </condition>
+            <condition match="$result.output_panel$==2">
+              <set token="show_table_panel">true</set>
+              <unset token="show_highlight_panel"></unset>
+              <unset token="show_event_panel"></unset>
+              <set token="tkn_use_case_search_string">$result.search_string$</set>
+            </condition>
+            <condition match="$result.output_panel$==1">
+              <set token="show_event_panel">true</set>
+              <unset token="show_highlight_panel"></unset>
+              <unset token="show_table_panel"></unset>
+              <set token="tkn_use_case_search_string">$result.search_string$</set>
+            </condition>
           </done>
         </search>
       </table>
@@ -273,17 +366,14 @@ ssphp.score.threshold.red,Threshold Red,9"]
           <query>
 | rest /servicesNS/-/-/saved/searches splunk_server=local
 
-| search eai:acl.app="DCAP{{environment}}" AND title=$tkn_saved_search|s$
+| search eai:acl.app="DCAP_DEV" AND title=$tkn_saved_search|s$
 
 | rex field=search "^(?&lt;search_text&gt;[\s\S]*?)``` ##################### end dashboard query ##################### ```"
+
+| eval search_text=replace('search_text',"``` ##################### replace with dashboard filter ##################### ```","$tkn_use_case_search_string$")
+
 | eval search_text=replace('search_text',"\|\s*fields","| table"),
         search_text='search_text'."| sort 0 - ssphp.score.score | fields - temp_total_count"
-
-| eval search_text=replace('search_text',"
-    \["," 
-     $tkn_use_case_search_string$ "."
-     
-    [")
     
 | table title, search, search_text
           </query>
@@ -296,9 +386,10 @@ ssphp.score.threshold.red,Threshold Red,9"]
   </row>
 
 
+
+<!-- ########################################################################## UNDERLYING DATA Row ########################################################################## --> 
   
-  
-  <row>
+  <row depends="$show_event_panel$">
     <panel>
       <title>Underlying Data</title>
       <event>
@@ -310,4 +401,103 @@ $tkn_use_case_search_text$
       </event>
     </panel>
   </row>
+
+
+  <row depends="$show_table_panel$">
+    <panel>
+      <title>Underlying Data</title>
+      <table>
+        <search>
+          <query>
+$tkn_use_case_search_text$
+          </query>
+        </search>
+      </table>
+    </panel>
+  </row>
+
+
+  <row depends="$debug$">
+    <html>
+      <style>
+         .css_for_green{ 
+         background-color: $tkn_colour_green$ !important;
+         color:#000000 !important;
+         font-size: 100% !important;
+         }
+         .css_for_orange{ 
+         background-color: $tkn_colour_orange$ !important;
+         color:#000000 !important;
+         font-size: 100% !important;
+         }
+         .css_for_red{
+         background-color: $tkn_colour_red$ !important;
+         color:#000000 !important;
+         font-size: 100% !important;
+         }
+         .css_for_blue{
+         background-color: $tkn_colour_blue$ !important;
+         color:#000000 !important;
+         font-size: 100% !important;
+         }
+      </style>
+    </html>
+  </row>
+
+  <row depends="$show_highlight_panel$">
+    <panel>
+      <title>Underlying Data</title>
+      <table id="table3">
+        <search>
+          <query>
+$tkn_use_case_search_text$
+
+| fields - ssphp.service.*
+
+| rename *{} as *¬¬
+| rename *{}* as *__*
+| rename * as z_*
+| rename z_ssphp* as ssphp*
+| foreach z_* 
+       [| eval fld_val='&lt;&lt;FIELD&gt;&gt;',
+               fld_val=mvjoin('fld_val',"~~"),
+               fld_val=case(isnull('fld_val'),"-",
+                            trim('fld_val')="","-",
+                            len('fld_val')&lt;2 AND !match('fld_val',"[a-zA-Z0-9]+") AND !match('fld_val',"^\*$"),"-",
+                            1==1,'fld_val'),
+               fld_name=replace(replace(replace("&lt;&lt;FIELD&gt;&gt;","¬¬","{}"),"__","{}"),"z_",""),
+               "&lt;&lt;FIELD&gt;&gt;"=if('ssphp.score.non_compliant_fields'='fld_name', 'fld_val'."¬red", 'fld_val')]
+
+| foreach * 
+  [| eval "&lt;&lt;FIELD&gt;&gt;"=if("&lt;&lt;FIELD&gt;&gt;" == "ssphp.score.non_compliant_fields", 'ssphp.score.non_compliant_fields', split('&lt;&lt;FIELD&gt;&gt;',"~~"))]
+               
+| rename z_* as *
+| rename *¬¬ as *{}
+| rename *__* as *{}*
+
+| eval sort_field=if('state'="*** FOR INFORMATION ONLY ***",1,2)
+| sort 0 sort_field, ssphp.score.score
+
+| fields - ssphp.score.score, ssphp.score.numerator, ssphp.score.denominator, fld_name, fld_val, ssphp.score.non_compliant_fields, sort_field
+          </query>
+          <earliest>0</earliest>
+          <latest>now</latest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="count">100</option>
+        <option name="dataOverlayMode">none</option>
+        <option name="drilldown">none</option>
+        <option name="percentagesRow">false</option>
+        <option name="rowNumbers">false</option>
+        <option name="totalsRow">false</option>
+        <option name="wrap">true</option>
+      </table>
+    </panel>
+  </row>
+
+
+
+
+
+
 </dashboard>
