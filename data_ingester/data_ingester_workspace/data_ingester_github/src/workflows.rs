@@ -104,6 +104,39 @@ pub(crate) struct WorkflowRuns {
     pub(crate) total_count: usize,
 }
 
+impl WorkflowRuns {
+    /// Filter workflow runs the runs with the biggest `run_number` by `workflow_id`
+    /// This helps reduce the number of workflowrunjobs we have to collect.
+    ///
+    pub(crate) fn filter_to_lastest_runs(&mut self) {
+        let mut latest: HashMap<i64, i64> = HashMap::new();
+
+        for run in self.workflow_runs.iter() {
+            if let Some(max_run_number) = latest.get(&run.workflow_id) {
+                if run.run_number > *max_run_number {
+                    let _ = latest.insert(run.workflow_id, run.run_number);
+                }
+            } else {
+                let _ = latest.insert(run.workflow_id, run.run_number);
+            }
+        }
+
+        self.workflow_runs = self
+            .workflow_runs
+            .iter()
+            .filter(|run| {
+                if let Some(max_run_number) = latest.get(&run.workflow_id) {
+                    return run.run_number == *max_run_number;
+                }
+                false
+            })
+            .cloned()
+            .collect();
+
+        self.total_count = self.workflow_runs.len();
+    }
+}
+
 impl ToHecEvents for &WorkflowRuns {
     type Item = WorkflowRun;
 
@@ -169,10 +202,12 @@ impl TryFrom<&GithubResponse> for WorkflowRuns {
     }
 }
 
-#[derive(Deserialize, Serialize, Default, Debug)]
+#[derive(Deserialize, Serialize, Default, Debug, Clone)]
 pub(crate) struct WorkflowRun {
     pub(crate) id: i64,
     pub(crate) run_attempt: i64,
+    pub(crate) workflow_id: i64,
+    pub(crate) run_number: i64,
     #[serde(flatten)]
     other: HashMap<String, Value>,
 }

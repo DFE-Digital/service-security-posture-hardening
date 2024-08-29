@@ -292,8 +292,9 @@ impl OctocrabGit {
     pub(crate) async fn repo_actions_list_workflow_runs(&self, repo: &str) -> Result<WorkflowRuns> {
         let uri = format!("/repos/{repo}/actions/runs?status=success&per_page=100");
         let result = self.get_collection(&uri).await?;
-        let workflow_runs =
+        let mut workflow_runs =
             WorkflowRuns::try_from(&result).context("Convert GitHubResponses to Workflows")?;
+        workflow_runs.filter_to_lastest_runs();
         Ok(workflow_runs)
     }
 
@@ -1079,14 +1080,9 @@ mod test {
                 .client
                 .repo_actions_list_workflow_runs(&repo_name)
                 .await?;
-            let workflow_files = client
-                .client
-                .repo_actions_list_workflow_runs(&repo_name)
-                .await?;
-
             let hec_events = (&workflow_files)
                 .to_hec_events()
-                .context("Convert SarifHec to HecEvents")?;
+                .context("Convert workflow_runs to HecEvents")?;
 
             client.splunk.send_batch(&hec_events).await?;
         }
