@@ -1,14 +1,15 @@
+---
 name: "CodeQL"
 
 on:
   push:
-    branches: [ "main", "improve-codeql" ]
+    branches: ["main"]
     paths:
       - 'DCAP/appserver/static/js/**'
       - '*.py'
   pull_request:
     # The branches below must be a subset of the branches above
-    types: [ opened, reopened ]
+    types: [opened, reopened]
     paths:
       - 'DCAP/appserver/static/js/**'
       - '**.py'
@@ -22,14 +23,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        language: [ 'python', 'javascript']
-    
+        language: ['python', 'javascript']
+
     uses: DFE-Digital/github-actions/.github/workflows/reusable-workflow-sast.yml@master
     with:
-      language: ${{ matrix.language }} 
+      language: ${{ matrix.language }}
       policy_action: 'continue'
       queries: 'security-extended'
       config_file: '.github/codeql-config.yaml'
     secrets:
       CODEQL_APP_ID: ${{ secrets.CODEQL_APP_ID }}
-      CODEQL_AUTHENTICATION_PRIVATE_KEY: ${{ secrets.CODEQL_AUTHENTICATION_PRIVATE_KEY }} 
+      CODEQL_AUTHENTICATION_PRIVATE_KEY: ${{ secrets.CODEQL_AUTHENTICATION_PRIVATE_KEY }}
