@@ -1,6 +1,5 @@
 ---
-name: Data Ingester Azure Terraform
-
+name: Data Ingester Offline tests
 on:
   pull_request:
     paths:
