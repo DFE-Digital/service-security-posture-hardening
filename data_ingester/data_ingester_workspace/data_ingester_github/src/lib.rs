@@ -232,6 +232,21 @@ impl OctocrabGit {
             crate::SingleOrVec::Vec(ref vec) => vec.to_vec(),
             crate::SingleOrVec::Single(single) => vec![single.clone()],
         }) {
+            if let Some(status) = ruleset.get("status") {
+                if status == "403" {
+                    let response_message = ruleset
+                        .get("message")
+                        .context("Getting error message from 403 response")?
+                        .as_str()
+                        .context("Getting 403 response as str")?;
+
+                    warn!(
+                        "error while 'Getting Rulesets for {repo}': {}",
+                        response_message
+                    );
+                    continue;
+                }
+            }
             let ruleset_id = ruleset
                 .get("id")
                 .with_context(|| format!("Getting `id` from ruleset: {:#?}", &ruleset))?

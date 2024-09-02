@@ -22,24 +22,27 @@ pub(crate) struct AppState {
     /// Lock for Azure to stop concurrent executions
     pub(crate) azure_lock: Arc<Mutex<()>>,
 
-    /// Lock for azure_resource_graph to stop concurrent executions        
+    /// Lock for azure_resource_graph to stop concurrent executions
     pub(crate) azure_resource_graph_lock: Arc<Mutex<()>>,
 
     /// Lock for github to stop concurrent executions
     pub(crate) github_lock: Arc<Mutex<()>>,
 
-    /// Lock for m365 to stop concurrent executions            
+    /// Lock for m365 to stop concurrent executions
     pub(crate) m365_lock: Arc<Mutex<()>>,
 
-    /// Lock for powershell to stop concurrent executions        
+    /// Lock for powershell to stop concurrent executions
     pub(crate) powershell_lock: Arc<Mutex<()>>,
     /// Is powershell installed in our function?
     pub(crate) powershell_installed: Arc<Mutex<bool>>,
 
-    /// Lock for splunk_test to stop concurrent executions            
+    /// Lock for splunk_test to stop concurrent executions
+    pub(crate) sonar_cloud: Arc<Mutex<()>>,
+
+    /// Lock for splunk_test to stop concurrent executions
     pub(crate) splunk_test_lock: Arc<Mutex<()>>,
 
-    /// Lock for threagile to stop concurrent executions            
+    /// Lock for threagile to stop concurrent executions
     pub(crate) threagile_lock: Arc<Mutex<()>>,
 }
 
@@ -60,6 +63,7 @@ impl AppState {
             azure_resource_graph_lock: Arc::new(Mutex::new(())),
             github_lock: Arc::new(Mutex::new(())),
             splunk_test_lock: Arc::new(Mutex::new(())),
+            sonar_cloud: Arc::new(Mutex::new(())),
             threagile_lock: Arc::new(Mutex::new(())),
         })
     }

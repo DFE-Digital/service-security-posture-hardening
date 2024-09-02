@@ -63,7 +63,6 @@ async fn github_app(github_app: &GitHubApp, splunk: &Arc<Splunk>) -> Result<()> 
         ));
     }
 
-    dbg!(&tasks);
     for (org_name, task) in tasks {
         task.await
             .context("Tokio task has completed successfully")?
@@ -139,8 +138,6 @@ async fn github_collect_installation_org(
         .await
         .context("Sending Calculated teams and members to Splunk")?;
 
-    dbg!(org_repos.inner.len());
-
     for repo in org_repos.inner {
         let rate_limits = github_client.client.ratelimit().get().await?;
         let rate_limits_json = serde_json::to_string(&rate_limits)?;
@@ -196,7 +193,7 @@ async fn github_collect_installation_org(
         .await;
 
         let repo_actions_list_workflows = try_collect_send(
-            &format!("Code scanning alerts for {repo_name}"),
+            &format!("Github actions list workflows for {repo_name}"),
             github_client.repo_actions_list_workflows(&repo_name),
             &splunk,
         )
