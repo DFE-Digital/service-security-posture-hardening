@@ -43,12 +43,12 @@ struct Sonar {
 }
 
 impl Sonar {
-    /// Create a new Qualys client using basic auth
+    /// Create a new Sonar Cloud client using basic auth
     fn new(bearer: &str) -> Result<Self> {
         let client = reqwest::ClientBuilder::new()
-            .default_headers(Sonar::headers(bearer).context("Building Qualys headers")?)
+            .default_headers(Sonar::headers(bearer).context("Building SonarCloud headers")?)
             .build()
-            .context("Building Qualys reqwest client")?;
+            .context("Building SonarCloud reqwest client")?;
         info!("Qualys client: {:?}", client);
         Ok(Self {
             client,
@@ -204,13 +204,11 @@ mod test {
     async fn test_list_projects() -> Result<()> {
         let test_client = TestClient::new().await?;
         for org in test_client.orgs {
-            dbg!(&org);
             let result = test_client.client.list_projects(&org).await?;
             assert!(result.paging.total > 0);
             let hec_events = (&result).to_hec_events()?;
             test_client.splunk.send_batch(&hec_events).await?;
         }
-        assert!(false);
         Ok(())
     }
 }

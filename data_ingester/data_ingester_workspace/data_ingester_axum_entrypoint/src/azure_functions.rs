@@ -252,7 +252,7 @@ async fn post_sonar_cloud(State(state): State<Arc<AppState>>) -> Json<AzureInvok
             "Sonar Cloud",
             state.sonar_cloud.clone(),
             state,
-            data_ingester_threagile::threagile,
+            data_ingester_sonar_cloud::entrypoint,
         )
         .await,
     )
