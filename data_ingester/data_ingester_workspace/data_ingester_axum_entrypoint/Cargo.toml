@@ -15,6 +15,7 @@ data_ingester_ms_powershell = { path = "../data_ingester_ms_powershell" }
 data_ingester_qualys = { path = "../data_ingester_qualys" }
 data_ingester_splunk = { path = "../data_ingester_splunk" }
 data_ingester_splunk_search = { path = "../data_ingester_splunk_search" }
+data_ingester_sonar_cloud = { path = "../data_ingester_sonar_cloud" }
 data_ingester_supporting = { path = "../data_ingester_supporting" }
 data_ingester_threagile = { path = "../data_ingester_threagile" }
 memory-stats = "1"

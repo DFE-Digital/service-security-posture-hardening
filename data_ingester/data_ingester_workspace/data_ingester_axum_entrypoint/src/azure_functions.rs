@@ -53,6 +53,7 @@ pub(crate) async fn start_server(tx: Sender<()>) -> Result<()> {
         .route("/m365", post(post_m365))
         .route("/powershell", post(post_powershell))
         .route("/qualys_qvs", post(post_qualys_qvs))
+        .route("/sonar_cloud", post(post_sonar_cloud))
         .route("/threagile", post(post_threagile))
         .with_state(Arc::new(app_state));
 
@@ -245,10 +246,24 @@ async fn post_qualys_qvs(State(state): State<Arc<AppState>>) -> Json<AzureInvoke
 }
 
 /// Run Threagile against assets from Splunk
+async fn post_sonar_cloud(State(state): State<Arc<AppState>>) -> Json<AzureInvokeResponse> {
+    Json(
+        function_runner(
+            "Sonar Cloud",
+            state.sonar_cloud.clone(),
+            state,
+            data_ingester_sonar_cloud::entrypoint,
+        )
+        .await,
+    )
+}
+
+
+/// Run Threagile against assets from Splunk
 async fn post_threagile(State(state): State<Arc<AppState>>) -> Json<AzureInvokeResponse> {
     Json(
         function_runner(
-            "Threagile Test",
+            "Threagile",
             state.threagile_lock.clone(),
             state,
             data_ingester_threagile::threagile,

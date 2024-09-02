@@ -23,6 +23,8 @@ pub struct Secrets {
     pub github_app: Option<GitHubApp>,
     pub qualys_username: Option<String>,
     pub qualys_password: Option<String>,
+    pub sonar_api_key: Option<String>,
+    pub sonar_orgs: Option<Vec<String>>,
 }
 
 /// Store a Github App token
@@ -95,6 +97,8 @@ pub async fn get_keyvault_secrets(keyvault_name: &str) -> Result<Secrets> {
     let github_app_id_1 = get_secret(&client, "github-app-id-1");
     let qualys_username = get_secret(&client, "qualys-username");
     let qualys_password = get_secret(&client, "qualys-password");
+    let sonar_api_key = get_secret(&client, "sonar-api-key");
+    let sonar_orgs = get_secret(&client, "sonar-orgs");
 
     let github_app = if let (Some(github_app_id_1), Some(github_private_key_1)) =
         (github_app_id_1.await?, github_private_key_1.await?)
@@ -124,5 +128,7 @@ pub async fn get_keyvault_secrets(keyvault_name: &str) -> Result<Secrets> {
         github_app,
         qualys_username: qualys_username.await?,
         qualys_password: qualys_password.await?,
+        sonar_api_key: sonar_api_key.await?,
+        sonar_orgs: sonar_orgs.await?.map(|s| s.split(",").map(|s| s.to_string()).collect()),
     })
 }
