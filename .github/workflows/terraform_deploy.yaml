@@ -10,27 +10,27 @@ on:
 jobs:
   build:
 
-  runs-on: ubuntu-latest
+    runs-on: ubuntu-latest
 
-  steps:
-    - name: checkout
-      uses: actions/checkout@v4
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
 
-    - name: Deploy terraform
-      uses: hashicorp/setup-terraform@v3
-      with:
-        terraform_version: 1.9.5
+      - name: Deploy terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.9.5
 
 
-    - name: Terraform version
-      run: terraform -version
+      - name: Terraform version
+        run: terraform -version
 
-      # Terraform
-    - name: Run terraform
-      env:
-        ARM_ACCESS_KEY: ${{ secrets.ARM_ACCESS_KEY }}
-        ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
-        ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
-        ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
-        ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
-      run: cd data_ingester/terraform/red; terraform init; terraform apply -auto-approve
+        # Terraform
+      - name: Run terraform
+        env:
+          ARM_ACCESS_KEY: ${{ secrets.ARM_ACCESS_KEY }}
+          ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
+          ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+          ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
+        run: cd data_ingester/terraform/red; terraform init; terraform apply -auto-approve
