@@ -87,7 +87,7 @@
 | fields - ssphp.assessment.categories{}, ssphp.assessment.tactics{}, ssphp.assessment.techniques{}, ssphp.assessment.threats{}, ssphp.benchmark.control.rationale{}
 
 | fields ssphp.*, SSPHP_UID
-            </query>
+          </query>
           <done>
             <set token="tkn_service_name">$result.ssphp.service.name$</set>
             <set token="tkn_current_service">$result.ssphp.service.name$</set>

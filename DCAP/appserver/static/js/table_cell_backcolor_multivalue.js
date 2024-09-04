@@ -14,6 +14,8 @@ require([
                       'status',
                       'conclusion',
                       'days_pushed_to_run',
+                      'analysisDateAllBranches',
+                      'sonar_project_key',
                       'job_uses_codeql',
                       'job_uses_reusable_workflow',
                       'Score',
