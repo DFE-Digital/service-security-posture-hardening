@@ -6,7 +6,7 @@
 
 
 <label>Security Posture Continuous Assurance : Service Control Detail Dashboard</label>
-<description>{{environment}} v4.3.4</description>
+<description>{{environment}} v4.3.6</description>
   
   <init>
     <unset token="tkn_ready_event"></unset>
@@ -322,7 +322,7 @@ ssphp.benchmark.version,Version,16"]
                                 'start_text'.'cve_id'.'div_text'.'manifest'.'div_text'.'resource_id'.'div_text'.'use_case'.'end_text',
                           lower('ssphp.assessment.source')="secrets",
                                 "(source=".'start_text_nob'.'ssphp.assessment.url'.'end_text_nob'." OR ".'start_text_nob'.'ssphp.assessment.url'.'end_text_nob'.")",
-                          lower('ssphp.assessment.source')="github_actions",
+                          lower('ssphp.assessment.source')="workflows",
                                 "| search repo_name=".'start_text_nob'.'ssphp.resource.id'.'end_text_nob',
                           lower('ssphp.assessment.source')="no tool",
                                 "(source=".'start_text_nob'."*".'ssphp.resource.id'."*".'end_text_nob'.")",
@@ -338,7 +338,7 @@ ssphp.benchmark.version,Version,16"]
 
        output_panel=case(lower('ssphp.assessment.source')="dependabot",1,
                           lower('ssphp.assessment.source')="secrets",1,
-                          lower('ssphp.assessment.source')="github_actions",3,
+                          lower('ssphp.assessment.source')="workflows",3,
                           lower('ssphp.assessment.source')="no tool",1,
                           lower('ssphp.use_case.group_name')="sast",1,
                           lower('ssphp.use_case.group_name')="qualys",2,
