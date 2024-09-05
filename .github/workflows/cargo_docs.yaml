@@ -36,27 +36,27 @@ jobs:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
-            data_ingester/data_ingester_workspace/target
-          key: cache-rust-target-${{ hashFiles('data_ingester/data_ingester_workspace/Cargo.lock') }}
+            ${{ github.workspace }}/data_ingester/data_ingester_workspace/target
+          key: cache-rust-target-${{ hashFiles('${{ github.workspace }}/data_ingester/data_ingester_workspace/Cargo.lock') }}
 
       - name: Setup pages
         id: pages
         uses: actions/configure-pages@v4
 
       - name: Clean docs folder
-        run: cp data_ingester/data_ingester_workspace/; cargo clean --doc
+        run: cd ${{ github.workspace }}/data_ingester/data_ingester_workspace/; cargo clean --doc
       - name: Build docs
-        run: cp data_ingester/data_ingester_workspace/; cargo doc --no-deps
+        run: cd ${{ github.workspace }}/data_ingester/data_ingester_workspace/; cargo doc --no-deps
       - name: Add redirect
-        run: echo '<meta http-equiv="refresh" content="0;url=data_ingester_axum_entrypoint/index.html">' > data_ingester/data_ingester_workspace/target/doc/index.html
+        run: echo '<meta http-equiv="refresh" content="0;url=data_ingester_axum_entrypoint/index.html">' > ${{ github.workspace }}/data_ingester/data_ingester_workspace/target/doc/index.html
 
       - name: Remove lock file
-        run: rm data_ingester/data_ingester_workspace/target/doc/.lock
+        run: rm ${{ github.workspace }}/data_ingester/data_ingester_workspace/target/doc/.lock
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: data_ingester/data_ingester_workspace/target/doc
+          path: ${{ github.workspace }}/data_ingester/data_ingester_workspace/target/doc
 
   deploy:
     name: Deploy
