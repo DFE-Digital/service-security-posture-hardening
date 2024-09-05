@@ -44,9 +44,9 @@ jobs:
         uses: actions/configure-pages@v4
 
       - name: Clean docs folder
-        run: cp data_ingester/data_ingester_workspace/; cargo clean --doc
+        run: cd data_ingester/data_ingester_workspace/; cargo clean --doc
       - name: Build docs
-        run: cp data_ingester/data_ingester_workspace/; cargo doc --no-deps
+        run: cd data_ingester/data_ingester_workspace/; cargo doc --no-deps
       - name: Add redirect
         run: echo '<meta http-equiv="refresh" content="0;url=data_ingester_axum_entrypoint/index.html">' > data_ingester/data_ingester_workspace/target/doc/index.html
 
