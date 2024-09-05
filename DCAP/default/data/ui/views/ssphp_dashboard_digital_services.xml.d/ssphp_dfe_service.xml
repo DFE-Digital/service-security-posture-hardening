@@ -5,7 +5,7 @@
 {% endif %}  
 
   <label>Security Posture Continuous Assurance : DfE Service Dashboard</label>
-  <description>{{environment}} v3.2.1</description>
+  <description>{{environment}} v3.3.4</description>
   
   <init>
     <set token="form.tkn_fields">C</set>
@@ -78,6 +78,14 @@
 | eventstats max(SSPHP_RUN) as max_SSPHP_RUN by ssphp.use_case.savedsearch
 | where SSPHP_RUN='max_SSPHP_RUN'
 | fields - max_SSPHP_RUN
+
+| search NOT ssphp.assessment.sub_source="true"
+
+```temp - for development period only till data timed out```
+| search NOT (ssphp.use_case.savedsearch="ssphp_use_case_github_sast_2-0_DEV" OR 
+              ssphp.use_case.savedsearch="ssphp_use_case_github_sast_3-0_DEV" OR 
+              ssphp.use_case.savedsearch="ssphp_use_case_github_sast_2-1_DEV" OR 
+              ssphp.use_case.savedsearch="ssphp_use_case_github_sast_2-2_DEV")
 
 | eval ssphp.assessment.categories=mvappend('ssphp.assessment.categories','ssphp.assessment.categories{}'),
        ssphp.assessment.tactics=mvappend('ssphp.assessment.tactics','ssphp.assessment.tactics{}'),
@@ -405,6 +413,15 @@
         <search>
           <query>
 `ssphp_summary_index{{environment}}` earliest=-2d@d latest=now ssphp.use_case.category="CODE_SCAN"
+
+| search NOT ssphp.assessment.sub_source="true"
+
+```temp - for development period only till data timed out```
+| search NOT (ssphp.use_case.savedsearch="ssphp_use_case_github_sast_2-0_DEV" OR 
+              ssphp.use_case.savedsearch="ssphp_use_case_github_sast_3-0_DEV" OR 
+              ssphp.use_case.savedsearch="ssphp_use_case_github_sast_2-1_DEV" OR 
+              ssphp.use_case.savedsearch="ssphp_use_case_github_sast_2-2_DEV")
+
 | fields ssphp.assessment.source
 | dedup ssphp.assessment.source
 | eval tools=case('ssphp.assessment.source'="DEPENDABOT","Dependabot",
