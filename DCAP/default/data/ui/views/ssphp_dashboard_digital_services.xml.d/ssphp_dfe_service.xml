@@ -5,7 +5,7 @@
 {% endif %}  
 
   <label>Security Posture Continuous Assurance : DfE Service Dashboard</label>
-  <description>{{environment}} v3.3.4</description>
+  <description>{{environment}} v3.3.5</description>
   
   <init>
     <set token="form.tkn_fields">C</set>
@@ -165,9 +165,10 @@
         <search base="bs_1">
           <query>
 | rex field=ssphp.score.score "^(?&lt;count_score&gt;[^|]*)|"
+| rex field=ssphp.resource.id "\/resourcegroups\/(?&lt;rg&gt;[^\/]*)\/"
          
 | stats count as number_controls_total,
-             dc(eval(if('ssphp.use_case.category'="POSTURE" AND 'count_score'&lt;100,'ssphp.resource.id',null()))) as posture_number_failed_resources, dc(eval(if('ssphp.use_case.category'="POSTURE" AND 'count_score'=100,'ssphp.resource.id',null()))) as posture_number_passed_resources,
+             dc(eval(if('ssphp.use_case.category'="POSTURE" AND 'count_score'&lt;100,'rg',null()))) as posture_number_failed_resources, dc(eval(if('ssphp.use_case.category'="POSTURE" AND 'count_score'=100,'rg',null()))) as posture_number_passed_resources,
 
              dc(eval(if('ssphp.use_case.category'="VULNERABILITY" AND 'count_score'&lt;100,'ssphp.resource.id',null()))) as vulnerability_number_failed_resources, dc(eval(if('ssphp.use_case.category'="VULNERABILITY" AND 'count_score'=100,'ssphp.resource.id',null()))) as vulnerability_number_passed_resources,
              
@@ -257,12 +258,14 @@
     <panel depends="$tkn_ready$,$tkn_show_abs$">
       <html>
         <div id="div_header" style="background:$tkn_posture_color$;color:white;font-weight:bold;font-size:$tkn_font_size_2$%;text-align:center;padding:$tkn_padding_2$">$tkn_posture_abs$</div> 
+        <div id="div_header" style="background:$tkn_posture_color$;color:white;font-size:80%;text-align:center">Compliant Resource Groups</div>
         <div id="div_header" style="background:$tkn_posture_color$;color:white;font-size:100%;text-align:center">POSTURE</div> 
       </html>
     </panel>
     <panel depends="$tkn_ready$,$tkn_show_perc$">
       <html>
         <div id="div_header" style="background:$tkn_posture_color$;color:white;font-weight:bold;font-size:$tkn_font_size_2$%;text-align:center;padding:$tkn_padding_2$">$tkn_posture_perc_passed_resources$</div> 
+        <div id="div_header" style="background:$tkn_posture_color$;color:white;font-size:80%;text-align:center">Compliant Resource Groups</div>
         <div id="div_header" style="background:$tkn_posture_color$;color:white;font-size:100%;text-align:center">POSTURE</div> 
       </html>
     </panel>
@@ -271,12 +274,14 @@
     <panel depends="$tkn_ready$,$tkn_show_abs$">
       <html>
         <div id="div_header" style="background:$tkn_vulnerability_color$;color:white;font-weight:bold;font-size:$tkn_font_size_2$%;text-align:center;padding:$tkn_padding_2$">$tkn_vulnerability_abs$</div> 
+        <div id="div_header" style="background:$tkn_posture_color$;color:white;font-size:80%;text-align:center">Compliant Virtual Machines</div>
         <div id="div_header" style="background:$tkn_vulnerability_color$;color:white;font-size:100%;text-align:center">VM VULNERABILITY</div> 
       </html>
     </panel>
     <panel depends="$tkn_ready$,$tkn_show_perc$">
       <html>
         <div id="div_header" style="background:$tkn_vulnerability_color$;color:white;font-weight:bold;font-size:$tkn_font_size_2$%;text-align:center;padding:$tkn_padding_2$">$tkn_vulnerability_perc_passed_resources$</div> 
+        <div id="div_header" style="background:$tkn_posture_color$;color:white;font-size:80%;text-align:center">Compliant Virtual Machines</div>
         <div id="div_header" style="background:$tkn_vulnerability_color$;color:white;font-size:100%;text-align:center">VM VULNERABILITY</div> 
       </html>
     </panel>
@@ -285,12 +290,14 @@
     <panel depends="$tkn_ready$,$tkn_show_abs$">
       <html>
         <div id="div_header" style="background:$tkn_repos_color$;color:white;font-weight:bold;font-size:$tkn_font_size_2$%;text-align:center;padding:$tkn_padding_2$">$tkn_repos_abs$</div> 
+        <div id="div_header" style="background:$tkn_posture_color$;color:white;font-size:80%;text-align:center">Compliant GitHub Repos</div>
         <div id="div_header" style="background:$tkn_repos_color$;color:white;font-size:100%;text-align:center">REPOS</div> 
       </html>
     </panel>
     <panel depends="$tkn_ready$,$tkn_show_perc$">
       <html>
         <div id="div_header" style="background:$tkn_repos_color$;color:white;font-weight:bold;font-size:$tkn_font_size_2$%;text-align:center;padding:$tkn_padding_2$">$tkn_repos_perc_passed_resources$</div> 
+        <div id="div_header" style="background:$tkn_posture_color$;color:white;font-size:80%;text-align:center">Compliant GitHub Repos</div>
         <div id="div_header" style="background:$tkn_repos_color$;color:white;font-size:100%;text-align:center">REPOS</div> 
       </html>
     </panel>
@@ -299,12 +306,14 @@
     <panel depends="$tkn_ready$,$tkn_show_abs$">
       <html>
         <div id="div_header" style="background:$tkn_codescan_color$;color:white;font-weight:bold;font-size:$tkn_font_size_2$%;text-align:center;padding:$tkn_padding_2$">$tkn_codescan_abs$</div> 
+        <div id="div_header" style="background:$tkn_posture_color$;color:white;font-size:80%;text-align:center">Compliant GitHub Repos</div>
         <div id="div_header" style="background:$tkn_codescan_color$;color:white;font-size:100%;text-align:center">CODE SCANNING</div> 
       </html>
     </panel>
     <panel depends="$tkn_ready$,$tkn_show_perc$">
       <html>
         <div id="div_header" style="background:$tkn_codescan_color$;color:white;font-weight:bold;font-size:$tkn_font_size_2$%;text-align:center;padding:$tkn_padding_2$">$tkn_codescan_perc_passed_resources$</div> 
+        <div id="div_header" style="background:$tkn_posture_color$;color:white;font-size:80%;text-align:center">Compliant GitHub Repos</div>
         <div id="div_header" style="background:$tkn_codescan_color$;color:white;font-size:100%;text-align:center">CODE SCANNING</div> 
       </html>
     </panel>
