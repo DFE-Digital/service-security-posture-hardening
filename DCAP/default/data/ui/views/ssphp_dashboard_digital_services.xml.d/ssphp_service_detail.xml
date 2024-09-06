@@ -1,12 +1,12 @@
 {% if environment=="_DEV" %}
-  <dashboard theme="light" version="1.1" hideFilters="true" stylesheet="ssphp_DEV.css" script="js/addtags.js, js/table_cell_backcolor_multivalue.js">
+  <dashboard theme="dark" version="1.1" hideFilters="true" stylesheet="ssphp_DEV.css" script="js/addtags.js, js/table_cell_backcolor_multivalue.js">
 {% else %}
   <dashboard theme="dark" version="1.1" hideFilters="true" stylesheet="ssphp.css" script="js/addtags.js, js/table_cell_backcolor_multivalue.js">
 {% endif %}
 
 
 <label>Security Posture Continuous Assurance : Service Control Detail Dashboard</label>
-<description>{{environment}} v4.3.6</description>
+<description>{{environment}} v4.4.2</description>
   
   <init>
     <unset token="tkn_ready_event"></unset>
@@ -18,7 +18,7 @@
   <search id="bs_1">
     <query>
 `ssphp_summary_index{{environment}}` SSPHP_UID=$tkn__uid|s$
-    [| search `ssphp_summary_index_DEV` SSPHP_UID=$tkn__uid|s$
+    [| search `ssphp_summary_index{{environment}}` SSPHP_UID=$tkn__uid|s$
       | stats max(SSPHP_RUN) as SSPHP_RUN
       | return SSPHP_RUN]
     
@@ -293,10 +293,22 @@ ssphp.benchmark.version,Version,16"]
       <table>
         <search base="bs_1">
           <query>
-| table ssphp.use_case.savedsearch
+
+```| eval ssphp.use_case.savedsearch_x=split('ssphp.use_case.savedsearch{}',"
+"),
+       ssphp.use_case.savedsearch=coalesce('ssphp.use_case.savedsearch', 'ssphp.use_case.savedsearch_x')```
+
+| eval ssphp.use_case.savedsearch=coalesce('ssphp.use_case.savedsearch', 'ssphp.use_case.savedsearch{}')
+       
+| eval ssphp.use_case.savedsearch_1=mvindex('ssphp.use_case.savedsearch',0),
+       ssphp.use_case.savedsearch_2=mvindex('ssphp.use_case.savedsearch',1)
+
+| fillnull value="-" ssphp.use_case.savedsearch_1, ssphp.use_case.savedsearch_2
+| table ssphp.use_case.savedsearch, ssphp.use_case.savedsearch_1, ssphp.use_case.savedsearch_2
           </query>
           <done>
-            <set token="tkn_saved_search">$result.ssphp.use_case.savedsearch$</set>
+            <set token="tkn_saved_search_1">$result.ssphp.use_case.savedsearch_1$</set>
+            <set token="tkn_saved_search_2">$result.ssphp.use_case.savedsearch_2$</set>
           </done>
         </search>
       </table>
@@ -335,36 +347,47 @@ ssphp.benchmark.version,Version,16"]
                           lower('ssphp.use_case.group_name')="repos",
                                 "| search ssphp.service.id=".'start_text_nob'.'ssphp.service.id'.'end_text_nob'." AND "."repo_name=".'start_text_nob'.'ssphp.resource.name'.'end_text_nob',
                           1==1,"oops"),
-
-       output_panel=case(lower('ssphp.assessment.source')="dependabot",1,
-                          lower('ssphp.assessment.source')="secrets",1,
-                          lower('ssphp.assessment.source')="workflows",3,
-                          lower('ssphp.assessment.source')="no tool",1,
-                          lower('ssphp.use_case.group_name')="sast",1,
-                          lower('ssphp.use_case.group_name')="qualys",2,
-                          lower('ssphp.use_case.group_name')="ms-defender",1,
-                          lower('ssphp.use_case.group_name')="repos",3,
-                          1==1,"oops")
+       ss2=$tkn_saved_search_2|s$,
+       output_panel=case('ss2'!="-",4,
+                         lower('ssphp.assessment.source')="dependabot",1,
+                         lower('ssphp.assessment.source')="secrets",1,
+                         lower('ssphp.assessment.source')="workflows",3,
+                         lower('ssphp.assessment.source')="no tool",1,
+                         lower('ssphp.use_case.group_name')="sast",1,
+                         lower('ssphp.use_case.group_name')="qualys",2,
+                         lower('ssphp.use_case.group_name')="ms-defender",1,
+                         lower('ssphp.use_case.group_name')="repos",3,
+                         1==1,"oops")
             
 | table search_string, output_panel
           </query>
           <done>
+            <condition match="$result.output_panel$==4">
+              <set token="show_2event_panel">true</set>
+              <unset token="show_table_panel"></unset>
+              <unset token="show_event_panel"></unset>
+              <unset token="show_highlight_panel"></unset>
+              <set token="tkn_use_case_search_string">$result.search_string$</set>
+            </condition>
             <condition match="$result.output_panel$==3">
               <set token="show_highlight_panel">true</set>
               <unset token="show_table_panel"></unset>
               <unset token="show_event_panel"></unset>
+              <unset token="show_2event_panel"></unset>
               <set token="tkn_use_case_search_string">$result.search_string$</set>
             </condition>
             <condition match="$result.output_panel$==2">
               <set token="show_table_panel">true</set>
               <unset token="show_highlight_panel"></unset>
               <unset token="show_event_panel"></unset>
+              <unset token="show_2event_panel"></unset>
               <set token="tkn_use_case_search_string">$result.search_string$</set>
             </condition>
             <condition match="$result.output_panel$==1">
               <set token="show_event_panel">true</set>
               <unset token="show_highlight_panel"></unset>
               <unset token="show_table_panel"></unset>
+              <unset token="show_2event_panel"></unset>
               <set token="tkn_use_case_search_string">$result.search_string$</set>
             </condition>
           </done>
@@ -372,13 +395,15 @@ ssphp.benchmark.version,Version,16"]
       </table>
     </panel>
 
+
+<!-- ############################## Get the 2 saved searches ############################## --> 
     <panel>
       <table>
         <search>
           <query>
 | rest /servicesNS/-/-/saved/searches splunk_server=local
 
-| search eai:acl.app="DCAP_DEV" AND title=$tkn_saved_search|s$
+| search eai:acl.app="DCAP{{environment}}" AND title=$tkn_saved_search_1|s$
 
 | rex field=search "^(?&lt;search_text&gt;[\s\S]*?)``` ##################### end dashboard query ##################### ```"
 
@@ -390,7 +415,31 @@ ssphp.benchmark.version,Version,16"]
 | table title, search, search_text
           </query>
           <done>
-            <set token="tkn_use_case_search_text">$result.search_text$</set>
+            <set token="tkn_use_case_search_text_1">$result.search_text$</set>
+          </done>
+        </search>
+      </table>
+    </panel>
+
+    <panel>
+      <table>
+        <search>
+          <query>
+| rest /servicesNS/-/-/saved/searches splunk_server=local
+
+| search eai:acl.app="DCAP{{environment}}" AND title=$tkn_saved_search_2|s$
+
+| rex field=search "^(?&lt;search_text&gt;[\s\S]*?)``` ##################### end dashboard query ##################### ```"
+
+| eval search_text=replace('search_text',"``` ##################### replace with dashboard filter ##################### ```","$tkn_use_case_search_string$")
+
+| eval search_text=replace('search_text',"\|\s*fields","| table"),
+        search_text='search_text'."| sort 0 - ssphp.score.score | fields - temp_total_count"
+    
+| table title, search, search_text
+          </query>
+          <done>
+            <set token="tkn_use_case_search_text_2">$result.search_text$</set>
           </done>
         </search>
       </table>
@@ -407,13 +456,45 @@ ssphp.benchmark.version,Version,16"]
       <event>
         <search>
           <query>
-$tkn_use_case_search_text$
+$tkn_use_case_search_text_1$
           </query>
           <done>
             <set token="tkn_ready_event">true</set>
           </done>
         </search>
       </event>
+    </panel>
+  </row>
+  
+
+  <row depends="$show_2event_panel$">
+    <panel>
+      <title>Underlying Data</title>
+      <table>
+        <search>
+          <query>
+$tkn_use_case_search_text_1$
+          </query>
+          <done>
+            <set token="tkn_ready_event">true</set>
+          </done>
+        </search>
+      </table>
+    </panel>
+  </row>
+  <row depends="$show_2event_panel$">
+
+    <panel>
+      <table>
+        <search>
+          <query>
+$tkn_use_case_search_text_2$
+          </query>
+          <done>
+            <set token="tkn_ready_event">true</set>
+          </done>
+        </search>
+      </table>
     </panel>
   </row>
 
@@ -424,7 +505,7 @@ $tkn_use_case_search_text$
       <table>
         <search>
           <query>
-$tkn_use_case_search_text$
+$tkn_use_case_search_text_1$
           </query>
           <done>
             <set token="tkn_ready_panel">true</set>
@@ -468,7 +549,7 @@ $tkn_use_case_search_text$
       <table id="table3">
         <search>
           <query>
-$tkn_use_case_search_text$
+$tkn_use_case_search_text_1$
 
 | fields - ssphp.service.*
 
@@ -552,10 +633,5 @@ $tkn_use_case_search_text$
         <html>Current User : $tkn__current_user_name$&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;Current App : $tkn__current_application$&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;User Service : $tkn__current_user_service$&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;Version : 5d9adba8cb2408f9193f00c611ddf74a974241ae</html>
     </panel>
 </row>
-
-
-
-
-
 
 </dashboard>
