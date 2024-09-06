@@ -1,5 +1,5 @@
 {% if environment=="_DEV" %}
-<dashboard version="1.1" theme="light" hideFilters="true" script="js/table_cell_color.js">
+<dashboard version="1.1" theme="dark" hideFilters="true" script="js/table_cell_color.js">
 {% else %}
 <dashboard version="1.1" theme="dark" hideFilters="true" script="js/table_cell_color.js">
 {% endif %}  
@@ -178,7 +178,7 @@
   <row depends="$tkn_ready$,$tkn_show_abs$">
       <html>
         <div class="absolute" style="background:$tkn_DNS_color$;"><a href="ssphp_foundational_systems_service?form.tkn__service=dns" target="_blank">$tkn_DNS_score_abs$</a></div>
-        <div class="undervalue" style="background:$tkn_DNS_color$;"><a href="ssphp_foundational_systems_service?form.tkn__service=dns" target="_blank">DNS [AWS]</a></div>
+        <div class="undervalue" style="background:$tkn_DNS_color$;"><a href="ssphp_foundational_systems_service?form.tkn__service=dns" target="_blank">AWS</a></div>
       </html>
   </row>
 
