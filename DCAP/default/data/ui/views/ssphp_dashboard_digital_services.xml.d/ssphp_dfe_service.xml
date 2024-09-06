@@ -1,11 +1,11 @@
 {% if environment=="_DEV" %}
-  <dashboard version="1.1" theme="light" hideFilters="true" script="js/addtags.js, js/table_cell_color.js">
+  <dashboard version="1.1" theme="dark" hideFilters="true" script="js/addtags.js, js/table_cell_color.js">
 {% else %}
   <dashboard version="1.1" theme="dark" hideFilters="true" script="js/addtags.js, js/table_cell_color.js">
 {% endif %}  
 
   <label>Security Posture Continuous Assurance : DfE Service Dashboard</label>
-  <description>{{environment}} v3.3.5</description>
+  <description>{{environment}} v3.3.9</description>
   
   <init>
     <set token="form.tkn_fields">C</set>
@@ -75,7 +75,7 @@
        ssphp.service.id=$tkn__service|s$
     ```ssphp.score.ciso_priority=1```
 
-| eventstats max(SSPHP_RUN) as max_SSPHP_RUN by ssphp.use_case.savedsearch
+| eventstats max(SSPHP_RUN) as max_SSPHP_RUN by ssphp.use_case.id
 | where SSPHP_RUN='max_SSPHP_RUN'
 | fields - max_SSPHP_RUN
 
@@ -175,7 +175,7 @@
              dc(eval(if('ssphp.use_case.category'="REPOS" AND 'count_score'&lt;100,'ssphp.resource.id',null()))) as repos_number_failed_resources,
              dc(eval(if('ssphp.use_case.category'="REPOS",'ssphp.resource.id',null()))) as repos_number_total_resources,
              
-             dc(eval(if('ssphp.use_case.category'="CODE_SCAN" AND 'count_score'&lt;100,'ssphp.resource.id',null()))) as codescan_number_failed_resources,
+             dc(eval(if('ssphp.use_case.category'="CODE_SCAN" AND 'ssphp.score.ciso_priority'=1 AND 'count_score'&lt;100,'ssphp.resource.id',null()))) as codescan_number_failed_resources,
              dc(eval(if('ssphp.use_case.category'="CODE_SCAN",'ssphp.resource.id',null()))) as codescan_number_total_resources
 
              
@@ -290,14 +290,14 @@
     <panel depends="$tkn_ready$,$tkn_show_abs$">
       <html>
         <div id="div_header" style="background:$tkn_repos_color$;color:white;font-weight:bold;font-size:$tkn_font_size_2$%;text-align:center;padding:$tkn_padding_2$">$tkn_repos_abs$</div> 
-        <div id="div_header" style="background:$tkn_posture_color$;color:white;font-size:80%;text-align:center">Compliant GitHub Repos</div>
+        <div id="div_header" style="background:$tkn_posture_color$;color:white;font-size:80%;text-align:center">GitHub Repos Compliant with CIS Benchmarks</div>
         <div id="div_header" style="background:$tkn_repos_color$;color:white;font-size:100%;text-align:center">REPOS</div> 
       </html>
     </panel>
     <panel depends="$tkn_ready$,$tkn_show_perc$">
       <html>
         <div id="div_header" style="background:$tkn_repos_color$;color:white;font-weight:bold;font-size:$tkn_font_size_2$%;text-align:center;padding:$tkn_padding_2$">$tkn_repos_perc_passed_resources$</div> 
-        <div id="div_header" style="background:$tkn_posture_color$;color:white;font-size:80%;text-align:center">Compliant GitHub Repos</div>
+        <div id="div_header" style="background:$tkn_posture_color$;color:white;font-size:80%;text-align:center">GitHub Repos Compliant with CIS Benchmarks</div>
         <div id="div_header" style="background:$tkn_repos_color$;color:white;font-size:100%;text-align:center">REPOS</div> 
       </html>
     </panel>
@@ -333,7 +333,7 @@
             width:25% !important;
           }
         </style>
-        <div id="div_header" style="font-size:175%;color:blue;">$tkn_current_service$</div> 
+        <div id="div_header" style="font-size:175%;color:$tkn_colour_orange$;">$tkn_current_service$</div> 
         <div id="div_header" style="font-size:120%">Control Details &amp; Scores [$tkn_controls_total$]</div> 
         <br></br>
         <div><span><a href="ssphp_dfe_service_threat_model?tkn__service=$tkn__service$" class="btn btn-primary" style="color:white;background-color:grey;text-align:left;display:block;width:100%;" target="_blank">Service Threat Model Dashboard</a></span></div> 
@@ -347,7 +347,7 @@
             width:25% !important;
           }
         </style>
-        <div id="div_header" style="font-size:175%;color:blue;">$tkn_current_service$</div> 
+        <div id="div_header" style="font-size:175%;color:$tkn_colour_orange$;">$tkn_current_service$</div> 
         <div id="div_header" style="font-size:120%">Control Details &amp; Scores [$tkn_controls_total_resources$]</div> 
         <br></br>
         <div><span><a href="ssphp_dfe_service_threat_model?tkn__service=$tkn__service$" class="btn btn-primary" style="color:white;background-color:grey;text-align:left;display:block;width:100%;" target="_blank">Service Threat Model Dashboard</a></span></div> 
