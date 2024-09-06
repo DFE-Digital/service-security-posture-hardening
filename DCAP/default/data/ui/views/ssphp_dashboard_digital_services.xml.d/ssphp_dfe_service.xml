@@ -5,7 +5,7 @@
 {% endif %}  
 
   <label>Security Posture Continuous Assurance : DfE Service Dashboard</label>
-  <description>{{environment}} v3.3.9</description>
+  <description>{{environment}} v3.3.16</description>
   
   <init>
     <set token="form.tkn_fields">C</set>
@@ -60,7 +60,15 @@
     </input>
   </fieldset>
 
-
+<!-- ##
+  <row>
+    <panel>
+      <html>
+         <div id="div_header" style="background:$tkn_posture_color$;color:white;font-size:80%;text-align:center">***$tkn_ready$***</div>
+      </html>
+    </panel>
+  </row>
+## -->
 
 <!-- ######################################################################################################################################### -->
 <!-- #################################### GET THE BASE SUMMARY INDEX DATA FOR THE OTHER QUERIES ############################################## -->
@@ -99,7 +107,6 @@
           <done>
             <set token="tkn_service_name">$result.ssphp.service.name$</set>
             <set token="tkn_current_service">$result.ssphp.service.name$</set>
-            <set token="tkn_ready">true</set>
           </done>
         </search>
         <option name="count">1</option>
@@ -219,6 +226,7 @@
        codescan_abs='codescan_number_passed_resources'." / ".'codescan_number_total_resources'
 
 | table posture_*, vulnerability_*, repos_*, codescan_*
+| eval tkn_ready="true"
             </query>
           <done>
             <set token="tkn_posture_perc_passed_resources">$result.posture_perc_passed_resources$</set>
@@ -245,8 +253,7 @@
             <set token="tkn_vulnerability_abs">$result.vulnerability_abs$</set>
             <set token="tkn_repos_abs">$result.repos_abs$</set>
             <set token="tkn_codescan_abs">$result.codescan_abs$</set>
-
-            <set token="tkn_ready">true</set>
+            <set token="tkn_ready">$result.tkn_ready$</set>
           </done>
         </search>
       </table>
@@ -254,7 +261,7 @@
   </row>
   
 
-  <row>
+  <row depends="$tkn_ready$">
     <panel depends="$tkn_ready$,$tkn_show_abs$">
       <html>
         <div id="div_header" style="background:$tkn_posture_color$;color:white;font-weight:bold;font-size:$tkn_font_size_2$%;text-align:center;padding:$tkn_padding_2$">$tkn_posture_abs$</div> 
