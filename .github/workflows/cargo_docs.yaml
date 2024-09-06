@@ -1,5 +1,5 @@
 ---
-name: Docs
+name: Rust - Cargo Docs
 on:
   push:
     branches: [main]
@@ -46,7 +46,7 @@ jobs:
       - name: Clean docs folder
         run: cd ${{ github.workspace }}/data_ingester/data_ingester_workspace/; cargo clean --doc
       - name: Build docs
-        run: cd ${{ github.workspace }}/data_ingester/data_ingester_workspace/; cargo doc --no-deps
+        run: cd ${{ github.workspace }}/data_ingester/data_ingester_workspace/; cargo doc --no-deps --document-private-items
       - name: Add redirect
         run: echo '<meta http-equiv="refresh" content="0;url=data_ingester_axum_entrypoint/index.html">' > ${{ github.workspace }}/data_ingester/data_ingester_workspace/target/doc/index.html
 
