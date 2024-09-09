@@ -18,22 +18,20 @@ jobs:
       - name: checkout
         uses: actions/checkout@v4
 
-        # Rust
-      - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: nightly-2024-06-12
-          target: x86_64-unknown-linux-musl
-          default: true
-          components: rust-src, clippy
-
       - uses: awalsh128/cache-apt-pkgs-action@v1
         with:
           packages: musl-tools
           version: 1.0
 
+      - name: toolchain
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: nightly-2024-09-04
+          targets: x86_64-unknown-linux-musl
+          components: rust-src, clippy
+
       - name: cargo audit
         run: cargo install cargo-audit; cd data_ingester/data_ingester_workspace; cargo audit
-
 
       - name: Cache build artifacts
         uses: actions/cache@v4
@@ -41,13 +39,8 @@ jobs:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
-            data_ingester/data_ingester_workspace/target
-          key: cache-rust-target-${{ hashFiles('data_ingester/data_ingester_workspace/Cargo.lock') }}
-
-      # - uses: actions-rs/cargo@v1
-      #   with:
-      #     command: test
-      #     args: --manifest-path data_ingester/data_ingester_rust/Cargo.toml
+            ${{ github.workspace }}/data_ingester/data_ingester_workspace/target
+          key: cache-rust-target-${{steps.toolchain.outputs.name}}-${{ hashFiles('${{ github.workspace }}/data_ingester/data_ingester_workspace/Cargo.lock') }}
 
       - name: cargo build
         run: cd data_ingester/data_ingester_workspace; cargo build --release --target=x86_64-unknown-linux-musl
