@@ -36,7 +36,7 @@ jobs:
 
       - name: Setup pages
         id: pages
-        uses: actions/configure-pages@v4
+        uses: actions/configure-pages@v5
 
       - name: Clean docs folder
         run: cd ${{ github.workspace }}/data_ingester/data_ingester_workspace/; cargo clean --doc
