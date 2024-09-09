@@ -18,15 +18,18 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: nightly-2024-06-12
-          target: x86_64-unknown-linux-musl
-          default: true
-          components: rust-src, clippy
+      # - uses: actions-rs/toolchain@v1
+      #   with:
+      #     toolchain: nightly-2024-06-12
+      #     target: x86_64-unknown-linux-musl
+      #     default: true
+      #     components: rust-src, clippy
 
-      # - name: Setup Rust
-      #   uses: dtolnay/rust-toolchain@nightly-2024-06-12
+      - name: toolchain
+        uses: dtolnay/rust-toolchain@nightly-2024-09-04
+        targets: x86_64-unknown-linux-musl
+        components: rust-src, clippy
+
       # - name: Configure cache
       #   uses: Swatinem/rust-cache@v2
 
@@ -37,7 +40,7 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             ${{ github.workspace }}/data_ingester/data_ingester_workspace/target
-          key: cache-rust-target-${{ hashFiles('${{ github.workspace }}/data_ingester/data_ingester_workspace/Cargo.lock') }}
+          key: cache-rust-target-${{steps.toolchain.outputs.name}}-${{ hashFiles('${{ github.workspace }}/data_ingester/data_ingester_workspace/Cargo.lock') }}
 
       - name: Setup pages
         id: pages
