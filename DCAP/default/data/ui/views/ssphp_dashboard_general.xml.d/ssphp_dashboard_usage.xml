@@ -1,0 +1,156 @@
+<dashboard version="1.1" theme="dark" hideFilters="false">
+  <label>Security Posture Continuous Assurance : DfE Usage Dashboard</label>
+  <description>v1.0.0</description>
+  
+  <init></init>
+  
+  
+  <search id="bs_1">
+    <query>
+index=_internal sourcetype="splunk_web_access" method="GET" status="200" user!=-
+| rex field=uri_path "\/app\/(?&lt;App&gt;[^\/]+)\/(?&lt;Dashboard&gt;[^\/\s]+)"
+| rex field=uri "tkn__service=(?&lt;Service&gt;[^&amp;]*)"
+
+| fillnull value="-" Service
+| search Dashboard="ssphp*"
+| rename user as User
+
+| eval view_day=strftime('_time',"%Y-%m-%d")
+
+| table _time, User, App, Dashboard, Service, view_day, uri_path
+      </query>
+    <earliest>-7d@d</earliest>
+    <latest>now</latest>
+  </search>
+  
+  
+  <fieldset submitButton="false">
+    <input type="radio" token="tkn_view" searchWhenChanged="true">
+      <label>View By</label>
+      <choice value="u">User</choice>
+      <choice value="d">Dashboard</choice>
+      <default>u</default>
+      <initialValue>u</initialValue>
+      <change>
+        <condition value="u">
+          <set token="tkn_show_u">true</set>
+          <unset token="tkn_show_d"></unset>
+        </condition>
+        <condition value="d">
+          <unset token="tkn_show_u"></unset>
+          <set token="tkn_show_d">true</set>
+        </condition>
+      </change>
+    </input>
+  </fieldset>
+
+
+<!-- ################### ROW BY USER ################### --> 
+  <row depends="$tkn_show_u$">
+    <panel id="panel1">
+      <input type="dropdown" token="tkn_user" searchWhenChanged="true">
+        <label>Select User</label>
+        <fieldForLabel>User</fieldForLabel>
+        <fieldForValue>User</fieldForValue>
+        <search base="bs_1">
+          <query>
+
+| fields User
+| dedup User
+| sort User
+          </query>
+        </search>
+      </input>
+      
+      <html>
+        <style>
+          #panel1{
+            width:10% !important;
+          }
+        </style>
+      </html>
+    </panel>
+    
+    
+    <panel id="panel2">
+      <html>
+        <style>
+          #panel2{
+            width:90% !important;
+          }
+        </style>
+      </html>
+      
+      <table>
+        <search base="bs_1">
+          <query>
+
+| search User=$tkn_user|s$
+| stats count as Views by User App Dashboard, Service, view_day
+
+| eval {view_day}='Views'
+| fields - Views, view_day
+| stats values(*) as * by User App Dashboard, Service
+          </query>
+        </search>
+        <option name="count">100</option>
+      </table>
+    </panel>
+  </row>
+
+
+<!-- ################### ROW BY DASHBOARD ################### --> 
+  <row depends="$tkn_show_d$">
+    <panel id="panel3">
+      <input type="dropdown" token="tkn_dashboard" searchWhenChanged="true">
+        <label>Select Dashboard</label>
+        <fieldForLabel>Dashboard</fieldForLabel>
+        <fieldForValue>Dashboard</fieldForValue>
+        <search base="bs_1">
+          <query>
+
+| fields Dashboard
+| dedup Dashboard
+| sort Dashboard
+          </query>
+        </search>
+      </input>
+      
+      <html>
+        <style>
+          #panel3{
+            width:10% !important;
+          }
+        </style>
+      </html>
+    </panel>
+    
+    
+    <panel id="panel4">
+      <html>
+        <style>
+          #panel4{
+            width:90% !important;
+          }
+        </style>
+      </html>
+      
+      <table>
+        <search base="bs_1">
+          <query>
+
+| search Dashboard=$tkn_dashboard|s$
+| stats count as Views by User App Dashboard, Service, view_day
+
+| eval {view_day}='Views'
+| fields - Views, view_day
+| stats values(*) as * by User App Dashboard, Service
+          </query>
+        </search>
+        <option name="count">100</option>
+      </table>
+    </panel>
+  </row>
+  
+  
+</dashboard>

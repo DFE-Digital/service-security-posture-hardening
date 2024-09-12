@@ -5,7 +5,7 @@
 {% endif %}  
 
   <label>Security Posture Continuous Assurance : DfE Service Dashboard</label>
-  <description>{{environment}} v3.3.16</description>
+  <description>{{environment}} v3.3.22</description>
   
   <init>
     <set token="form.tkn_fields">C</set>
@@ -14,7 +14,7 @@
     <set token="tkn_font_size_2">400</set>
     <set token="tkn_padding_1">60</set>
     <set token="tkn_padding_2">30</set>
-    <set token="tkn__service">das</set>
+<!-- #    <set token="tkn__service">das</set> # -->
     <unset token="tkn_ready"></unset>
   </init>
 
@@ -795,5 +795,6 @@ $tkn_resource_search$
         <html>Current User : $tkn__current_user_name$&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;Current App : $tkn__current_application$&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;User Service : $tkn__current_user_service$&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;Version : 5d9adba8cb2408f9193f00c611ddf74a974241ae</html>
     </panel>
 </row>
+
 
 </dashboard>
