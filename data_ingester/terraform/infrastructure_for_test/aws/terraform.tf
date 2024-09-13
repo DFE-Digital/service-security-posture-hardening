@@ -1,0 +1,146 @@
+# │ Error: creating IAM Virtual MFA Device (sam-ca-mfa-device): InvalidClientTokenId: The security token included in the request is invalid
+# │ 	status code: 403, request id: ea10949b-28a0-49f1-9fbc-32cba64d550a
+# use --no-session
+
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 4.16"
+    }
+  }
+
+  required_version = ">= 1.2.0"
+}
+
+provider "aws" {
+  region = "eu-west-2"
+}
+
+resource "aws_s3_bucket" "example" {
+  bucket = "my-tf-ca-test"
+}
+
+resource "aws_account_alternate_contact" "security" {
+
+  alternate_contact_type = "SECURITY"
+
+  name          = "Sam Pritchard"
+  title         = "Lord"
+  email_address = "sam@prigital.co.uk"
+  phone_number  = "+447733333555"
+}
+
+resource "aws_iam_account_password_policy" "strict" {
+  minimum_password_length        = 14
+  require_lowercase_characters   = true
+  require_numbers                = true
+  require_uppercase_characters   = true
+  require_symbols                = false
+  allow_users_to_change_password = true
+}
+
+resource "aws_iam_virtual_mfa_device" "sam-ca-mfa" {
+  virtual_mfa_device_name = "sam-ca-mfa-device"
+}
+
+output "mfa_qr" {
+  sensitive = true
+  value     = aws_iam_virtual_mfa_device.sam-ca-mfa.qr_code_png
+}
+
+resource "aws_iam_user" "pearly-whites" {
+  name = "casetoner"
+
+  tags = {
+    tag-key = "tf-managed-user"
+  }
+}
+
+resource "aws_iam_access_key" "pearly-key" {
+  user = aws_iam_user.pearly-whites.name
+}
+
+resource "aws_iam_user_policy" "pearly-policy" {
+  name = "pearly-policy"
+  user = aws_iam_user.pearly-whites.name
+
+  # Terraform's "jsonencode" function converts a
+  # Terraform expression result to valid JSON syntax.
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = [
+          "ec2:Describe*",
+        ]
+        Effect   = "Allow"
+        Resource = "*"
+      },
+    ]
+  })
+}
+
+resource "aws_iam_policy" "policy" {
+  name        = "test-policy"
+  description = "A test policy"
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = [
+          "s3:List*",
+        ]
+        Effect   = "Allow"
+        Resource = "*"
+      },
+    ]
+  })
+}
+
+resource "aws_iam_user_policy_attachment" "test-attach" {
+  user       = aws_iam_user.pearly-whites.name
+  policy_arn = aws_iam_policy.policy.arn
+}
+
+
+data "aws_iam_policy_document" "assume_role" {
+  statement {
+    effect = "Allow"
+
+    principals {
+      type        = "Service"
+      identifiers = ["ec2.amazonaws.com"]
+    }
+
+    actions = ["sts:AssumeRole"]
+  }
+}
+
+resource "aws_iam_role" "role" {
+  name               = "security-test-role"
+  assume_role_policy = data.aws_iam_policy_document.assume_role.json
+}
+
+resource "aws_iam_role_policy_attachment" "test-attach" {
+  role       = aws_iam_role.role.name
+  policy_arn = "arn:aws:iam::aws:policy/AWSSupportAccess"
+}
+
+resource "aws_iam_server_certificate" "test_cert" {
+  name             = "some_test_cert"
+  certificate_body = file("cert.pem")
+  private_key      = file("key.pem")
+}
+
+# resource "aws_route53_zone" "primary" {
+#   name = "example.com"
+# }
+
+# resource "aws_route53_record" "www" {
+#   zone_id = aws_route53_zone.primary.zone_id
+#   name    = "www.example.com"
+#   type    = "A"
+#   ttl     = 300
+#   records = [aws_eip.lb.public_ip]
+# }
