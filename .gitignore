@@ -18,6 +18,7 @@ TA_SSPHP/output
 TA_SSPHP/tests/SPLUNK_HOME
 .python_packages
 .DS_Store
-.terraform
-.terraform.lock.hcl
+**/.terraform
+**/.terraform.lock.hcl
+**/*tfstate*
 rustc-ice*.txt
