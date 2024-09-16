@@ -19,8 +19,6 @@
 
 
   <fieldset submitButton="false">
-    
-    
     <input type="radio" token="tkn_view" searchWhenChanged="true">
       <label>View</label>
       <choice value="a">Absolute</choice>
@@ -40,6 +38,16 @@
     </input>
   </fieldset>
 
+
+
+  <row rejects="$tkn_ready$">
+    <panel depends="$tkn_ready$,$tkn_show_abs$">
+      <html>
+        <div id="div_header" style="background:$tkn_posture_color$;color:white;font-weight:bold;font-size:$tkn_font_size_2$%;text-align:center;padding:$tkn_padding_2$">Requesting Data - Please Wait</div> 
+      </html>
+    </panel>
+  </row>
+    
 
 
 <!-- ######################################################################################################################################### -->
