@@ -97,7 +97,7 @@ impl<'a> ResourcesFilter<'a> {
     }
 
     /// Filter Terrafrom resources by type
-    pub fn by_type(mut self, ty: &str) -> Self {
+    pub fn by_type<S: Into<String>>(mut self, ty: S) -> Self {
         self.r#type.push(ty.into());
         self
     }
