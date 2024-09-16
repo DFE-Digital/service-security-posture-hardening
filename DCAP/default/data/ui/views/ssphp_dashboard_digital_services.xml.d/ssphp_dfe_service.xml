@@ -5,7 +5,7 @@
 {% endif %}  
 
   <label>Security Posture Continuous Assurance : DfE Service Dashboard</label>
-  <description>{{environment}} v3.3.22</description>
+  <description>{{environment}} v3.3.24</description>
   
   <init>
     <set token="form.tkn_fields">C</set>
@@ -14,31 +14,11 @@
     <set token="tkn_font_size_2">400</set>
     <set token="tkn_padding_1">60</set>
     <set token="tkn_padding_2">30</set>
-<!-- #    <set token="tkn__service">das</set> # -->
     <unset token="tkn_ready"></unset>
   </init>
 
 
   <fieldset submitButton="false">
-<!-- #
-    <input type="dropdown" token="tkn__service" searchWhenChanged="true">
-      <label>Service</label>
-      <fieldForLabel>ssphp.service.name</fieldForLabel>
-      <fieldForValue>ssphp.service.id</fieldForValue>
-      <search>
-        <query>
-`ssphp_summary_index{{environment}}` earliest=-2d@d latest=now
-| fields ssphp.service.id, ssphp.service.name
-| dedup ssphp.service.id
-| sort 0 ssphp.service.id
-          </query>
-      </search>
-      <selectFirstChoice>true</selectFirstChoice>
-      <change>
-        <unset token="tkn_ready"></unset>
-      </change>
-    </input>
-### -->     
     
     
     <input type="radio" token="tkn_view" searchWhenChanged="true">
@@ -60,15 +40,7 @@
     </input>
   </fieldset>
 
-<!-- ##
-  <row>
-    <panel>
-      <html>
-         <div id="div_header" style="background:$tkn_posture_color$;color:white;font-size:80%;text-align:center">***$tkn_ready$***</div>
-      </html>
-    </panel>
-  </row>
-## -->
+
 
 <!-- ######################################################################################################################################### -->
 <!-- #################################### GET THE BASE SUMMARY INDEX DATA FOR THE OTHER QUERIES ############################################## -->
@@ -226,7 +198,6 @@
        codescan_abs='codescan_number_passed_resources'." / ".'codescan_number_total_resources'
 
 | table posture_*, vulnerability_*, repos_*, codescan_*
-| eval tkn_ready="true"
             </query>
           <done>
             <set token="tkn_posture_perc_passed_resources">$result.posture_perc_passed_resources$</set>
@@ -253,7 +224,6 @@
             <set token="tkn_vulnerability_abs">$result.vulnerability_abs$</set>
             <set token="tkn_repos_abs">$result.repos_abs$</set>
             <set token="tkn_codescan_abs">$result.codescan_abs$</set>
-            <set token="tkn_ready">$result.tkn_ready$</set>
           </done>
         </search>
       </table>
@@ -659,10 +629,11 @@ $tkn_search_filter$
 $tkn_resource_search$
 
 | eventstats count as number_controls_total
-| eval number_controls_total=tostring('number_controls_total', "commas")
+| eval number_controls_total_string=tostring('number_controls_total', "commas")
           </query>
           <done>
-            <eval token="tkn_controls_total">if(isnotnull($result.number_controls_total$),$result.number_controls_total$,"0")</eval>
+            <eval token="tkn_controls_total">if(isnotnull($result.number_controls_total_string$),$result.number_controls_total_string$,"0")</eval>
+            <eval token="tkn_ready">if(isnotnull($result.number_controls_total$) AND $result.number_controls_total$!="" AND $result.number_controls_total$&gt;0,"true",null())</eval>
           </done>
         </search>
         <option name="count">100</option>
