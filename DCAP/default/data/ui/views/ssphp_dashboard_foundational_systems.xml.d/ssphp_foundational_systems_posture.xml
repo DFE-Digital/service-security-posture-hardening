@@ -1,5 +1,5 @@
 {% if environment=="_DEV" %}
-<dashboard version="1.1" theme="dark" hideFilters="true" script="js/table_cell_color.js">
+<dashboard version="1.1" theme="light" hideFilters="true" script="js/table_cell_color.js">
 {% else %}
 <dashboard version="1.1" theme="dark" hideFilters="true" script="js/table_cell_color.js">
 {% endif %}  

@@ -1,5 +1,5 @@
 {% if environment=="_DEV" %}
-  <dashboard theme="dark" version="1.1" hideFilters="true" stylesheet="ssphp_DEV.css" script="js/addtags.js, js/table_cell_backcolor_multivalue.js">
+  <dashboard theme="light" version="1.1" hideFilters="true" stylesheet="ssphp_DEV.css" script="js/addtags.js, js/table_cell_backcolor_multivalue.js">
 {% else %}
   <dashboard theme="dark" version="1.1" hideFilters="true" stylesheet="ssphp.css" script="js/addtags.js, js/table_cell_backcolor_multivalue.js">
 {% endif %}

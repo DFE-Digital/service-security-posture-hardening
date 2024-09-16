@@ -1,11 +1,11 @@
 {% if environment=="_DEV" %}
-  <dashboard version="1.1" theme="dark" hideFilters="true" script="js/addtags.js, js/table_cell_color.js">
+  <dashboard version="1.1" theme="light" hideFilters="true" script="js/addtags.js, js/table_cell_color.js">
 {% else %}
   <dashboard version="1.1" theme="dark" hideFilters="true" script="js/addtags.js, js/table_cell_color.js">
 {% endif %}  
 
   <label>Security Posture Continuous Assurance : DfE Service Dashboard</label>
-  <description>{{environment}} v3.3.24</description>
+  <description>{{environment}} v3.3.28</description>
   
   <init>
     <set token="form.tkn_fields">C</set>
@@ -19,8 +19,6 @@
 
 
   <fieldset submitButton="false">
-    
-    
     <input type="radio" token="tkn_view" searchWhenChanged="true">
       <label>View</label>
       <choice value="a">Absolute</choice>
@@ -40,6 +38,16 @@
     </input>
   </fieldset>
 
+
+
+  <row rejects="$tkn_ready$">
+    <panel>
+      <html>
+        <div id="div_header" style="background:darkgrey;color:white;font-weight:bold;font-size:$tkn_font_size_2$%;text-align:center;padding:$tkn_padding_2$">Requesting Data - Please Wait</div> 
+      </html>
+    </panel>
+  </row>
+    
 
 
 <!-- ######################################################################################################################################### -->
