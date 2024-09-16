@@ -48,11 +48,11 @@ impl State {
 /// Filters are additive, the retured Resources must pass all supplied filters
 /// Multiple filters can be applied to the resources
 #[derive(Debug)]
-pub struct ResourcesFilter<'a> {
+pub struct ResourcesFilter<'a, 'b> {
     pub inner: &'a [Resource],
-    provider: Vec<String>,
-    name: Vec<String>,
-    r#type: Vec<String>,
+    provider: Vec<&'b str>,
+    name: Vec<&'b str>,
+    r#type: Vec<&'b str>,
     filter_operation: ResourceFilterOperation,
 }
 
@@ -63,7 +63,7 @@ pub enum ResourceFilterOperation {
     Or,
 }
 
-impl<'a> ResourcesFilter<'a> {
+impl<'a, 'b> ResourcesFilter<'a, 'b> {
     pub fn filter(self) -> Vec<&'a Resource> {
         self.inner
             .iter()
@@ -91,20 +91,20 @@ impl<'a> ResourcesFilter<'a> {
     }
 
     /// Filter Terrafrom resources by provider
-    pub fn by_provider<S: Into<String>>(mut self, provider: S) -> Self {
-        self.provider.push(provider.into());
+    pub fn by_provider(mut self, provider: &'b str) -> Self {
+        self.provider.push(provider);
         self
     }
 
     /// Filter Terrafrom resources by type
-    pub fn by_type<S: Into<String>>(mut self, ty: S) -> Self {
-        self.r#type.push(ty.into());
+    pub fn by_type(mut self, ty: &'b str) -> Self {
+        self.r#type.push(ty);
         self
     }
 
     /// Filter Terrafrom resources by name    
-    pub fn by_name<S: Into<String>>(mut self, name: S) -> Self {
-        self.name.push(name.into());
+    pub fn by_name(mut self, name: &'b str) -> Self {
+        self.name.push(name);
         self
     }
 
