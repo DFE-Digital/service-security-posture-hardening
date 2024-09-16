@@ -1,5 +1,5 @@
 {% if environment=="_DEV" %}
-  <dashboard theme="dark" version="1.1" hideFilters="true">
+  <dashboard theme="light" version="1.1" hideFilters="true">
 {% else %}
   <dashboard theme="dark" version="1.1" hideFilters="true"> 
 {% endif %}  
