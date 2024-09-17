@@ -6,9 +6,8 @@ on:
     branches:
       - main
     paths:
-      - data_ingester/**
-    paths-ignore:
-      - data_ingester/terraform/infrastructure_for_test/**
+      - 'data_ingester/**'
+      - '!data_ingester/terraform/infrastructure_for_test/**'
   workflow_dispatch:
 
 jobs:
