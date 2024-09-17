@@ -3,6 +3,8 @@ name: Rust - Cargo Docs
 on:
   push:
     branches: [main]
+    paths:
+      - data_ingester/data_ingester_workspace
 permissions:
   contents: read
   pages: write
