@@ -21,6 +21,14 @@ resource "aws_s3_bucket" "example" {
   bucket = "my-tf-ca-test"
 }
 
+resource "aws_s3_bucket_public_access_block" "example_acl" {
+  bucket = aws_s3_bucket.example.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
 
 # resource "aws_s3_bucket_versioning" "bucket_versioning_CIS-2-1-2" {
 #   bucket = aws_s3_bucket.example.id
@@ -179,7 +187,20 @@ resource "aws_cloudtrail" "test-cloudtrail" {
   name                          = "cloudtrail_test"
   s3_bucket_name                = aws_s3_bucket.s3_bucket_cloudtrail_test.id
   s3_key_prefix                 = "prefix"
-  include_global_service_events = false
+  include_global_service_events = true
+  is_multi_region_trail         = true
+  enable_logging                = true
+  enable_log_file_validation    = true
+
+  event_selector {
+    read_write_type           = "All"
+    include_management_events = true
+
+    data_resource {
+      type   = "AWS::S3::Object"
+      values = ["arn:aws:s3"]
+    }
+  }
 }
 
 resource "aws_s3_bucket" "s3_bucket_cloudtrail_test" {
