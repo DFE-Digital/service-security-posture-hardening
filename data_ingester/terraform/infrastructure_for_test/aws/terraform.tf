@@ -281,6 +281,66 @@ data "aws_partition" "current" {}
 
 data "aws_region" "current" {}
 
+
+resource "aws_config_config_rule" "config_rule" {
+  name = "config_rule"
+
+  source {
+    owner             = "AWS"
+    source_identifier = "S3_BUCKET_VERSIONING_ENABLED"
+  }
+
+  depends_on = [aws_config_configuration_recorder.config_recorder]
+}
+
+resource "aws_config_configuration_recorder" "config_recorder" {
+  name     = "config_recorder"
+  role_arn = aws_iam_role.config_role.arn
+  recording_group {
+    all_supported = "true"
+    include_global_resource_types = "true"
+
+  }
+}
+
+resource "aws_config_configuration_recorder_status" "config_recorder_status" {
+  name       = aws_config_configuration_recorder.config_recorder.name
+  is_enabled = true
+  ## Needs a "LastStatus=SUCCESS to pass. i.e. needs to run (CIS 3.5)"
+}
+
+data "aws_iam_policy_document" "assume_role" {
+  statement {
+    effect = "Allow"
+
+    principals {
+      type        = "Service"
+      identifiers = ["config.amazonaws.com"]
+    }
+
+    actions = ["sts:AssumeRole"]
+  }
+}
+
+resource "aws_iam_role" "config_role" {
+  name               = "my-awsconfig-role"
+  assume_role_policy = data.aws_iam_policy_document.assume_role.json
+}
+
+data "aws_iam_policy_document" "policy_document" {
+  statement {
+    effect    = "Allow"
+    actions   = ["config:Put*"]
+    resources = ["*"]
+  }
+}
+
+resource "aws_iam_role_policy" "p" {
+  name   = "my-awsconfig-policy"
+  role   = aws_iam_role.config_role.id
+  policy = data.aws_iam_policy_document.policy_document.json
+}
+
 # resource "aws_route53_zone" "primary" {
 #   name = "example.com"
 # }
