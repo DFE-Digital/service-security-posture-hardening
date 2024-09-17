@@ -21,6 +21,41 @@ resource "aws_s3_bucket" "example" {
   bucket = "my-tf-ca-test"
 }
 
+
+# resource "aws_s3_bucket_versioning" "bucket_versioning_CIS-2-1-2" {
+#   bucket = aws_s3_bucket.example.id
+
+#   versioning_configuration {
+#     status = "Enabled"
+#     mfa_delete = "Enabled"
+#   }
+# }
+
+data "aws_iam_policy_document" "aws_iam_policy_doc_s3_example" {
+  statement {
+    sid    = "AWSDenyS3HTTPRequests_CIS2-1-1"
+    effect = "Deny"
+
+    principals {
+      type        = "*"
+      identifiers = ["*"]
+    }
+
+    actions   = ["s3:*"]
+    resources = [aws_s3_bucket.example.arn]
+    condition {
+      test     = "Bool"
+      variable = "aws:SecureTransport"
+      values   = ["false"]
+    }
+  }
+}
+
+resource "aws_s3_bucket_policy" "s3_bucket_policy_example" {
+  bucket = aws_s3_bucket.example.id
+  policy = data.aws_iam_policy_document.aws_iam_policy_doc_s3_example.json
+}
+
 resource "aws_account_alternate_contact" "security" {
 
   alternate_contact_type = "SECURITY"
@@ -38,6 +73,7 @@ resource "aws_iam_account_password_policy" "strict" {
   require_uppercase_characters   = true
   require_symbols                = false
   allow_users_to_change_password = true
+  max_password_age               = 45
 }
 
 resource "aws_iam_virtual_mfa_device" "sam-ca-mfa" {
@@ -133,6 +169,10 @@ resource "aws_iam_server_certificate" "test_cert" {
   private_key      = file("key.pem")
 }
 
+resource "aws_accessanalyzer_analyzer" "account_analyzer" {
+  analyzer_name = "account_analyzer"
+}
+
 resource "aws_cloudtrail" "test-cloudtrail" {
   depends_on = [aws_s3_bucket_policy.s3_bucket_policy_test]
 
@@ -163,6 +203,24 @@ data "aws_iam_policy_document" "aws_iam_policy_doc_s3" {
       test     = "StringEquals"
       variable = "aws:SourceArn"
       values   = ["arn:${data.aws_partition.current.partition}:cloudtrail:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:trail/cloudtrail_test"]
+    }
+  }
+
+  statement {
+    sid    = "AWSDenyS3HTTPRequests_CIS2-1-1"
+    effect = "Deny"
+
+    principals {
+      type        = "*"
+      identifiers = ["*"]
+    }
+
+    actions   = ["s3:*"]
+    resources = [aws_s3_bucket.s3_bucket_cloudtrail_test.arn]
+    condition {
+      test     = "Bool"
+      variable = "aws:SecureTransport"
+      values   = ["false"]
     }
   }
 
