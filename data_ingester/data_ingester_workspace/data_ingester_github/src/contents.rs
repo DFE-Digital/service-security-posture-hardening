@@ -1,4 +1,4 @@
-use crate::{GithubResponse, GithubResponses};
+use crate::github_response::{GithubResponse, GithubResponses};
 use anyhow::{anyhow, Context, Result};
 use base64::prelude::*;
 use data_ingester_splunk::splunk::ToHecEvents;
@@ -126,12 +126,11 @@ impl TryFrom<&GithubResponses> for Contents {
     type Error = anyhow::Error;
 
     fn try_from(value: &GithubResponses) -> std::prelude::v1::Result<Self, Self::Error> {
-        if value.inner.is_empty() {
+        if value.is_empty() {
             anyhow::bail!("No workflows in Github Response");
         }
         let contents = value
-            .inner
-            .iter()
+            .responses_iter()
             .filter_map(|response| Contents::try_from(response).ok())
             .flat_map(|contents| contents.contents.into_iter())
             .collect::<Vec<Content>>();

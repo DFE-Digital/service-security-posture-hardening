@@ -1,4 +1,4 @@
-use crate::{DateTime, GithubResponse, GithubResponses};
+use crate::{github_response::GithubResponse, github_response::GithubResponses, DateTime};
 use data_ingester_splunk::splunk::ToHecEvents;
 use serde::{Deserialize, Serialize};
 
@@ -46,13 +46,12 @@ impl TryFrom<&GithubResponses> for Artifacts {
     type Error = anyhow::Error;
 
     fn try_from(value: &GithubResponses) -> std::prelude::v1::Result<Self, Self::Error> {
-        if value.inner.is_empty() {
+        if value.is_empty() {
             anyhow::bail!("No artifacts in Github Response");
         }
 
         let artifacts = value
-            .inner
-            .iter()
+            .responses_iter()
             .filter_map(|response| Artifacts::try_from(response).ok())
             .flat_map(|artifacts| artifacts.artifacts.into_iter())
             .collect::<Vec<Artifact>>();
@@ -60,7 +59,7 @@ impl TryFrom<&GithubResponses> for Artifacts {
         Ok(Self {
             artifacts,
             total_count: 0,
-            source: value.inner[0].source.to_string(),
+            source: value.source(),
             sourcetype: "github".to_string(),
         })
     }

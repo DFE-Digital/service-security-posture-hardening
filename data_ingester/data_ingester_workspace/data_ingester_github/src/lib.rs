@@ -5,26 +5,31 @@ mod action_runs;
 mod artifacts;
 mod contents;
 pub mod entrypoint;
+mod github_response;
+mod org_members;
+mod repos;
 mod teams;
 mod workflows;
+use crate::github_response::{GithubResponse, GithubResponses};
+use crate::org_members::org_member_query;
+use crate::repos::Repos;
 use crate::workflows::Workflows;
 use anyhow::{Context, Result};
 use artifacts::{Artifact, Artifacts};
 use bytes::Bytes;
 use contents::Contents;
 use data_ingester_sarif::{Sarif, SarifHecs};
-use data_ingester_splunk::splunk::ToHecEvents;
 use data_ingester_supporting::keyvault::GitHubApp;
-use graphql_client::{GraphQLQuery, Response};
+use github_response::GithubNextLink;
+use graphql_client::GraphQLQuery;
+use graphql_client::Response;
 use http_body_util::BodyExt;
-use itertools::Itertools;
-use octocrab::models::{ArtifactId, InstallationId, Repository};
+use octocrab::models::{ArtifactId, InstallationId};
 use octocrab::params::actions::ArchiveFormat;
 use octocrab::Octocrab;
-use regex::Regex;
+use org_members::{OrgMemberQuery, OrgMembers};
 use serde::{Deserialize, Serialize};
 use teams::GitHubTeamsOrg;
-use tokio::sync::OnceCell;
 use tracing::{error, info, warn};
 use workflows::{WorkflowRunJobs, WorkflowRuns};
 
@@ -119,12 +124,9 @@ impl OctocrabGit {
         let mut raw = vec![];
         let mut teams_org = crate::teams::GitHubTeamsOrg::new(org);
 
-        for team in teams.inner.iter().flat_map(|ghr| match &ghr.response {
-            crate::SingleOrVec::Vec(ref vec) => vec.to_vec(),
-            crate::SingleOrVec::Single(single) => vec![single.clone()],
-        }) {
+        for team in teams.responses_value_iter() {
             teams_org
-                .push_team_value(&team)
+                .push_team_value(team)
                 .context("Adding team to org")?;
 
             let team_id = team
@@ -146,7 +148,7 @@ impl OctocrabGit {
                 .push_team_members_responses(team_id, &team_members)
                 .context("Adding members to team&org")?;
 
-            raw.extend(team_members.inner);
+            raw.extend(team_members.into_inner());
 
             let team_teams = self
                 .org_team_teams(org, team_id)
@@ -157,9 +159,9 @@ impl OctocrabGit {
                 .push_team_teams_responses(team_id, &team_teams)
                 .context("Adding teams to org")?;
 
-            raw.extend(team_teams.inner);
+            raw.extend(team_teams.into_inner());
         }
-        teams.inner.extend(raw);
+        teams.extend(raw);
         Ok((teams, teams_org))
     }
 
@@ -228,10 +230,7 @@ impl OctocrabGit {
 
         let mut ruleset_details = vec![];
 
-        for ruleset in rulesets.inner.iter().flat_map(|ghr| match &ghr.response {
-            crate::SingleOrVec::Vec(ref vec) => vec.to_vec(),
-            crate::SingleOrVec::Single(single) => vec![single.clone()],
-        }) {
+        for ruleset in rulesets.responses_value_iter() {
             if let Some(status) = ruleset.get("status") {
                 if status == "403" {
                     let response_message = ruleset
@@ -241,7 +240,7 @@ impl OctocrabGit {
                         .context("Getting 403 response as str")?;
 
                     warn!(
-                        "error while 'Getting Rulesets for {repo}': {}",
+                        "error while 'Gtting Rulesets for {repo}': {}",
                         response_message
                     );
                     continue;
@@ -254,14 +253,14 @@ impl OctocrabGit {
                 .context("Getting `id` as u64")?;
 
             info!("Getting Ruleset for {repo} {ruleset_id}");
-            ruleset_details.extend(
-                self.repo_ruleset_by_id(repo, ruleset_id)
-                    .await
-                    .context("Getting team members")?
-                    .inner,
-            );
+            let repo_ruleset = self
+                .repo_ruleset_by_id(repo, ruleset_id)
+                .await
+                .context("Getting team members")?;
+
+            ruleset_details.extend(repo_ruleset.into_inner());
         }
-        rulesets.inner.extend(ruleset_details);
+        rulesets.extend(ruleset_details);
         Ok(rulesets)
     }
 
@@ -504,15 +503,14 @@ impl OctocrabGit {
         for uri in uris {
             let collection = self.get_collection(&uri).await?;
             if collection
-                .inner
-                .iter()
-                .any(|response| response.ssphp_http_status == 200)
+                .responses_iter()
+                .any(|response| response.http_status() == 200)
             {
-                responses.extend(collection.inner);
+                responses.extend(collection.into_inner());
                 break;
             }
         }
-        Ok(GithubResponses { inner: responses })
+        Ok(responses.into())
     }
 
     /// Get a relative uri from api.github.com.
@@ -523,7 +521,7 @@ impl OctocrabGit {
 
         let response = self
             .client
-            ._get(next_link.next.context("no link available")?)
+            ._get(next_link.next().context("no link available")?)
             .await
             .with_context(|| format!("Using Octocrab to get url: {}", uri))?;
 
@@ -551,13 +549,9 @@ impl OctocrabGit {
             }
         };
 
-        let responses = vec![GithubResponse {
-            response: body,
-            source: uri.to_string(),
-            ssphp_http_status: status,
-        }];
+        let responses = vec![GithubResponse::new(body, uri.to_string(), status)];
 
-        Ok(GithubResponses { inner: responses })
+        Ok(responses.into())
     }
 
     /// Get a relative uri from api.github.com and exhaust all next links.
@@ -568,7 +562,7 @@ impl OctocrabGit {
 
         let mut responses = vec![];
 
-        while let Some(ref next) = next_link.next {
+        while let Some(next) = next_link.next() {
             let response = self
                 .client
                 ._get(next)
@@ -616,14 +610,10 @@ impl OctocrabGit {
                 }
             };
 
-            responses.push(GithubResponse {
-                response: body,
-                source: uri.to_string(),
-                ssphp_http_status: status,
-            });
+            responses.push(GithubResponse::new(body, uri.to_string(), status));
         }
 
-        Ok(GithubResponses { inner: responses })
+        Ok(responses.into())
     }
 
     pub(crate) async fn wait_for_rate_limit(&self) -> Result<()> {
@@ -700,108 +690,12 @@ impl OctocrabGit {
     }
 }
 
-/// Containing for OrgMembers
-#[derive(Default, Debug)]
-struct OrgMembers(Vec<OrgMember>);
-
-impl OrgMembers {
-    /// Extend the members from a [org_member_query::ResponseData]
-    pub(crate) fn extend(
-        &mut self,
-        response: Response<org_member_query::ResponseData>,
-    ) -> Result<()> {
-        let members: OrgMembers = response.try_into().context("Convert to OrgMembers")?;
-        self.0.extend(members.0);
-        Ok(())
-    }
-}
-
-/// Hec Event descriptor for Org Members
-impl ToHecEvents for &OrgMembers {
-    type Item = OrgMember;
-
-    fn source(&self) -> &str {
-        "graphql:org_members_query"
-    }
-
-    fn sourcetype(&self) -> &str {
-        "github"
-    }
-
-    fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
-        Box::new(self.0.iter())
-    }
-    fn ssphp_run_key(&self) -> &str {
-        "github"
-    }
-}
-
-/// Org member representation sent to Splunk
-#[derive(Serialize, Default, Debug)]
-struct OrgMember {
-    organisation: String,
-    login: String,
-    email: String,
-    role: org_member_query::OrganizationMemberRole,
-}
-
-/// Convert a [org_member_query::ResponseData] to [OrgMembers]
-impl TryFrom<Response<org_member_query::ResponseData>> for OrgMembers {
-    type Error = anyhow::Error;
-    fn try_from(value: Response<org_member_query::ResponseData>) -> Result<Self> {
-        let organization = value
-            .data
-            .and_then(|data| data.organization)
-            .context("OrgQueryOrganization should be present")?;
-        let organization_login = organization.login.as_str();
-        let members_with_roles = organization
-            .members_with_role
-            .edges
-            .context("Expect member_with_role edges to be present")?;
-
-        let mut org_members = Vec::with_capacity(members_with_roles.len());
-
-        for member_with_role in members_with_roles.iter().flatten() {
-            let role = member_with_role
-                .role
-                .as_ref()
-                .context("Role to be present")?;
-            let member = member_with_role
-                .node
-                .as_ref()
-                .context("Expect member to be present")?;
-            let org_member = OrgMember {
-                organisation: organization_login.to_owned(),
-                login: member.login.to_owned(),
-                email: member.email.to_owned(),
-                role: role.clone(),
-            };
-            org_members.push(org_member);
-        }
-        Ok(OrgMembers(org_members))
-    }
-}
-
-impl Default for org_member_query::OrganizationMemberRole {
-    fn default() -> Self {
-        Self::MEMBER
-    }
-}
-
-/// Autogenerated structs from 'src/org_member_query.graphql'
-#[derive(GraphQLQuery)]
-#[graphql(
-    schema_path = "src/schema.docs.graphql",
-    query_path = "src/org_member_query.graphql",
-    response_derives = "Clone, Debug, Default",
-    variables_derives = "Clone, Debug"
-)]
-pub struct OrgMemberQuery;
-
 /// Custom DateTime struct for the GitHub API
 #[derive(Clone, Default, Debug, Serialize, Deserialize, PartialOrd, Eq, PartialEq)]
 struct DateTime(String);
 
+#[cfg(feature = "live_tests")]
+#[cfg(test)]
 #[cfg(feature = "live_tests")]
 #[cfg(test)]
 mod test {
@@ -1126,284 +1020,6 @@ mod test {
 
             client.splunk.send_batch(&hec_events).await?;
         }
-        Ok(())
-    }
-}
-
-#[derive(Serialize, Debug, Clone)]
-struct Repos {
-    inner: Vec<Repository>,
-    source: String,
-}
-
-/// New type for Vec<[Repository]> including the source of the repository
-impl Repos {
-    fn new(repos: Vec<Repository>, org: &str) -> Self {
-        Self {
-            inner: repos,
-            source: format!("github:{}", org),
-        }
-    }
-}
-
-impl ToHecEvents for &Repos {
-    type Item = Repository;
-    fn source(&self) -> &str {
-        &self.source
-    }
-
-    fn sourcetype(&self) -> &str {
-        "github"
-    }
-
-    fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
-        Box::new(self.inner.iter())
-    }
-    fn ssphp_run_key(&self) -> &str {
-        "github"
-    }
-}
-
-/// A collection of API responses from Github
-#[derive(Serialize, Debug)]
-struct GithubResponses {
-    inner: Vec<GithubResponse>,
-}
-
-impl<'a> IntoIterator for &'a GithubResponses {
-    type Item = &'a GithubResponse;
-
-    type IntoIter = GithubResponsesIterator<'a>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        Self::IntoIter {
-            current: 0,
-            collection: &self.inner,
-        }
-    }
-}
-
-struct GithubResponsesIterator<'a> {
-    current: usize,
-    collection: &'a [GithubResponse],
-}
-
-impl<'a> Iterator for GithubResponsesIterator<'a> {
-    type Item = &'a GithubResponse;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        let value = self.collection.get(self.current);
-        if value.is_some() {
-            self.current = 1;
-        }
-        value
-    }
-}
-
-impl ToHecEvents for &GithubResponses {
-    type Item = GithubResponse;
-
-    /// Not used
-    fn source(&self) -> &str {
-        unimplemented!()
-    }
-
-    /// Not used
-    fn sourcetype(&self) -> &str {
-        unimplemented!()
-    }
-
-    /// Not used
-    fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
-        unimplemented!()
-    }
-
-    /// Create a collection of
-    /// [data_ingester_splunk::splunk::HecEvent] for each element in
-    /// of a Github response, in a collection of github responses.
-    fn to_hec_events(&self) -> Result<Vec<data_ingester_splunk::splunk::HecEvent>> {
-        Ok(self
-            .inner
-            .iter()
-            .flat_map(|response| response.to_hec_events())
-            .flatten()
-            .collect())
-    }
-
-    fn ssphp_run_key(&self) -> &str {
-        "github"
-    }
-}
-
-/// An  API responses from Github
-#[derive(Serialize, Debug)]
-pub(crate) struct GithubResponse {
-    #[serde(flatten)]
-    response: SingleOrVec,
-    #[serde(skip)]
-    source: String,
-    ssphp_http_status: u16,
-}
-
-impl<'a> IntoIterator for &'a GithubResponse {
-    type Item = &'a serde_json::Value;
-
-    type IntoIter = GithubResponseIterator<'a>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        match &self.response {
-            SingleOrVec::Vec(vec) => Self::IntoIter {
-                current: 0,
-                collection: vec.iter().collect(),
-            },
-            SingleOrVec::Single(single) => Self::IntoIter {
-                current: 0,
-                collection: vec![&single],
-            },
-        }
-    }
-}
-
-pub(crate) struct GithubResponseIterator<'a> {
-    current: usize,
-    collection: Vec<&'a serde_json::Value>,
-}
-
-impl<'a> Iterator for GithubResponseIterator<'a> {
-    type Item = &'a serde_json::Value;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        let value = self.collection.get(self.current);
-        if value.is_some() {
-            self.current += 1;
-        }
-        value.copied()
-    }
-}
-
-/// Descriminator type to help [serde::Deserialize] deal with API endpoints that return a '{}' or a '[{}]'
-#[derive(Deserialize, Serialize, Debug)]
-#[serde(untagged)]
-enum SingleOrVec {
-    Vec(Vec<serde_json::Value>),
-    Single(serde_json::Value),
-}
-
-impl ToHecEvents for &GithubResponse {
-    type Item = Self;
-    fn source(&self) -> &str {
-        &self.source
-    }
-
-    fn sourcetype(&self) -> &str {
-        "github"
-    }
-
-    /// Not used
-    fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
-        unimplemented!()
-    }
-
-    /// Create a [data_ingester_splunk::splunk::HecEvent] for each
-    /// element of a collection returned by a single GitHub api call.
-    fn to_hec_events(&self) -> Result<Vec<data_ingester_splunk::splunk::HecEvent>> {
-        // TODO FIX THIS
-        // Shouldn't have to clone all the values :(
-        let data = match &self.response {
-            SingleOrVec::Single(single) => vec![single.clone()],
-            SingleOrVec::Vec(vec) => vec.to_vec(),
-        };
-
-        let (ok, _err): (Vec<_>, Vec<_>) = data
-            .iter()
-            .map(|event| GithubResponse {
-                response: SingleOrVec::Single(event.clone()),
-                source: self.source.clone(),
-                ssphp_http_status: self.ssphp_http_status,
-            })
-            .map(|gr| {
-                data_ingester_splunk::splunk::HecEvent::new_with_ssphp_run(
-                    &gr,
-                    self.source(),
-                    self.sourcetype(),
-                    self.get_ssphp_run(),
-                )
-            })
-            .partition_result();
-        Ok(ok)
-    }
-
-    fn ssphp_run_key(&self) -> &str {
-        "github"
-    }
-}
-
-/// Helper for paginating GitHub resoponses.
-///
-/// Represents the link to the next page of results for a paginated Github request.
-///
-/// The link is stored as just the path and query elements of the URI
-/// for compatibility with OctoCrab authentication
-///
-#[derive(Debug)]
-struct GithubNextLink {
-    next: Option<String>,
-}
-
-impl GithubNextLink {
-    /// Use the exact url as the next link
-    fn from_str(url: impl Into<String>) -> Self {
-        Self {
-            next: Some(url.into()),
-        }
-    }
-
-    /// Take a `link` header, as returned  by Github, and create a new [GithubNextLink] from it.
-    async fn from_link_str(header: &str) -> Self {
-        static CELL: OnceCell<Regex> = OnceCell::const_new();
-        let regex = CELL
-            .get_or_init(|| async {
-                Regex::new(r#"<(?<url>[^>]+)>; rel=\"next\""#).expect("Regex is valid")
-            })
-            .await;
-
-        let next = regex
-            .captures(header)
-            .and_then(|cap| cap.name("url").map(|m| m.as_str().to_string()))
-            .and_then(|url| http::uri::Uri::from_maybe_shared(url).ok())
-            .and_then(|uri| uri.path_and_query().map(|pq| pq.as_str().to_string()));
-
-        Self { next }
-    }
-
-    /// Create a next link from a [http::Response] from GitHub API.
-    async fn from_response<T>(response: &http::Response<T>) -> Result<Self> {
-        let header = if let Some(header) = response.headers().get("link") {
-            header
-                .to_str()
-                .context("Unable to parse GitHub link header")?
-        } else {
-            return Ok(Self { next: None });
-        };
-        Ok(Self::from_link_str(header).await)
-    }
-}
-
-#[cfg(test)]
-mod test_github_next_link {
-    use anyhow::Result;
-
-    use crate::GithubNextLink;
-    #[tokio::test]
-    async fn test_github_links() -> Result<()> {
-        let header = "<https://api.github.com/repositories/123456789/dependabot/alerts?per_page=1&page=2>; rel=\"next\", <https://api.github.com/repositories/123456789/dependabot/alerts?per_page=1&page=5>; rel=\"last\"";
-
-        let next = GithubNextLink::from_link_str(header).await;
-        assert!(next.next.is_some());
-        assert_eq!(
-            next.next.unwrap(),
-            "/repositories/123456789/dependabot/alerts?per_page=1&page=2".to_string()
-        );
         Ok(())
     }
 }
