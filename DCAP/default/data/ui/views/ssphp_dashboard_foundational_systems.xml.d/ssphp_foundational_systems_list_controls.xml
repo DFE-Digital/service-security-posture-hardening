@@ -1,0 +1,60 @@
+{% if environment=="_DEV" %}
+  <dashboard theme="light" version="1.1" hideFilters="true" stylesheet="ssphp_DEV.css" script="js/addtags.js, js/table_cell_backcolor_multivalue.js">
+{% else %}
+  <dashboard theme="dark" version="1.1" hideFilters="true" stylesheet="ssphp.css" script="js/addtags.js, js/table_cell_backcolor_multivalue.js">
+{% endif %}
+
+
+<label>Security Posture Continuous Assurance : List Foundational Systems Controls Dashboard</label>
+<description>{{environment}} v1.0.0</description>
+  
+
+
+  <row depends="$debug$">
+    <panel>
+      <table>
+        <search>
+          <query>
+| rest /servicesNS/-/-/saved/searches splunk_server=local
+
+| search eai:acl.app="{{app}}{{environment}}" AND title="ssphp_list_fs_controls{{environment}}"
+
+| table title, search
+          </query>
+          <done>
+            <set token="tkn_search_text">$result.search$</set>
+          </done>
+        </search>
+      </table>
+    </panel>
+  </row>
+
+
+
+
+  <row>
+    <panel>
+      <title>Control List</title>
+      <table>
+        <search>
+          <query>
+$tkn_search_text$
+          </query>
+          <done>
+            <set token="tkn_ready_highlight">true</set>
+          </done>
+          <earliest>0</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="count">50</option>
+        <option name="dataOverlayMode">none</option>
+        <option name="drilldown">none</option>
+        <option name="percentagesRow">false</option>
+        <option name="rowNumbers">false</option>
+        <option name="totalsRow">false</option>
+        <option name="wrap">true</option>
+      </table>
+    </panel>
+  </row>
+
+</dashboard>
