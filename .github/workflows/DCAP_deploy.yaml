@@ -1,0 +1,28 @@
+---
+name: DCAP Production Deploy
+
+on:
+  push:
+    branches:
+      - main
+      - composite-deploy-action-test
+    paths:
+      - DCAP/**
+      - .github/workflows/DCAP_deploy.yaml
+  workflow_dispatch:
+
+jobs:
+  deploy:
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dfe-digital/splunk-app-packager@composite-deploy-action
+        with:
+          app_package_path: 'DCAP'
+          splunk_username: ${{ secrets.SPLUNK_USERNAME }}
+          splunk_password: ${{ secrets.SPLUNK_PASSWORD }}
+          splunk_acs_token: ${{ secrets.SPLUNK_ACS_TOKEN }}
+          splunk_acs_stack: ${{ secrets.SPLUNK_ACS_STACK }}
