@@ -1,4 +1,4 @@
-use crate::{GithubResponse, GithubResponses};
+use crate::{github_response::GithubResponse, github_response::GithubResponses};
 use anyhow::{anyhow, Result};
 use data_ingester_splunk::splunk::ToHecEvents;
 use serde::{Deserialize, Serialize};
@@ -55,13 +55,12 @@ impl TryFrom<&GithubResponses> for Workflows {
     type Error = anyhow::Error;
 
     fn try_from(value: &GithubResponses) -> std::prelude::v1::Result<Self, Self::Error> {
-        if value.inner.is_empty() {
+        if value.is_empty() {
             anyhow::bail!("No artifacts in Github Response");
         }
 
         let workflows = value
-            .inner
-            .iter()
+            .responses_iter()
             .filter_map(|response| Workflows::try_from(response).ok())
             .flat_map(|workflows| workflows.workflows.into_iter())
             .collect::<Vec<Workflow>>();
@@ -69,7 +68,7 @@ impl TryFrom<&GithubResponses> for Workflows {
         Ok(Self {
             workflows,
             total_count: 0,
-            source: value.inner[0].source.to_string(),
+            source: value.source(),
             sourcetype: "github".to_string(),
         })
     }
@@ -161,13 +160,12 @@ impl TryFrom<&GithubResponses> for WorkflowRuns {
     type Error = anyhow::Error;
 
     fn try_from(value: &GithubResponses) -> std::prelude::v1::Result<Self, Self::Error> {
-        if value.inner.is_empty() {
+        if value.is_empty() {
             anyhow::bail!("No artifacts in Github Response");
         }
 
         let workflow_runs = value
-            .inner
-            .iter()
+            .responses_iter()
             .filter_map(|response| WorkflowRuns::try_from(response).ok())
             .flat_map(|workflow_runs| workflow_runs.workflow_runs.into_iter())
             .collect::<Vec<WorkflowRun>>();
@@ -175,7 +173,7 @@ impl TryFrom<&GithubResponses> for WorkflowRuns {
         Ok(Self {
             total_count: workflow_runs.len(),
             workflow_runs,
-            source: value.inner[0].source.to_string(),
+            source: value.source(),
             sourcetype: "github".to_string(),
         })
     }
@@ -274,21 +272,22 @@ impl TryFrom<&GithubResponses> for WorkflowRunJobs {
     type Error = anyhow::Error;
 
     fn try_from(value: &GithubResponses) -> std::prelude::v1::Result<Self, Self::Error> {
-        if value.inner.is_empty() {
+        if value.is_empty() {
             anyhow::bail!("No artifacts in Github Response");
         }
 
         let jobs = value
-            .inner
-            .iter()
+            .into_iter()
             .filter_map(|response| WorkflowRunJobs::try_from(response).ok())
             .flat_map(|workflow_run_jobs| workflow_run_jobs.jobs.into_iter())
             .collect::<Vec<Value>>();
 
+        let source = value.source();
+
         Ok(Self {
             total_count: jobs.len(),
             jobs,
-            source: value.inner[0].source.to_string(),
+            source,
             sourcetype: "github".to_string(),
         })
     }

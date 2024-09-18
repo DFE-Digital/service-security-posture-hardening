@@ -1,4 +1,4 @@
-use crate::{DateTime, GithubResponse, GithubResponses};
+use crate::{github_response::GithubResponse, github_response::GithubResponses, DateTime};
 use data_ingester_splunk::splunk::ToHecEvents;
 use serde::{Deserialize, Serialize};
 
@@ -46,13 +46,12 @@ impl TryFrom<&GithubResponses> for Artifacts {
     type Error = anyhow::Error;
 
     fn try_from(value: &GithubResponses) -> std::prelude::v1::Result<Self, Self::Error> {
-        if value.inner.is_empty() {
+        if value.is_empty() {
             anyhow::bail!("No artifacts in Github Response");
         }
 
         let artifacts = value
-            .inner
-            .iter()
+            .responses_iter()
             .filter_map(|response| Artifacts::try_from(response).ok())
             .flat_map(|artifacts| artifacts.artifacts.into_iter())
             .collect::<Vec<Artifact>>();
@@ -60,7 +59,7 @@ impl TryFrom<&GithubResponses> for Artifacts {
         Ok(Self {
             artifacts,
             total_count: 0,
-            source: value.inner[0].source.to_string(),
+            source: value.source(),
             sourcetype: "github".to_string(),
         })
     }
@@ -149,7 +148,7 @@ struct WorkflowRun {
 mod test {
     use serde_json::Value;
 
-    use crate::{GithubResponse, GithubResponses};
+    use crate::{github_response::SingleOrVec, GithubResponse, GithubResponses};
 
     use super::Artifacts;
 
@@ -204,11 +203,8 @@ mod test {
     /// `Artifacts` loaded from JSON
     fn artifacts() -> Artifacts {
         let value = artifact_as_value();
-        let github_response = GithubResponse {
-            response: crate::SingleOrVec::Single(value),
-            source: "github_test".to_string(),
-            ssphp_http_status: 200,
-        };
+        let github_response =
+            GithubResponse::new(SingleOrVec::Single(value), "github_test".to_string(), 200);
         Artifacts::try_from(&github_response).expect("Artifacts to Parse from GitHubResponse")
     }
 
@@ -216,11 +212,8 @@ mod test {
     #[test]
     fn artifacts_try_from_github_response() {
         let value = artifact_as_value();
-        let github_response = GithubResponse {
-            response: crate::SingleOrVec::Single(value),
-            source: "github_test".to_string(),
-            ssphp_http_status: 200,
-        };
+        let github_response =
+            GithubResponse::new(SingleOrVec::Single(value), "github_test".to_string(), 200);
         let artifacts =
             Artifacts::try_from(&github_response).expect("Artifacts to Parse from GitHubResponse");
         assert_eq!(artifacts.artifacts.len(), 2);
@@ -230,14 +223,10 @@ mod test {
     #[test]
     fn artifacts_try_from_github_responses() {
         let value = artifact_as_value();
-        let github_response = GithubResponse {
-            response: crate::SingleOrVec::Single(value),
-            source: "github_test".to_string(),
-            ssphp_http_status: 200,
-        };
-        let github_responses = GithubResponses {
-            inner: vec![github_response],
-        };
+        let github_response =
+            GithubResponse::new(SingleOrVec::Single(value), "github_test".to_string(), 200);
+        let github_responses: GithubResponses = vec![github_response].into();
+
         let artifacts = Artifacts::try_from(&github_responses)
             .expect("Artifacts to Parse from GitHubResponses");
         assert_eq!(artifacts.artifacts.len(), 2);

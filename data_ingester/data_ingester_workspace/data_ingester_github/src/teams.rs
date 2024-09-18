@@ -1,11 +1,10 @@
 use std::{collections::HashMap, fmt::Display};
 
+use crate::github_response::GithubResponses;
 use anyhow::{Context, Result};
 use data_ingester_splunk::splunk::{HecEvent, ToHecEvents};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-
-use crate::GithubResponses;
 
 /// Representation of a GitHub org to calculate nested team membership
 #[derive(Default, Debug)]
@@ -89,26 +88,14 @@ impl GitHubTeamsOrg {
             .teams
             .get_mut(&TeamId(team_id))
             .context("No team with matching ID")?;
-        for response in &responses.inner {
-            match response.response {
-                crate::SingleOrVec::Vec(ref members) => {
-                    for member in members {
-                        let member = Member::try_from(member.clone())?;
-                        team.members.push(member.id.clone());
-                        if !self.members.contains_key(&member.id) {
-                            let _ = self.members.insert(member.id.clone(), member);
-                        }
-                    }
-                }
-                crate::SingleOrVec::Single(ref member) => {
-                    let member = Member::try_from(member.clone())?;
-                    team.members.push(member.id.clone());
-                    if !self.members.contains_key(&member.id) {
-                        let _ = self.members.insert(member.id.clone(), member);
-                    }
+        responses.responses_value_iter().for_each(|value| {
+            if let Ok(member) = Member::try_from(value.clone()) {
+                team.members.push(member.id.clone());
+                if !self.members.contains_key(&member.id) {
+                    let _ = self.members.insert(member.id.clone(), member);
                 }
             }
-        }
+        });
         Ok(())
     }
 
@@ -126,28 +113,22 @@ impl GitHubTeamsOrg {
             .teams
             .get_mut(&TeamId(team_id))
             .context("No team with matching ID")?;
+
         let mut new_teams = vec![];
-        for response in &responses.inner {
-            match response.response {
-                crate::SingleOrVec::Vec(ref child_teams) => {
-                    for child_team_value in child_teams {
-                        let child_team = Team::try_from(child_team_value.clone())?;
-                        team.teams.push(child_team.id.clone());
-                        new_teams.push(child_team);
-                    }
-                }
-                crate::SingleOrVec::Single(ref child_team_value) => {
-                    let child_team = Team::try_from(child_team_value.clone())?;
-                    team.teams.push(child_team.id.clone());
-                    new_teams.push(child_team);
-                }
+
+        responses.responses_value_iter().for_each(|value| {
+            if let Ok(child_team) = Team::try_from(value.clone()) {
+                team.teams.push(child_team.id.clone());
+                new_teams.push(child_team);
             }
-        }
+        });
+
         for new_team in new_teams {
             if !self.teams.contains_key(&new_team.id) {
                 let _ = self.teams.insert(new_team.id.clone(), new_team);
             }
         }
+
         Ok(())
     }
 

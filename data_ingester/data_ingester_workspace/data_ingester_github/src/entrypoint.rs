@@ -105,7 +105,11 @@ async fn github_collect_installation_org(
         .org_repos(&org_name)
         .await
         .context("Getting repos for {org_name}")?;
-    info!("Retreived {} repos for {}", org_repos.inner.len(), org_name);
+    info!(
+        "Retreived {} repos for {}",
+        org_repos.repos().len(),
+        org_name
+    );
 
     let events = (&org_repos)
         .to_hec_events()
@@ -138,7 +142,7 @@ async fn github_collect_installation_org(
         .await
         .context("Sending Calculated teams and members to Splunk")?;
 
-    for repo in org_repos.inner {
+    for repo in org_repos.repos() {
         let rate_limits = github_client.client.ratelimit().get().await?;
         let rate_limits_json = serde_json::to_string(&rate_limits)?;
         info!(name: "GitHub", org_name, rate_limits_json);
