@@ -240,7 +240,7 @@ impl OctocrabGit {
                         .context("Getting 403 response as str")?;
 
                     warn!(
-                        "error while 'Gtting Rulesets for {repo}': {}",
+                        "error while 'Getting Rulesets for {repo}': {}",
                         response_message
                     );
                     continue;
@@ -696,8 +696,6 @@ struct DateTime(String);
 
 #[cfg(feature = "live_tests")]
 #[cfg(test)]
-#[cfg(feature = "live_tests")]
-#[cfg(test)]
 mod test {
     use std::{borrow::Borrow, env};
 
@@ -705,6 +703,7 @@ mod test {
     use data_ingester_splunk::splunk::{Splunk, ToHecEvents};
     use data_ingester_supporting::keyvault::get_keyvault_secrets;
     use futures::future::{BoxFuture, FutureExt};
+    use octocrab::models::Repository;
 
     use crate::{OctocrabGit, Repos};
 
@@ -788,7 +787,7 @@ mod test {
             T: std::fmt::Debug + Borrow<H>,
             for<'a> &'a H: ToHecEvents,
         {
-            for repo in self.repos.inner.iter() {
+            for repo in self.repos().iter() {
                 let repo_name = self.repo_name(&repo.name);
                 let result = func(&repo_name).await.unwrap();
 
@@ -803,6 +802,10 @@ mod test {
                     .context("Sending events to Splunk")?;
             }
             Ok(())
+        }
+
+        fn repos(&self) -> &[Repository] {
+            self.repos.repos()
         }
 
         async fn org<F, T, H>(&self, func: F) -> Result<()>
@@ -929,7 +932,7 @@ mod test {
     async fn test_github_download_artifact() -> Result<()> {
         let client = TestClient::new().await;
         let mut total_hec_events = vec![];
-        for repo in client.repos.inner.iter() {
+        for repo in client.repos().iter() {
             let repo_name = client.repo_name(&repo.name);
             let sarif_hecs = client
                 .client
@@ -961,7 +964,7 @@ mod test {
     #[tokio::test]
     async fn test_repo_actions_get_workflow_files() -> Result<()> {
         let client = TestClient::new().await;
-        for repo in client.repos.inner.iter() {
+        for repo in client.repos().iter() {
             let repo_name = client.repo_name(&repo.name);
             let workflows = client
                 .client
@@ -983,13 +986,13 @@ mod test {
     #[tokio::test]
     async fn test_repo_actions_list_workflow_runs() -> Result<()> {
         let client = TestClient::new().await;
-        for repo in client.repos.inner.iter() {
+        for repo in client.repos().iter() {
             let repo_name = client.repo_name(&repo.name);
             let workflow_runs = client
                 .client
                 .repo_actions_list_workflow_runs(&repo_name)
                 .await?;
-            let hec_events = (&workflow_files)
+            let hec_events = (&workflow_runs)
                 .to_hec_events()
                 .context("Convert workflow_runs to HecEvents")?;
 
@@ -1001,7 +1004,7 @@ mod test {
     #[tokio::test]
     async fn test_repo_actions_list_workflow_run_jobs() -> Result<()> {
         let client = TestClient::new().await;
-        for repo in client.repos.inner.iter() {
+        for repo in client.repos().iter() {
             let repo_name = client.repo_name(&repo.name);
 
             let workflow_runs = client
