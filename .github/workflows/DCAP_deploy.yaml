@@ -5,10 +5,8 @@ on:
   push:
     branches:
       - main
-      - composite-deploy-action-test
     paths:
       - DCAP/**
-      - .github/workflows/DCAP_deploy.yaml
   workflow_dispatch:
 
 jobs:
@@ -19,7 +17,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: dfe-digital/splunk-app-packager@composite-deploy-action
+      - uses: dfe-digital/splunk-app-packager@main
         with:
           app_package_path: 'DCAP'
           splunk_username: ${{ secrets.SPLUNK_USERNAME }}
