@@ -22,3 +22,4 @@ TA_SSPHP/tests/SPLUNK_HOME
 **/.terraform.lock.hcl
 **/*tfstate*
 rustc-ice*.txt
+*.profraw
