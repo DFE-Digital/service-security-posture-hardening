@@ -5,7 +5,8 @@
             "schedule": "0 0 2 * * *",
             "direction": "in",
             "type": "timerTrigger",
-            "runOnStartup": false
+            "runOnStartup": false,
+            "UseMonitor": false
         }
     ]
 }
