@@ -4,7 +4,8 @@
             "name": "timer",
             "schedule": "0 0 4 * * *",
             "direction": "in",
-            "type": "timerTrigger"
+            "type": "timerTrigger",
+            "runOnStartup": false
         }
     ]
 }
