@@ -89,6 +89,7 @@ impl Sonar {
                 total: 0,
             },
             components: vec![],
+            issues: vec![],
             source: format!("{url}{org}"),
         };
 
@@ -106,7 +107,46 @@ impl Sonar {
             }
             page_n += 1;
             tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
-            
+        }
+        Ok(sonar_response)
+    }
+
+    async fn issues_search(&self, org: &str, component_keys: &str) -> Result<SonarResponse> {
+        let url =  "https://sonarcloud.io/api/issues/search";
+        let org = format!("?organization={org}");
+        //let components = format!("&componentKeys={}", component_keys.join(","));
+        let components = format!("&componentKeys={}", component_keys);        
+        let url = format!("{url}{org}{components}");
+        let mut page_n = 1;        
+
+        let mut sonar_response = SonarResponse {
+            paging: SonarPaging{
+                page_index: 0,
+                page_size: 0,
+                total: 0,
+            },
+            issues: vec![],
+            components: vec![],
+            source: format!("{url}"),
+        };
+
+        loop {
+
+            let page = format!("&ps=300&p={page_n}");
+            let request_url = format!("{url}{page}");
+            let response = self.request(Method::GET, &request_url).send().await?;
+            let body = response.text().await?;
+            let page_response = serde_json::from_str::<SonarResponse>(&body)?;
+            sonar_response.issues.extend(page_response.issues);
+            sonar_response.paging = page_response.paging;
+            if sonar_response.paging.total == sonar_response.issues.len() {
+                break;
+            }
+            page_n += 1;
+            dbg!("sleep");
+            dbg!(&sonar_response);
+            dbg!(&sonar_response.paging);            
+            tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
         }
         Ok(sonar_response)
     }
@@ -115,7 +155,10 @@ impl Sonar {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 struct SonarResponse {
     paging: SonarPaging,
+    #[serde(default)]    
     components: Vec<Value>,
+    #[serde(default)]    
+    issues: Vec<Value>,    
     #[serde(default)]
     source: String,
 }
@@ -140,6 +183,29 @@ impl ToHecEvents for &SonarResponse {
     }
 }
 
+struct ComponentKeys {
+    keys: Vec<String>
+}
+
+struct ComponentKey {
+    key: String,
+}
+
+impl From<&SonarResponse> for ComponentKeys {
+    fn from(value: &SonarResponse) -> Self {
+        let keys = value.components.iter()
+            .flat_map(|component| component.as_object()
+                 .and_then(|obj| obj.get("key")
+                           .and_then(|key| key.as_str())
+                           .and_then(|str| Some(str.to_string()))
+                 )
+            )
+            .collect();
+        Self {
+            keys
+        }
+    }
+}
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
@@ -158,7 +224,7 @@ mod test {
     use data_ingester_splunk::splunk::{Splunk, ToHecEvents};
     use data_ingester_supporting::keyvault::get_keyvault_secrets;
 
-    use crate::Sonar;
+    use crate::{ComponentKeys, Sonar};
 
 
     #[derive(Clone)]
@@ -211,6 +277,22 @@ mod test {
         }
         Ok(())
     }
+
+    #[tokio::test]
+    async fn test_issues_search() -> Result<()> {
+        let test_client = TestClient::new().await?;
+        for org in test_client.orgs {
+            let result = test_client.client.list_projects(&org).await?;
+            let component_keys = ComponentKeys::from(&result);
+            let issues = test_client.client.issues_search(&org, component_keys.keys[0].as_str()).await?;
+            dbg!(&issues);
+            // assert!(result.paging.total > 0);
+            let hec_events = (&issues).to_hec_events()?;
+            test_client.splunk.send_batch(&hec_events).await?;
+        }
+        assert!(false);
+        Ok(())
+    }    
 }
 
 
