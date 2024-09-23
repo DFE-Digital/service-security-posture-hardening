@@ -46,6 +46,50 @@ pub(crate) struct AppState {
     pub(crate) threagile_lock: Arc<Mutex<()>>,
 }
 
+#[derive(Serialize, Debug)]
+pub(crate) AppStateHealthCheck {
+    splunk: String,
+    secrets: String,
+    aws_lock: String,
+    azure_lock: String,
+    azure_resource_graph_lock: String,
+    github_lock: String,
+    m365_lock: String,
+    powershell_lock: String,
+    powershell_installed: String,
+    sonar_cloud: String,
+    splunk_test_lock: String,
+    threagile_lock: String,
+}
+
+struct ArcState {
+    arc_strong_count: usize,
+    arc_weak_count: usize,
+}
+
+struct MutexState<T> {
+    state: std::sync::TryLockResult<T>
+}
+
+impl<T> From<Arc<T>> for ArcState {
+    fn from(value: Arc<T>) -> Self {
+        ArcState {
+            arc_strong_count: Arc::strong_count(&value),
+            arc_weak_count: Arc::weak_count(&value),
+        }
+    }
+}
+
+
+
+impl From<AppState> for AppStateHealthCheck {
+    fn from(value: AppState) -> Self {
+        let splunk  = Arc::strong_count(&value.splunk);
+    }
+}
+         
+
+
 impl AppState {
     /// Create a new AppState
     pub(crate) async fn new() -> Result<Self> {

@@ -125,17 +125,19 @@ where
     };
     response.logs.push(result);
     drop(lock);
+    info!("{name}: completed collection!");
     response
 }
 
 /// Health check
-async fn get_health_check() -> Json<AzureInvokeResponse> {
+async fn get_health_check(State(state): State<Arc<AppState>>) -> Json<AzureInvokeResponse> {
     info!("Health check");
     Json(AzureInvokeResponse {
         outputs: None,
         logs: vec![
             "Health Check".to_string(),
             format!("GIT_HASH: {}", env!("GIT_HASH")),
+            format!("{:#?}", state),
         ],
         return_value: None,
     })
