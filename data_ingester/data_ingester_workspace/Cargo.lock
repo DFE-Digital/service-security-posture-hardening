@@ -271,9 +271,9 @@ dependencies = [
 
 [[package]]
 name = "aws-sdk-accessanalyzer"
-version = "1.45.0"
+version = "1.46.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bb6c4688f6b240f63ebfeb0b5442ef38f74be35dc2fc360ffae8eb675c778f1f"
+checksum = "5b0d86f02e07da11f94b08024a4a2a6c2b2c96d8a3d369ab0a5b5333bda8bd2b"
 dependencies = [
  "aws-credential-types",
  "aws-runtime",
@@ -294,9 +294,9 @@ dependencies = [
 
 [[package]]
 name = "aws-sdk-account"
-version = "1.43.0"
+version = "1.44.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b826a18f1384499ad5fb7b84568dcb392e9034ea2df5a716e3f3d322e6c2f7a5"
+checksum = "cfc5f403db7b3bf61440fc180d24c9fe2430209f1791f6d49ed6d21dc5103cb2"
 dependencies = [
  "aws-credential-types",
  "aws-runtime",
@@ -316,9 +316,9 @@ dependencies = [
 
 [[package]]
 name = "aws-sdk-cloudtrail"
-version = "1.45.0"
+version = "1.46.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "99493a96ea2a6fa59ad20cfeecd7df11d7efa91450687703391769ef9a6cc72a"
+checksum = "d889539ec288a539417e9a5d0ca649e219ebaea5a456d569717b381187ed57aa"
 dependencies = [
  "aws-credential-types",
  "aws-runtime",
@@ -338,9 +338,9 @@ dependencies = [
 
 [[package]]
 name = "aws-sdk-config"
-version = "1.44.0"
+version = "1.45.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bab9c3b4c4dab33b761abe721721234012ad415dcbc017b694206b51176c3290"
+checksum = "83f1a0006d5aa0d9a8ba8207e142a08e28c366cca7b043489f82489728c18fe4"
 dependencies = [
  "aws-credential-types",
  "aws-runtime",
@@ -360,9 +360,9 @@ dependencies = [
 
 [[package]]
 name = "aws-sdk-ec2"
-version = "1.72.0"
+version = "1.73.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3ea47cb1df3ccfb5930519deb087713472d4b7b7f04ee72d7fe7cae5d55c8da6"
+checksum = "f28e99a84594aa86a04ff482f9b836bf796749a97ad811b6b976827d7ba9695f"
 dependencies = [
  "aws-credential-types",
  "aws-runtime",
@@ -384,9 +384,9 @@ dependencies = [
 
 [[package]]
 name = "aws-sdk-iam"
-version = "1.44.0"
+version = "1.45.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0fcdb1aef845f58ba45fbb4acc9adc7c493c380852a95fc68cd461b77704943c"
+checksum = "99f65f73a963d0c4c1a6f139a7f48cf2f1ff9e8f9ad8598c1d1413bd9739c417"
 dependencies = [
  "aws-credential-types",
  "aws-runtime",
@@ -407,9 +407,9 @@ dependencies = [
 
 [[package]]
 name = "aws-sdk-kms"
-version = "1.43.0"
+version = "1.44.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d9f7cb482caa5444d445c94417b9c74e49a849beb09ede4f2f4c3c15f8157387"
+checksum = "c6550445e0913c9383375f4a5a2f550817567a19a178107fce1e1afd767f802a"
 dependencies = [
  "aws-credential-types",
  "aws-runtime",
@@ -429,9 +429,9 @@ dependencies = [
 
 [[package]]
 name = "aws-sdk-organizations"
-version = "1.46.1"
+version = "1.47.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cde6d32098f1b87e1bc5cb4484f1a5f0b211b4d47068dcb89dbd5be16dbbd744"
+checksum = "077f333fefec2ddcd332086a40c8ea8b3697dfc27cacd36fb6c7f999b857298c"
 dependencies = [
  "aws-credential-types",
  "aws-runtime",
@@ -451,9 +451,9 @@ dependencies = [
 
 [[package]]
 name = "aws-sdk-route53"
-version = "1.45.0"
+version = "1.46.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f0087158b6df2aac1a00f66facafaa85ff881bd3405983b03ed42cea2149e793"
+checksum = "166797e8ac4c96b4e2db362b98c6e2b076914592da67f77990c380c453fc4eb9"
 dependencies = [
  "aws-credential-types",
  "aws-runtime",
@@ -473,9 +473,9 @@ dependencies = [
 
 [[package]]
 name = "aws-sdk-s3"
-version = "1.49.0"
+version = "1.51.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e518950d4ac43508c8bfc2fe4e24b0752d99eab80134461d5e162dcda0214b55"
+checksum = "c09fd4b5c7ed75f52b913b4f3ff0501dae7f8cb9125f6d45db4553980cbc0528"
 dependencies = [
  "ahash",
  "aws-credential-types",
@@ -508,9 +508,9 @@ dependencies = [
 
 [[package]]
 name = "aws-sdk-s3control"
-version = "1.45.0"
+version = "1.46.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0cc88cd549358f7a237ac786fc16f7c14af65755a9193f0d89f6f778997a68b7"
+checksum = "d02ea16f82de770b4381e7c72533a96f6ca56578d04f07fe7fbbaa813cc8f118"
 dependencies = [
  "aws-credential-types",
  "aws-runtime",
@@ -533,9 +533,9 @@ dependencies = [
 
 [[package]]
 name = "aws-sdk-securityhub"
-version = "1.45.0"
+version = "1.46.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ee9f9bca89c2db280af3de3790526d8e61e82c5c8d03ca2eeb894de321db5b84"
+checksum = "058a2f6fb69e40accce36ba888ed26512d94d64165a8de4fe5c12acf45326bad"
 dependencies = [
  "aws-credential-types",
  "aws-runtime",
@@ -599,9 +599,9 @@ dependencies = [
 
 [[package]]
 name = "aws-sdk-sts"
-version = "1.42.0"
+version = "1.43.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d1c46924fb1add65bba55636e12812cae2febf68c0f37361766f627ddcca91ce"
+checksum = "cd7a4d279762a35b9df97209f6808b95d4fe78547fe2316b4d200a0283960c5a"
 dependencies = [
  "aws-credential-types",
  "aws-runtime",
@@ -827,9 +827,9 @@ dependencies = [
 
 [[package]]
 name = "axum"
-version = "0.7.5"
+version = "0.7.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3a6c9af12842a67734c9a2e355436e5d03b22383ed60cf13cd0c18fbfe3dcbcf"
+checksum = "8f43644eed690f5374f1af436ecd6aea01cd201f6fbdf0178adaf6907afb2cec"
 dependencies = [
  "async-trait",
  "axum-core",
@@ -853,7 +853,7 @@ dependencies = [
  "serde_urlencoded",
  "sync_wrapper 1.0.1",
  "tokio",
- "tower",
+ "tower 0.5.1",
  "tower-layer",
  "tower-service",
  "tracing",
@@ -861,9 +861,9 @@ dependencies = [
 
 [[package]]
 name = "axum-core"
-version = "0.4.3"
+version = "0.4.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a15c63fd72d41492dc4f497196f5da1fb04fb7529e631d73630d1b491e47a2e3"
+checksum = "5e6b8ba012a258d63c9adfa28b9ddcf66149da6f986c5b5452e629d5ee64bf00"
 dependencies = [
  "async-trait",
  "bytes",
@@ -874,7 +874,7 @@ dependencies = [
  "mime",
  "pin-project-lite",
  "rustversion",
- "sync_wrapper 0.1.2",
+ "sync_wrapper 1.0.1",
  "tower-layer",
  "tower-service",
  "tracing",
@@ -1063,9 +1063,9 @@ checksum = "1fd0f2584146f6f2ef48085050886acf353beff7305ebd1ae69500e27c67f64b"
 
 [[package]]
 name = "bytes"
-version = "1.7.1"
+version = "1.7.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8318a53db07bb3f8dca91a600466bdb3f2eaadeedfdbcf02e1accbad9271ba50"
+checksum = "428d9aa8fbc0670b7b8d6030a7fadd0f86151cae55e4dbbece15f3780a3dfaf3"
 dependencies = [
  "serde",
 ]
@@ -1472,7 +1472,7 @@ dependencies = [
  "jsonwebtoken",
  "octocrab",
  "regex",
- "secrecy",
+ "secrecy 0.10.2",
  "serde",
  "serde_json",
  "serde_yaml",
@@ -2602,7 +2602,7 @@ dependencies = [
  "pin-project-lite",
  "socket2",
  "tokio",
- "tower",
+ "tower 0.4.13",
  "tower-service",
  "tracing",
 ]
@@ -3070,14 +3070,14 @@ dependencies = [
  "once_cell",
  "percent-encoding",
  "pin-project",
- "secrecy",
+ "secrecy 0.8.0",
  "serde",
  "serde_json",
  "serde_path_to_error",
  "serde_urlencoded",
  "snafu",
  "tokio",
- "tower",
+ "tower 0.4.13",
  "tower-http",
  "tracing",
  "url",
@@ -3931,6 +3931,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "secrecy"
+version = "0.10.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ba079fa568d52545cd70b334b2ce6f88f62b8fc2bda9290f48a0578388a49331"
+dependencies = [
+ "zeroize",
+]
+
+[[package]]
 name = "security-framework"
 version = "2.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4563,6 +4572,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "tower"
+version = "0.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2873938d487c3cfb9aed7546dc9f2711d867c9f90c46b889989a2cb84eba6b4f"
+dependencies = [
+ "futures-core",
+ "futures-util",
+ "pin-project-lite",
+ "sync_wrapper 0.1.2",
+ "tokio",
+ "tower-layer",
+ "tower-service",
+ "tracing",
+]
+
+[[package]]
 name = "tower-http"
 version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4576,7 +4601,7 @@ dependencies = [
  "http-body-util",
  "iri-string",
  "pin-project-lite",
- "tower",
+ "tower 0.4.13",
  "tower-layer",
  "tower-service",
  "tracing",
