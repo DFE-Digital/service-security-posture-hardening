@@ -129,6 +129,8 @@ pub async fn get_keyvault_secrets(keyvault_name: &str) -> Result<Secrets> {
         qualys_username: qualys_username.await?,
         qualys_password: qualys_password.await?,
         sonar_api_key: sonar_api_key.await?,
-        sonar_orgs: sonar_orgs.await?.map(|s| s.split(",").map(|s| s.to_string()).collect()),
+        sonar_orgs: sonar_orgs
+            .await?
+            .map(|s| s.split(",").map(|s| s.to_string()).collect()),
     })
 }

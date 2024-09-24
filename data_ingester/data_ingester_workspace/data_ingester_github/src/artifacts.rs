@@ -49,7 +49,6 @@ impl TryFrom<&GithubResponses> for Artifacts {
         if value.is_empty() {
             anyhow::bail!("No artifacts in Github Response");
         }
-
         let artifacts = value
             .responses_iter()
             .filter_map(|response| Artifacts::try_from(response).ok())
@@ -68,8 +67,8 @@ impl TryFrom<&GithubResponses> for Artifacts {
 /// Convert a `&GitHubResponse` into `Artifacts`
 impl TryFrom<&GithubResponse> for Artifacts {
     type Error = anyhow::Error;
-    fn try_from(value: &GithubResponse) -> Result<Self, Self::Error> {
-        let artifacts = value
+    fn try_from(response: &GithubResponse) -> Result<Self, Self::Error> {
+        let artifacts = response
             .into_iter()
             .filter_map(|value| value.get("artifacts"))
             .filter_map(|value| value.as_array())
@@ -80,8 +79,8 @@ impl TryFrom<&GithubResponse> for Artifacts {
         Ok(Self {
             total_count: artifacts.len(),
             artifacts,
-            source: value.source().to_string(),
-            sourcetype: value.sourcetype().to_string(),
+            source: response.source().to_string(),
+            sourcetype: response.sourcetype().to_string(),
         })
     }
 }
@@ -107,7 +106,7 @@ impl Artifact {
     pub(crate) fn org_name(&self) -> Option<&str> {
         self.archive_download_url.split('/').nth(4)
     }
-    /// The name of the GitHub Repository the Artifact belongs to.    
+    /// The name of the GitHub Repository the Artifact belongs to.
     pub(crate) fn repo_name(&self) -> Option<&str> {
         self.archive_download_url.split('/').nth(5)
     }

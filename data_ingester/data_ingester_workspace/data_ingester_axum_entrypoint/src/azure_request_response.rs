@@ -34,14 +34,14 @@ use serde::Serialize;
 // }
 
 /// https://learn.microsoft.com/en-us/azure/azure-functions/functions-custom-handlers#request-payload
-#[derive(Debug, Deserialize, Default)]
+#[derive(Debug, Deserialize, Default, Serialize)]
 pub(crate) struct AzureInvokeRequest {
     #[allow(dead_code)]
     #[serde(rename = "Data")]
-    pub(crate) data: serde_json::Value,
+    pub(crate) data: Option<serde_json::Value>,
     #[allow(dead_code)]
     #[serde(rename = "Metadata")]
-    pub(crate) metadata: serde_json::Value,
+    pub(crate) metadata: Option<serde_json::Value>,
 }
 
 /// https://learn.microsoft.com/en-us/azure/azure-functions/functions-custom-handlers#response-payload

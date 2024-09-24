@@ -1,12 +1,20 @@
 use anyhow::Context;
 use anyhow::Result;
+use axum::http::HeaderMap;
+use axum::Json;
 use data_ingester_splunk::splunk::Splunk;
 use data_ingester_supporting::keyvault::get_keyvault_secrets;
 use data_ingester_supporting::keyvault::Secrets;
+use serde::Serialize;
+use std::collections::HashMap;
 use std::env;
 use std::sync::Arc;
+use std::time::SystemTime;
 use tokio::sync::Mutex;
+use tokio::sync::RwLock;
 use tracing::info;
+
+use crate::azure_request_response::AzureInvokeRequest;
 
 /// AppState for all requests
 #[derive(Clone)]
@@ -44,51 +52,210 @@ pub(crate) struct AppState {
 
     /// Lock for threagile to stop concurrent executions
     pub(crate) threagile_lock: Arc<Mutex<()>>,
+    pub(crate) stats: Arc<RwLock<Stats>>,
+}
+
+/// Records stats for requsets made to this execution
+#[derive(Serialize, Debug)]
+pub(crate) struct Stats {
+    start_up_time: u64,
+    instance_requests: Vec<Invocation>,
+}
+
+impl Stats {
+    /// Create a new Stats struct
+    fn new() -> Self {
+        Self {
+            start_up_time: SystemTime::now()
+                .duration_since(SystemTime::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_secs(),
+            instance_requests: vec![],
+        }
+    }
+
+    /// Add a new Invocation
+    pub(crate) fn new_invocation<T: Into<String>>(
+        &mut self,
+        name: T,
+        headers: HeaderMap,
+        request: Option<Json<AzureInvokeRequest>>,
+    ) -> usize {
+        self.instance_requests
+            .push(Invocation::new(name, headers, request));
+        self.instance_requests.len()
+    }
+
+    /// Get a Invocation by index
+    pub(crate) fn get(&mut self, index: usize) -> &mut Invocation {
+        &mut self.instance_requests[index]
+    }
+}
+
+/// Represents a single Invocation and it's metadata
+#[derive(Serialize, Debug)]
+pub(crate) struct Invocation {
+    name: String,
+    start: u64,
+    finish: Option<u64>,
+    got_lock: Option<bool>,
+    errors: Option<String>,
+    headers: Headers,
+    request: Option<AzureInvokeRequest>,
+}
+
+impl Invocation {
+    /// Create a new invocation
+    pub(crate) fn new<N: Into<String>>(
+        name: N,
+        headers: HeaderMap,
+        request: Option<Json<AzureInvokeRequest>>,
+    ) -> Self {
+        let headers = Headers::from(headers);
+        let request = request.map(|json| json.0);
+        Self {
+            name: name.into(),
+            start: SystemTime::now()
+                .duration_since(SystemTime::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_secs(),
+            finish: None,
+            errors: None,
+            got_lock: None,
+            headers,
+            request,
+        }
+    }
+
+    /// Add a finish timestamp to this invocation
+    pub(crate) fn finish(&mut self) {
+        self.finish = Some(
+            SystemTime::now()
+                .duration_since(SystemTime::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_secs(),
+        );
+    }
+
+    /// Did this Invocation successfully get the lock
+    pub(crate) fn lock_state(&mut self, state: bool) -> &mut Self {
+        self.got_lock = Some(state);
+        self
+    }
+
+    /// Any errors during exectuction
+    pub(crate) fn errors<T: Into<String>>(&mut self, errors: T) -> &mut Self {
+        self.errors = Some(errors.into());
+        self
+    }
 }
 
 #[derive(Serialize, Debug)]
-pub(crate) AppStateHealthCheck {
-    splunk: String,
-    secrets: String,
-    aws_lock: String,
-    azure_lock: String,
-    azure_resource_graph_lock: String,
-    github_lock: String,
-    m365_lock: String,
-    powershell_lock: String,
-    powershell_installed: String,
-    sonar_cloud: String,
-    splunk_test_lock: String,
-    threagile_lock: String,
+pub(crate) struct Headers(HashMap<String, String>);
+
+impl From<HeaderMap> for Headers {
+    fn from(value: HeaderMap) -> Self {
+        let headers = value
+            .iter()
+            .map(|(k, v)| {
+                (
+                    k.as_str().to_string(),
+                    v.to_str()
+                        .map(|s| s.to_string())
+                        .unwrap_or_else(|e| format!("{}", e)),
+                )
+            })
+            .collect::<HashMap<String, String>>();
+        Self(headers)
+    }
 }
 
+#[derive(Serialize, Debug)]
+pub(crate) struct AppStateHealthCheck<'a> {
+    splunk: ArcState,
+    secrets: ArcState,
+    aws_lock: ArcMutexState,
+    azure_lock: ArcMutexState,
+    azure_resource_graph_lock: ArcMutexState,
+    github_lock: ArcMutexState,
+    m365_lock: ArcMutexState,
+    powershell_lock: ArcMutexState,
+    powershell_installed: ArcMutexState,
+    sonar_cloud: ArcMutexState,
+    splunk_test_lock: ArcMutexState,
+    threagile_lock: ArcMutexState,
+    exectuction_stats: &'a Stats,
+}
+
+/// Records the stats for an Arc
+#[derive(Serialize, Debug)]
 struct ArcState {
     arc_strong_count: usize,
     arc_weak_count: usize,
 }
 
-struct MutexState<T> {
-    state: std::sync::TryLockResult<T>
+/// Records the stats for an Mutex
+#[derive(Serialize, Debug)]
+struct MutexState {
+    state: String,
 }
 
-impl<T> From<Arc<T>> for ArcState {
-    fn from(value: Arc<T>) -> Self {
-        ArcState {
-            arc_strong_count: Arc::strong_count(&value),
-            arc_weak_count: Arc::weak_count(&value),
+impl<T> From<&Arc<Mutex<T>>> for MutexState {
+    fn from(value: &Arc<Mutex<T>>) -> Self {
+        let state = match value.try_lock() {
+            Ok(_) => "Unlocked",
+            Err(_) => "WouldBlock",
+        };
+        Self {
+            state: state.to_string(),
         }
     }
 }
 
-
-
-impl From<AppState> for AppStateHealthCheck {
-    fn from(value: AppState) -> Self {
-        let splunk  = Arc::strong_count(&value.splunk);
+impl<T> From<&Arc<T>> for ArcState {
+    fn from(value: &Arc<T>) -> Self {
+        ArcState {
+            arc_strong_count: Arc::strong_count(value),
+            arc_weak_count: Arc::weak_count(value),
+        }
     }
 }
-         
 
+/// Records the stats for an Arc<Mutex<T>>
+#[derive(Serialize, Debug)]
+struct ArcMutexState {
+    mutex: MutexState,
+    arc: ArcState,
+}
+
+impl<T> From<&Arc<Mutex<T>>> for ArcMutexState {
+    fn from(value: &Arc<Mutex<T>>) -> Self {
+        ArcMutexState {
+            arc: value.into(),
+            mutex: MutexState::from(value),
+        }
+    }
+}
+
+impl<'a, 'b> From<(&'b Arc<AppState>, &'a Stats)> for AppStateHealthCheck<'a> {
+    fn from((value, stats): (&'b Arc<AppState>, &'a Stats)) -> Self {
+        Self {
+            splunk: (&value.splunk).into(),
+            secrets: (&value.secrets).into(),
+            aws_lock: (&value.aws_lock).into(),
+            azure_lock: (&value.azure_lock).into(),
+            azure_resource_graph_lock: (&value.azure_resource_graph_lock).into(),
+            github_lock: (&value.github_lock).into(),
+            m365_lock: (&value.m365_lock).into(),
+            powershell_lock: (&value.powershell_lock).into(),
+            powershell_installed: (&value.powershell_installed).into(),
+            sonar_cloud: (&value.sonar_cloud).into(),
+            splunk_test_lock: (&value.splunk_test_lock).into(),
+            threagile_lock: (&value.threagile_lock).into(),
+            exectuction_stats: stats,
+        }
+    }
+}
 
 impl AppState {
     /// Create a new AppState
@@ -109,6 +276,7 @@ impl AppState {
             splunk_test_lock: Arc::new(Mutex::new(())),
             sonar_cloud: Arc::new(Mutex::new(())),
             threagile_lock: Arc::new(Mutex::new(())),
+            stats: Arc::new(RwLock::new(Stats::new())),
         })
     }
 

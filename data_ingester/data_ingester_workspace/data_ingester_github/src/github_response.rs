@@ -80,7 +80,7 @@ impl<'a> Iterator for GithubResponsesIterator<'a> {
     fn next(&mut self) -> Option<Self::Item> {
         let value = self.collection.get(self.current);
         if value.is_some() {
-            self.current = 1;
+            self.current += 1;
         }
         value
     }
