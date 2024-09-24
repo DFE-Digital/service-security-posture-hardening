@@ -8,7 +8,7 @@ use tokio::sync::oneshot;
 use tracing::{debug, info, instrument, subscriber::DefaultGuard, warn};
 use tracing_subscriber::{layer::SubscriberExt, EnvFilter, Registry};
 
-#[tokio::main(flavor = "multi_thread", worker_threads = 10)]
+#[tokio::main(flavor = "multi_thread")]
 #[instrument]
 async fn main() -> Result<()> {
     println!("Starting tracing ...");

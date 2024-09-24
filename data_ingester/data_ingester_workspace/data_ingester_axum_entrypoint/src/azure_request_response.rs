@@ -38,10 +38,10 @@ use serde::Serialize;
 pub(crate) struct AzureInvokeRequest {
     #[allow(dead_code)]
     #[serde(rename = "Data")]
-    pub(crate) data: Option<serde_json::Value>,
+    pub(crate) data: serde_json::Value,
     #[allow(dead_code)]
     #[serde(rename = "Metadata")]
-    pub(crate) metadata: Option<serde_json::Value>,
+    pub(crate) metadata: serde_json::Value,
 }
 
 /// https://learn.microsoft.com/en-us/azure/azure-functions/functions-custom-handlers#response-payload
