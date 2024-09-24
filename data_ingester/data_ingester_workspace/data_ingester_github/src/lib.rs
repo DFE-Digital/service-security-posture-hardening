@@ -467,14 +467,12 @@ impl OctocrabGit {
                 .with_context(|| {
                     format!("Downloading artifact {}", artifact.archive_download_url)
                 })?;
-
             let sarifs = Sarif::from_zip_bytes(semgrep_zip).with_context(|| {
                 format!(
                     "Failed to extract Sarif file from zipfile from: {}",
                     artifact.archive_download_url
                 )
             })?;
-
             let _ = sarifs
                 .into_iter()
                 .map(|sarif| sarif.to_sarif_hec(&artifact.archive_download_url, "github", "github"))

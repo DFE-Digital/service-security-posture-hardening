@@ -3,13 +3,13 @@ use std::sync::Arc;
 use anyhow::{Context, Result};
 use data_ingester_splunk::splunk::{try_collect_send, Splunk, ToHecEvents};
 use data_ingester_supporting::keyvault::Secrets;
-use serde::{Deserialize, Serialize};
-use serde_json::Value;
-use tracing::info;
 use reqwest::{
     header::{HeaderMap, HeaderValue},
     Client, Method, RequestBuilder,
 };
+use serde::{Deserialize, Serialize};
+use serde_json::Value;
+use tracing::info;
 
 pub async fn entrypoint(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
     let sonar_api_key = secrets
@@ -22,7 +22,8 @@ pub async fn entrypoint(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()
     let orgs = secrets
         .sonar_orgs
         .as_ref()
-        .expect("Sonar orgs should be configured").clone();
+        .expect("Sonar orgs should be configured")
+        .clone();
 
     for org in orgs {
         let _project_list = try_collect_send(
@@ -30,12 +31,10 @@ pub async fn entrypoint(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()
             sonar.list_projects(&org),
             &splunk,
         )
-            .await;
+        .await;
     }
     Ok(())
-
 }
-
 
 #[derive(Debug, Default, Clone)]
 struct Sonar {
@@ -50,15 +49,12 @@ impl Sonar {
             .build()
             .context("Building SonarCloud reqwest client")?;
         info!("Qualys client: {:?}", client);
-        Ok(Self {
-            client,
-        })
+        Ok(Self { client })
     }
 
     /// RequestBuilder utilising basic_auth
     fn request(&self, method: Method, url: &str) -> RequestBuilder {
-        self.client
-            .request(method, url)
+        self.client.request(method, url)
     }
 
     /// Default headers
@@ -78,12 +74,12 @@ impl Sonar {
     }
 
     async fn list_projects(&self, org: &str) -> Result<SonarResponse> {
-        let url =  "https://sonarcloud.io/api/components/search_projects";
+        let url = "https://sonarcloud.io/api/components/search_projects";
         let org = format!("?organization={org}");
-        let mut page_n = 1;        
+        let mut page_n = 1;
 
         let mut sonar_response = SonarResponse {
-            paging: SonarPaging{
+            paging: SonarPaging {
                 page_index: 0,
                 page_size: 0,
                 total: 0,
@@ -93,7 +89,6 @@ impl Sonar {
         };
 
         loop {
-
             let page = format!("&ps=300&p={page_n}");
             let request_url = format!("{url}{org}{page}");
             let response = self.request(Method::GET, &request_url).send().await?;
@@ -106,7 +101,6 @@ impl Sonar {
             }
             page_n += 1;
             tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
-            
         }
         Ok(sonar_response)
     }
@@ -140,7 +134,6 @@ impl ToHecEvents for &SonarResponse {
     }
 }
 
-
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 struct SonarPaging {
@@ -160,26 +153,25 @@ mod test {
 
     use crate::Sonar;
 
-
     #[derive(Clone)]
     struct TestClient {
         client: Sonar,
         orgs: Vec<String>,
         splunk: Splunk,
     }
-    
+
     impl TestClient {
         async fn new() -> Result<TestClient> {
             let secrets = get_keyvault_secrets(
                 &env::var("KEY_VAULT_NAME").expect("Need KEY_VAULT_NAME enviornment variable"),
             )
-                .await?;
+            .await?;
 
             let splunk = Splunk::new(
                 secrets.splunk_host.as_ref().context("No value")?,
                 secrets.splunk_token.as_ref().context("No value")?,
             )?;
-            
+
             let sonar_api_key = secrets
                 .sonar_api_key
                 .as_ref()
@@ -189,13 +181,13 @@ mod test {
             let orgs = secrets
                 .sonar_orgs
                 .as_ref()
-                .expect("Sonar orgs should be configured").clone();
+                .expect("Sonar orgs should be configured")
+                .clone();
 
-            
             Ok(TestClient {
                 client: sonar,
                 orgs,
-                splunk
+                splunk,
             })
         }
     }
@@ -212,5 +204,3 @@ mod test {
         Ok(())
     }
 }
-
-

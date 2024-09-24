@@ -34,7 +34,7 @@ use serde::Serialize;
 // }
 
 /// https://learn.microsoft.com/en-us/azure/azure-functions/functions-custom-handlers#request-payload
-#[derive(Debug, Deserialize, Default)]
+#[derive(Debug, Deserialize, Default, Serialize)]
 pub(crate) struct AzureInvokeRequest {
     #[allow(dead_code)]
     #[serde(rename = "Data")]

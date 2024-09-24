@@ -155,7 +155,7 @@ async fn github_collect_installation_org(
         info!("Getting GitHub data for: {}", repo_name);
 
         let _semgrep_artifacts = try_collect_send(
-            &format!("Getting Semgrep artifacts for {repo_name}"),
+            &format!("Semgrep artifacts for {repo_name}"),
             github_client.repo_get_sarif_artifacts(repo_name.as_str(), "semgrep"),
             &splunk,
         )
