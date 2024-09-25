@@ -7,7 +7,7 @@ members = [
     "data_ingester_azure_rest",
     "data_ingester_github",
     "data_ingester_ms_graph",
-    "data_ingester_ms_powershell",
+    "data_ingester_ms_powershell", "data_ingester_mssql",
     "data_ingester_qualys",
     "data_ingester_sarif", "data_ingester_sonar_cloud",
     "data_ingester_splunk",
