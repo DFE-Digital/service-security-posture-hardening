@@ -1474,6 +1474,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "data_ingester_financial_business_partners"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "data_ingester_splunk",
+ "data_ingester_supporting",
+ "futures",
+ "serde",
+ "serde_json",
+ "tiberius",
+ "tokio",
+ "tokio-util",
+ "tracing",
+]
+
+[[package]]
 name = "data_ingester_github"
 version = "0.1.0"
 dependencies = [
@@ -1537,22 +1553,6 @@ dependencies = [
  "serde",
  "serde_json",
  "tokio",
- "tracing",
-]
-
-[[package]]
-name = "data_ingester_mssql"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "data_ingester_splunk",
- "data_ingester_supporting",
- "futures",
- "serde",
- "serde_json",
- "tiberius",
- "tokio",
- "tokio-util",
  "tracing",
 ]
 
