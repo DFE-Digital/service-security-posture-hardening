@@ -1421,6 +1421,7 @@ dependencies = [
  "data_ingester_aws",
  "data_ingester_azure",
  "data_ingester_azure_rest",
+ "data_ingester_financial_business_partners",
  "data_ingester_github",
  "data_ingester_ms_graph",
  "data_ingester_ms_powershell",

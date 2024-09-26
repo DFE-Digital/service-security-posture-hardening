@@ -54,7 +54,10 @@ pub(crate) async fn start_server(tx: Sender<()>) -> Result<()> {
         .route("/azure_resource_graph", post(post_azure_resource_graph))
         .route("/github", post(post_github))
         .route("/m365", post(post_m365))
-        .route("/financial_business_partners", post(post_financial_business_partners))
+        .route(
+            "/financial_business_partners",
+            post(post_financial_business_partners),
+        )
         .route("/powershell", post(post_powershell))
         .route("/qualys_qvs", post(post_qualys_qvs))
         .route("/sonar_cloud", post(post_sonar_cloud))
@@ -375,7 +378,6 @@ async fn post_threagile(
     )
 }
 
-
 async fn post_financial_business_partners(
     headers: HeaderMap,
     State(state): State<Arc<AppState>>,
@@ -386,7 +388,7 @@ async fn post_financial_business_partners(
             "Financial Business Partners",
             state.financial_business_partners_lock.clone(),
             state,
-            data_ingester_threagile::threagile,
+            data_ingester_financial_business_partners::entrypoint,
             headers,
             payload,
         )
