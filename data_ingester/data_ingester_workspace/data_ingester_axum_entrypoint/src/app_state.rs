@@ -50,8 +50,8 @@ pub(crate) struct AppState {
     /// Lock for splunk_test to stop concurrent executions
     pub(crate) sonar_cloud: Arc<Mutex<()>>,
 
-    /// Lock for splunk_test to stop concurrent executions
-    pub(crate) splunk_test_lock: Arc<Mutex<()>>,
+    /// Lock for qualys_qvs to stop concurrent executions
+    pub(crate) qualys_qvs_lock: Arc<Mutex<()>>,
 
     /// Lock for threagile to stop concurrent executions
     pub(crate) threagile_lock: Arc<Mutex<()>>,
@@ -177,18 +177,20 @@ impl From<HeaderMap> for Headers {
 pub(crate) struct AppStateHealthCheck<'a> {
     splunk: ArcState,
     secrets: ArcState,
+
     aws_lock: ArcMutexState,
     azure_lock: ArcMutexState,
     azure_resource_graph_lock: ArcMutexState,
     financial_business_partners_lock: ArcMutexState,
     github_lock: ArcMutexState,
     m365_lock: ArcMutexState,
-    powershell_lock: ArcMutexState,
     powershell_installed: ArcMutexState,
+    powershell_lock: ArcMutexState,
+    qualys_qvs_lock: ArcMutexState,
     sonar_cloud: ArcMutexState,
-    splunk_test_lock: ArcMutexState,
     threagile_lock: ArcMutexState,
-    exectuction_stats: &'a Stats,
+
+    execution_stats: &'a Stats,
 }
 
 /// Records the stats for an Arc
@@ -252,12 +254,12 @@ impl<'a, 'b> From<(&'b Arc<AppState>, &'a Stats)> for AppStateHealthCheck<'a> {
             financial_business_partners_lock: (&value.financial_business_partners_lock).into(),
             github_lock: (&value.github_lock).into(),
             m365_lock: (&value.m365_lock).into(),
-            powershell_lock: (&value.powershell_lock).into(),
             powershell_installed: (&value.powershell_installed).into(),
+            powershell_lock: (&value.powershell_lock).into(),
             sonar_cloud: (&value.sonar_cloud).into(),
-            splunk_test_lock: (&value.splunk_test_lock).into(),
+            qualys_qvs_lock: (&value.qualys_qvs_lock).into(),
             threagile_lock: (&value.threagile_lock).into(),
-            exectuction_stats: stats,
+            execution_stats: stats,
         }
     }
 }
@@ -279,10 +281,10 @@ impl AppState {
             m365_lock: Arc::new(Mutex::new(())),
             powershell_installed: Arc::new(Mutex::new(false)),
             powershell_lock: Arc::new(Mutex::new(())),
+            qualys_qvs_lock: Arc::new(Mutex::new(())),
             sonar_cloud: Arc::new(Mutex::new(())),
-            splunk_test_lock: Arc::new(Mutex::new(())),
-            threagile_lock: Arc::new(Mutex::new(())),
             stats: Arc::new(RwLock::new(Stats::new())),
+            threagile_lock: Arc::new(Mutex::new(())),
         })
     }
 

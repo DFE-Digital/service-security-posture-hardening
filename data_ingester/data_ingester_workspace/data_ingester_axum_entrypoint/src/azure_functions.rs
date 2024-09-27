@@ -204,7 +204,7 @@ async fn post_aws(
 ) -> Json<AzureInvokeResponse> {
     Json(
         function_runner(
-            "Azure",
+            "AWS",
             state.aws_lock.clone(),
             state,
             data_ingester_aws::aws::aws,
@@ -329,8 +329,8 @@ async fn post_qualys_qvs(
 ) -> Json<AzureInvokeResponse> {
     Json(
         function_runner(
-            "Splunk Test",
-            state.splunk_test_lock.clone(),
+            "Qualys QVS",
+            state.qualys_qvs_lock.clone(),
             state,
             data_ingester_qualys::entrypoint::qualys_qvs,
             headers,
