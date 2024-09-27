@@ -186,11 +186,11 @@ pub(crate) struct AppStateHealthCheck<'a> {
     m365_lock: ArcMutexState,
     powershell_installed: ArcMutexState,
     powershell_lock: ArcMutexState,
+    qualys_qvs_lock: ArcMutexState,
     sonar_cloud: ArcMutexState,
-    splunk_test_lock: ArcMutexState,
     threagile_lock: ArcMutexState,
 
-    exectuction_stats: &'a Stats,
+    execution_stats: &'a Stats,
 }
 
 /// Records the stats for an Arc
@@ -257,9 +257,9 @@ impl<'a, 'b> From<(&'b Arc<AppState>, &'a Stats)> for AppStateHealthCheck<'a> {
             powershell_installed: (&value.powershell_installed).into(),
             powershell_lock: (&value.powershell_lock).into(),
             sonar_cloud: (&value.sonar_cloud).into(),
-            splunk_test_lock: (&value.qualys_qvs_lock).into(),
+            qualys_qvs_lock: (&value.qualys_qvs_lock).into(),
             threagile_lock: (&value.threagile_lock).into(),
-            exectuction_stats: stats,
+            execution_stats: stats,
         }
     }
 }
