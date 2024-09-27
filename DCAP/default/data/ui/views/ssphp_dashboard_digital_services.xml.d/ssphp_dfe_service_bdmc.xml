@@ -1,0 +1,164 @@
+{% if environment=="_DEV" %}
+  <dashboard version="1.1" theme="light" script="js/table_cell_color.js">
+{% else %}
+  <dashboard version="1.1" theme="dark" script="js/table_cell_color.js">
+{% endif %}  
+
+
+<label>BDMC : Not a CMDB</label>
+<description>{{environment}} v1.0.0</description>
+  
+<search id="base_1">
+  <query>
+| inputlookup ssphp_bdmc_fbp.csv where portfolio!="Unallocated"
+  </query>
+</search>
+  
+<search id="base_2">
+  <query>
+| inputlookup ssphp_bdmc.csv
+  </query>
+</search>
+
+
+  <fieldset submitButton="false">
+    <input type="dropdown" token="tkn_portfolio" searchWhenChanged="true">
+      <label>Portfolio</label>
+      <fieldForLabel>portfolio</fieldForLabel>
+      <fieldForValue>portfolio</fieldForValue>
+      <search base="base_1">
+        <query>
+| fields portfolio
+| dedup portfolio
+| sort 0 portfolio
+        </query>
+      </search>
+      <change>
+        <unset token="form.tkn_service_line"></unset>
+        <unset token="form.tkn_product"></unset>
+        <unset token="form.tkn_type"></unset>
+      </change>
+    </input>
+    
+    <input type="dropdown" token="tkn_service_line" searchWhenChanged="true">
+      <label>Service Line</label>
+      <fieldForLabel>service_line</fieldForLabel>
+      <fieldForValue>service_line</fieldForValue>
+      <search base="base_1">
+        <query>
+| search portfolio=$tkn_portfolio|s$
+| fields service_line
+| dedup service_line
+| sort 0 service_line
+        </query>
+      </search>
+      <change>
+        <unset token="form.tkn_product"></unset>
+        <unset token="form.tkn_type"></unset>
+      </change>
+    </input>
+    
+    <input type="dropdown" token="tkn_product" searchWhenChanged="true">
+      <label>Product</label>
+      <fieldForLabel>product</fieldForLabel>
+      <fieldForValue>product</fieldForValue>
+      <search base="base_1">
+        <query>
+| search portfolio=$tkn_portfolio|s$ AND service_line=$tkn_service_line|s$
+| fields product
+| dedup product
+| sort 0 product
+        </query>
+      </search>
+      <change>
+        <unset token="form.tkn_type"></unset>
+      </change>
+    </input>
+
+    
+    <input type="dropdown" token="tkn_type" searchWhenChanged="true">
+      <label>Resource Type</label>
+      <fieldForLabel>t_display</fieldForLabel>
+      <fieldForValue>type</fieldForValue>
+      <search base="base_2">
+        <query>
+| search portfolio=$tkn_portfolio|s$ AND service_line=$tkn_service_line|s$ AND product=$tkn_product|s$
+| fields type
+| dedup type
+| eval t_display=mvindex(split('type',"/"),-1)
+| table type, t_display
+| sort 0 t_display
+        </query>
+      </search>
+    </input>
+  </fieldset>
+  
+  
+  <row>
+    <panel id="panel1">
+      <title>Resources</title>
+        <html>
+          <style>
+            #panel1{
+              width:75% !important;
+            }
+          </style>
+        </html>
+      <table>
+      <search base="base_2">
+          <query>
+| search portfolio=$tkn_portfolio|s$ AND service_line=$tkn_service_line|s$ AND product=$tkn_product|s$ AND type=$tkn_type|s$
+
+| table tenantId, subscriptionId, resourceGroup, resource_id, environment
+        </query>
+        </search>
+        <option name="count">100</option>
+        <option name="dataOverlayMode">none</option>
+        <option name="drilldown">none</option>
+        <option name="percentagesRow">false</option>
+        <option name="rowNumbers">false</option>
+        <option name="totalsRow">false</option>
+        <option name="wrap">true</option>
+      </table>
+    </panel>
+
+
+    <panel id="panel2">
+      <title>Ownership</title>
+        <html>
+          <style>
+            #panel2{
+              width:25% !important;
+            }
+          </style>
+        </html>
+      <table>
+      <search base="base_2">
+          <query>
+| search portfolio=$tkn_portfolio|s$ AND service_line=$tkn_service_line|s$ AND product=$tkn_product|s$ AND type=$tkn_type|s$
+
+| stats values(cost_centre_code) as cost_centre_code, 
+        values(cost_centre_title) as cost_centre_title, 
+        values(account_code) as account_code, 
+        values(activity_code) as activity_code,
+        values(cost_centre_owner) as cost_centre_owner,
+        values(financial_business_partner_email) as financial_business_partner_email,
+        values(hosting_provider_email) as hosting_provider_email,
+        values(hosting_support_email) as hosting_support_email,
+        values(product_owner_email) as product_owner_email
+
+| transpose
+| rename column as key, "row 1" as value
+        </query>
+        </search>
+        <option name="count">100</option>
+        <option name="dataOverlayMode">none</option>
+        <option name="drilldown">none</option>
+        <option name="percentagesRow">false</option>
+        <option name="rowNumbers">false</option>
+        <option name="totalsRow">false</option>
+        <option name="wrap">true</option>
+      </table>
+    </panel>
+  </row>
+</dashboard>

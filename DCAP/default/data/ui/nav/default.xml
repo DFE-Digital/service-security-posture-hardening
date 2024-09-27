@@ -23,6 +23,7 @@
       <a href="ssphp_dfe_service?tkn__service=s194">CISO Continuous Assurance</a>
     </collection>
     <a href="ssphp_critical_vulnerabilities">Vulnerability Management</a>
+    <a href="ssphp_dfe_service_bdmc">Not CMDB</a>
     <a href="ssphp_foundational_systems_dashboard_help">Dashboard Help</a>
   </collection>
 {% endif %}
