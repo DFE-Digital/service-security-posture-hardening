@@ -330,7 +330,7 @@ async fn post_qualys_qvs(
     Json(
         function_runner(
             "Qualys QVS",
-            state.splunk_test_lock.clone(),
+            state.qualys_qvs_lock.clone(),
             state,
             data_ingester_qualys::entrypoint::qualys_qvs,
             headers,
