@@ -6,7 +6,7 @@
 
 
 <label>BDMC : Not a CMDB</label>
-<description>{{environment}} v1.0.0</description>
+<description>{{environment}} v1.0.1</description>
   
 <search id="base_1">
   <query>
@@ -142,6 +142,7 @@
         values(account_code) as account_code, 
         values(activity_code) as activity_code,
         values(cost_centre_owner) as cost_centre_owner,
+        values(cost_centre_owner_email) as cost_centre_owner_email,
         values(financial_business_partner_email) as financial_business_partner_email,
         values(hosting_provider_email) as hosting_provider_email,
         values(hosting_support_email) as hosting_support_email,
