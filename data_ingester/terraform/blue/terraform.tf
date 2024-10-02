@@ -17,7 +17,7 @@ locals {
   }
   #  sku_name_python      = "Y1"
   sku_name_rust        = "EP1"
-  key_vault_name       = "SSPHP-Metrics"
+  key_vault_name       = "SSPHP-Metrics-i4tm3"
   key_vault_object_ids = ["3d088dc7-61ad-439d-82e4-0fe2b3874751"]
 }
 
@@ -29,4 +29,8 @@ module "data_ingester" {
   key_vault_name       = local.key_vault_name
   key_vault_object_ids = local.key_vault_object_ids
   tags                 = local.tags
+  vnet = {
+    name        = "ssphp_test_vnet",
+    subnet_name = "default"
+  }
 }

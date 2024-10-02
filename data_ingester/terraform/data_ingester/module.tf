@@ -8,19 +8,21 @@ resource "random_string" "resource_code" {
   upper   = false
 }
 
+locals {
+  postfix = var.random_postfix != null ? var.random_postfix : random_string.resource_code.result
+}
+
 resource "azurerm_resource_group" "tfstate" {
   name     = var.resource_group
   location = "West Europe"
   tags     = var.tags
-  # {
-  #   "Product"          = "Protective Monitoring - Splunk SaaS"
-  #   "Environment"      = "Development"
-  #   "Service Offering" = "Protective Monitoring - Splunk SaaS"
-  # }
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 resource "azurerm_storage_account" "tfstate" {
-  name                            = "tfstate${random_string.resource_code.result}"
+  name                            = "tfstate${local.postfix}"
   resource_group_name             = azurerm_resource_group.tfstate.name
   location                        = azurerm_resource_group.tfstate.location
   account_tier                    = "Standard"
