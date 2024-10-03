@@ -172,19 +172,29 @@ impl User<'_> {
     }
 
     pub fn set_is_privileged(&mut self, role_definitions: &EntraRoleDefinitions) {
+        let mut is_privileged = false;
+
         for role in self.roles_mut().iter_mut() {
             match role_definitions.value.get(&role.role_template_id) {
                 Some(role_definition) => {
-                    if *role_definition.is_privileged.as_ref().unwrap_or(&false) {
+                    let is_role_privileged =
+                        *role_definition.is_privileged.as_ref().unwrap_or(&false);
+                    if is_role_privileged {
                         role.is_privileged = Some(true);
-                        self.is_privileged = Some(true);
-                        return;
+                        is_privileged = true;
                     }
                 }
                 None => continue,
             }
         }
-        self.is_privileged = Some(false)
+
+        let privileged_azure_roles = self
+            .azure_roles
+            .as_ref()
+            .map(|roles| !roles.privileged_roles.is_empty())
+            .unwrap_or(false);
+
+        self.is_privileged = Some(is_privileged || privileged_azure_roles);
     }
 
     pub fn assigned_plans_remove_deleted(&mut self) {
