@@ -188,13 +188,13 @@ impl User<'_> {
             }
         }
 
-        let priviliged_azure_roles = self
+        let privileged_azure_roles = self
             .azure_roles
             .as_ref()
             .map(|roles| !roles.privileged_roles.is_empty())
             .unwrap_or(false);
 
-        self.is_privileged = Some(is_privileged || priviliged_azure_roles);
+        self.is_privileged = Some(is_privileged || privileged_azure_roles);
     }
 
     pub fn assigned_plans_remove_deleted(&mut self) {
