@@ -142,6 +142,13 @@ async fn github_collect_installation_org(
         .await
         .context("Sending Calculated teams and members to Splunk")?;
 
+    let _org_custom_properties = try_collect_send(
+        &format!("Custom properties for {org_name}"),
+        github_client.org_get_custom_property_values(&org_name),
+        &splunk,
+    )
+    .await;
+
     for repo in org_repos.repos() {
         let rate_limits = github_client.client.ratelimit().get().await?;
         let rate_limits_json = serde_json::to_string(&rate_limits)?;
@@ -305,6 +312,10 @@ async fn github_collect_installation_org(
         )
         .await;
     }
+    Ok(())
+}
+
+async fn update_custom_properties(org: &str) -> Result<()> {
     Ok(())
 }
 

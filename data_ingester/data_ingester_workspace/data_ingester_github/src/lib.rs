@@ -4,6 +4,7 @@
 mod action_runs;
 mod artifacts;
 mod contents;
+mod custom_properties;
 pub mod entrypoint;
 mod github_response;
 mod org_members;
@@ -18,6 +19,7 @@ use anyhow::{Context, Result};
 use artifacts::{Artifact, Artifacts};
 use bytes::Bytes;
 use contents::Contents;
+use custom_properties::CustomProperterySetter;
 use data_ingester_sarif::{Sarif, SarifHecs};
 use data_ingester_supporting::keyvault::GitHubApp;
 use github_response::GithubNextLink;
@@ -163,6 +165,67 @@ impl OctocrabGit {
         }
         teams.extend(raw);
         Ok((teams, teams_org))
+    }
+
+    /// Set a custom property for an organisation
+    ///
+    /// `org` - The GitHub Organisation to query.
+    ///
+    /// `custom_property` - a `CustomProperterySetter` describing the custom property to set
+    ///
+    pub(crate) async fn org_create_custom_property(
+        &self,
+        org: &str,
+        custom_property: &CustomProperterySetter,
+    ) -> Result<GithubResponses> {
+        let url = format!(
+            "https://api.github.com/orgs/{}/properties/schema/{}",
+            org,
+            custom_property.property_name()
+        );
+        let response = self.client._put(&url, Some(custom_property)).await?;
+
+        let status = response.status().as_u16();
+
+        let mut body = response
+            .collect()
+            .await
+            .context("collect body")?
+            .to_bytes()
+            .slice(0..);
+
+        if body.is_empty() {
+            body = "{}".into();
+        }
+
+        let response_body = match serde_json::from_slice::<serde_json::Value>(&body.to_vec()) {
+            Ok(ok) => ok,
+            Err(err) => {
+                let body_string = String::from_utf8(body.to_vec())
+                    .unwrap_or_else(|err| format!("Unable to decode body as UTF8: {}", err));
+                warn!(
+                    "Error decoding create_custom_property response: {}:{} ",
+                    err, body_string
+                );
+                anyhow::bail!(err)
+            }
+        };
+        let github_response = GithubResponse::new(
+            github_response::SingleOrVec::Single(response_body),
+            url,
+            status,
+        );
+        let github_responses = GithubResponses::from_response(github_response);
+        Ok(github_responses)
+    }
+
+    /// Get the custom properties for an organisation
+    pub(crate) async fn org_get_custom_property_values(
+        &self,
+        org: &str,
+    ) -> Result<GithubResponses> {
+        let uri = format!("/orgs/{}/properties/values", org);
+        self.get_collection(&uri).await
     }
 
     /// Get Members for org Team
