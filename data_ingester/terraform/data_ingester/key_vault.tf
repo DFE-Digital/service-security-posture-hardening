@@ -1,10 +1,5 @@
 data "azurerm_client_config" "current" {}
 
-# locals {
-#   key_vault_name = "${var.key_vault_name}-${random_string.resource_code.result}"
-# }
-
-
 resource "azurerm_key_vault" "SSPHP" {
   name                            = var.key_vault_name
   location                        = azurerm_resource_group.tfstate.location
@@ -16,6 +11,9 @@ resource "azurerm_key_vault" "SSPHP" {
   enabled_for_template_deployment = true
   sku_name                        = "standard"
 
+  lifecycle {
+    prevent_destroy = true
+  }
 
   dynamic "access_policy" {
     for_each = toset(var.key_vault_object_ids)
@@ -49,27 +47,6 @@ resource "azurerm_key_vault" "SSPHP" {
     }
   }
 
-  # access_policy {
-  #   tenant_id = azurerm_linux_function_app.SSPHP.identity[0].tenant_id
-  #   object_id = azurerm_linux_function_app.SSPHP.identity[0].principal_id
-
-  #   key_permissions = [
-  #     "Get",
-  #     "List"
-  #   ]
-
-  #   secret_permissions = [
-  #     "Get",
-  #     "List",
-  #   ]
-
-  #   storage_permissions = [
-  #     "Get",
-  #     "List",
-  #   ]
-
-  # }
-
   access_policy {
     tenant_id = azurerm_linux_function_app.SSPHP_rust.identity[0].tenant_id
     object_id = azurerm_linux_function_app.SSPHP_rust.identity[0].principal_id
@@ -93,6 +70,36 @@ resource "azurerm_key_vault" "SSPHP" {
       "Get",
       "List",
     ]
+  }
+
+  dynamic "access_policy" {
+    for_each = azurerm_linux_function_app.SSPHP_rust-vnet
+
+    content {
+      tenant_id = access_policy.value["identity"][0].tenant_id
+      object_id = access_policy.value["identity"][0].principal_id
+
+      key_permissions = [
+        "Get",
+        "List"
+      ]
+
+      secret_permissions = [
+        "Get",
+        "List",
+      ]
+
+      storage_permissions = [
+        "Get",
+        "List",
+      ]
+
+      certificate_permissions = [
+        "Get",
+        "List",
+      ]
+
+    }
   }
 }
 
@@ -145,4 +152,9 @@ resource "azurerm_key_vault_certificate" "example" {
       validity_in_months = 12
     }
   }
+
+  lifecycle {
+    prevent_destroy = true
+  }
+
 }
