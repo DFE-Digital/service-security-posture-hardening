@@ -14,7 +14,7 @@ pub async fn install_powershell() -> Result<()> {
         .args(
             [
                 "-L",
-                "https://github.com/PowerShell/PowerShell/releases/download/v7.3.7/powershell_7.3.7-1.deb_amd64.deb",
+                "https://github.com/PowerShell/PowerShell/releases/download/v7.4.5/powershell_7.4.5-1.deb_amd64.deb",
                 "-o",
                 "/tmp/powershell_7.3.7-1.deb_amd64.deb",
             ]
