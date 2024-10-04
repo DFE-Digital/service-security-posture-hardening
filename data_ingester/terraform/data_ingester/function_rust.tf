@@ -83,6 +83,10 @@ resource "azurerm_linux_function_app" "SSPHP_rust-vnet" {
     RUST_BACKTRACE                 = "1"
     RUST_LOG                       = "info"
   }
+
+  lifecycle {
+    ignore_changes = [virtual_network_subnet_id]
+  }
 }
 
 # Vnet join
