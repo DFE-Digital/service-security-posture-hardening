@@ -43,7 +43,27 @@ pub async fn entrypoint(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> anyhow::R
     let tcp = TcpStream::connect(config.get_addr()).await?;
     tcp.set_nodelay(true)?;
 
-    let mut client = Client::connect(config, tcp.compat_write()).await?;
+    let mut client = match Client::connect(config, tcp.compat_write()).await {
+        // Connection successful.
+        Ok(client) => client,
+        // The server wants us to redirect to a different address
+        Err(tiberius::error::Error::Routing { host, port }) => {
+            let mut config = Config::new();
+
+            config.host(&host);
+            config.port(port);
+            config.authentication(AuthMethod::sql_server(username, password));
+            config.database(db);
+            config.encryption(tiberius::EncryptionLevel::Required);
+
+            let tcp = TcpStream::connect(config.get_addr()).await?;
+            tcp.set_nodelay(true)?;
+
+            // we should not have more than one redirect, so we'll short-circuit here.
+            Client::connect(config, tcp.compat_write()).await?
+        }
+        Err(e) => Err(e)?,
+    };
 
     let contact_details_query = ContactDetails::query();
 
