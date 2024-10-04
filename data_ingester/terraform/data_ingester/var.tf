@@ -26,8 +26,9 @@ variable "key_vault_object_ids" {
 variable "vnet" {
   description = "Deploy the function into an existing VNET. `name` is the name of the vnet, `subnet_name` is the name of the subnet"
   type = object({
-    name        = string,
-    subnet_name = string,
+    name                = string,
+    subnet_name         = string,
+    resource_group_name = string,
   })
   default = null
 }
