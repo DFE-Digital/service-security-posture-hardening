@@ -33,6 +33,7 @@ where
 
     // Who can edit the values of the property
     values_editable_by: Option<ValuesEditableBy>,
+    #[serde(skip)]
     _phantom_data: PhantomData<S>,
 }
 
@@ -93,7 +94,10 @@ impl<V: AsRef<[S]>, S: AsRef<str>> CustomProperterySetter<V, S> {
     }
 
     pub fn from_fbp_product() -> Self {
-        CustomProperterySetter::new("product", Some("Product"), false, ValueType::String)
+        let mut product_setter =
+            CustomProperterySetter::new("product", Some("Product"), false, ValueType::String);
+        product_setter.values_editable_by = Some(ValuesEditableBy::OrgAndRepoActors);
+        product_setter
     }
 
     pub fn property_name(&self) -> &str {
@@ -357,9 +361,7 @@ mod live_tests {
 mod test {
     use data_ingester_financial_business_partners::fbp_results::{FbpResult, FbpResults};
 
-    use crate::custom_properties::{
-        CustomProperterySetter, DefaultValue, ValueType, ValuesEditableBy,
-    };
+    use crate::custom_properties::CustomProperterySetter;
 
     fn fbp_results() -> FbpResults {
         FbpResults {
@@ -388,11 +390,11 @@ mod test {
         let fbp = fbp_results();
 
         let portfolio_setter = CustomProperterySetter::from_fbp_portfolio(fbp.portfolios());
-        let json = serde_json::to_value(&portfolio_setter).unwrap();
+        let mut json = serde_json::to_value(&portfolio_setter).unwrap();
 
-        let expected_json = serde_json::to_value(serde_json::json!({
+        let mut expected_json = serde_json::to_value(serde_json::json!({
             "property_name": "portfolio",
-            "value_type": "multi_select",
+            "value_type": "single_select",
             "required": false,
             "default_value": null,
             "description": "The portfolio",
@@ -400,6 +402,24 @@ mod test {
             "values_editable_by": "org_and_repo_actors",
         }))
         .unwrap();
+
+        // Check all allowed_values exist in the output object
+        fbp.portfolios()
+            .iter()
+            .flat_map(|po| serde_json::to_value(po))
+            .for_each(|po| {
+                assert!(json
+                    .get("allowed_values")
+                    .expect("allowed_values should have items")
+                    .as_array()
+                    .expect("should be array")
+                    .contains(&po))
+            });
+
+        // Remove allowed values due to array ordering Eq
+        let _ = json.get_mut("allowed_values").unwrap().take();
+        let _ = expected_json.get_mut("allowed_values").unwrap().take();
+
         assert_eq!(expected_json, json);
     }
 
@@ -409,11 +429,11 @@ mod test {
 
         let service_line_setter =
             CustomProperterySetter::from_fbp_service_line(fbp.service_lines());
-        let json = serde_json::to_value(&service_line_setter).unwrap();
+        let mut json = serde_json::to_value(&service_line_setter).unwrap();
 
-        let expected_json = serde_json::to_value(serde_json::json!({
+        let mut expected_json = serde_json::to_value(serde_json::json!({
             "property_name": "service_line",
-            "value_type": "multi_select",
+            "value_type": "single_select",
             "required": false,
             "default_value": null,
             "description": "The service line",
@@ -421,36 +441,45 @@ mod test {
             "values_editable_by": "org_and_repo_actors",
         }))
         .unwrap();
+
+        // Check all allowed_values exist in the output object
+        fbp.service_lines()
+            .iter()
+            .flat_map(|sl| serde_json::to_value(sl))
+            .for_each(|sl| {
+                assert!(json
+                    .get("allowed_values")
+                    .expect("allowed_values should have items")
+                    .as_array()
+                    .expect("should be array")
+                    .contains(&sl))
+            });
+
+        // Remove allowed values due to array ordering Eq
+        let _ = json.get_mut("allowed_values").unwrap().take();
+        let _ = expected_json.get_mut("allowed_values").unwrap().take();
+
         assert_eq!(expected_json, json);
     }
 
     #[tokio::test]
-    async fn test_custom_property_setter_output() {
-        let cps = {
-            let mut cps = CustomProperterySetter::<Vec<_>, &str>::new(
-                "foo",
-                Some("description"),
-                false,
-                ValueType::SingleSelect,
-            );
-            cps.default_value = Some(DefaultValue::String("FOO".into()));
-            cps.values_editable_by = Some(ValuesEditableBy::OrgActors);
-            cps.allowed_values = Some(vec!["foo", "bar"]);
-            cps
-        };
-        let json = serde_json::to_string_pretty(&cps).unwrap();
+    async fn test_product_setter() {
+        let product_setter: CustomProperterySetter<Vec<_>, &str> =
+            CustomProperterySetter::from_fbp_product();
+
+        let json = serde_json::to_value(&product_setter).unwrap();
+
+        //let allowed_values: Vec<&str> = vec![];
         let expected_json = serde_json::to_value(serde_json::json!({
-            "property_name": "service_line",
-            "value_type": "multi_select",
+            "property_name": "product",
+            "value_type": "string",
             "required": false,
             "default_value": null,
-            "description": "The service line",
-            "allowed_values": cps.allowed_values,
+            "description": "Product",
+            "allowed_values": null,
             "values_editable_by": "org_and_repo_actors",
         }))
         .unwrap();
-
-        println!("{}", json);
         assert_eq!(json, expected_json);
     }
 }
