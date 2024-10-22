@@ -173,10 +173,10 @@ impl OctocrabGit {
     ///
     /// `custom_property` - a `CustomProperterySetter` describing the custom property to set
     ///
-    pub(crate) async fn org_create_custom_property(
+    pub(crate) async fn org_create_custom_property<T: AsRef<[S]> + Serialize, S: AsRef<str>>(
         &self,
         org: &str,
-        custom_property: &CustomProperterySetter,
+        custom_property: &CustomProperterySetter<T, S>,
     ) -> Result<GithubResponses> {
         let url = format!(
             "https://api.github.com/orgs/{}/properties/schema/{}",
@@ -198,7 +198,7 @@ impl OctocrabGit {
             body = "{}".into();
         }
 
-        let response_body = match serde_json::from_slice::<serde_json::Value>(&body.to_vec()) {
+        let response_body = match serde_json::from_slice::<serde_json::Value>(&body) {
             Ok(ok) => ok,
             Err(err) => {
                 let body_string = String::from_utf8(body.to_vec())

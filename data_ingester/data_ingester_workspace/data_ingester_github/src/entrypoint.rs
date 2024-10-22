@@ -1,10 +1,10 @@
 //! Entrypoint for running the collection
-use std::sync::Arc;
-
-use crate::OctocrabGit;
+use crate::{custom_properties::CustomProperterySetter, OctocrabGit};
 use anyhow::{Context, Result};
+use data_ingester_financial_business_partners::fbp_results::FbpResults;
 use data_ingester_splunk::splunk::{set_ssphp_run, try_collect_send, Splunk, ToHecEvents};
 use data_ingester_supporting::keyvault::{GitHubApp, Secrets};
+use std::sync::Arc;
 use tracing::{error, info};
 
 /// Public entry point
@@ -56,8 +56,8 @@ async fn github_app(github_app: &GitHubApp, splunk: &Arc<Splunk>) -> Result<()> 
         tasks.push((
             org_name.clone(),
             tokio::spawn(github_collect_installation_org(
-                installation_client,
-                org_name,
+                installation_client.clone(),
+                org_name.clone(),
                 splunk.clone(),
             )),
         ));
@@ -76,11 +76,6 @@ async fn github_collect_installation_org(
     org_name: String,
     splunk: Arc<Splunk>,
 ) -> Result<()> {
-    // DO NOT MERGE TO MAIN
-    // if org_name != "DFE-Digital" {
-    //     return Ok(());
-    // }
-    // anyhow::bail!("foo");
     github_client.wait_for_rate_limit().await?;
     let rate_limits = github_client.client.ratelimit().get().await?;
     let rate_limits_json = serde_json::to_string(&rate_limits)?;
@@ -315,13 +310,100 @@ async fn github_collect_installation_org(
     Ok(())
 }
 
-async fn update_custom_properties(org: &str) -> Result<()> {
+pub async fn github_set_custom_properties_entrypoint(
+    secrets: Arc<Secrets>,
+    splunk: Arc<Splunk>,
+) -> Result<()> {
+    info!("Updating GitHub custom properties");
+
+    let github_app = secrets
+        .github_app
+        .as_ref()
+        .context("No Github App configured")?;
+
+    let client = OctocrabGit::new_from_app(github_app).context("Build OctocrabGit")?;
+    info!("Getting installations");
+    let installations = client
+        .client
+        .apps()
+        .installations()
+        .send()
+        .await
+        .context("Getting installations for github app")?;
+
+    let mut tasks = vec![];
+
+    let fbp_results = Arc::new(
+        FbpResults::get_results_from_splunk(secrets)
+            .await
+            .context("Getting FBP Results from Splunk")?,
+    );
+
+    for installation in installations {
+        info!("Installation ID: {}", installation.id);
+
+        if installation.account.r#type != "Organization" {
+            continue;
+        }
+
+        let installation_client = client
+            .for_installation_id(installation.id)
+            .await
+            .context("build octocrabgit client")?;
+
+        let org_name = installation.account.login.to_string();
+
+        info!("Installation org name: {}", &org_name);
+
+        tasks.push((
+            org_name.clone(),
+            tokio::spawn(update_custom_properties(
+                installation_client,
+                org_name,
+                splunk.clone(),
+                fbp_results.clone(),
+            )),
+        ));
+    }
+
+    for (org_name, task) in tasks {
+        task.await
+            .context("Tokio task has completed successfully")?
+            .with_context(|| format!("Running GitHub collection for {}", org_name))?;
+    }
+    drop(fbp_results);
+    Ok(())
+}
+
+async fn update_custom_properties(
+    github_client: OctocrabGit,
+    org_name: String,
+    splunk: Arc<Splunk>,
+    fbp_results: Arc<FbpResults>,
+) -> Result<()> {
+    let portfolio_setter = CustomProperterySetter::from_fbp_portfolio(fbp_results.portfolios());
+    let service_line_setter =
+        CustomProperterySetter::from_fbp_service_line(fbp_results.service_lines());
+    let product_setter = CustomProperterySetter::from_fbp_product();
+
+    for cps in [portfolio_setter, service_line_setter, product_setter] {
+        let _repo_branch_rules = try_collect_send(
+            &format!(
+                "Setting GitHub Custom Property for {org_name}/{}",
+                cps.property_name()
+            ),
+            github_client.org_create_custom_property(&org_name, &cps),
+            &splunk,
+        )
+        .await;
+    }
+
     Ok(())
 }
 
 #[cfg(feature = "live_tests")]
 #[cfg(test)]
-mod test {
+mod live_tests {
     use std::{env, sync::Arc};
 
     use anyhow::{Context, Result};
@@ -329,6 +411,7 @@ mod test {
     use data_ingester_supporting::keyvault::get_keyvault_secrets;
 
     use crate::entrypoint::github_octocrab_entrypoint;
+    use crate::entrypoint::github_set_custom_properties_entrypoint;
 
     #[tokio::test]
     async fn test_all_github() -> Result<()> {
@@ -346,6 +429,25 @@ mod test {
         github_octocrab_entrypoint(Arc::new(secrets), Arc::new(splunk))
             .await
             .context("Running ocotcrab full test")?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_github_set_custom_properties() -> Result<()> {
+        let secrets = get_keyvault_secrets(
+            &env::var("KEY_VAULT_NAME").expect("Need KEY_VAULT_NAME enviornment variable"),
+        )
+        .await
+        .unwrap();
+
+        let splunk = Splunk::new(
+            secrets.splunk_host.as_ref().context("No value")?,
+            secrets.splunk_token.as_ref().context("No value")?,
+        )?;
+
+        github_set_custom_properties_entrypoint(Arc::new(secrets), Arc::new(splunk))
+            .await
+            .context("Settings GitHub Custom Properties in test")?;
         Ok(())
     }
 }

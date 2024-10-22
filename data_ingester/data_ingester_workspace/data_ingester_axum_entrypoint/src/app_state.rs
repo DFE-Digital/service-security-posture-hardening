@@ -39,6 +39,9 @@ pub(crate) struct AppState {
     /// Lock for github to stop concurrent executions
     pub(crate) github_lock: Arc<Mutex<()>>,
 
+    /// Lock for github_custom_properties to stop concurrent executions
+    pub(crate) github_custom_properties_lock: Arc<Mutex<()>>,
+
     /// Lock for m365 to stop concurrent executions
     pub(crate) m365_lock: Arc<Mutex<()>>,
 
@@ -183,6 +186,7 @@ pub(crate) struct AppStateHealthCheck<'a> {
     azure_resource_graph_lock: ArcMutexState,
     financial_business_partners_lock: ArcMutexState,
     github_lock: ArcMutexState,
+    github_custom_properties_lock: ArcMutexState,
     m365_lock: ArcMutexState,
     powershell_installed: ArcMutexState,
     powershell_lock: ArcMutexState,
@@ -253,6 +257,7 @@ impl<'a, 'b> From<(&'b Arc<AppState>, &'a Stats)> for AppStateHealthCheck<'a> {
             azure_resource_graph_lock: (&value.azure_resource_graph_lock).into(),
             financial_business_partners_lock: (&value.financial_business_partners_lock).into(),
             github_lock: (&value.github_lock).into(),
+            github_custom_properties_lock: (&value.github_custom_properties_lock).into(),
             m365_lock: (&value.m365_lock).into(),
             powershell_installed: (&value.powershell_installed).into(),
             powershell_lock: (&value.powershell_lock).into(),
@@ -278,6 +283,7 @@ impl AppState {
             azure_resource_graph_lock: Arc::new(Mutex::new(())),
             financial_business_partners_lock: Arc::new(Mutex::new(())),
             github_lock: Arc::new(Mutex::new(())),
+            github_custom_properties_lock: Arc::new(Mutex::new(())),
             m365_lock: Arc::new(Mutex::new(())),
             powershell_installed: Arc::new(Mutex::new(false)),
             powershell_lock: Arc::new(Mutex::new(())),

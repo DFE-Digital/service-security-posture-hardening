@@ -1,4 +1,6 @@
-use anyhow::Context;
+pub mod fbp_results;
+
+use anyhow::{Context, Result};
 use data_ingester_splunk::splunk::{set_ssphp_run, HecEvent, Splunk, ToHecEvents};
 use data_ingester_supporting::keyvault::Secrets;
 use futures::TryStreamExt;
@@ -8,8 +10,8 @@ use tiberius::{AuthMethod, Client, Config, Query, QueryItem, Row};
 use tokio::net::TcpStream;
 use tokio_util::compat::TokioAsyncWriteCompatExt;
 
-pub async fn entrypoint(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> anyhow::Result<()> {
-    set_ssphp_run("mssql")?;
+pub async fn entrypoint(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
+    set_ssphp_run("fbp")?;
 
     let host = secrets
         .mssql_host
@@ -271,7 +273,7 @@ mod live_tests {
         )
         .await
         .unwrap();
-        set_ssphp_run("mssql")?;
+        set_ssphp_run("fbp")?;
 
         let splunk = Splunk::new(
             secrets.splunk_host.as_ref().context("No value")?,

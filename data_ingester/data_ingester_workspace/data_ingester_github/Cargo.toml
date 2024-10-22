@@ -7,8 +7,10 @@ edition = "2021"
 anyhow = { version = "1", features=["backtrace"]}
 base64 = "0.22"
 bytes = "1"
+data_ingester_financial_business_partners = { path = "../data_ingester_financial_business_partners" }
 data_ingester_sarif = { path = "../data_ingester_sarif" }
 data_ingester_splunk = { path = "../data_ingester_splunk" }
+data_ingester_splunk_search = { path = "../data_ingester_splunk_search" }
 data_ingester_supporting = { path = "../data_ingester_supporting" }
 futures = "0"
 graphql_client = "0"

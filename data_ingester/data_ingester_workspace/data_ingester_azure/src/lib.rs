@@ -90,6 +90,25 @@ pub async fn azure_users(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<(
         .send_batch((&aad_role_definitions).to_hec_events()?)
         .await?;
 
+    let splunk_clone = splunk.clone();
+    let process_to_splunk = tokio::spawn(async move {
+        while let Some(mut users) = reciever.recv().await {
+            users.set_is_privileged(&aad_role_definitions);
+
+            users.process_caps(&caps);
+
+            users
+                .add_azure_roles(
+                    &subscription_role_assignments,
+                    &subscription_role_definitions,
+                )
+                .context("Failed to add azure roles")?;
+
+            splunk_clone.send_batch((&users).to_hec_events()?).await?;
+        }
+        anyhow::Ok::<()>(())
+    });
+
     let _ = try_collect_send(
         "Azure Security Contacts",
         azure_rest.get_security_contacts(),
@@ -125,23 +144,6 @@ pub async fn azure_users(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<(
     )
     .await;
 
-    let process_to_splunk = tokio::spawn(async move {
-        while let Some(mut users) = reciever.recv().await {
-            users.set_is_privileged(&aad_role_definitions);
-
-            users.process_caps(&caps);
-
-            users
-                .add_azure_roles(
-                    &subscription_role_assignments,
-                    &subscription_role_definitions,
-                )
-                .context("Failed to add azure roles")?;
-
-            splunk.send_batch((&users).to_hec_events()?).await?;
-        }
-        anyhow::Ok::<()>(())
-    });
     let _ = list_users.await?;
 
     let _ = process_to_splunk.await?;
