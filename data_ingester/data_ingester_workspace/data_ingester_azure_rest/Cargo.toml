@@ -8,10 +8,10 @@ edition = "2021"
 [dependencies]
 async-recursion = "1"
 anyhow = { version = "1", features=["backtrace"]}
-azure_core = { version = "0.19", default-features = false, features = ["enable_reqwest_rustls"]}
-azure_identity = { version = "0.19", default-features = false, features = ["enable_reqwest_rustls", "client_certificate"]}
-azure_mgmt_authorization = { version = "0.19", default-features = false, features = ["enable_reqwest_rustls", "package-2022-04-01"]}
-azure_mgmt_subscription = { version = "0.19", default-features = false, features = ["enable_reqwest_rustls", "package-2021-10"]}
+azure_core = { version = "0.21", default-features = false, features = ["enable_reqwest_rustls"]}
+azure_identity = { version = "0.21", default-features = false, features = ["enable_reqwest_rustls", "client_certificate"]}
+azure_mgmt_authorization = { version = "0.21", default-features = false, features = ["enable_reqwest_rustls", "package-2022-04-01"]}
+azure_mgmt_subscription = { version = "0.21", default-features = false, features = ["enable_reqwest_rustls", "package-2021-10"]}
 data_ingester_splunk = { path = "../data_ingester_splunk" }
 data_ingester_supporting = { path = "../data_ingester_supporting" }
 dyn-fmt = "0"
