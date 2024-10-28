@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 pub struct CustomProperterySetter<V, S>
 where
     V: AsRef<[S]>,
-    S: AsRef<str>,
+    S: AsRef<str> + std::fmt::Debug,
 {
     // The name of the property
     property_name: String,
@@ -37,7 +37,7 @@ where
     _phantom_data: PhantomData<S>,
 }
 
-impl<V: AsRef<[S]>, S: AsRef<str>> CustomProperterySetter<V, S> {
+impl<V: AsRef<[S]>, S: AsRef<str> + std::fmt::Debug> CustomProperterySetter<V, S> {
     pub fn new<N: Into<String>, D: Into<String>>(
         property_name: N,
         description: Option<D>,
@@ -128,260 +128,17 @@ pub(crate) enum ValuesEditableBy {
     OrgAndRepoActors,
 }
 
-#[cfg(feature = "live_tests")]
-#[cfg(test)]
-mod live_tests {
-    // use super::*;
-    // use anyhow::Context;
-    // use anyhow::Result;
-    // use octocrab::Octocrab;
-
-    // fn octocrab_client() -> Result<Octocrab> {
-    //     let token = std::env::var("GITHUB_TOKEN").expect("GITHUB_TOKEN env variable is required");
-
-    //     let octocrab = Octocrab::builder().personal_token(token).build()?;
-    //     Ok(octocrab)
-    // }
-
-    // #[tokio::test]
-    // async fn test_custom_property_setter_output() -> Result<()> {
-    //     let cps1 = {
-    //         let mut cps = CustomProperterySetter::<Vec<_>, &str>::new(
-    //             "1_portfolio".to_string(),
-    //             "description".into(),
-    //             false,
-    //             ValueType::SingleSelect,
-    //         );
-    //         //cps.default_value = Some(DefaultValue::String("FOO".into()));
-    //         cps.values_editable_by = Some(ValuesEditableBy::OrgAndRepoActors);
-    //         cps.allowed_values = Some(vec![
-    //             "Afghanistan",
-    //             "Albania",
-    //             "Algeria",
-    //             "Andorra",
-    //             "Angola",
-    //             "Antigua and Barbuda",
-    //             "Argentina",
-    //             "Armenia",
-    //             "Australia",
-    //             "Austria",
-    //             "Azerbaijan",
-    //             "B",
-    //             "The Bahamas",
-    //             "Bahrain",
-    //             "Bangladesh",
-    //             "Barbados",
-    //             "Belarus",
-    //             "Belgium",
-    //             "Belize",
-    //             "Benin",
-    //             "Bhutan",
-    //             "Bolivia",
-    //             "Bosnia and Herzegovina",
-    //             "Botswana",
-    //             "Brazil",
-    //             "Brunei",
-    //             "Bulgaria",
-    //             "Burkina Faso",
-    //             "Burundi",
-    //             "C",
-    //             "Cabo Verde",
-    //             "Cambodia",
-    //             "Cameroon",
-    //             "Canada",
-    //             "Central African Republic",
-    //             "Chad",
-    //             "Chile",
-    //             "China",
-    //             "Colombia",
-    //             "Comoros",
-    //             "Congo, Democratic Republic of the",
-    //             "Congo, Republic of the",
-    //             "Costa Rica",
-    //             "Croatia",
-    //             "Cuba",
-    //             "Cyprus",
-    //             "Czech Republic",
-    //             "D",
-    //             "Denmark",
-    //             "Djibouti",
-    //             "Dominica",
-    //             "Dominican Republic",
-    //             "E",
-    //             "East Timor (Timor-Leste)",
-    //             "Ecuador",
-    //             "Egypt",
-    //             "El Salvador",
-    //             "Equatorial Guinea",
-    //             "Eritrea",
-    //             "Estonia",
-    //             "Eswatini",
-    //             "Ethiopia",
-    //         ]);
-    //         cps
-    //     };
-    //     let cps2 = {
-    //         let mut cps = CustomProperterySetter::new(
-    //             "2_service_line".to_string(),
-    //             Some("description"),
-    //             false,
-    //             ValueType::SingleSelect,
-    //         );
-    //         //cps.default_value = Some(DefaultValue::String("FOO"));
-    //         cps.values_editable_by = Some(ValuesEditableBy::OrgAndRepoActors);
-    //         cps.allowed_values = Some(vec![
-    //             "Mastador",
-    //             "Mastiff",
-    //             "Meagle",
-    //             "Meerkat",
-    //             "Mexican Free-Tailed Bat",
-    //             "Miki",
-    //             "Mini Labradoodle",
-    //             "Miniature Bull Terrier",
-    //             "Miniature Pinscher",
-    //             "Mink",
-    //             "Minke Whale",
-    //             "Mole",
-    //             "Mongoose",
-    //             "Mongrel",
-    //             "Monkey",
-    //             "Moorhen",
-    //             "Moose",
-    //             "Morkie",
-    //             "Moscow Watchdog",
-    //             "Mountain Cur",
-    //             "Mountain Feist",
-    //             "Mountain Gorilla",
-    //             "Mountain Lion",
-    //             "Mouse",
-    //             "Mudi",
-    //             "Mule",
-    //             "Mule Deer",
-    //             "Muntjac",
-    //             "Musk Deer",
-    //             "Muskox",
-    //             "Muskrat",
-    //             "Nabarlek",
-    //             "Naked Mole Rat",
-    //             "Narwhal",
-    //             "Neanderthal",
-    //             "Neapolitan Mastiff",
-    //             "Nebelung",
-    //             "Netherland Dwarf Rabbit",
-    //             "Newfoundland",
-    //             "Newfypoo",
-    //             "Nigerian Goat",
-    //             "Nilgai",
-    //             "Norfolk Terrier",
-    //             "North American Black Bear",
-    //             "Northern Fur Seal",
-    //             "Northern Inuit Dog",
-    //             "Norwegian Buhund",
-    //             "Norwegian Elkhound",
-    //             "Norwegian Forest",
-    //             "Norwegian Lundehund",
-    //             "Norwich Terrier",
-    //             "Nova Scotia Duck Tolling Retriever",
-    //             "Nubian Goat",
-    //             "Numbat",
-    //             "Nutria",
-    //             "Nyala",
-    //             "Ocelot",
-    //             "Okapi",
-    //             "Old English Sheepdog",
-    //             "Olingo",
-    //             "Olive Baboon",
-    //             "Onager",
-    //             "Opossum",
-    //             "Orangutan",
-    //             "Oribi",
-    //             "Otter",
-    //             "Otterhound",
-    //         ]);
-    //         cps
-    //     };
-
-    //     let cps3 = {
-    //         let mut cps = CustomProperterySetter::new(
-    //             "3_product".to_string(),
-    //             Some("description"),
-    //             false,
-    //             ValueType::String,
-    //         );
-    //         //cps.default_value = Some(DefaultValue::String("FOO"));
-    //         cps.values_editable_by = Some(ValuesEditableBy::OrgAndRepoActors);
-    //         cps
-    //     };
-
-    //     let octocrab = octocrab_client()?;
-    //     for cps in [cps1, cps2, cps3] {
-    //         let response = octocrab
-    //             ._put(
-    //                 format!(
-    //                     "https://api.github.com/orgs/403ind/properties/schema/{}",
-    //                     cps.property_name
-    //                 ),
-    //                 Some(&cps),
-    //             )
-    //             .await?;
-    //         dbg!(&response);
-    //         dbg!(&response.status());
-    //         let body = response.collect().await?.to_bytes().to_vec();
-    //         dbg!(String::from_utf8(body).unwrap());
-    //     }
-
-    //     let cps4 = {
-    //         let mut cps: CustomProperterySetter::<Vec<_>, &str> = CustomProperterySetter::new(
-    //             "product",
-    //             Some("description"),
-    //             false,
-    //             ValueType::String,
-    //         );
-    //         //cps.default_value = Some(DefaultValue::String("FOO"));
-    //         cps.values_editable_by = Some(ValuesEditableBy::OrgAndRepoActors);
-    //         cps
-    //     };
-    //     let response = octocrab
-    //         ._put(
-    //             format!("https://api.github.com/orgs/403ind/properties/schema/7%20product"),
-    //             Some(&cps4),
-    //         )
-    //         .await?;
-    //     dbg!(&response);
-    //     dbg!(&response.status());
-    //     let body = response.collect().await?.to_bytes().to_vec();
-    //     dbg!(String::from_utf8(body).unwrap());
-
-    //     assert!(false);
-    //     Ok(())
-    // }
-}
-
 #[cfg(test)]
 mod test {
-    use data_ingester_financial_business_partners::fbp_results::{FbpResult, FbpResults};
+    use data_ingester_financial_business_partners::fbp_results::FbpResult;
 
     use crate::custom_properties::CustomProperterySetter;
 
-    fn fbp_results() -> FbpResults {
-        FbpResults {
-            results: vec![
-                FbpResult {
-                    portfolio: "po1".into(),
-                    service_line: "sl1".into(),
-                    product: vec!["pr1-1".into(), "pr1-2".into()],
-                },
-                FbpResult {
-                    portfolio: "po2".into(),
-                    service_line: "sl2".into(),
-                    product: vec!["pr2-1".into(), "pr2-2".into()],
-                },
-                FbpResult {
-                    portfolio: "po3".into(),
-                    service_line: "sl3".into(),
-                    product: vec!["pr3-1".into(), "pr3-2".into()],
-                },
-            ],
+    fn fbp_results() -> FbpResult {
+        FbpResult {
+            portfolios: vec!["po1".into(), "po2".into(), "po3".into()],
+            service_lines: vec!["sl1".into(), "sl2".into(), "sl3".into()],
+            products: vec!["pr1-1".into(), "pr1-2".into()],
         }
     }
 
@@ -462,8 +219,8 @@ mod test {
         assert_eq!(expected_json, json);
     }
 
-    #[tokio::test]
-    async fn test_product_setter() {
+    #[test]
+    fn test_product_setter() {
         let product_setter: CustomProperterySetter<Vec<_>, &str> =
             CustomProperterySetter::from_fbp_product();
 

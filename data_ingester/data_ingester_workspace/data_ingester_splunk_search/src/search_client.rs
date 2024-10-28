@@ -11,6 +11,7 @@ use tracing::info;
 
 use crate::acs::Acs;
 
+#[derive(Debug)]
 pub struct SplunkApiClient {
     /// A reqwest client
     client: Client,
@@ -174,7 +175,7 @@ impl SplunkApiClient {
             .await
             .context("Getting search response body")?
             .lines()
-            .inspect(|line| println!("line: {:?}", line))
+            // .inspect(|line| println!("Splunk search `line`: {:?}", line))
             .flat_map(serde_json::from_str::<SearchResult<T>>)
             .map(|sr| sr.result)
             .collect();

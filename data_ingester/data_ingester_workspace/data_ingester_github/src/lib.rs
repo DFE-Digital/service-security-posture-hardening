@@ -173,16 +173,20 @@ impl OctocrabGit {
     ///
     /// `custom_property` - a `CustomProperterySetter` describing the custom property to set
     ///
-    pub(crate) async fn org_create_custom_property<T: AsRef<[S]> + Serialize, S: AsRef<str>>(
+    pub(crate) async fn org_create_or_update_custom_property<
+        T: AsRef<[S]> + Serialize + std::fmt::Debug,
+        S: AsRef<str> + std::fmt::Debug,
+    >(
         &self,
         org: &str,
         custom_property: &CustomProperterySetter<T, S>,
     ) -> Result<GithubResponses> {
         let url = format!(
-            "https://api.github.com/orgs/{}/properties/schema/{}",
+            "/orgs/{}/properties/schema/{}",
             org,
             custom_property.property_name()
         );
+
         let response = self.client._put(&url, Some(custom_property)).await?;
 
         let status = response.status().as_u16();
@@ -210,12 +214,15 @@ impl OctocrabGit {
                 anyhow::bail!(err)
             }
         };
+
         let github_response = GithubResponse::new(
             github_response::SingleOrVec::Single(response_body),
             url,
             status,
         );
+
         let github_responses = GithubResponses::from_response(github_response);
+
         Ok(github_responses)
     }
 
@@ -649,8 +656,6 @@ impl OctocrabGit {
 
             let body_string = std::string::String::from_utf8(body.to_vec())?;
             if status == 403 && body_string.contains("API rate limit exceeded") {
-                dbg!(&status);
-                dbg!(&body);
                 self.wait_for_rate_limit()
                     .await
                     .context("Waiting for rate limit")?;

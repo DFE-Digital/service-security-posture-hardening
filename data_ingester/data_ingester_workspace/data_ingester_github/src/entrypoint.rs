@@ -1,7 +1,7 @@
 //! Entrypoint for running the collection
 use crate::{custom_properties::CustomProperterySetter, OctocrabGit};
 use anyhow::{Context, Result};
-use data_ingester_financial_business_partners::fbp_results::FbpResults;
+use data_ingester_financial_business_partners::fbp_results::FbpResult;
 use data_ingester_splunk::splunk::{set_ssphp_run, try_collect_send, Splunk, ToHecEvents};
 use data_ingester_supporting::keyvault::{GitHubApp, Secrets};
 use std::sync::Arc;
@@ -334,10 +334,14 @@ pub async fn github_set_custom_properties_entrypoint(
     let mut tasks = vec![];
 
     let fbp_results = Arc::new(
-        FbpResults::get_results_from_splunk(secrets)
+        FbpResult::get_results_from_splunk(secrets)
             .await
             .context("Getting FBP Results from Splunk")?,
     );
+
+    if fbp_results.is_empty() {
+        anyhow::bail!("empty fbp results");
+    }
 
     for installation in installations {
         info!("Installation ID: {}", installation.id);
@@ -371,7 +375,7 @@ pub async fn github_set_custom_properties_entrypoint(
             .context("Tokio task has completed successfully")?
             .with_context(|| format!("Running GitHub collection for {}", org_name))?;
     }
-    drop(fbp_results);
+
     Ok(())
 }
 
@@ -379,7 +383,7 @@ async fn update_custom_properties(
     github_client: OctocrabGit,
     org_name: String,
     splunk: Arc<Splunk>,
-    fbp_results: Arc<FbpResults>,
+    fbp_results: Arc<FbpResult>,
 ) -> Result<()> {
     let portfolio_setter = CustomProperterySetter::from_fbp_portfolio(fbp_results.portfolios());
     let service_line_setter =
@@ -392,7 +396,7 @@ async fn update_custom_properties(
                 "Setting GitHub Custom Property for {org_name}/{}",
                 cps.property_name()
             ),
-            github_client.org_create_custom_property(&org_name, &cps),
+            github_client.org_create_or_update_custom_property(&org_name, &cps),
             &splunk,
         )
         .await;
@@ -407,6 +411,7 @@ mod live_tests {
     use std::{env, sync::Arc};
 
     use anyhow::{Context, Result};
+    use data_ingester_financial_business_partners::ContactDetails;
     use data_ingester_splunk::splunk::Splunk;
     use data_ingester_supporting::keyvault::get_keyvault_secrets;
 
@@ -445,9 +450,14 @@ mod live_tests {
             secrets.splunk_token.as_ref().context("No value")?,
         )?;
 
+        let contact_details = ContactDetails::generate_contact_details(10);
+
+        splunk.send_into_hec_batch(&contact_details).await?;
+
         github_set_custom_properties_entrypoint(Arc::new(secrets), Arc::new(splunk))
             .await
             .context("Settings GitHub Custom Properties in test")?;
+
         Ok(())
     }
 }

@@ -4,6 +4,7 @@ use anyhow::{Context, Result};
 use data_ingester_splunk::splunk::{set_ssphp_run, HecEvent, Splunk, ToHecEvents};
 use data_ingester_supporting::keyvault::Secrets;
 use futures::TryStreamExt;
+use rand::Rng;
 use serde::Serialize;
 use std::sync::Arc;
 use tiberius::{AuthMethod, Client, Config, Query, QueryItem, Row};
@@ -113,21 +114,21 @@ impl<T: Into<String>> From<(Row, T)> for ContactDetails {
     }
 }
 
-#[derive(Serialize, Debug)]
-pub(crate) struct ContactDetails {
-    id: Option<i32>,
-    stakeholder_type: Option<String>,
-    email_address: Option<String>,
-    portfolio: Option<String>,
-    service_line: Option<String>,
-    product: Option<String>,
-    cost_centre_code: Option<i32>,
-    cost_centre_owner: Option<String>,
-    cost_centre_title: Option<String>,
-    account_code: Option<String>,
-    activity_code: Option<i32>,
+#[derive(Debug, Serialize)]
+pub struct ContactDetails {
+    pub id: Option<i32>,
+    pub stakeholder_type: Option<String>,
+    pub email_address: Option<String>,
+    pub portfolio: Option<String>,
+    pub service_line: Option<String>,
+    pub product: Option<String>,
+    pub cost_centre_code: Option<i32>,
+    pub cost_centre_owner: Option<String>,
+    pub cost_centre_title: Option<String>,
+    pub account_code: Option<String>,
+    pub activity_code: Option<i32>,
     #[serde(skip_serializing)]
-    source: String,
+    pub source: String,
 }
 
 impl ContactDetails {
@@ -234,6 +235,27 @@ AS a
 ORDER BY a.ID
 ",
         )
+    }
+
+    pub fn generate_contact_details(amount: usize) -> Vec<Self> {
+        let mut rng = rand::thread_rng();
+        let contact_details: Vec<ContactDetails> = (0..amount)
+            .map(|_| Self {
+                id: Some(rng.gen()),
+                stakeholder_type: Some(format!("Stakeholder Type {}", rng.gen::<i32>() % 5)),
+                email_address: Some(format!("email{}@example.com", rng.gen::<i32>() % 100)),
+                portfolio: Some(format!("Portfolio {}", rng.gen::<i32>() % 10)),
+                service_line: Some(format!("Service Line {}", rng.gen::<i32>() % 5)),
+                product: Some(format!("Product {}", rng.gen::<i32>() % 10)),
+                cost_centre_code: Some(rng.gen()),
+                cost_centre_owner: Some(format!("Cost Centre Owner {}", rng.gen::<i32>() % 5)),
+                cost_centre_title: Some(format!("Cost Centre Title {}", rng.gen::<i32>() % 10)),
+                account_code: Some(format!("Account Code {}", rng.gen::<i32>() % 100)),
+                activity_code: Some(rng.gen()),
+                source: "fake_data".into(),
+            })
+            .collect();
+        contact_details
     }
 }
 

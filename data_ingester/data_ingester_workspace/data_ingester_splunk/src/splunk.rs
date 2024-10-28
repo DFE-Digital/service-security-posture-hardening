@@ -236,6 +236,31 @@ impl Splunk {
         Ok(())
     }
 
+    pub async fn send_into_hec_batch<H: ToHecEvents>(
+        &self,
+        events: impl IntoIterator<Item = H>,
+    ) -> Result<()> {
+        for batch in events
+            .into_iter()
+            .flat_map(|e| e.to_hec_events())
+            .batching(batch_lines)
+        {
+            let request = self
+                .client
+                .post(&self.url)
+                .body(batch)
+                .build()
+                .context("building request")?;
+
+            let _response = self
+                .client
+                .execute(request)
+                .await
+                .context("sending to splunk")?;
+        }
+        Ok(())
+    }
+
     #[deprecated(note = "Use `tracing` instead.")]
     pub async fn log(&self, message: &str) -> Result<()> {
         debug!("{}", &message);

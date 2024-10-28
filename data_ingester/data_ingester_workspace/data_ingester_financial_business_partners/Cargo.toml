@@ -16,6 +16,7 @@ tracing = "0"
 tiberius = {version="*", default-features=false, features=["tds73", "rustls", "sql-browser-tokio"]}
 tokio-util = { version="0.7.12", features=["full", "compat"] }
 futures= "*"
+rand = "*"
 
 [lints]
 workspace = true

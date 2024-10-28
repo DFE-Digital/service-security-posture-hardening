@@ -1,30 +1,34 @@
-use std::{collections::HashSet, sync::Arc};
-
 use anyhow::{Context, Result};
 use data_ingester_splunk_search::search_client::SplunkApiClient;
 use data_ingester_supporting::keyvault::Secrets;
 use serde::Deserialize;
+use std::sync::Arc;
 use tracing::info;
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Default)]
 pub struct FbpResult {
-    pub portfolio: String,
-    pub service_line: String,
-    pub product: Vec<String>,
+    #[serde(rename(deserialize = "portfolio"))]
+    pub portfolios: Vec<String>,
+    #[serde(rename(deserialize = "service_line"))]
+    pub service_lines: Vec<String>,
+    #[serde(rename(deserialize = "product"))]
+    pub products: Vec<String>,
 }
 
-#[derive(Debug)]
-pub struct FbpResults {
-    pub results: Vec<FbpResult>,
-}
-
-impl From<Vec<FbpResult>> for FbpResults {
+impl From<Vec<FbpResult>> for FbpResult {
     fn from(value: Vec<FbpResult>) -> Self {
-        Self { results: value }
+        value
+            .into_iter()
+            .fold(FbpResult::default(), |mut acc, value| {
+                acc.portfolios.extend(value.portfolios);
+                acc.service_lines.extend(value.service_lines);
+                acc.products.extend(value.products);
+                acc
+            })
     }
 }
 
-impl FbpResults {
+impl FbpResult {
     pub async fn get_results_from_splunk(secrets: Arc<Secrets>) -> Result<Self> {
         let mut search_client =
             SplunkApiClient::new_from_secrets(secrets.clone())?.set_app("DCAP_DEV");
@@ -34,63 +38,49 @@ impl FbpResults {
             .await
             .context("Opening Splunk access via ACS")?;
 
-        let search = "| savedsearch ssphp_list_fbp_taxonomy_DEV";
+        let search = "| savedsearch ssphp_list_fbp_taxonomy_github_custom_properties_DEV";
 
         info!("Running splunk search '{}'", search);
+
         let fbp_results = search_client
             .run_search::<FbpResult>(search)
             .await
             .context("Running Splunk Search")?;
 
-        // search_client
-        //     .close_acs()
-        //     .await
-        //     .context("Closing Splunk access via ACS")?;
+        search_client
+            .close_acs()
+            .await
+            .context("Closing Splunk access via ACS")?;
+
         Ok(fbp_results.into())
     }
 
-    pub fn portfolios(&self) -> Vec<&str> {
-        self.results
-            .iter()
-            .map(|result| result.portfolio.as_str())
-            .collect::<HashSet<&str>>()
-            .into_iter()
-            .collect()
+    pub fn portfolios(&self) -> &[String] {
+        self.portfolios.as_slice()
     }
 
-    pub fn service_lines(&self) -> Vec<&str> {
-        self.results
-            .iter()
-            .map(|result| result.service_line.as_str())
-            .collect::<HashSet<&str>>()
-            .into_iter()
-            .collect()
+    pub fn service_lines(&self) -> &[String] {
+        self.service_lines.as_slice()
+    }
+
+    pub fn products(&self) -> &[String] {
+        self.service_lines.as_slice()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.portfolios.is_empty() || self.service_lines.is_empty() || self.products.is_empty()
     }
 }
 
 #[cfg(test)]
 mod test {
-    use super::{FbpResult, FbpResults};
+    use super::FbpResult;
 
-    fn fbp_results() -> FbpResults {
-        FbpResults {
-            results: vec![
-                FbpResult {
-                    portfolio: "po1".into(),
-                    service_line: "sl1".into(),
-                    product: vec!["pr1-1".into(), "pr1-2".into()],
-                },
-                FbpResult {
-                    portfolio: "po2".into(),
-                    service_line: "sl2".into(),
-                    product: vec!["pr2-1".into(), "pr2-2".into()],
-                },
-                FbpResult {
-                    portfolio: "po3".into(),
-                    service_line: "sl3".into(),
-                    product: vec!["pr3-1".into(), "pr3-2".into()],
-                },
-            ],
+    fn fbp_results() -> FbpResult {
+        FbpResult {
+            portfolios: vec!["po1".into(), "po2".into(), "po3".into()],
+            service_lines: vec!["sl1".into(), "sl2".into(), "sl3".into()],
+            products: vec!["pr1-1".into(), "pr1-2".into()],
         }
     }
 
@@ -116,7 +106,7 @@ mod test {
 mod live_tests {
     use std::{env, sync::Arc};
 
-    use super::FbpResults;
+    use super::FbpResult;
     use data_ingester_splunk::splunk::set_ssphp_run;
     use data_ingester_supporting::keyvault::get_keyvault_secrets;
 
@@ -129,9 +119,11 @@ mod live_tests {
         .unwrap();
         set_ssphp_run("fbp")?;
 
-        let fbp = FbpResults::get_results_from_splunk(Arc::new(secrets)).await?;
+        let fbp = FbpResult::get_results_from_splunk(Arc::new(secrets)).await?;
 
-        assert!(!fbp.results.is_empty());
+        assert!(!fbp.portfolios().is_empty());
+        assert!(!fbp.service_lines().is_empty());
+        assert!(!fbp.products().is_empty());
 
         Ok(())
     }
