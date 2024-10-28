@@ -53,6 +53,10 @@ pub(crate) async fn start_server(tx: Sender<()>) -> Result<()> {
         .route("/azure", post(post_azure))
         .route("/azure_resource_graph", post(post_azure_resource_graph))
         .route("/github", post(post_github))
+        .route(
+            "/github_custom_properties",
+            post(post_github_custom_properties),
+        )
         .route("/m365", post(post_m365))
         .route(
             "/financial_business_partners",
@@ -265,6 +269,25 @@ async fn post_github(
             state.github_lock.clone(),
             state,
             data_ingester_github::entrypoint::github_octocrab_entrypoint,
+            headers,
+            payload,
+        )
+        .await,
+    )
+}
+
+/// Set GitHub Custom Properties
+async fn post_github_custom_properties(
+    headers: HeaderMap,
+    State(state): State<Arc<AppState>>,
+    payload: Option<Json<AzureInvokeRequest>>,
+) -> Json<AzureInvokeResponse> {
+    Json(
+        function_runner(
+            "GitHub Custom Properties",
+            state.github_custom_properties_lock.clone(),
+            state,
+            data_ingester_github::entrypoint::github_set_custom_properties_entrypoint,
             headers,
             payload,
         )
