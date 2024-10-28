@@ -393,7 +393,8 @@ async fn update_custom_properties(
     for cps in [portfolio_setter, service_line_setter, product_setter] {
         let _repo_branch_rules = try_collect_send(
             &format!(
-                "Setting GitHub Custom Property for {org_name}/{}",
+                "Setting GitHub Custom Property for {}/{}",
+                org_name,
                 cps.property_name()
             ),
             github_client.org_create_or_update_custom_property(&org_name, &cps),
