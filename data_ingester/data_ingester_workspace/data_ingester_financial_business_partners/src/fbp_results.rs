@@ -31,14 +31,14 @@ impl From<Vec<FbpResult>> for FbpResult {
 impl FbpResult {
     pub async fn get_results_from_splunk(secrets: Arc<Secrets>) -> Result<Self> {
         let mut search_client =
-            SplunkApiClient::new_from_secrets(secrets.clone())?.set_app("DCAP_DEV");
+            SplunkApiClient::new_from_secrets(secrets.clone())?.set_app("DCAP");
 
         search_client
             .open_acs()
             .await
             .context("Opening Splunk access via ACS")?;
 
-        let search = "| savedsearch ssphp_list_fbp_taxonomy_github_custom_properties_DEV";
+        let search = "| savedsearch ssphp_list_fbp_taxonomy_github_custom_properties";
 
         info!("Running splunk search '{}'", search);
 
