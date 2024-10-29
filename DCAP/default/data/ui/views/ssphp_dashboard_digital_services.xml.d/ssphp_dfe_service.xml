@@ -4,8 +4,9 @@
   <dashboard version="1.1" theme="dark" hideFilters="true" script="js/addtags.js, js/table_cell_color.js">
 {% endif %}  
 
+
   <label>Security Posture Continuous Assurance : DfE Service Dashboard</label>
-  <description>{{environment}} v3.3.28</description>
+  <description>{{environment}} v4.0.0</description>
   
   <init>
     <set token="form.tkn_fields">C</set>
@@ -15,74 +16,61 @@
     <set token="tkn_padding_1">60</set>
     <set token="tkn_padding_2">30</set>
     <unset token="tkn_ready"></unset>
+
+
+    <set token="tokHideAll">true</set>
+    
+    <set token="tkn_dashboard_start">1</set> 
   </init>
 
 
-  <fieldset submitButton="false">
-    <input type="radio" token="tkn_view" searchWhenChanged="true">
-      <label>View</label>
-      <choice value="a">Absolute</choice>
-      <choice value="p">Percentage</choice>
-      <default>a</default>
-      <initialValue>a</initialValue>
-      <change>
-        <condition value="a">
-          <set token="tkn_show_abs">true</set>
-          <unset token="tkn_show_perc"></unset>
-        </condition>
-        <condition value="p">
-          <unset token="tkn_show_abs"></unset>
-          <set token="tkn_show_perc">true</set>
-        </condition>
-      </change>
-    </input>
-  </fieldset>
-
-
-
-  <row rejects="$tkn_ready$">
-    <panel>
-      <html>
-        <div id="div_header" style="background:darkgrey;color:white;font-weight:bold;font-size:$tkn_font_size_2$%;text-align:center;padding:$tkn_padding_2$">Requesting Data - Please Wait</div> 
-      </html>
-    </panel>
-  </row>
+  <fieldset submitButton="false"></fieldset>
     
 
 
 <!-- ######################################################################################################################################### -->
-<!-- #################################### GET THE BASE SUMMARY INDEX DATA FOR THE OTHER QUERIES ############################################## -->
+<!-- ############################################################################ BASE SEARCHES ############################################## -->
 <!-- ######################################################################################################################################### -->
 
   <row depends="$debug$">
     <panel>
       <table>
-        <search id="bs_1">
+        <search id="base_menu">
           <query>
-`ssphp_summary_index{{environment}}` earliest=-2d@d latest=now
-       ssphp.service.id=$tkn__service|s$
-    ```ssphp.score.ciso_priority=1```
+| inputlookup ssphp_bdmc_fbp.csv where portfolio!="Unallocated"
 
-| eventstats max(SSPHP_RUN) as max_SSPHP_RUN by ssphp.use_case.id
-| where SSPHP_RUN='max_SSPHP_RUN'
-| fields - max_SSPHP_RUN
+| append [| makeresults
+          | eval portfolio="Unassigned",
+                 service_line="Unassigned",
+                 product="Unassigned",
+                 cost_centre_code="Various"]
+          </query>
+        </search>
+      </table>
+    </panel>
+    
+<!-- #```| loadjob savedsearch="{{splunk_user}}:$tkn_current_app$:ssphp_create_dashboard_dataset_service{{environment}}"```# -->
+    <panel>
+      <table>
+        <search id="bs_0">
+          <query>
+| loadjob savedsearch="ssphp_app_account:$tkn_current_app$:ssphp_create_dashboard_dataset_service_DEV"
 
-| search NOT ssphp.assessment.sub_source="true"
+| fields ssphp.service.portfolio, ssphp.service.service_line, ssphp.service.product, ssphp.assessment.source, ssphp.use_case.category, ssphp.use_case.id, ssphp.use_case.title, ssphp.assessment.display_name, ssphp.score.score, ssphp.score.compliance_status, ssphp.score.ciso_priority, ssphp.assessment.description, ssphp.score.color, ssphp.resource.id, SSPHP_UID
+          </query>
+        </search>
+        <option name="count">1</option>
+      </table>
+    </panel>
 
-```temp - for development period only till data timed out```
-| search NOT (ssphp.use_case.savedsearch="ssphp_use_case_github_sast_2-0_DEV" OR 
-              ssphp.use_case.savedsearch="ssphp_use_case_github_sast_3-0_DEV" OR 
-              ssphp.use_case.savedsearch="ssphp_use_case_github_sast_2-1_DEV" OR 
-              ssphp.use_case.savedsearch="ssphp_use_case_github_sast_2-2_DEV")
 
-| eval ssphp.assessment.categories=mvappend('ssphp.assessment.categories','ssphp.assessment.categories{}'),
-       ssphp.assessment.tactics=mvappend('ssphp.assessment.tactics','ssphp.assessment.tactics{}'),
-       ssphp.assessment.techniques=mvappend('ssphp.assessment.techniques','ssphp.assessment.techniques{}'),
-       ssphp.assessment.threats=mvappend('ssphp.assessment.threats','ssphp.assessment.threats{}'),
-       ssphp.benchmark.control.rationale=mvappend('ssphp.benchmark.control.rationale','ssphp.benchmark.control.rationale{}')
-| fields - ssphp.assessment.categories{}, ssphp.assessment.tactics{}, ssphp.assessment.techniques{}, ssphp.assessment.threats{}, ssphp.benchmark.control.rationale{}
+    <panel>
+      <table>
+        <search base="bs_0" id="bs_1">
+          <query>
+| search ssphp.service.portfolio=$tkn_portfolio|s$ AND ssphp.service.service_line=$tkn_service_line|s$ AND ssphp.service.product=$tkn_product|s$
 
-| fields ssphp.*, SSPHP_UID
+| fields ssphp.service.portfolio, ssphp.service.service_line, ssphp.service.product, ssphp.assessment.source, ssphp.use_case.category, ssphp.use_case.id, ssphp.use_case.title, ssphp.assessment.display_name, ssphp.score.score, ssphp.score.compliance_status, ssphp.score.ciso_priority, ssphp.assessment.description, ssphp.score.color, ssphp.resource.id, SSPHP_UID
           </query>
           <done>
             <set token="tkn_service_name">$result.ssphp.service.name$</set>
@@ -93,6 +81,257 @@
       </table>
     </panel>
   </row>
+  
+  
+
+
+
+
+<!-- ######################################################################################################################################### -->
+<!-- ############################################################################ INPUTS ##################################################### -->
+<!-- ######################################################################################################################################### -->
+  
+  
+  <row>
+    <panel id="menu1">
+      <html>
+        <style>
+          #menu1{
+            width:7% !important;
+          }
+        </style>
+      </html>
+      
+      <input type="link" token="tokHide" searchWhenChanged="true" depends="$tokShowAll$">
+        <label></label>
+        <choice value="hide">Hide Menu</choice>
+        <change>
+          <condition value="hide">
+            <set token="tokHideAll">true</set>
+            <unset token="tokShowAll"></unset>
+            <unset token="form.tokShow"></unset>
+            <unset token="tokShow"></unset>
+          </condition>
+        </change>
+      </input>
+      
+      <input type="link" token="tokShow" searchWhenChanged="true" depends="$tokHideAll$">
+        <label></label>
+        <choice value="show">Show Menu</choice>
+        <change>
+          <condition value="show">
+            <set token="tokShowAll">true</set>
+            <unset token="tokHideAll"></unset>
+            <unset token="form.tokHide"></unset>
+            <unset token="tokHide"></unset>
+
+            <set token="tkn_dashboard_start">2</set>
+          </condition>
+        </change>
+      </input>
+    </panel>    
+    
+    
+    <panel id="menu2" depends="$tokShowAll$">
+      <html>
+        <style>
+          #menu2{
+            width:70% !important;
+          }
+        </style>
+      </html>
+      
+      <input type="dropdown" token="tkn_portfolio" searchWhenChanged="true">
+        <label>Portfolio</label>
+        <fieldForLabel>portfolio</fieldForLabel>
+        <fieldForValue>portfolio</fieldForValue>
+        <search base="base_menu">
+          <query>
+  | fields portfolio
+  | dedup portfolio
+  | sort 0 portfolio
+          </query>
+        </search>
+        <change>
+          <condition match=" like($tkn_dashboard_start$,&quot;2&quot;) ">
+            <unset token="form.tkn_service_line"></unset>
+            <unset token="form.tkn_product"></unset>
+            <set token="tkn_resource_count">0</set>
+          </condition>
+          <condition>
+            <set token="tkn_resource_count">0</set>
+          </condition>
+        </change>
+      </input>
+  
+  
+      <input type="dropdown" token="tkn_service_line" searchWhenChanged="true">
+        <label>Service Line</label>
+        <fieldForLabel>service_line</fieldForLabel>
+        <fieldForValue>service_line</fieldForValue>
+        <search base="base_menu">
+          <query>
+  | search portfolio=$tkn_portfolio|s$
+  | fields service_line
+  | dedup service_line
+  | sort 0 service_line
+          </query>
+        </search>
+        <change>
+          <condition match=" like($tkn_dashboard_start$,&quot;2&quot;) ">
+            <unset token="form.tkn_product"></unset>
+            <set token="tkn_resource_count">0</set>
+          </condition>
+          <condition>
+            <set token="tkn_resource_count">0</set>
+          </condition>
+        </change>
+      </input>
+  
+  
+      <input type="dropdown" token="tkn_product" searchWhenChanged="true">
+        <label>Product</label>
+        <fieldForLabel>product</fieldForLabel>
+        <fieldForValue>product</fieldForValue>
+        <search base="base_menu">
+          <query>
+  | search portfolio=$tkn_portfolio|s$ AND service_line=$tkn_service_line|s$
+  | fields product
+  | dedup product
+  | sort 0 product
+          </query>
+        </search>
+        <change>
+          <condition match=" like($tkn_dashboard_start$,&quot;2&quot;) ">
+          <set token="tkn_resource_count">0</set>
+          </condition>
+          <condition>
+            <set token="tkn_resource_count">0</set>
+          </condition>
+        </change>
+      </input>
+    </panel>
+    
+
+<!-- ############################################################################ SERVICE DETAILS LINE ############################################## -->    
+    <panel id="menu3" depends="$tokHideAll$">
+      <html>
+        <style>
+          #menu3{
+            width:70% !important;
+          }
+        </style>
+
+        <head>
+          <style>
+            th, td {
+              padding: 5px;
+            }
+            th {
+              text-align: left;
+            }
+          </style>
+        </head>
+        <body>
+          <table style="width:100%">
+            <tr>
+              <th style="width:30%">PORTFOLIO</th>
+              <th style="width:40%">SERVICE LINE</th>
+              <th style="width:30%">PRODUCT</th>
+            </tr>
+            <tr>
+              <td style="font-size:175%;color:$tkn_colour_orange$;">$tkn_portfolio$</td>
+              <td style="font-size:175%;color:$tkn_colour_orange$;">$tkn_service_line$</td>
+              <td style="font-size:175%;color:$tkn_colour_orange$;">$tkn_product$</td>
+            </tr>
+          </table>
+        </body>
+      </html>
+    </panel>
+    
+    
+    <panel id="menu4" depends="$tokShowAll$">
+      <html>
+        <style>
+          #menu4{
+            width:23% !important;
+          }
+        </style>
+      </html>
+      
+      <input type="radio" token="tkn_view" searchWhenChanged="true">
+        <label>View</label>
+        <choice value="a">Absolute</choice>
+        <choice value="p">Percentage</choice>
+        <default>a</default>
+        <initialValue>a</initialValue>
+        <change>
+          <condition value="a">
+            <set token="tkn_show_abs">true</set>
+            <unset token="tkn_show_perc"></unset>
+          </condition>
+          <condition value="p">
+            <unset token="tkn_show_abs"></unset>
+            <set token="tkn_show_perc">true</set>
+            
+            
+            <set token="tkn_dashboard_start">2</set> 
+          </condition>
+        </change>
+      </input>
+    </panel>
+      
+    <panel id="menu5" depends="$tokHideAll$">
+      <html>
+        <style>
+          #menu5{
+            width:23% !important;
+          }
+        </style>
+      </html>
+      
+      <table>
+        <search base="base_menu">
+          <query>
+            
+| where portfolio=$tkn_portfolio|s$ AND service_line=$tkn_service_line|s$ AND product=$tkn_product|s$
+
+| lookup ssphp_cost_centre_owner_emals.csv cost_centre_owner OUTPUT email as cost_centre_owner_email
+
+| stats values(cost_centre_title) as cost_centre_title,
+        values(cost_centre_owner) as cost_centre_owner, 
+        values(cost_centre_owner_email) as cost_centre_owner_email, 
+        values(financial_business_partner_email) as financial_business_partner_email, 
+        values(hosting_provider_email) as hosting_provider_email, 
+        values(hosting_support_email) as hosting_support_email, 
+        values(product_owner_email) as product_owner_email
+
+| eval service_details="Cost Cente : ".'cost_centre_title',
+       service_details=if(isnotnull('cost_centre_owner') AND cost_centre_owner!="null", mvappend('service_details',"Cost Centre Owner : ".'cost_centre_owner'), 'service_details'),
+       service_details=if(isnotnull('cost_centre_owner_email') AND cost_centre_owner!="null", mvappend('service_details',"Cost Centre Owner EMail : ".'cost_centre_owner_email'), 'service_details'),
+       service_details=if(isnotnull('financial_business_partner_email') AND financial_business_partner_email!="null", mvappend('service_details',"Financial Business Partner EMail : ".'financial_business_partner_email'), 'service_details'),
+       service_details=if(isnotnull('hosting_provider_email') AND hosting_provider_email!="null", mvappend('service_details',"Hosting Provider EMail : ".'hosting_provider_email'), 'service_details'),
+       service_details=if(isnotnull('hosting_support_email') AND hosting_support_email!="null", mvappend('service_details',"Hosting Support EMail : ".'hosting_support_email'), 'service_details'),
+       service_details=if(isnotnull('product_owner_email') AND product_owner_email!="null", mvappend('service_details',"Product Owner EMail : ".'product_owner_email'), 'service_details'),
+       service_details=mvjoin('service_details',"
+")
+| table service_details
+          </query>
+        </search>
+        <option name="drilldown">none</option>
+      </table>
+    </panel>
+    
+  </row>
+
+
+<!-- #  <row rejects="$tkn_ready$">
+    <panel>
+      <html>
+        <div id="div_header" style="background:darkgrey;color:white;font-weight:bold;font-size:$tkn_font_size_2$%;text-align:center;padding:$tkn_padding_2$">Requesting Data - Please Wait</div> 
+      </html>
+    </panel>
+  </row># -->
 
 
   
@@ -125,7 +364,7 @@
           <query>
   | makeresults
 
-  `ssphp_metrics_eval_field_colors{{environment}}`
+  `ssphp_metrics_eval_field_colors_DEV`
 
   | table tkn_*
           </query>
@@ -140,6 +379,55 @@
       </table>
     </panel>
   </row>
+  
+  
+  <row depends="$debug$">
+    <panel>
+      <table>
+        <search>
+          <query>
+  | makeresults
+  | eval user_dashboard_token="&gt;&gt;&gt;&gt;".$tkn_portfolio|s$."::".$tkn_service_line|s$."::".$tkn_product|s$."::".$tkn__current_user_name|s$."::".$tkn__current_application|s$."&lt;&lt;&lt;&lt;"
+  | table user_dashboard_token
+          </query>
+          <done>
+            <set token="tkn_user_dashboard_token">$result.user_dashboard_token$</set>
+          </done>
+        </search>
+      </table>
+    </panel>
+    
+
+    <panel>
+      <table>
+        <search>
+          <query>
+index=_audit user=$tkn__current_user_name|s$ action=search "makeresults" "user_dashboard_token" provenance="UI:Dashboard:ip_sandbox" NOT ("index=_internal" OR "index=_audit") earliest=-30d latest=now
+| rex field=_raw "^[\s\S]*\"\&gt;\&gt;\&gt;\&gt;\"\.\"(?&lt;portfolio&gt;[^\"]*)\"\.\"::\"\.\"(?&lt;service_line&gt;[^\"]*)\"\.\"::\"\.\"(?&lt;product&gt;[^\"]*)\"\.\"::\"\.\"(?&lt;user&gt;[^\"]*)\"\.\"::\"\.\"(?&lt;app&gt;[^\"]*)[\s\S]*$"
+| eval previous_dashboard_token="&gt;&gt;&gt;&gt;".'portfolio'."::".'service_line'."::".'product'."::".'user'."::".'app'."&lt;&lt;&lt;&lt;",
+       time=strftime(_time,"%Y-%m-%d %H:%M:%S")
+| fields _time, time, previous_dashboard_token, portfolio, service_line, product```, user, app```
+| sort 0 - _time
+| dedup previous_dashboard_token
+
+```| table time, previous_dashboard_token
+| head 10
+| stats values(previous_dashboard_token) as previous_dashboard_token```
+
+| table previous_dashboard_token, portfolio, service_line, product
+| head 1
+          </query>
+          <done> 
+            <set token="form.tkn_portfolio">$result.portfolio$</set>
+            <set token="form.tkn_service_line">$result.service_line$</set>
+            <set token="form.tkn_product">$result.product$</set>
+          </done>
+        </search>
+      </table>
+    </panel>    
+  </row>
+
+  
   
 
 <!-- ######################################################################################################################################### -->
@@ -259,14 +547,14 @@
     <panel depends="$tkn_ready$,$tkn_show_abs$">
       <html>
         <div id="div_header" style="background:$tkn_vulnerability_color$;color:white;font-weight:bold;font-size:$tkn_font_size_2$%;text-align:center;padding:$tkn_padding_2$">$tkn_vulnerability_abs$</div> 
-        <div id="div_header" style="background:$tkn_posture_color$;color:white;font-size:80%;text-align:center">Compliant Virtual Machines</div>
+        <div id="div_header" style="background:$tkn_vulnerability_color$;color:white;font-size:80%;text-align:center">Compliant Virtual Machines</div>
         <div id="div_header" style="background:$tkn_vulnerability_color$;color:white;font-size:100%;text-align:center">VM VULNERABILITY</div> 
       </html>
     </panel>
     <panel depends="$tkn_ready$,$tkn_show_perc$">
       <html>
         <div id="div_header" style="background:$tkn_vulnerability_color$;color:white;font-weight:bold;font-size:$tkn_font_size_2$%;text-align:center;padding:$tkn_padding_2$">$tkn_vulnerability_perc_passed_resources$</div> 
-        <div id="div_header" style="background:$tkn_posture_color$;color:white;font-size:80%;text-align:center">Compliant Virtual Machines</div>
+        <div id="div_header" style="background:$tkn_vulnerability_color$;color:white;font-size:80%;text-align:center">Compliant Virtual Machines</div>
         <div id="div_header" style="background:$tkn_vulnerability_color$;color:white;font-size:100%;text-align:center">VM VULNERABILITY</div> 
       </html>
     </panel>
@@ -275,14 +563,14 @@
     <panel depends="$tkn_ready$,$tkn_show_abs$">
       <html>
         <div id="div_header" style="background:$tkn_repos_color$;color:white;font-weight:bold;font-size:$tkn_font_size_2$%;text-align:center;padding:$tkn_padding_2$">$tkn_repos_abs$</div> 
-        <div id="div_header" style="background:$tkn_posture_color$;color:white;font-size:80%;text-align:center">GitHub Repos Compliant with CIS Benchmarks</div>
+        <div id="div_header" style="background:$tkn_repos_color$;color:white;font-size:80%;text-align:center">GitHub Repos Compliant with CIS Benchmarks</div>
         <div id="div_header" style="background:$tkn_repos_color$;color:white;font-size:100%;text-align:center">REPOS</div> 
       </html>
     </panel>
     <panel depends="$tkn_ready$,$tkn_show_perc$">
       <html>
         <div id="div_header" style="background:$tkn_repos_color$;color:white;font-weight:bold;font-size:$tkn_font_size_2$%;text-align:center;padding:$tkn_padding_2$">$tkn_repos_perc_passed_resources$</div> 
-        <div id="div_header" style="background:$tkn_posture_color$;color:white;font-size:80%;text-align:center">GitHub Repos Compliant with CIS Benchmarks</div>
+        <div id="div_header" style="background:$tkn_repos_color$;color:white;font-size:80%;text-align:center">GitHub Repos Compliant with CIS Benchmarks</div>
         <div id="div_header" style="background:$tkn_repos_color$;color:white;font-size:100%;text-align:center">REPOS</div> 
       </html>
     </panel>
@@ -291,14 +579,14 @@
     <panel depends="$tkn_ready$,$tkn_show_abs$">
       <html>
         <div id="div_header" style="background:$tkn_codescan_color$;color:white;font-weight:bold;font-size:$tkn_font_size_2$%;text-align:center;padding:$tkn_padding_2$">$tkn_codescan_abs$</div> 
-        <div id="div_header" style="background:$tkn_posture_color$;color:white;font-size:80%;text-align:center">Compliant GitHub Repos</div>
+        <div id="div_header" style="background:$tkn_codescan_color$;color:white;font-size:80%;text-align:center">Compliant GitHub Repos</div>
         <div id="div_header" style="background:$tkn_codescan_color$;color:white;font-size:100%;text-align:center">CODE SCANNING</div> 
       </html>
     </panel>
     <panel depends="$tkn_ready$,$tkn_show_perc$">
       <html>
         <div id="div_header" style="background:$tkn_codescan_color$;color:white;font-weight:bold;font-size:$tkn_font_size_2$%;text-align:center;padding:$tkn_padding_2$">$tkn_codescan_perc_passed_resources$</div> 
-        <div id="div_header" style="background:$tkn_posture_color$;color:white;font-size:80%;text-align:center">Compliant GitHub Repos</div>
+        <div id="div_header" style="background:$tkn_codescan_color$;color:white;font-size:80%;text-align:center">Compliant GitHub Repos</div>
         <div id="div_header" style="background:$tkn_codescan_color$;color:white;font-size:100%;text-align:center">CODE SCANNING</div> 
       </html>
     </panel>
@@ -310,45 +598,18 @@
 <!-- #################################################################################################################################### --> 
 
 
-  <row depends="$tkn_ready$">
-    <panel id="w1c" depends="$tkn_show_by_control$">
+  <row>
+
+      
+    <panel id="m1">
       <html>
         <style>
-          #w1c{
-            width:25% !important;
-          }
-        </style>
-        <div id="div_header" style="font-size:175%;color:$tkn_colour_orange$;">$tkn_current_service$</div> 
-        <div id="div_header" style="font-size:120%">Control Details &amp; Scores [$tkn_controls_total$]</div> 
-        <br></br>
-        <div><span><a href="ssphp_dfe_service_threat_model?tkn__service=$tkn__service$" class="btn btn-primary" style="color:white;background-color:grey;text-align:left;display:block;width:100%;" target="_blank">Service Threat Model Dashboard</a></span></div> 
-      </html>
-    </panel>
-
-    <panel id="w1r" depends="$tkn_show_by_resource$">
-      <html>
-        <style>
-          #w1r{
-            width:25% !important;
-          }
-        </style>
-        <div id="div_header" style="font-size:175%;color:$tkn_colour_orange$;">$tkn_current_service$</div> 
-        <div id="div_header" style="font-size:120%">Control Details &amp; Scores [$tkn_controls_total_resources$]</div> 
-        <br></br>
-        <div><span><a href="ssphp_dfe_service_threat_model?tkn__service=$tkn__service$" class="btn btn-primary" style="color:white;background-color:grey;text-align:left;display:block;width:100%;" target="_blank">Service Threat Model Dashboard</a></span></div> 
-      </html>
-    </panel>
-
-
-    <panel id="w2">
-      <html>
-        <style>
-          #w2{
-            width:75% !important;
+          #m1{
+            width:88% !important;
           }
         </style>
       </html>
-
+    
       <input type="checkbox" token="tkn_fields" searchWhenChanged="true">
         <label>View</label>
         <choice value="N">Non-Compliant only</choice>
@@ -359,20 +620,28 @@
       </input>
 
       <input type="radio" token="tkn_group_by" searchWhenChanged="true">
-        <label>Group By</label>
+        <label>Show By</label>
+        <choice value="L">List</choice>
+        <choice value="R">Resource</choice> 
         <choice value="C">Control</choice>
-        <choice value="R">Resource</choice>
-        <default>C</default>
-        <initialValue>C</initialValue>
+        <default>L</default>
+        <initialValue>L</initialValue>
         <change>
-          <condition value="C">
-            <set token="tkn_show_by_control">true</set>
+          <condition value="L">
+            <set token="tkn_show_by_list">true</set>
             <unset token="tkn_show_by_resource"></unset>
+            <unset token="tkn_show_by_control"></unset>
           </condition>
           <condition value="R">
             <set token="tkn_show_by_resource">true</set>
+            <unset token="tkn_show_by_list"></unset>
             <unset token="tkn_show_by_control"></unset>
-          </condition>        
+          </condition>
+          <condition value="C">
+            <set token="tkn_show_by_control">true</set>
+            <unset token="tkn_show_by_list"></unset>
+            <unset token="tkn_show_by_resource"></unset>
+          </condition>
         </change>
       </input>
 
@@ -406,15 +675,9 @@
         <fieldForValue>tools</fieldForValue>
         <search>
           <query>
-`ssphp_summary_index{{environment}}` earliest=-2d@d latest=now ssphp.use_case.category="CODE_SCAN"
+`ssphp_summary_index_DEV` earliest=-2d@d latest=now ssphp.use_case.category="CODE_SCAN"
 
 | search NOT ssphp.assessment.sub_source="true"
-
-```temp - for development period only till data timed out```
-| search NOT (ssphp.use_case.savedsearch="ssphp_use_case_github_sast_2-0_DEV" OR 
-              ssphp.use_case.savedsearch="ssphp_use_case_github_sast_3-0_DEV" OR 
-              ssphp.use_case.savedsearch="ssphp_use_case_github_sast_2-1_DEV" OR 
-              ssphp.use_case.savedsearch="ssphp_use_case_github_sast_2-2_DEV")
 
 | fields ssphp.assessment.source
 | dedup ssphp.assessment.source
@@ -431,25 +694,25 @@
 
       <input type="text" token="tkn_resource_search" searchWhenChanged="true">
         <label>Search for Resource</label>
-        <prefix> | search "Resource Details"="*</prefix>
+        <prefix>"*</prefix>
         <suffix>*" </suffix>
         <default>*</default>
         <initialValue>*</initialValue>
       </input>
-    </panel>
-
-<!-- #############################
-    <panel id="w3">
+    </panel>    
+    
+    <panel id="m2">
       <html>
         <style>
-          #w3{
-            width:25% !important;
+          #m2{
+            width:12% !important;
           }
         </style>
-        <div><span><a href="ssphp_foundational_systems_dashboard_help?tkn_service=true" class="btn btn-primary" style="color:black;background-color:grey;text-align:center;display:block;float:right;width:30%;" target="_blank">Dashboard Help</a></span></div> 
+
+<div><span><a href="ssphp_dfe_service_threat_model?tkn__service=$tkn__service$" class="btn btn-primary" style="color:white;background-color:lightgrey;text-align:left;display:block;width:100%;" target="_blank">Service Threat Model Dashboard</a></span></div>
       </html>
     </panel>
- ############################# --> 
+
  
 <!-- Search to build filter text --> 
     <panel depends="$debug$">
@@ -477,10 +740,10 @@
 
 
 <!-- #################################################################################################################################### --> 
-<!-- ########################################## Main Data Table === SHOW BY CONTROL ##################################################### --> 
+<!-- ########################################## Main Data Table === SHOW BY LIST ##################################################### --> 
 <!-- #################################################################################################################################### --> 
 
-  <row depends="$debug$, $tkn_show_by_control$">
+  <row depends="$debug$, $tkn_show_by_list$">
     <html>
       <style>
          .css_for_green{ 
@@ -531,7 +794,7 @@
 
 
 
-  <row depends="$tkn_ready$, $tkn_show_by_control$">
+  <row depends="$tkn_show_by_list$">
     <panel>
       <html>
         <style>
@@ -582,35 +845,16 @@
         </style>
       </html>
       <table id="table1">
+        <title>Control Details &amp; Scores [$tkn_controls_total_list$]</title>
         <search base="bs_1">
           <query>
 $tkn_category$
 
 $tkn_code_tools$
 
-| eval ssphp.assessment.consequence=replace('ssphp.assessment.consequence',"\&lt;P\&gt;",""),
-       ssphp.assessment.description=if('ssphp.use_case.category'="VULNERABILITY",mvappend('ssphp.assessment.consequence','ssphp.assessment.cve'),'ssphp.assessment.description'),
+| search ssphp.resource.id=$tkn_resource_search$
 
-       ssphp.assessment.description=if('ssphp.use_case.category'="POSTURE",replace('ssphp.assessment.description',"\&lt;(\/)?a|A\&gt;",""),'ssphp.assessment.description'),
-       ssphp.assessment.description=if('ssphp.use_case.category'="POSTURE",replace('ssphp.assessment.description',"\&lt;br\&gt;",""),'ssphp.assessment.description'),
-       ssphp.assessment.description=if('ssphp.use_case.category'="POSTURE",replace('ssphp.assessment.description'," target=\"_blank\" href=",""),'ssphp.assessment.description'),
-       ssphp.resource.id=if('ssphp.use_case.category'="POSTURE",mvdedup(mvappend('ssphp.resource.NativeResourceId', 'ssphp.resource.id', 'ssphp.resource.ResourceId')),'ssphp.resource.id'),
-
-       ssphp.assessment.display_name=if('ssphp.use_case.category'="REPOS",'ssphp.benchmark.control.title','ssphp.assessment.display_name'),
-       ssphp.assessment.description=if('ssphp.use_case.category'="REPOS",'ssphp.benchmark.control.description','ssphp.assessment.description'),
-
-       ssphp.assessment.display_name=if('ssphp.use_case.category'="CODE_SCAN",'ssphp.assessment.title','ssphp.assessment.display_name'),
-       ssphp.resource.id=if('ssphp.use_case.category'="CODE_SCAN",mvappend('ssphp.resource.id','ssphp.resource.dependency.manifest_path'),'ssphp.resource.id')
-       
-       
-| eval ssphp.score.compliance_status=if('ssphp.score.score'="100","Compliant","Non-Compliant"),
-       ssphp.score.ciso_priority=case('ssphp.score.ciso_priority'=1,"DfE Mandated",
-                                      'ssphp.score.ciso_priority'=2,"Recommended",
-                                      1==1,"Desirable"),
-       ssphp.score.score='ssphp.score.score'."|".'ssphp.score.color',
-       ssphp.score.compliance_status='ssphp.score.compliance_status'."|".'ssphp.score.color'
-
-`ssphp_add_display_colours{{environment}}`
+$tkn_search_filter$
 
 ``` sort the lines properly ```
 | fillnull value=0 n3
@@ -619,9 +863,8 @@ $tkn_code_tools$
         sort_field='n4'.'n5'
 | sort 0 sort_field, ssphp.use_case.id
 
-| table ssphp.service.id, ssphp.use_case.id, ssphp.use_case.title, ssphp.assessment.display_name, ```ssphp.benchmark.control.title,``` ssphp.score.score, ssphp.score.compliance_status, ssphp.score.ciso_priority, ssphp.assessment.description, ```ssphp.benchmark.control.description,``` ssphp.score.color, ssphp.resource.id, SSPHP_UID
+| table ssphp.service.portfolio, ssphp.service.service_line, ssphp.service.product, ssphp.use_case.id, ssphp.use_case.title, ssphp.assessment.display_name, ssphp.score.score, ssphp.score.compliance_status, ssphp.score.ciso_priority, ssphp.assessment.description, ssphp.score.color, ssphp.resource.id, SSPHP_UID
 
-$tkn_search_filter$
 
 | eval "DfE Service"='ssphp.service.id'
 | rex field=ssphp.score.score "^^(?&lt;count_score&gt;[^|]*)|"
@@ -634,13 +877,11 @@ $tkn_search_filter$
          ssphp.assessment.description as "Description",
          ssphp.resource.id as "Resource Details"
 
-$tkn_resource_search$
-
 | eventstats count as number_controls_total
 | eval number_controls_total_string=tostring('number_controls_total', "commas")
           </query>
           <done>
-            <eval token="tkn_controls_total">if(isnotnull($result.number_controls_total_string$),$result.number_controls_total_string$,"0")</eval>
+            <eval token="tkn_controls_total_list">if(isnotnull($result.number_controls_total_string$),$result.number_controls_total_string$,"0")</eval>
             <eval token="tkn_ready">if(isnotnull($result.number_controls_total$) AND $result.number_controls_total$!="" AND $result.number_controls_total$&gt;0,"true",null())</eval>
           </done>
         </search>
@@ -671,6 +912,7 @@ $tkn_resource_search$
 
   <row depends="$tkn_show_by_resource$">
     <panel>
+      <title>Resource Details &amp; Scores [$tkn_controls_total_resources$]</title>
       <table>
         <search base="bs_1">
           <query>
@@ -678,30 +920,7 @@ $tkn_category$
 
 $tkn_code_tools$
 
-| eval ssphp.assessment.consequence=replace('ssphp.assessment.consequence',"\&lt;P\&gt;",""),
-       ssphp.assessment.description=if('ssphp.use_case.category'="VULNERABILITY",mvappend('ssphp.assessment.consequence','ssphp.assessment.cve'),'ssphp.assessment.description'),
-
-       ssphp.resource.id=if('ssphp.use_case.category'="POSTURE",mvdedup(mvappend('ssphp.resource.NativeResourceId', 'ssphp.resource.id', 'ssphp.resource.ResourceId')),'ssphp.resource.id'),
-
-       ssphp.assessment.display_name=if('ssphp.use_case.category'="REPOS",'ssphp.benchmark.control.title','ssphp.assessment.display_name'),
-       ssphp.assessment.description=if('ssphp.use_case.category'="REPOS",'ssphp.benchmark.control.description','ssphp.assessment.description'),
-
-       ssphp.assessment.display_name=if('ssphp.use_case.category'="CODE_SCAN",'ssphp.assessment.title','ssphp.assessment.display_name')
-       
-       
-| eval ssphp.score.compliance_status=if('ssphp.score.score'="100","Compliant","Non-Compliant"),
-       ssphp.score.ciso_priority=case('ssphp.score.ciso_priority'=1,"DfE Mandated",
-                                      'ssphp.score.ciso_priority'=2,"Recommended",
-                                      1==1,"Desirable"),
-       ssphp.score.score='ssphp.score.score'."|".'ssphp.score.color',
-       ssphp.score.compliance_status='ssphp.score.compliance_status'."|".'ssphp.score.color'
-
-| fields ssphp.service.id, ssphp.use_case.id, ssphp.use_case.title, ssphp.assessment.display_name, ```ssphp.benchmark.control.title,``` ssphp.score.score, ssphp.score.compliance_status, ssphp.score.ciso_priority, ssphp.assessment.description, ```ssphp.benchmark.control.description,``` ssphp.score.color, ssphp.resource.id, SSPHP_UID, ssphp.assessment.source
-
 $tkn_search_filter$
-
-| eval "DfE Service"='ssphp.service.id'
-| rex field=ssphp.score.score "^^(?&lt;count_score&gt;[^|]*)|"
 
 | rename ssphp.use_case.title as "Use Case",
          ssphp.assessment.display_name  as "Control Title", 
@@ -712,18 +931,73 @@ $tkn_search_filter$
          ssphp.resource.id as "Resource Details"
 
 
-| stats values(eval(if(like('Compliance Status',"Non-Compliant%"),'ssphp.assessment.source'." :: ".'Control Title'." [".mvindex(split('Score',"|"),0)."]",null()))) as "Control Title" 
-        by "Resource Details"
+| eval display_control_title='ssphp.assessment.source'."::".'Control Title'." [".mvindex(split('Score',"|"),0)."]"
 
-| where isnotnull('Control Title')
 
-$tkn_resource_search$
+| stats values(display_control_title) as "Control Title" by "Resource Details"
+
+| search "Resource Details"=$tkn_resource_search$
 
 | eventstats count as number_controls_total
 | sort 0 "Resource Details"
           </query>
           <done>
             <eval token="tkn_controls_total_resources">if(isnotnull($result.number_controls_total$),$result.number_controls_total$,"0")</eval>
+          </done>
+        </search>
+        <option name="count">100</option>
+        <option name="dataOverlayMode">none</option>
+        <option name="percentagesRow">false</option>
+        <option name="rowNumbers">false</option>
+        <option name="totalsRow">false</option>
+        <option name="wrap">true</option>
+        <option name="drilldown">none</option>
+        <fields>"Resource Details","Control Title"</fields>
+      </table>
+    </panel>
+  </row>
+
+
+
+  
+
+
+<!-- #################################################################################################################################### --> 
+<!-- ########################################## Main Data Table === SHOW BY CONTROL #################################################### --> 
+<!-- #################################################################################################################################### --> 
+
+
+  <row depends="$tkn_show_by_control$">
+    <panel>
+      <title>Resource Details &amp; Scores [$tkn_controls_total_controls$]</title>
+      <table>
+        <search base="bs_1">
+          <query>
+$tkn_category$
+
+$tkn_code_tools$
+
+$tkn_search_filter$
+
+| rename ssphp.use_case.title as "Use Case",
+         ssphp.assessment.display_name  as "Control Title", 
+         ssphp.score.score as "Score",
+         ssphp.score.compliance_status as "Compliance Status",
+         ssphp.score.ciso_priority as "Control Type",
+         ssphp.assessment.description as "Description",
+         ssphp.resource.id as "Resource Details"
+
+
+| eval "Control Title"='ssphp.assessment.source'."::".'Control Title'
+
+| search "Resource Details"=$tkn_resource_search$
+| stats values("Resource Details") as "Resource Details" by "Control Title"
+
+| eventstats count as number_controls_total
+| sort 0 "Resource Details"
+          </query>
+          <done>
+            <eval token="tkn_controls_total_controls">if(isnotnull($result.number_controls_total$),$result.number_controls_total$,"0")</eval>
           </done>
         </search>
         <option name="count">100</option>
@@ -744,8 +1018,8 @@ $tkn_resource_search$
 <!-- ###################################################### FOOTER ROW ################################################################## -->
 <!-- #################################################################################################################################### --> 
 
-<row depends="$tkn_show_footer$">
-    <panel depends="$debug$">
+<row depends="$debug$">
+    <panel>
         <table>
             <search>
                 <query>
