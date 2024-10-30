@@ -5,7 +5,10 @@ use data_ingester_splunk::splunk::{set_ssphp_run, Splunk, ToHecEvents};
 use data_ingester_supporting::keyvault::Secrets;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use std::{collections::VecDeque, sync::Arc};
+use std::{
+    collections::{HashMap, VecDeque},
+    sync::Arc,
+};
 use tokio::time::{Duration, Instant};
 use tracing::{error, info};
 pub async fn azure_resource_graph(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
@@ -298,11 +301,20 @@ enum ResourceGraphResponse {
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(transparent)]
 pub(crate) struct ResourceGraphData {
-    inner: Vec<Value>,
+    inner: Vec<ResourceGraphDataInner>,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub(crate) struct ResourceGraphDataInner {
+    // Pull `type` out to make sure it's the first field in the
+    // serialized output to workaround Splunk KV extraction limits
+    r#type: String,
+    #[serde(flatten)]
+    other: HashMap<String, Value>,
 }
 
 impl ToHecEvents for &ResourceGraphData {
-    type Item = Value;
+    type Item = ResourceGraphDataInner;
     fn source(&self) -> &str {
         "azure_resource_graph"
     }

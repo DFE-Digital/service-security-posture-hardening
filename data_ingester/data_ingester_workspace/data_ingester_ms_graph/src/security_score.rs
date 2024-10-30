@@ -1,4 +1,4 @@
-use std::iter;
+use std::{collections::HashMap, iter};
 
 use data_ingester_splunk::splunk::ToHecEvents;
 use serde::{Deserialize, Serialize};
@@ -16,7 +16,7 @@ pub struct SecurityScores {
 }
 
 impl ToHecEvents for &SecurityScores {
-    type Item = Value;
+    type Item = ControlScore;
     fn source(&self) -> &str {
         "msgraph"
     }
@@ -69,7 +69,7 @@ pub struct SecurityScore {
     pub vendor_information: VendorInformation,
     pub average_comparative_scores: Vec<AverageComparativeScore>,
     #[serde(skip_serializing)]
-    pub control_scores: Vec<Value>,
+    pub control_scores: Vec<ControlScore>,
 }
 
 //impl ToHecEvents for &SecurityScore {
@@ -125,20 +125,10 @@ pub struct AverageComparativeScore {
     pub seat_size_range_upper_value: Option<String>,
 }
 
-// #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
-// #[serde(rename_all = "camelCase")]
-// pub struct ControlScore {
-//     pub control_category: String,
-//     pub control_name: String,
-//     pub description: String,
-//     pub score: f64,
-//     pub source: Option<String>,
-//     #[serde(rename = "IsApplicable")]
-//     pub is_applicable: Option<String>,
-//     pub score_in_percentage: Option<f64>,
-//     pub on: Option<String>,
-//     pub last_synced: String,
-//     pub implementation_status: String,
-//     pub count: Option<String>,
-//     pub total: Option<String>,
-// }
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ControlScore {
+    pub control_name: String,
+    #[serde(flatten)]
+    pub other: HashMap<String, Value>,
+}

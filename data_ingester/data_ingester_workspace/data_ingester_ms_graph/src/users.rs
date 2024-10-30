@@ -24,6 +24,7 @@ use std::ops::Deref;
 #[derive(Debug, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct User<'a> {
+    is_privileged: Option<bool>,
     account_enabled: Option<bool>,
     #[serde(skip_serializing_if = "Vec::is_empty")]
     assigned_plans: Vec<AssignedPlan>,
@@ -50,7 +51,6 @@ pub struct User<'a> {
     pub azure_roles: Option<UserAzureRoles>,
     #[serde(skip_deserializing)]
     conditional_access_policies: Option<Vec<UserConditionalAccessPolicy<'a>>>,
-    is_privileged: Option<bool>,
 }
 
 /// Used to represent an AAD users roles in Azure (Cloud) subscriptions
