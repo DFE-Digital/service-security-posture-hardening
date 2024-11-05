@@ -7,7 +7,7 @@ use azure_mgmt_subscription::package_2021_10::{
     models::Subscription, Client as ClientSubscription,
 };
 
-use anyhow::{Context, Result};
+use anyhow::{anyhow, Context, Result};
 use azure_core::auth::TokenCredential;
 use azure_identity::ClientSecretCredential;
 use azure_identity::TokenCredentialOptions;
@@ -274,7 +274,7 @@ impl AzureRest {
 
         loop {
             if retries == 0 {
-                anyhow::bail!("Failed to make request errors:{:?}", errors)
+                anyhow::bail!("Failed to make request!\nerrors:{:?}", errors)
             } else if retries < MAX_RETRIES {
                 sleep(SLEEP_TIME).await;
             } else {
@@ -313,11 +313,6 @@ impl AzureRest {
 
             let status = response.status();
 
-            if !response.status().is_success() {
-                warn!("post_rest_request:status:{:?}", &status);
-                continue;
-            }
-
             let response_body = match response.text().await {
                 Ok(ok) => ok,
                 Err(err) => {
@@ -327,6 +322,15 @@ impl AzureRest {
                 }
             };
 
+            if !status.is_success() {
+                let error = format!(
+                    "post_rest_request:status:{:?}, body:{:?}",
+                    &status, &response_body
+                );
+                errors.push(anyhow!(error));
+                continue;
+            }
+
             let rt: T = match serde_json::from_str(&response_body) {
                 Ok(obj) => obj,
                 Err(err) => {
@@ -335,7 +339,7 @@ impl AzureRest {
                         err, response_body
                     );
                     warn!(error);
-                    errors.push(anyhow::anyhow!(error));
+                    errors.push(anyhow!(error));
                     continue;
                 }
             };
