@@ -103,11 +103,13 @@ async fn make_request(
 ) -> Result<QueryResponse> {
     let response = loop {
         rate_limit.wait().await?;
-        match az_client
+
+        let result = az_client
             .post_rest_request(endpoint, &request_body)
             .await
-            .context("Sending Resource Graph Post Request")?
-        {
+            .context("Sending Resource Graph Post Request")?;
+
+        match result {
             // Happy path
             ResourceGraphResponse::Query(response) => break response,
 
