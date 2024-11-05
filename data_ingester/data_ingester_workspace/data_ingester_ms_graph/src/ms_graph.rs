@@ -212,8 +212,8 @@ impl MsGraph {
         Ok(LegacyPolicies { inner: result })
     }
 
-    /// M365 V2 1.1.18
-    /// This does not work - No such API
+    // /// M365 V2 1.1.18
+    // /// This does not work - No such API
     // pub async fn get_app_family_details(&self) -> Result<AppFamilyDetails> {
     //     let result = self
     //         .get(&self.beta_client, "/organization/getAppFamilyDetails")

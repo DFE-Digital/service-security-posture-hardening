@@ -17,7 +17,8 @@ use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use serde_json::Value;
 use std::iter;
 use std::{collections::HashMap, sync::Arc};
-use tracing::error;
+use tokio::time::{sleep, Duration};
+use tracing::{error, warn};
 use url::Url;
 
 use data_ingester_splunk::splunk::ToHecEvents;
@@ -31,6 +32,7 @@ pub struct AzureRest {
 impl AzureRest {
     pub async fn new(client_id: &str, client_secret: &str, tenant_id: &str) -> Result<Self> {
         let http_client = azure_core::new_http_client();
+
         let credential = Arc::new(ClientSecretCredential::new(
             http_client,
             tenant_id.to_owned(),
@@ -243,43 +245,102 @@ impl AzureRest {
         Ok(rt)
     }
 
+    /// Send a request to Azure using the client token
+    ///
+    /// Azure is really unstable long term and requests are likely to
+    /// fail in lots of different ways.
     pub async fn post_rest_request<T: DeserializeOwned + std::fmt::Debug, B: Serialize>(
         &self,
         url: &str,
         body: &B,
     ) -> Result<T> {
-        let response = self
-            .credential
-            .get_token(&["https://management.azure.com/.default"])
-            .await?;
-
-        let body_json =
-            serde_json::to_string(&body).context("Serialize HTTP request body to json")?;
-
-        let response = reqwest::Client::new()
-            .post(url)
-            .header(
-                "Authorization",
-                format!("Bearer {}", response.token.secret()),
-            )
-            .header("Content-Type", "application/json")
-            .body(body_json)
-            .send()
-            .await
-            .context("make HTTP request")?
-            .text()
-            .await
-            .context("Get body from HTTP response")?;
-
-        let rt: T = match serde_json::from_str(&response) {
-            Ok(obj) => obj,
+        let post_body_json = match serde_json::to_string(&body) {
+            Ok(ok) => ok,
             Err(err) => {
-                error!("serde error: {:?}", &err);
-                error!("serde error &response: {:?}", &response);
-                anyhow::bail!("Failed to deserialize HTTP response");
+                // If the body won't serialize then we have to bail.
+                anyhow::bail!(
+                    "serde_json::to_string err:{:?}, class:{:?}",
+                    err,
+                    err.classify()
+                );
             }
         };
-        Ok(rt)
+
+        const MAX_RETRIES: u8 = 5;
+        const SLEEP_TIME: Duration = Duration::from_secs(3);
+        let mut retries = MAX_RETRIES;
+
+        let mut errors: Vec<anyhow::Error> = vec![];
+
+        loop {
+            if retries == 0 {
+                anyhow::bail!("Failed to make request errors:{:?}", errors)
+            } else if retries < MAX_RETRIES {
+                sleep(SLEEP_TIME).await;
+            } else {
+                retries -= 1;
+            }
+
+            let token_response = self
+                .credential
+                .get_token(&["https://management.azure.com/.default"])
+                .await;
+
+            let token = match token_response {
+                Ok(ok) => ok,
+                Err(err) => {
+                    warn!("token_response: {:?}", err);
+                    errors.push(err.into());
+                    continue;
+                }
+            };
+
+            let response = match reqwest::Client::new()
+                .post(url)
+                .header("Authorization", format!("Bearer {}", token.token.secret()))
+                .header("Content-Type", "application/json")
+                .body(post_body_json.clone())
+                .send()
+                .await
+            {
+                Ok(ok) => ok,
+                Err(err) => {
+                    warn!("request::send() err:{:?}", err);
+                    errors.push(err.into());
+                    continue;
+                }
+            };
+
+            let status = response.status();
+
+            if !response.status().is_success() {
+                warn!("post_rest_request:status:{:?}", &status);
+                continue;
+            }
+
+            let response_body = match response.text().await {
+                Ok(ok) => ok,
+                Err(err) => {
+                    warn!("response.text(): {:?}", err);
+                    errors.push(err.into());
+                    continue;
+                }
+            };
+
+            let rt: T = match serde_json::from_str(&response_body) {
+                Ok(obj) => obj,
+                Err(err) => {
+                    let error = format!(
+                        "serde_json::from_str: err:{:?}, body:{:?}",
+                        err, response_body
+                    );
+                    warn!(error);
+                    errors.push(anyhow::anyhow!(error));
+                    continue;
+                }
+            };
+            return Ok(rt);
+        }
     }
 
     pub async fn rest_request_subscription_iter_no_hec(

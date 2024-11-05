@@ -1,7 +1,7 @@
 use serde::Deserialize;
 use serde::Serialize;
 
-/// Example data for Azure Functions request/response structs
+// /// Example data for Azure Functions request/response structs
 // Request headers
 // {
 //     "host": "127.0.0.1:34963",
