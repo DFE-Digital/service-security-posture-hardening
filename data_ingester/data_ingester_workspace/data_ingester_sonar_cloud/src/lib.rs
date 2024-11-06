@@ -1,7 +1,5 @@
-use std::sync::Arc;
-
 use anyhow::{Context, Result};
-use data_ingester_splunk::splunk::{try_collect_send, Splunk, ToHecEvents};
+use data_ingester_splunk::splunk::{set_ssphp_run, try_collect_send, Splunk, ToHecEvents};
 use data_ingester_supporting::keyvault::Secrets;
 use reqwest::{
     header::{HeaderMap, HeaderValue},
@@ -9,9 +7,11 @@ use reqwest::{
 };
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use std::sync::Arc;
 use tracing::info;
 
 pub async fn entrypoint(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
+    set_ssphp_run("sonar_cloud")?;
     let sonar_api_key = secrets
         .sonar_api_key
         .as_ref()
