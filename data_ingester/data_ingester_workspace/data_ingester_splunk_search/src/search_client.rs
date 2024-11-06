@@ -1,4 +1,7 @@
+use std::sync::Arc;
+
 use anyhow::{Context, Result};
+use data_ingester_supporting::keyvault::Secrets;
 use reqwest::{
     header::{HeaderMap, HeaderValue},
     Client,
@@ -8,6 +11,7 @@ use tracing::info;
 
 use crate::acs::Acs;
 
+#[derive(Debug)]
 pub struct SplunkApiClient {
     /// A reqwest client
     client: Client,
@@ -71,6 +75,30 @@ impl SplunkApiClient {
             app: "search".to_string(),
             acs,
         })
+    }
+
+    pub fn new_from_secrets(secrets: Arc<Secrets>) -> Result<Self> {
+        let splunk_cloud_stack = secrets.splunk_cloud_stack.as_deref();
+
+        let splunk_acs_token = secrets.splunk_acs_token.as_deref();
+
+        let splunk_search_token = secrets
+            .splunk_search_token
+            .as_ref()
+            .context("Getting splunk_search_token secret")?;
+
+        let splunk_search_url = secrets
+            .splunk_search_url
+            .as_ref()
+            .context("Getting splunk_search_url secret")?;
+
+        SplunkApiClient::new(
+            splunk_search_url,
+            splunk_search_token,
+            splunk_cloud_stack,
+            splunk_acs_token,
+        )
+        .context("Creating Splunk search client")
     }
 
     /// Grant search access via ACS
@@ -147,7 +175,7 @@ impl SplunkApiClient {
             .await
             .context("Getting search response body")?
             .lines()
-            //            .inspect(|line| info!("line: {:?}", line))
+            // .inspect(|line| println!("Splunk search `line`: {:?}", line))
             .flat_map(serde_json::from_str::<SearchResult<T>>)
             .map(|sr| sr.result)
             .collect();

@@ -42,28 +42,7 @@ pub async fn threagile(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()>
     info!("Extracting Threagile bins");
     let threagile_path = extract_threagile()?;
 
-    let splunk_cloud_stack = secrets.splunk_cloud_stack.as_deref();
-
-    let splunk_acs_token = secrets.splunk_acs_token.as_deref();
-
-    let splunk_search_token = secrets
-        .splunk_search_token
-        .as_ref()
-        .context("Getting splunk_search_token secret")?;
-
-    let splunk_search_url = secrets
-        .splunk_search_url
-        .as_ref()
-        .context("Getting splunk_search_url secret")?;
-
-    let mut search_client = SplunkApiClient::new(
-        splunk_search_url,
-        splunk_search_token,
-        splunk_cloud_stack,
-        splunk_acs_token,
-    )
-    .context("Creating Splunk search client")?
-    .set_app("DCAP");
+    let mut search_client = SplunkApiClient::new_from_secrets(secrets.clone())?.set_app("DCAP");
 
     search_client
         .open_acs()

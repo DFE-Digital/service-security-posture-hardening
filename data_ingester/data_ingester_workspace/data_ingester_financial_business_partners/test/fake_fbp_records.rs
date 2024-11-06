@@ -1,0 +1,1 @@
+use data_ingester_financial_business_partners::ContactDetails;

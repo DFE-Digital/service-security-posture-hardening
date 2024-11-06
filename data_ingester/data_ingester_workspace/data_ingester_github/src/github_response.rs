@@ -13,6 +13,12 @@ pub(crate) struct GithubResponses {
 }
 
 impl GithubResponses {
+    pub(crate) fn from_response(github_response: GithubResponse) -> Self {
+        Self {
+            inner: vec![github_response],
+        }
+    }
+
     pub(crate) fn is_empty(&self) -> bool {
         self.inner.is_empty()
     }
