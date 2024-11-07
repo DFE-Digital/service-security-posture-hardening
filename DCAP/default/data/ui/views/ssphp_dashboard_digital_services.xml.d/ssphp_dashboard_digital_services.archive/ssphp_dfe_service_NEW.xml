@@ -1,7 +1,6 @@
-<dashboard version="1.1" theme="dark" script="js/addtags.js, js/table_cell_color.js">
+<dashboard version="1.1" theme="light" script="js/addtags.js, js/table_cell_color.js">
 
-
-  <label>Security Posture Continuous Assurance : DfE Service Dashboard</label>
+  <label>IN DEVELOPMENT ---- Security Posture Continuous Assurance : DfE Service Dashboard</label>
   <description>_DEV v3.3.28</description>
   
   <init>
@@ -42,32 +41,32 @@
                  cost_centre_code="Various"]
           </query>
         </search>
-        <option name="count">1</option>
       </table>
     </panel>
     
-<!-- #```| loadjob savedsearch="{{splunk_user}}:$tkn_current_app$:ssphp_create_dashboard_dataset_service{{environment}}"```# -->
+    
     <panel>
       <table>
-        <search id="bs_0">
+        <search id="bs_1">
           <query>
-| loadjob savedsearch="ssphp_app_account:$tkn_current_app$:ssphp_create_dashboard_dataset_service_DEV"
+`ssphp_summary_index_DEV` earliest=-2d@d latest=now
 
-| fields ssphp.service.portfolio, ssphp.service.service_line, ssphp.service.product, ssphp.assessment.source, ssphp.use_case.category, ssphp.use_case.id, ssphp.use_case.title, ssphp.assessment.display_name, ssphp.score.score, ssphp.score.compliance_status, ssphp.score.ciso_priority, ssphp.assessment.description, ssphp.score.color, ssphp.resource.id, ssphp.resource.tenant, ssphp.resource.subscription, ssphp.resource.resource_group, SSPHP_UID
-          </query>
-        </search>
-        <option name="count">1</option>
-      </table>
-    </panel>
+| eventstats max(SSPHP_RUN) as max_SSPHP_RUN by ssphp.use_case.id
+| where SSPHP_RUN='max_SSPHP_RUN'
+| fields - max_SSPHP_RUN
 
-
-    <panel>
-      <table>
-        <search base="bs_0" id="bs_1">
-          <query>
 | search ssphp.service.portfolio=$tkn_portfolio|s$ AND ssphp.service.service_line=$tkn_service_line|s$ AND ssphp.service.product=$tkn_product|s$
 
-| fields ssphp.service.portfolio, ssphp.service.service_line, ssphp.service.product, ssphp.assessment.source, ssphp.use_case.category, ssphp.use_case.id, ssphp.use_case.title, ssphp.assessment.display_name, ssphp.score.score, ssphp.score.compliance_status, ssphp.score.ciso_priority, ssphp.assessment.description, ssphp.score.color, ssphp.resource.id, ssphp.resource.tenant, ssphp.resource.subscription, ssphp.resource.resource_group, SSPHP_UID
+| search NOT ssphp.assessment.sub_source="true"
+
+| eval ssphp.assessment.categories=mvappend('ssphp.assessment.categories','ssphp.assessment.categories{}'),
+       ssphp.assessment.tactics=mvappend('ssphp.assessment.tactics','ssphp.assessment.tactics{}'),
+       ssphp.assessment.techniques=mvappend('ssphp.assessment.techniques','ssphp.assessment.techniques{}'),
+       ssphp.assessment.threats=mvappend('ssphp.assessment.threats','ssphp.assessment.threats{}'),
+       ssphp.benchmark.control.rationale=mvappend('ssphp.benchmark.control.rationale','ssphp.benchmark.control.rationale{}')
+| fields - ssphp.assessment.categories{}, ssphp.assessment.tactics{}, ssphp.assessment.techniques{}, ssphp.assessment.threats{}, ssphp.benchmark.control.rationale{}
+
+| fields ssphp.*, SSPHP_UID
           </query>
           <done>
             <set token="tkn_service_name">$result.ssphp.service.name$</set>
@@ -286,7 +285,6 @@
           }
         </style>
       </html>
-      
       <table>
         <search base="base_menu">
           <query>
@@ -309,26 +307,24 @@
        service_details=if(isnotnull('financial_business_partner_email') AND financial_business_partner_email!="null", mvappend('service_details',"Financial Business Partner EMail : ".'financial_business_partner_email'), 'service_details'),
        service_details=if(isnotnull('hosting_provider_email') AND hosting_provider_email!="null", mvappend('service_details',"Hosting Provider EMail : ".'hosting_provider_email'), 'service_details'),
        service_details=if(isnotnull('hosting_support_email') AND hosting_support_email!="null", mvappend('service_details',"Hosting Support EMail : ".'hosting_support_email'), 'service_details'),
-       service_details=if(isnotnull('product_owner_email') AND product_owner_email!="null", mvappend('service_details',"Product Owner EMail : ".'product_owner_email'), 'service_details'),
-       service_details=mvjoin('service_details',"
-")
+       service_details=if(isnotnull('product_owner_email') AND product_owner_email!="null", mvappend('service_details',"Product Owner EMail : ".'product_owner_email'), 'service_details')
 | table service_details
+| rename service_details as "Service Details"
           </query>
         </search>
-        <option name="drilldown">none</option>
       </table>
     </panel>
     
   </row>
 
 
-<!-- #  <row rejects="$tkn_ready$">
+  <row rejects="$tkn_ready$">
     <panel>
       <html>
         <div id="div_header" style="background:darkgrey;color:white;font-weight:bold;font-size:$tkn_font_size_2$%;text-align:center;padding:$tkn_padding_2$">Requesting Data - Please Wait</div> 
       </html>
     </panel>
-  </row># -->
+  </row>
 
 
   
@@ -436,50 +432,87 @@ index=_audit user=$tkn__current_user_name|s$ action=search "makeresults" "user_d
       <table>
         <search base="bs_1">
           <query>
-| search (ssphp.use_case.category="POSTURE" OR ssphp.use_case.category="VULNERABILITY")
+| rex field=ssphp.score.score "^(?&lt;count_score&gt;[^|]*)|"
+| rex field=ssphp.resource.id "\/resourcegroups\/(?&lt;rg&gt;[^\/]*)\/"
+         
+| stats count as number_controls_total,
+             dc(eval(if('ssphp.use_case.category'="POSTURE" AND 'count_score'&lt;100,'rg',null()))) as posture_number_failed_resources, dc(eval(if('ssphp.use_case.category'="POSTURE" AND 'count_score'=100,'rg',null()))) as posture_number_passed_resources,
 
-| search ssphp.resource.id="***" 
+             dc(eval(if('ssphp.use_case.category'="VULNERABILITY" AND 'count_score'&lt;100,'ssphp.resource.id',null()))) as vulnerability_number_failed_resources, dc(eval(if('ssphp.use_case.category'="VULNERABILITY" AND 'count_score'=100,'ssphp.resource.id',null()))) as vulnerability_number_passed_resources,
+             
+             dc(eval(if('ssphp.use_case.category'="REPOS" AND 'count_score'&lt;100,'ssphp.resource.id',null()))) as repos_number_failed_resources,
+             dc(eval(if('ssphp.use_case.category'="REPOS",'ssphp.resource.id',null()))) as repos_number_total_resources,
+             
+             dc(eval(if('ssphp.use_case.category'="CODE_SCAN" AND 'ssphp.score.ciso_priority'=1 AND 'count_score'&lt;100,'ssphp.resource.id',null()))) as codescan_number_failed_resources,
+             dc(eval(if('ssphp.use_case.category'="CODE_SCAN",'ssphp.resource.id',null()))) as codescan_number_total_resources
 
-| where 'ssphp.score.ciso_priority'="DfE Mandated" 
-
-| eval rg='ssphp.resource.tenant'."/".'ssphp.resource.subscription'."/".'ssphp.resource.resource_group'
-
-| stats count, sum(eval(if(mvindex(split('ssphp.score.score',"|"),0)="100",1,0))) as rg_good by ssphp.use_case.category, rg
-| stats count, sum(eval(if('count'='rg_good',1,0))) as rg_good by ssphp.use_case.category
-
-| eval {ssphp.use_case.category}_count='count',
-       {ssphp.use_case.category}_rg_good='rg_good'
+             
+| eval posture_number_total_resources='posture_number_failed_resources'+'posture_number_passed_resources',
+       vulnerability_number_total_resources='vulnerability_number_failed_resources'+'vulnerability_number_passed_resources',
+       repos_number_passed_resources='repos_number_total_resources'-'repos_number_failed_resources',
+       codescan_number_passed_resources='codescan_number_total_resources'-'codescan_number_failed_resources',
        
-| fields - count, rg_good, ssphp.use_case.category
-| stats values(*) as *
+       posture_perc_passed_resources=coalesce(floor('posture_number_passed_resources'*100/'posture_number_total_resources'),"0"),
+       vulnerability_perc_passed_resources=coalesce(floor('vulnerability_number_passed_resources'*100/'vulnerability_number_total_resources'),"0"),
+       repos_perc_passed_resources=coalesce(floor('repos_number_passed_resources'*100/'repos_number_total_resources'),"0"),
+       codescan_perc_passed_resources=coalesce(floor('codescan_number_passed_resources'*100/'codescan_number_total_resources'),"0")
 
-| eval posture_number_total_resources='POSTURE_count',
-       posture_number_passed_resources='POSTURE_rg_good',
-       posture_perc_passed_resources=('posture_number_passed_resources'*100)/'posture_number_total_resources'."%",
-       posture_abs='posture_number_passed_resources'." / ".'posture_number_total_resources',
-       posture_color=case(isnull('posture_perc_passed_resources') OR 'posture_perc_passed_resources'="","#171D21",
+| eval posture_color=case(isnull('posture_perc_passed_resources') OR 'posture_perc_passed_resources'="","#171D21",
                                   'posture_perc_passed_resources'=100,"#6AB187",
                                   1==1,"#D32D41"),
-       
-       vulnerability_number_total_resources='VULNERABILITY_count',
-       vulnerability_number_passed_resources='VULNERABILITY_rg_good',
-       vulnerability_perc_passed_resources=('vulnerability_number_passed_resources'*100)/'vulnerability_number_total_resources'."%",
-       vulnerability_abs='vulnerability_number_passed_resources'." / ".'vulnerability_number_total_resources',
        vulnerability_color=case(isnull('vulnerability_perc_passed_resources') OR 'vulnerability_perc_passed_resources'="","#171D21",
                                   'vulnerability_perc_passed_resources'=100,"#6AB187",
+                                  1==1,"#D32D41"),
+       repos_color=case(isnull('repos_perc_passed_resources') OR 'repos_perc_passed_resources'="","#171D21",
+                                  'repos_perc_passed_resources'=100,"#6AB187",
+                                  1==1,"#D32D41"),
+       codescan_color=case(isnull('codescan_perc_passed_resources') OR 'codescan_perc_passed_resources'="","#171D21",
+                                  'codescan_perc_passed_resources'=100,"#6AB187",
                                   1==1,"#D32D41")
+                                  
+| eval posture_perc_passed_resources='posture_perc_passed_resources'."%",
+       vulnerability_perc_passed_resources='vulnerability_perc_passed_resources'."%",
+       repos_perc_passed_resources='repos_perc_passed_resources'."%",
+       codescan_perc_passed_resources='codescan_perc_passed_resources'."%"
+       
+| eval number_controls_total=tostring('number_controls_total', "commas"), 
+       posture_number_failed_resources=tostring('posture_number_failed_resources', "commas"), posture_number_passed_resources=tostring('posture_number_passed_resources', "commas"), posture_number_total_resources=tostring('posture_number_total_resources', "commas"),
+       vulnerability_number_failed_resources=tostring('vulnerability_number_failed_resources', "commas"), vulnerability_number_passed_resources=tostring('vulnerability_number_passed_resources', "commas"), vulnerability_number_total_resources=tostring('vulnerability_number_total_resources', "commas"),
+       repos_number_failed_resources=tostring('repos_number_failed_resources', "commas"), repos_number_passed_resources=tostring('repos_number_passed_resources', "commas"), repos_number_total_resources=tostring('repos_number_total_resources', "commas"),
+       codescan_number_failed_resources=tostring('codescan_number_failed_resources', "commas"), codescan_number_passed_resources=tostring('codescan_number_passed_resources', "commas"), codescan_number_total_resources=tostring('codescan_number_total_resources', "commas")
+       
+| eval posture_abs='posture_number_passed_resources'." / ".'posture_number_total_resources',
+       vulnerability_abs='vulnerability_number_passed_resources'." / ".'vulnerability_number_total_resources',
+       repos_abs='repos_number_passed_resources'." / ".'repos_number_total_resources',
+       codescan_abs='codescan_number_passed_resources'." / ".'codescan_number_total_resources'
+
+| table posture_*, vulnerability_*, repos_*, codescan_*
             </query>
           <done>
-            <set token="tkn_posture_number_total_resources">$result.posture_number_total_resources$</set>
-            <set token="tkn_vulnerability_number_total_resources">$result.vulnerability_number_total_resources$</set>
-            <set token="tkn_posture_number_passed_resources">$result.posture_number_passed_resources$</set>
-            <set token="tkn_vulnerability_number_passed_resources">$result.vulnerability_number_passed_resources$</set>
             <set token="tkn_posture_perc_passed_resources">$result.posture_perc_passed_resources$</set>
             <set token="tkn_vulnerability_perc_passed_resources">$result.vulnerability_perc_passed_resources$</set>
-            <set token="tkn_posture_abs">$result.posture_abs$</set>
-            <set token="tkn_vulnerability_abs">$result.vulnerability_abs$</set>
+            <set token="tkn_repos_perc_passed_resources">$result.repos_perc_passed_resources$</set>
+            <set token="tkn_codescan_perc_passed_resources">$result.codescan_perc_passed_resources$</set>
+
+            <set token="tkn_posture_number_total_resources">$result.posture_number_total_resources$</set>
+            <set token="tkn_vulnerability_number_total_resources">$result.vulnerability_number_total_resources$</set>
+            <set token="tkn_repos_number_total_resources">$result.repos_number_total_resources$</set>
+            <set token="tkn_codescan_number_total_resources">$result.codescan_number_total_resources$</set>
+
+            <set token="tkn_posture_number_passed_resources">$result.posture_number_passed_resources$</set>
+            <set token="tkn_vulnerability_number_passed_resources">$result.vulnerability_number_passed_resources$</set>
+            <set token="tkn_repos_number_passed_resources">$result.repos_number_passed_resources$</set>
+            <set token="tkn_codescan_number_passed_resources">$result.codescan_number_passed_resources$</set>
+
             <set token="tkn_posture_color">$result.posture_color$</set>
             <set token="tkn_vulnerability_color">$result.vulnerability_color$</set>
+            <set token="tkn_repos_color">$result.repos_color$</set>
+            <set token="tkn_codescan_color">$result.codescan_color$</set>
+
+            <set token="tkn_posture_abs">$result.posture_abs$</set>
+            <set token="tkn_vulnerability_abs">$result.vulnerability_abs$</set>
+            <set token="tkn_repos_abs">$result.repos_abs$</set>
+            <set token="tkn_codescan_abs">$result.codescan_abs$</set>
           </done>
         </search>
       </table>
@@ -507,14 +540,14 @@ index=_audit user=$tkn__current_user_name|s$ action=search "makeresults" "user_d
     <panel depends="$tkn_ready$,$tkn_show_abs$">
       <html>
         <div id="div_header" style="background:$tkn_vulnerability_color$;color:white;font-weight:bold;font-size:$tkn_font_size_2$%;text-align:center;padding:$tkn_padding_2$">$tkn_vulnerability_abs$</div> 
-        <div id="div_header" style="background:$tkn_vulnerability_color$;color:white;font-size:80%;text-align:center">Compliant Virtual Machines</div>
+        <div id="div_header" style="background:$tkn_posture_color$;color:white;font-size:80%;text-align:center">Compliant Virtual Machines</div>
         <div id="div_header" style="background:$tkn_vulnerability_color$;color:white;font-size:100%;text-align:center">VM VULNERABILITY</div> 
       </html>
     </panel>
     <panel depends="$tkn_ready$,$tkn_show_perc$">
       <html>
         <div id="div_header" style="background:$tkn_vulnerability_color$;color:white;font-weight:bold;font-size:$tkn_font_size_2$%;text-align:center;padding:$tkn_padding_2$">$tkn_vulnerability_perc_passed_resources$</div> 
-        <div id="div_header" style="background:$tkn_vulnerability_color$;color:white;font-size:80%;text-align:center">Compliant Virtual Machines</div>
+        <div id="div_header" style="background:$tkn_posture_color$;color:white;font-size:80%;text-align:center">Compliant Virtual Machines</div>
         <div id="div_header" style="background:$tkn_vulnerability_color$;color:white;font-size:100%;text-align:center">VM VULNERABILITY</div> 
       </html>
     </panel>
@@ -523,14 +556,14 @@ index=_audit user=$tkn__current_user_name|s$ action=search "makeresults" "user_d
     <panel depends="$tkn_ready$,$tkn_show_abs$">
       <html>
         <div id="div_header" style="background:$tkn_repos_color$;color:white;font-weight:bold;font-size:$tkn_font_size_2$%;text-align:center;padding:$tkn_padding_2$">$tkn_repos_abs$</div> 
-        <div id="div_header" style="background:$tkn_repos_color$;color:white;font-size:80%;text-align:center">GitHub Repos Compliant with CIS Benchmarks</div>
+        <div id="div_header" style="background:$tkn_posture_color$;color:white;font-size:80%;text-align:center">GitHub Repos Compliant with CIS Benchmarks</div>
         <div id="div_header" style="background:$tkn_repos_color$;color:white;font-size:100%;text-align:center">REPOS</div> 
       </html>
     </panel>
     <panel depends="$tkn_ready$,$tkn_show_perc$">
       <html>
         <div id="div_header" style="background:$tkn_repos_color$;color:white;font-weight:bold;font-size:$tkn_font_size_2$%;text-align:center;padding:$tkn_padding_2$">$tkn_repos_perc_passed_resources$</div> 
-        <div id="div_header" style="background:$tkn_repos_color$;color:white;font-size:80%;text-align:center">GitHub Repos Compliant with CIS Benchmarks</div>
+        <div id="div_header" style="background:$tkn_posture_color$;color:white;font-size:80%;text-align:center">GitHub Repos Compliant with CIS Benchmarks</div>
         <div id="div_header" style="background:$tkn_repos_color$;color:white;font-size:100%;text-align:center">REPOS</div> 
       </html>
     </panel>
@@ -539,14 +572,14 @@ index=_audit user=$tkn__current_user_name|s$ action=search "makeresults" "user_d
     <panel depends="$tkn_ready$,$tkn_show_abs$">
       <html>
         <div id="div_header" style="background:$tkn_codescan_color$;color:white;font-weight:bold;font-size:$tkn_font_size_2$%;text-align:center;padding:$tkn_padding_2$">$tkn_codescan_abs$</div> 
-        <div id="div_header" style="background:$tkn_codescan_color$;color:white;font-size:80%;text-align:center">Compliant GitHub Repos</div>
+        <div id="div_header" style="background:$tkn_posture_color$;color:white;font-size:80%;text-align:center">Compliant GitHub Repos</div>
         <div id="div_header" style="background:$tkn_codescan_color$;color:white;font-size:100%;text-align:center">CODE SCANNING</div> 
       </html>
     </panel>
     <panel depends="$tkn_ready$,$tkn_show_perc$">
       <html>
         <div id="div_header" style="background:$tkn_codescan_color$;color:white;font-weight:bold;font-size:$tkn_font_size_2$%;text-align:center;padding:$tkn_padding_2$">$tkn_codescan_perc_passed_resources$</div> 
-        <div id="div_header" style="background:$tkn_codescan_color$;color:white;font-size:80%;text-align:center">Compliant GitHub Repos</div>
+        <div id="div_header" style="background:$tkn_posture_color$;color:white;font-size:80%;text-align:center">Compliant GitHub Repos</div>
         <div id="div_header" style="background:$tkn_codescan_color$;color:white;font-size:100%;text-align:center">CODE SCANNING</div> 
       </html>
     </panel>
@@ -558,7 +591,7 @@ index=_audit user=$tkn__current_user_name|s$ action=search "makeresults" "user_d
 <!-- #################################################################################################################################### --> 
 
 
-  <row>
+  <row depends="$tkn_ready$">
 
       
     <panel id="m1">
@@ -588,18 +621,18 @@ index=_audit user=$tkn__current_user_name|s$ action=search "makeresults" "user_d
         <initialValue>L</initialValue>
         <change>
           <condition value="L">
-            <set token="tkn_show_by_list">true</set>
+            <set token="tkn_show_by_control">true</set>
             <unset token="tkn_show_by_resource"></unset>
-            <unset token="tkn_show_by_control"></unset>
+            <unset token="tkn_show_by_use_case"></unset>
           </condition>
           <condition value="R">
             <set token="tkn_show_by_resource">true</set>
-            <unset token="tkn_show_by_list"></unset>
             <unset token="tkn_show_by_control"></unset>
+            <unset token="tkn_show_by_use_case"></unset>
           </condition>
           <condition value="C">
-            <set token="tkn_show_by_control">true</set>
-            <unset token="tkn_show_by_list"></unset>
+            <set token="tkn_show_by_use_case">true</set>
+            <unset token="tkn_show_by_control"></unset>
             <unset token="tkn_show_by_resource"></unset>
           </condition>
         </change>
@@ -700,10 +733,10 @@ index=_audit user=$tkn__current_user_name|s$ action=search "makeresults" "user_d
 
 
 <!-- #################################################################################################################################### --> 
-<!-- ########################################## Main Data Table === SHOW BY LIST ##################################################### --> 
+<!-- ########################################## Main Data Table === SHOW BY CONTROL ##################################################### --> 
 <!-- #################################################################################################################################### --> 
 
-  <row depends="$debug$, $tkn_show_by_list$">
+  <row depends="$debug$, $tkn_show_by_control$">
     <html>
       <style>
          .css_for_green{ 
@@ -754,7 +787,7 @@ index=_audit user=$tkn__current_user_name|s$ action=search "makeresults" "user_d
 
 
 
-  <row depends="$tkn_show_by_list$">
+  <row depends="$tkn_ready$, $tkn_show_by_control$">
     <panel>
       <html>
         <style>
@@ -805,16 +838,36 @@ index=_audit user=$tkn__current_user_name|s$ action=search "makeresults" "user_d
         </style>
       </html>
       <table id="table1">
-        <title>Control Details &amp; Scores [$tkn_controls_total_list$]</title>
+        <title>Control Details &amp; Scores [$tkn_controls_total$]</title>
         <search base="bs_1">
           <query>
 $tkn_category$
 
 $tkn_code_tools$
 
-| search ssphp.resource.id=$tkn_resource_search$
+| eval ssphp.assessment.consequence=replace('ssphp.assessment.consequence',"\&lt;P\&gt;",""),
+       ssphp.assessment.description=if('ssphp.use_case.category'="VULNERABILITY",mvappend('ssphp.assessment.consequence','ssphp.assessment.cve'),'ssphp.assessment.description'),
 
-$tkn_search_filter$
+       ssphp.assessment.description=if('ssphp.use_case.category'="POSTURE",replace('ssphp.assessment.description',"\&lt;(\/)?a|A\&gt;",""),'ssphp.assessment.description'),
+       ssphp.assessment.description=if('ssphp.use_case.category'="POSTURE",replace('ssphp.assessment.description',"\&lt;br\&gt;",""),'ssphp.assessment.description'),
+       ssphp.assessment.description=if('ssphp.use_case.category'="POSTURE",replace('ssphp.assessment.description'," target=\"_blank\" href=",""),'ssphp.assessment.description'),
+       ssphp.resource.id=if('ssphp.use_case.category'="POSTURE",mvdedup(mvappend('ssphp.resource.NativeResourceId', 'ssphp.resource.id', 'ssphp.resource.ResourceId')),'ssphp.resource.id'),
+
+       ssphp.assessment.display_name=if('ssphp.use_case.category'="REPOS",'ssphp.benchmark.control.title','ssphp.assessment.display_name'),
+       ssphp.assessment.description=if('ssphp.use_case.category'="REPOS",'ssphp.benchmark.control.description','ssphp.assessment.description'),
+
+       ssphp.assessment.display_name=if('ssphp.use_case.category'="CODE_SCAN",'ssphp.assessment.title','ssphp.assessment.display_name'),
+       ssphp.resource.id=if('ssphp.use_case.category'="CODE_SCAN",mvappend('ssphp.resource.id','ssphp.resource.dependency.manifest_path'),'ssphp.resource.id')
+       
+       
+| eval ssphp.score.compliance_status=if('ssphp.score.score'="100","Compliant","Non-Compliant"),
+       ssphp.score.ciso_priority=case('ssphp.score.ciso_priority'=1,"DfE Mandated",
+                                      'ssphp.score.ciso_priority'=2,"Recommended",
+                                      1==1,"Desirable"),
+       ssphp.score.score='ssphp.score.score'."|".'ssphp.score.color',
+       ssphp.score.compliance_status='ssphp.score.compliance_status'."|".'ssphp.score.color'
+
+`ssphp_add_display_colours_DEV`
 
 ``` sort the lines properly ```
 | fillnull value=0 n3
@@ -823,8 +876,9 @@ $tkn_search_filter$
         sort_field='n4'.'n5'
 | sort 0 sort_field, ssphp.use_case.id
 
-| table ssphp.service.portfolio, ssphp.service.service_line, ssphp.service.product, ssphp.use_case.id, ssphp.use_case.title, ssphp.assessment.display_name, ssphp.score.score, ssphp.score.compliance_status, ssphp.score.ciso_priority, ssphp.assessment.description, ssphp.score.color, ssphp.resource.id, SSPHP_UID
+| table ssphp.service.portfolio, ssphp.service.service_line, ssphp.service.product, ssphp.use_case.id, ssphp.use_case.title, ssphp.assessment.display_name, ```ssphp.benchmark.control.title,``` ssphp.score.score, ssphp.score.compliance_status, ssphp.score.ciso_priority, ssphp.assessment.description, ```ssphp.benchmark.control.description,``` ssphp.score.color, ssphp.resource.id, SSPHP_UID
 
+$tkn_search_filter$
 
 | eval "DfE Service"='ssphp.service.id'
 | rex field=ssphp.score.score "^^(?&lt;count_score&gt;[^|]*)|"
@@ -837,11 +891,13 @@ $tkn_search_filter$
          ssphp.assessment.description as "Description",
          ssphp.resource.id as "Resource Details"
 
+| search "Resource Details"=$tkn_resource_search$
+
 | eventstats count as number_controls_total
 | eval number_controls_total_string=tostring('number_controls_total', "commas")
           </query>
           <done>
-            <eval token="tkn_controls_total_list">if(isnotnull($result.number_controls_total_string$),$result.number_controls_total_string$,"0")</eval>
+            <eval token="tkn_controls_total">if(isnotnull($result.number_controls_total_string$),$result.number_controls_total_string$,"0")</eval>
             <eval token="tkn_ready">if(isnotnull($result.number_controls_total$) AND $result.number_controls_total$!="" AND $result.number_controls_total$&gt;0,"true",null())</eval>
           </done>
         </search>
@@ -872,7 +928,6 @@ $tkn_search_filter$
 
   <row depends="$tkn_show_by_resource$">
     <panel>
-      <title>Resource Details &amp; Scores [$tkn_controls_total_resources$]</title>
       <table>
         <search base="bs_1">
           <query>
@@ -880,7 +935,30 @@ $tkn_category$
 
 $tkn_code_tools$
 
+| eval ssphp.assessment.consequence=replace('ssphp.assessment.consequence',"\&lt;P\&gt;",""),
+       ssphp.assessment.description=if('ssphp.use_case.category'="VULNERABILITY",mvappend('ssphp.assessment.consequence','ssphp.assessment.cve'),'ssphp.assessment.description'),
+
+       ssphp.resource.id=if('ssphp.use_case.category'="POSTURE",mvdedup(mvappend('ssphp.resource.NativeResourceId', 'ssphp.resource.id', 'ssphp.resource.ResourceId')),'ssphp.resource.id'),
+
+       ssphp.assessment.display_name=if('ssphp.use_case.category'="REPOS",'ssphp.benchmark.control.title','ssphp.assessment.display_name'),
+       ssphp.assessment.description=if('ssphp.use_case.category'="REPOS",'ssphp.benchmark.control.description','ssphp.assessment.description'),
+
+       ssphp.assessment.display_name=if('ssphp.use_case.category'="CODE_SCAN",'ssphp.assessment.title','ssphp.assessment.display_name')
+       
+       
+| eval ssphp.score.compliance_status=if('ssphp.score.score'="100","Compliant","Non-Compliant"),
+       ssphp.score.ciso_priority=case('ssphp.score.ciso_priority'=1,"DfE Mandated",
+                                      'ssphp.score.ciso_priority'=2,"Recommended",
+                                      1==1,"Desirable"),
+       ssphp.score.score='ssphp.score.score'."|".'ssphp.score.color',
+       ssphp.score.compliance_status='ssphp.score.compliance_status'."|".'ssphp.score.color'
+
+| fields ssphp.service.portfolio, ssphp.service.service_line, ssphp.service.product, ssphp.use_case.id, ssphp.use_case.title, ssphp.assessment.display_name, ```ssphp.benchmark.control.title,``` ssphp.score.score, ssphp.score.compliance_status, ssphp.score.ciso_priority, ssphp.assessment.description, ```ssphp.benchmark.control.description,``` ssphp.score.color, ssphp.resource.id, SSPHP_UID, ssphp.assessment.source
+
 $tkn_search_filter$
+
+| eval "DfE Service"='ssphp.service.id'
+| rex field=ssphp.score.score "^^(?&lt;count_score&gt;[^|]*)|"
 
 | rename ssphp.use_case.title as "Use Case",
          ssphp.assessment.display_name  as "Control Title", 
@@ -890,11 +968,11 @@ $tkn_search_filter$
          ssphp.assessment.description as "Description",
          ssphp.resource.id as "Resource Details"
 
-| where isnotnull('Control Title') AND trim('Control Title')!=""
-| eval display_control_title='ssphp.assessment.source'."::".'Control Title'." [".mvindex(split('Score',"|"),0)."]"
 
+| stats values(eval(if(like('Compliance Status',"Non-Compliant%"),'ssphp.assessment.source'." :: ".'Control Title'." [".mvindex(split('Score',"|"),0)."]",null()))) as "Control Title" 
+        by "Resource Details"
 
-| stats values(display_control_title) as "Control Title" by "Resource Details"
+| where isnotnull('Control Title')
 
 | search "Resource Details"=$tkn_resource_search$
 
@@ -923,13 +1001,12 @@ $tkn_search_filter$
 
 
 <!-- #################################################################################################################################### --> 
-<!-- ########################################## Main Data Table === SHOW BY CONTROL #################################################### --> 
+<!-- ########################################## Main Data Table === SHOW BY USE CASE #################################################### --> 
 <!-- #################################################################################################################################### --> 
 
 
-  <row depends="$tkn_show_by_control$">
+  <row depends="$tkn_show_by_use_case$">
     <panel>
-      <title>Resource Details &amp; Scores [$tkn_controls_total_controls$]</title>
       <table>
         <search base="bs_1">
           <query>
@@ -937,27 +1014,49 @@ $tkn_category$
 
 $tkn_code_tools$
 
+| eval ssphp.assessment.consequence=replace('ssphp.assessment.consequence',"\&lt;P\&gt;",""),
+       ssphp.assessment.description=if('ssphp.use_case.category'="VULNERABILITY",mvappend('ssphp.assessment.consequence','ssphp.assessment.cve'),'ssphp.assessment.description'),
+
+       ssphp.resource.id=if('ssphp.use_case.category'="POSTURE",mvdedup(mvappend('ssphp.resource.NativeResourceId', 'ssphp.resource.id', 'ssphp.resource.ResourceId')),'ssphp.resource.id'),
+
+       ssphp.assessment.display_name=if('ssphp.use_case.category'="REPOS",'ssphp.benchmark.control.title','ssphp.assessment.display_name'),
+       ssphp.assessment.description=if('ssphp.use_case.category'="REPOS",'ssphp.benchmark.control.description','ssphp.assessment.description'),
+
+       ssphp.assessment.display_name=if('ssphp.use_case.category'="CODE_SCAN",'ssphp.assessment.title','ssphp.assessment.display_name')
+       
+       
+| eval ssphp.score.compliance_status=if('ssphp.score.score'="100","Compliant","Non-Compliant"),
+       ssphp.score.ciso_priority=case('ssphp.score.ciso_priority'=1,"DfE Mandated",
+                                      'ssphp.score.ciso_priority'=2,"Recommended",
+                                      1==1,"Desirable"),
+       ssphp.score.score='ssphp.score.score'."|".'ssphp.score.color',
+       ssphp.score.compliance_status='ssphp.score.compliance_status'."|".'ssphp.score.color'
+
+| fields ssphp.service.portfolio, ssphp.service.service_line, ssphp.service.product, ssphp.use_case.id, ssphp.use_case.title, ssphp.assessment.display_name, ```ssphp.benchmark.control.title,``` ssphp.score.score, ssphp.score.compliance_status, ssphp.score.ciso_priority, ssphp.assessment.description, ```ssphp.benchmark.control.description,``` ssphp.score.color, ssphp.resource.id, SSPHP_UID, ssphp.assessment.source
+
 $tkn_search_filter$
 
-| rename ssphp.use_case.title as "Use Case",
+| where 'ssphp.score.compliance_status'="Non-Compliant|red" AND 'ssphp.score.ciso_priority'="DfE Mandated" 
+
+| search ssphp.resource.id=$tkn_resource_search$
+ 
+| stats values(ssphp.resource.id) as ssphp.resource.id, values(*) as * by ssphp.use_case.id
+
+| table ssphp.service.id, ```ssphp.use_case.id,``` ssphp.use_case.title, ssphp.assessment.display_name, ```ssphp.benchmark.control.title,``` ssphp.score.score, ssphp.score.compliance_status, ssphp.score.ciso_priority, ```ssphp.assessment.description,``` ```ssphp.benchmark.control.description,``` ssphp.score.color, ssphp.resource.id
+
+| rex field=ssphp.score.score "^^(?&lt;count_score&gt;[^|]*)|"
+
+| rename ssphp.service.id as "DfE Service",
+         ssphp.use_case.title as "Use Case",
          ssphp.assessment.display_name  as "Control Title", 
          ssphp.score.score as "Score",
          ssphp.score.compliance_status as "Compliance Status",
          ssphp.score.ciso_priority as "Control Type",
          ssphp.assessment.description as "Description",
          ssphp.resource.id as "Resource Details"
-
-
-| eval "Control Title"='ssphp.assessment.source'."::".'Control Title'
-
-| search "Resource Details"=$tkn_resource_search$
-| stats values("Resource Details") as "Resource Details" by "Control Title"
-
-| eventstats count as number_controls_total
-| sort 0 "Resource Details"
           </query>
           <done>
-            <eval token="tkn_controls_total_controls">if(isnotnull($result.number_controls_total$),$result.number_controls_total$,"0")</eval>
+            <eval token="tkn_controls_total_resources">if(isnotnull($result.number_controls_total$),$result.number_controls_total$,"0")</eval>
           </done>
         </search>
         <option name="count">100</option>

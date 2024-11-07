@@ -5,7 +5,7 @@
   
   <search id="bs_1">
     <query>
-`ssphp_summary_index_DEV` earliest=-6mon@mon latest=now
+`ssphp_summary_index` earliest=-6mon@mon latest=now
 ssphp.source.foundational_system="*"
       (ssphp.use_case.id="azure*" OR ssphp.use_case.id="dns*" OR ssphp.use_case.id="m365*" OR ssphp.use_case.id="aad*" OR (ssphp.use_case.id="github*" AND ssphp.use_case.savedsearch="*_fs*"))
       ssphp.use_case.id!="*_000"
@@ -72,7 +72,7 @@ ssphp.source.foundational_system="*"
       <table id="table1">
         <search>
           <query>
-`ssphp_summary_index_DEV` earliest=-6mon@mon latest=now
+`ssphp_summary_index` earliest=-6mon@mon latest=now
 ssphp.source.foundational_system="*"
       (ssphp.use_case.id="azure*" OR ssphp.use_case.id="dns*" OR ssphp.use_case.id="m365*" OR ssphp.use_case.id="aad*" OR (ssphp.use_case.id="github*" AND ssphp.use_case.savedsearch="*_fs*"))
       ssphp.use_case.id!="*_000"
