@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use crate::splunk::{HecEvent, Splunk};
+use crate::splunk::{HecEvent, Splunk, SSPHP_RUN_NEW};
 use crate::thread::SplunkTask;
 use anyhow::{Context, Result};
 use tracing_core::subscriber::Subscriber;
@@ -13,7 +13,7 @@ use tracing_subscriber::{EnvFilter, Registry};
 pub fn start_splunk_tracing(splunk: Arc<Splunk>, source: &str, sourcetype: &str) -> Result<()> {
     let stdout_log = tracing_subscriber::fmt::layer()
         .with_ansi(false)
-        .compact()
+        .json()
         .with_writer(std::io::stderr);
 
     let splunk_filter: EnvFilter =
@@ -49,10 +49,15 @@ impl SplunkLayer {
 /// Simple [tracing_subscriber::Layer] to send events to Splunk
 impl<S: Subscriber> Layer<S> for SplunkLayer {
     fn on_event(&self, event: &Event<'_>, _ctx: tracing_subscriber::layer::Context<'_, S>) {
-        let hec_event = HecEvent::new(
+        let ssphp_run = SSPHP_RUN_NEW
+            .read()
+            .map(|hm| *hm.get("default").unwrap_or(&0))
+            .unwrap_or_else(|_| 0);
+        let hec_event = HecEvent::new_with_ssphp_run(
             &event.as_serde(),
             self.source.as_str(),
             self.sourcetype.as_str(),
+            ssphp_run,
         )
         .expect("Serialization should complete");
         _ = self.splunk_task.send(hec_event);
