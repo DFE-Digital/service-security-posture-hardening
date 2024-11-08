@@ -23,7 +23,7 @@ members = [
 unwrap-used = "warn"
 
 [workspace.lints.rust]
-single_use_lifetimes = "warn"
+# single_use_lifetimes = "warn"
 unused_import-braces = "warn"
 unused_results = "warn"
 

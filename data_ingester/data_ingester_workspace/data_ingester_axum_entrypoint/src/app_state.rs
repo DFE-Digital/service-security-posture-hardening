@@ -13,6 +13,7 @@ use std::time::SystemTime;
 use tokio::sync::Mutex;
 use tokio::sync::RwLock;
 use tracing::info;
+use valuable::Valuable;
 
 use crate::azure_request_response::AzureInvokeRequest;
 
@@ -62,7 +63,7 @@ pub(crate) struct AppState {
 }
 
 /// Records stats for requsets made to this execution
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, Valuable)]
 pub(crate) struct Stats {
     start_up_time: u64,
     instance_requests: Vec<Invocation>,
@@ -99,7 +100,7 @@ impl Stats {
 }
 
 /// Represents a single Invocation and it's metadata
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, Valuable)]
 pub(crate) struct Invocation {
     name: String,
     start: u64,
@@ -156,7 +157,7 @@ impl Invocation {
     }
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, Valuable)]
 pub(crate) struct Headers(HashMap<String, String>);
 
 impl From<HeaderMap> for Headers {
@@ -176,11 +177,10 @@ impl From<HeaderMap> for Headers {
     }
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, Valuable)]
 pub(crate) struct AppStateHealthCheck<'a> {
     splunk: ArcState,
     secrets: ArcState,
-
     aws_lock: ArcMutexState,
     azure_lock: ArcMutexState,
     azure_resource_graph_lock: ArcMutexState,
@@ -193,19 +193,18 @@ pub(crate) struct AppStateHealthCheck<'a> {
     qualys_qvs_lock: ArcMutexState,
     sonar_cloud: ArcMutexState,
     threagile_lock: ArcMutexState,
-
     execution_stats: &'a Stats,
 }
 
 /// Records the stats for an Arc
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, Valuable)]
 struct ArcState {
     arc_strong_count: usize,
     arc_weak_count: usize,
 }
 
 /// Records the stats for an Mutex
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, Valuable)]
 struct MutexState {
     state: String,
 }
@@ -232,7 +231,7 @@ impl<T> From<&Arc<T>> for ArcState {
 }
 
 /// Records the stats for an Arc<Mutex<T>>
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, Valuable)]
 struct ArcMutexState {
     mutex: MutexState,
     arc: ArcState,
