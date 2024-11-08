@@ -1,5 +1,6 @@
 use serde::Deserialize;
 use serde::Serialize;
+use valuable::Valuable;
 
 // /// Example data for Azure Functions request/response structs
 // Request headers
@@ -34,14 +35,49 @@ use serde::Serialize;
 // }
 
 /// https://learn.microsoft.com/en-us/azure/azure-functions/functions-custom-handlers#request-payload
-#[derive(Debug, Deserialize, Default, Serialize)]
-pub(crate) struct AzureInvokeRequest {
-    #[allow(dead_code)]
+#[derive(Debug, Deserialize, Default, Serialize, Valuable)]
+pub struct AzureInvokeRequest {
     #[serde(rename = "Data")]
-    pub(crate) data: serde_json::Value,
-    #[allow(dead_code)]
+    pub(crate) data: Data,
     #[serde(rename = "Metadata")]
-    pub(crate) metadata: serde_json::Value,
+    pub(crate) metadata: Metadata,
+}
+
+#[derive(Debug, Deserialize, Default, Serialize, Valuable)]
+pub(crate) struct Data {
+    pub(crate) timer: Option<Timer>,
+}
+
+#[derive(Debug, Deserialize, Default, Serialize, Valuable)]
+pub struct Timer {
+    #[serde(rename = "IsPastDue")]
+    pub(crate) is_past_due: bool,
+    #[serde(rename = "Schedule")]
+    pub(crate) schedule: Schedule,
+    #[serde(rename = "ScheduleStats")]
+    pub(crate) schedule_stats: Option<()>,
+}
+
+#[derive(Debug, Deserialize, Default, Serialize, Valuable)]
+pub struct Schedule {
+    #[serde(rename = "AdjustForDst")]
+    pub(crate) adjust_for_dst: bool,
+}
+
+#[derive(Debug, Deserialize, Default, Serialize, Valuable)]
+pub struct Metadata {
+    #[allow(dead_code)]
+    pub(crate) sys: MetadataSys,
+}
+
+#[derive(Debug, Deserialize, Default, Serialize, Valuable)]
+pub struct MetadataSys {
+    #[serde(rename = "MethodName")]
+    pub(crate) method_name: String,
+    #[serde(rename = "RandGuid")]
+    pub(crate) rand_guid: String,
+    #[serde(rename = "UtcNow")]
+    pub(crate) utc_now: String,
 }
 
 /// https://learn.microsoft.com/en-us/azure/azure-functions/functions-custom-handlers#response-payload
