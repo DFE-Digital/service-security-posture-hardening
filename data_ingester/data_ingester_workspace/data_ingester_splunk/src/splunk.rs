@@ -23,7 +23,7 @@ use uuid::Uuid;
 // Legacy, just used for tests and logs
 static SSPHP_RUN: RwLock<u64> = RwLock::new(0_u64);
 
-static SSPHP_RUN_NEW: LazyLock<RwLock<HashMap<String, u64>>> = LazyLock::new(|| {
+pub(crate) static SSPHP_RUN_NEW: LazyLock<RwLock<HashMap<String, u64>>> = LazyLock::new(|| {
     let mut hm = HashMap::new();
     let _ = hm.insert("default".to_string(), 0_u64);
     RwLock::new(hm)
@@ -38,7 +38,6 @@ pub struct HecEvent {
 }
 
 impl HecEvent {
-    // TODO: Should return Result
     pub fn new<T: Serialize>(event: &T, source: &str, sourcetype: &str) -> Result<HecEvent> {
         let ssphp_run = *SSPHP_RUN
             .read()

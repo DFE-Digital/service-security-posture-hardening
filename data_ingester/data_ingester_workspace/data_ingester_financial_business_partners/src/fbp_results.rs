@@ -30,8 +30,7 @@ impl From<Vec<FbpResult>> for FbpResult {
 
 impl FbpResult {
     pub async fn get_results_from_splunk(secrets: Arc<Secrets>) -> Result<Self> {
-        let mut search_client =
-            SplunkApiClient::new_from_secrets(secrets.clone())?.set_app("DCAP");
+        let mut search_client = SplunkApiClient::new_from_secrets(secrets.clone())?.set_app("DCAP");
 
         search_client
             .open_acs()

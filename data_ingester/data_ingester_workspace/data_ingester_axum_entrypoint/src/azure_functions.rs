@@ -18,6 +18,7 @@ use tokio::sync::oneshot::Sender;
 use tokio::sync::Mutex;
 use tracing::error;
 use tracing::info;
+use valuable::Valuable;
 
 /// Start the Axum server
 ///
@@ -182,13 +183,13 @@ where
 /// Health check
 async fn get_health_check(State(state): State<Arc<AppState>>) -> Json<AzureInvokeResponse> {
     info!("Health check");
-    let app_state_health_check_json = {
-        let stats = state.stats.read().await;
-        let app_state_health_check = AppStateHealthCheck::from((&state, &(*stats)));
-        serde_json::to_string(&app_state_health_check)
-            .unwrap_or_else(|_| "ERROR converting AppState to Json".to_string())
-    };
-    info!("{}", app_state_health_check_json);
+    let stats = state.stats.read().await;
+    let app_state_health_check = AppStateHealthCheck::from((&state, &(*stats)));
+
+    info!(health_state = app_state_health_check.as_value());
+
+    let app_state_health_check_json = serde_json::to_string(&app_state_health_check)
+        .unwrap_or_else(|_| "ERROR converting AppState to Json".to_string());
     Json(AzureInvokeResponse {
         outputs: None,
         logs: vec![
