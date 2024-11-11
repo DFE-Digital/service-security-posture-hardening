@@ -275,7 +275,7 @@ impl ToHecEvents for &ContactDetails {
     }
 
     fn ssphp_run_key(&self) -> &str {
-        "mssql"
+        "fbp"
     }
 }
 
