@@ -39,7 +39,7 @@
           | eval portfolio="Unassigned",
                  service_line="Unassigned",
                  product="Unassigned",
-                 cost_centre_code="Various"]
+                 cost_centre_title="Unassigned"]
           </query>
         </search>
         <option name="count">1</option>
@@ -467,7 +467,9 @@ index=_audit user=$tkn__current_user_name|s$ action=search "makeresults" "user_d
        vulnerability_abs='vulnerability_number_passed_resources'." / ".'vulnerability_number_total_resources',
        vulnerability_color=case(isnull('vulnerability_perc_passed_resources') OR 'vulnerability_perc_passed_resources'="","#171D21",
                                   'vulnerability_perc_passed_resources'=100,"#6AB187",
-                                  1==1,"#D32D41")
+                                  1==1,"#D32D41"),
+                                  
+       vulnerability_abs=if(isnull('vulnerability_abs'),"-",'vulnerability_abs')
             </query>
           <done>
             <set token="tkn_posture_number_total_resources">$result.posture_number_total_resources$</set>
@@ -480,6 +482,20 @@ index=_audit user=$tkn__current_user_name|s$ action=search "makeresults" "user_d
             <set token="tkn_vulnerability_abs">$result.vulnerability_abs$</set>
             <set token="tkn_posture_color">$result.posture_color$</set>
             <set token="tkn_vulnerability_color">$result.vulnerability_color$</set>
+            
+            
+
+            <set token="tkn_repos_perc_passed_resources">0%</set>
+            <set token="tkn_repos_number_total_resources">0</set>
+            <set token="tkn_repos_number_passed_resources">0</set>
+            <set token="tkn_repos_color">#171D21</set>
+            <set token="tkn_repos_abs">0 / 0</set>
+            
+            <set token="tkn_codescan_perc_passed_resources">0%</set>
+            <set token="tkn_codescan_number_total_resources">0</set>
+            <set token="tkn_codescan_number_passed_resources">0</set>
+            <set token="tkn_codescan_color">#171D21</set>
+            <set token="tkn_codescan_abs">0 / 0</set>            
           </done>
         </search>
       </table>
@@ -565,7 +581,7 @@ index=_audit user=$tkn__current_user_name|s$ action=search "makeresults" "user_d
       <html>
         <style>
           #m1{
-            width:88% !important;
+            width:50% !important;
           }
         </style>
       </html>
@@ -661,10 +677,57 @@ index=_audit user=$tkn__current_user_name|s$ action=search "makeresults" "user_d
       </input>
     </panel>    
     
+
+
     <panel id="m2">
       <html>
         <style>
           #m2{
+            width:19% !important;
+          }
+        </style>
+      </html>
+      
+      <table>
+        <search base="bs_1">
+          <query>
+| stats values(ssphp.resource.resource_group) as "Reource Groups" by ssphp.resource.subscription
+| rename ssphp.resource.subscription as "Subscriptions"
+          </query>
+        </search>
+      </table>
+    </panel>
+
+
+
+
+    <panel id="m3">
+      <html>
+        <style>
+          #m3{
+            width:19% !important;
+          }
+        </style>
+      </html>
+      
+      <table>
+        <search base="bs_1">
+          <query>
+| stats values(ssphp.resource.resource_group) as "Repositories"
+          </query>
+        </search>
+      </table>
+    </panel>
+
+
+
+
+
+    
+    <panel id="m4">
+      <html>
+        <style>
+          #m4{
             width:12% !important;
           }
         </style>
@@ -812,7 +875,7 @@ $tkn_category$
 
 $tkn_code_tools$
 
-| search ssphp.resource.id=$tkn_resource_search$
+| search ssphp.resource.id=$tkn_resource_search$ AND ssphp.resource.id!=""
 
 $tkn_search_filter$
 
@@ -872,7 +935,7 @@ $tkn_search_filter$
 
   <row depends="$tkn_show_by_resource$">
     <panel>
-      <title>Resource Details &amp; Scores [$tkn_controls_total_resources$]</title>
+      <title>Controls by Resource [$tkn_controls_total_resources$]</title>
       <table>
         <search base="bs_1">
           <query>
@@ -896,7 +959,7 @@ $tkn_search_filter$
 
 | stats values(display_control_title) as "Control Title" by "Resource Details"
 
-| search "Resource Details"=$tkn_resource_search$
+| search "Resource Details"=$tkn_resource_search$ AND "Resource Details"!=""
 
 | eventstats count as number_controls_total
 | sort 0 "Resource Details"
@@ -929,7 +992,7 @@ $tkn_search_filter$
 
   <row depends="$tkn_show_by_control$">
     <panel>
-      <title>Resource Details &amp; Scores [$tkn_controls_total_controls$]</title>
+      <title>Resources by Control [$tkn_controls_total_controls$]</title>
       <table>
         <search base="bs_1">
           <query>
@@ -947,10 +1010,10 @@ $tkn_search_filter$
          ssphp.assessment.description as "Description",
          ssphp.resource.id as "Resource Details"
 
-
+| where isnotnull('Control Title') AND trim('Control Title')!=""
 | eval "Control Title"='ssphp.assessment.source'."::".'Control Title'
 
-| search "Resource Details"=$tkn_resource_search$
+| search "Resource Details"=$tkn_resource_search$ AND "Resource Details"!=""
 | stats values("Resource Details") as "Resource Details" by "Control Title"
 
 | eventstats count as number_controls_total
