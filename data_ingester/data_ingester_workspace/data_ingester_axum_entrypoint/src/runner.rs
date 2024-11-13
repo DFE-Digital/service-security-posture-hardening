@@ -22,7 +22,7 @@ impl RunnerState {
         Self::Start
     }
 
-    fn next(&mut self) -> () {
+    fn next(&mut self) {
         *self = match self {
             RunnerState::Start => RunnerState::Lock,
             RunnerState::Lock => RunnerState::Running,
