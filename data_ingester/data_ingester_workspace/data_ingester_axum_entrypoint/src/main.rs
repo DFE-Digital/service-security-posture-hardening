@@ -2,6 +2,7 @@ use anyhow::{Context, Result};
 mod app_state;
 mod azure_functions;
 mod azure_request_response;
+mod runner;
 use azure_functions::start_server;
 use memory_stats::memory_stats;
 use tokio::sync::oneshot;
