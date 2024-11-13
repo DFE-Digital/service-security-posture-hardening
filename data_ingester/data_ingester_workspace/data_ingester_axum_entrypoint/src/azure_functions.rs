@@ -2,21 +2,17 @@ use crate::app_state::AppState;
 use crate::app_state::AppStateHealthCheck;
 use crate::azure_request_response::AzureInvokeRequest;
 use crate::azure_request_response::AzureInvokeResponse;
+use crate::runner::function_runner;
 use crate::start_local_tracing;
 use anyhow::Context;
 use anyhow::Result;
 use axum::http::HeaderMap;
 use axum::{extract::State, routing::get, routing::post, Json, Router};
 use data_ingester_splunk::splunk::set_ssphp_run;
-use data_ingester_splunk::splunk::Splunk;
 use data_ingester_splunk::start_splunk_tracing;
-use data_ingester_supporting::keyvault::Secrets;
 use std::env;
-use std::future::Future;
 use std::sync::Arc;
 use tokio::sync::oneshot::Sender;
-use tokio::sync::Mutex;
-use tracing::error;
 use tracing::info;
 use valuable::Valuable;
 
@@ -31,9 +27,10 @@ use valuable::Valuable;
 /// tx: takes a [Sender] - used send a signal indicating the server is ready
 ///
 pub(crate) async fn start_server(tx: Sender<()>) -> Result<()> {
+    let name = "axum_server";
     let tracing_guard = start_local_tracing().context("Starting Tracing for server pre Splunk")?;
 
-    info!("Starting server for Azure Functions");
+    info!(name = name, "Starting");
 
     let app_state = AppState::new().await.context("Building App State")?;
 
@@ -46,7 +43,7 @@ pub(crate) async fn start_server(tx: Sender<()>) -> Result<()> {
     .context("Start Splunk Tracing")?;
 
     drop(tracing_guard);
-    info!("Splunk tracing started");
+    info!(name = name, "Splunk tracing started");
 
     let app = Router::new()
         .route("/", get(get_health_check))
@@ -75,7 +72,7 @@ pub(crate) async fn start_server(tx: Sender<()>) -> Result<()> {
         Err(_) => 3000,
     };
 
-    info!("Using port {port}");
+    info!(name = name, port = port);
     let listener = tokio::net::TcpListener::bind(("0.0.0.0", port))
         .await
         .context("Binding to socket")?;
@@ -84,100 +81,6 @@ pub(crate) async fn start_server(tx: Sender<()>) -> Result<()> {
         .expect("Caller should be listening for Warp start event");
     axum_serve.await.context("Axum Serv")?;
     Ok(())
-}
-
-/// Run a entrypoint function
-///
-/// Checks to see if the lock can be held, then runs the async
-/// function for data collection.
-///
-/// The lock should be freed when the function completes or the
-/// function fails.
-///
-/// name: The name of this function to use for logging
-/// lock: The lock to prevent concurrent executions
-/// func: an async function taking [Arc<Secrets}] and [Arc<Splunk>]
-///
-async fn function_runner<F, R>(
-    name: &str,
-    lock: Arc<Mutex<()>>,
-    state: Arc<AppState>,
-    func: F,
-    headers: HeaderMap,
-    request: Option<Json<AzureInvokeRequest>>,
-) -> AzureInvokeResponse
-where
-    F: Fn(Arc<Secrets>, Arc<Splunk>) -> R,
-    R: Future<Output = Result<(), anyhow::Error>>,
-{
-    let invocation_index = state
-        .stats
-        .write()
-        .await
-        .new_invocation(name, headers, request)
-        - 1;
-
-    let mut response = AzureInvokeResponse {
-        outputs: None,
-        logs: vec![name.to_string(), format!("GIT_HASH: {}", env!("GIT_HASH"))],
-        return_value: None,
-    };
-
-    let lock = match lock.try_lock() {
-        Ok(lock) => {
-            let _ = state
-                .stats
-                .write()
-                .await
-                .get(invocation_index)
-                .lock_state(true);
-
-            let msg = format!("{} lock aquired, starting", name);
-            info!("{}", &msg);
-            response.logs.push(msg.to_owned());
-            lock
-        }
-        Err(_) => {
-            state
-                .stats
-                .write()
-                .await
-                .get(invocation_index)
-                .lock_state(false)
-                .finish();
-
-            let msg = format!("{} collection is already in progress. NOT starting.", name);
-            error!("{}", &msg);
-            response.logs.push(msg.to_owned());
-
-            return response;
-        }
-    };
-
-    let result = match func(state.secrets.clone(), state.splunk.clone()).await {
-        Ok(_) => {
-            state.stats.write().await.get(invocation_index).finish();
-            format!("{} Success", name)
-        }
-        Err(e) => {
-            state
-                .stats
-                .write()
-                .await
-                .get(invocation_index)
-                .errors(format!("{:#?}", e))
-                .finish();
-            let error = format!("{} entrypoint failed with error: {:#?}", &name, &e);
-            error!(error);
-            error
-        }
-    };
-
-    drop(lock);
-
-    response.logs.push(result);
-    info!("{name}: completed collection!");
-    response
 }
 
 /// Health check
