@@ -17,7 +17,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: dfe-digital/splunk-app-packager@v0.0.2
+      - uses: dfe-digital/splunk-app-packager@v0.0.3
         with:
           app_package_path: 'DCAP'
           splunk_username: ${{ secrets.SPLUNK_USERNAME }}
