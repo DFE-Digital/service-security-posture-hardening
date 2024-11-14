@@ -250,9 +250,9 @@ pub async fn aws(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
 
     let _ = try_collect_send("aws_dfe_3x", aws_client.aws_dfe_3x(), &splunk).await;
 
-    let _ = try_collect_send("aws_dfe_4x", aws_client.aws_dfe_4x(), &splunk).await;
+    let zones = try_collect_send("aws_dfe_4x", aws_client.aws_dfe_4x(), &splunk).await.context("AWS 4x: Getting zones")?;
 
-    let _ = try_collect_send("aws_dfe_5x", aws_client.aws_dfe_5x(), &splunk).await;
+    let _ = try_collect_send("aws_dfe_5x", aws_client.aws_dfe_5x(zones), &splunk).await;
 
     info!("AWS Collection Complete");
 
@@ -1399,9 +1399,7 @@ impl AwsClient {
         })
     }
 
-    pub(crate) async fn aws_dfe_5x(&self) -> Result<RecordSets> {
-        let zones = self.aws_dfe_4x().await?;
-
+    pub(crate) async fn aws_dfe_5x(&self, zones: crate::aws_route53::HostedZones) -> Result<RecordSets> {
         // Build resolver
         let resolver =
             TokioAsyncResolver::tokio(ResolverConfig::default(), ResolverOpts::default());
