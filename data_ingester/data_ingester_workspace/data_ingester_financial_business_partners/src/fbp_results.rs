@@ -37,7 +37,7 @@ impl FbpResult {
             .await
             .context("Opening Splunk access via ACS")?;
 
-        let search = "| savedsearch ssphp_list_fbp_taxonomy_github_custom_properties";
+        let search = "| savedsearch ssphp_app_account:DCAP:ssphp_list_fbp_taxonomy_github_custom_properties";
 
         info!("Running splunk search '{}'", search);
 
