@@ -1,0 +1,7 @@
+--
+title: "Disable Azure 2.1.15"
+authors:
+  - "Alex Kinnane"
+  - "Ian Pearl"
+problem_statement: "Azure has deprecated the Log analytics agent recommend by this control https://learn.microsoft.com/en-us/azure/azure-monitor/agents/log-analytics-agent"
+decision: "Disbale the control and review alternatives from CIS"
