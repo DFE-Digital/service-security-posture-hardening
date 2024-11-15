@@ -38,7 +38,6 @@ fn allowed_values_cleaner_to_github<S: AsRef<str>>(value: S) -> String {
     }
 }
 
-#[allow(dead_code)]
 fn allowed_values_cleaner_from_github<S: AsRef<str>>(value: S) -> String {
     match value.as_ref() {
         "Digital Delivery - OIG (Protected)" => "Digital Delivery – OIG (Protected)".into(),
