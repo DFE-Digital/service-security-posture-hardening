@@ -1,19 +1,15 @@
-use std::marker::PhantomData;
-
+use data_ingester_splunk::splunk::ToHecEvents;
+use itertools::{Either, Itertools};
 use serde::{Deserialize, Serialize};
+use tracing::error;
+
+use crate::github_response::{GithubResponse, GithubResponses};
 
 /// https://docs.github.com/en/rest/orgs/custom-properties?apiVersion=2022-11-28#create-or-update-custom-properties-for-an-organization
 #[derive(Debug, Deserialize, Serialize)]
-pub struct CustomProperterySetter<V, S>
-where
-    V: AsRef<[S]>,
-    S: AsRef<str> + std::fmt::Debug,
-{
+pub struct CustomProperterySetter {
     // The name of the property
     property_name: String,
-
-    //The URL that can be used to fetch, update, or delete info about this property via the API.
-    //url: Option<String>,
 
     // The type of the value for the property
     // Can be one of: string, single_select, multi_select, true_false
@@ -29,15 +25,28 @@ where
     description: Option<String>,
 
     // An ordered list of the allowed values of the property. The property can have up to 200 allowed values.
-    allowed_values: Option<V>,
+    allowed_values: Option<Vec<String>>,
 
     // Who can edit the values of the property
     values_editable_by: Option<ValuesEditableBy>,
-    #[serde(skip)]
-    _phantom_data: PhantomData<S>,
 }
 
-impl<V: AsRef<[S]>, S: AsRef<str> + std::fmt::Debug> CustomProperterySetter<V, S> {
+fn allowed_values_cleaner_to_github<S: AsRef<str>>(value: S) -> String {
+    match value.as_ref() {
+        "Digital Delivery – OIG (Protected)" => "Digital Delivery - OIG (Protected)".into(),
+        _ => value.as_ref().to_string(),
+    }
+}
+
+#[allow(dead_code)]
+fn allowed_values_cleaner_from_github<S: AsRef<str>>(value: S) -> String {
+    match value.as_ref() {
+        "Digital Delivery - OIG (Protected)" => "Digital Delivery – OIG (Protected)".into(),
+        _ => value.as_ref().to_string(),
+    }
+}
+
+impl CustomProperterySetter {
     pub fn new<N: Into<String>, D: Into<String>>(
         property_name: N,
         description: Option<D>,
@@ -53,29 +62,39 @@ impl<V: AsRef<[S]>, S: AsRef<str> + std::fmt::Debug> CustomProperterySetter<V, S
             description: description.map(|d| d.into()),
             allowed_values: None,
             values_editable_by: None,
-            _phantom_data: PhantomData,
         }
     }
 
-    pub fn new_single_select<N: Into<String>, D: Into<String>>(
+    pub fn new_single_select<
+        V: AsRef<[S]>,
+        S: AsRef<str> + std::fmt::Debug,
+        N: Into<String>,
+        D: Into<String>,
+    >(
         property_name: N,
         description: Option<D>,
         required: bool,
         allowed_values: V,
     ) -> Self {
+        let allowed_value_strings: Vec<String> = allowed_values
+            .as_ref()
+            .iter()
+            .map(|value| allowed_values_cleaner_to_github(value.as_ref()))
+            .collect();
         Self {
             property_name: property_name.into(),
             value_type: ValueType::SingleSelect,
             required,
             default_value: None,
             description: description.map(|d| d.into()),
-            allowed_values: Some(allowed_values),
+            allowed_values: Some(allowed_value_strings),
             values_editable_by: Some(ValuesEditableBy::OrgAndRepoActors),
-            _phantom_data: PhantomData,
         }
     }
 
-    pub fn from_fbp_portfolio(allowed_values: V) -> Self {
+    pub fn from_fbp_portfolio<V: AsRef<[S]>, S: AsRef<str> + std::fmt::Debug>(
+        allowed_values: V,
+    ) -> Self {
         CustomProperterySetter::new_single_select(
             "portfolio",
             Some("The portfolio"),
@@ -84,10 +103,12 @@ impl<V: AsRef<[S]>, S: AsRef<str> + std::fmt::Debug> CustomProperterySetter<V, S
         )
     }
 
-    pub fn from_fbp_service_line(allowed_values: V) -> Self {
+    pub fn from_fbp_service_line<V: AsRef<[S]>, S: AsRef<str> + std::fmt::Debug>(
+        allowed_values: V,
+    ) -> Self {
         CustomProperterySetter::new_single_select(
             "service_line",
-            Some("The service line"),
+            Some("The Service Line"),
             false,
             allowed_values,
         )
@@ -126,6 +147,113 @@ pub(crate) enum DefaultValue {
 pub(crate) enum ValuesEditableBy {
     OrgActors,
     OrgAndRepoActors,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub(crate) struct CustomProperties {
+    custom_properties: Vec<CustomProperty>,
+    source: String,
+    //    status: Option<u16>,
+}
+
+impl ToHecEvents for &CustomProperties {
+    type Item = CustomProperty;
+
+    fn source(&self) -> &str {
+        self.source.as_str()
+    }
+
+    fn sourcetype(&self) -> &str {
+        "github"
+    }
+
+    fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
+        Box::new(self.custom_properties.iter())
+    }
+
+    fn ssphp_run_key(&self) -> &str {
+        "github"
+    }
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub(crate) struct CustomProperty {
+    repository_id: u64,
+    repository_name: String,
+    repository_full_name: String,
+    properties: Vec<Property>,
+}
+
+impl CustomProperty {
+    fn clean(&mut self) {
+        self.properties
+            .iter_mut()
+            .for_each(|property| match property.value {
+                Some(VecOrString::VecString(ref mut vec)) => {
+                    vec.iter_mut()
+                        .for_each(|value| *value = allowed_values_cleaner_from_github(&value));
+                }
+                Some(VecOrString::String(ref mut value)) => {
+                    *value = allowed_values_cleaner_from_github(&value);
+                }
+                _ => {}
+            });
+    }
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub(crate) struct Property {
+    property_name: String,
+    value: Option<VecOrString>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(untagged)]
+enum VecOrString {
+    VecString(Vec<String>),
+    String(String),
+}
+
+impl From<GithubResponses> for CustomProperties {
+    fn from(value: GithubResponses) -> Self {
+        let custom_properties = value
+            .responses_iter()
+            .map(CustomProperties::from)
+            .flat_map(|custom_properties| custom_properties.custom_properties.into_iter())
+            .collect();
+        Self {
+            custom_properties,
+            source: value.source(),
+        }
+    }
+}
+
+impl From<&GithubResponse> for CustomProperties {
+    fn from(value: &GithubResponse) -> Self {
+        let (mut custom_properties, failures): (Vec<_>, Vec<_>) = value
+            .into_iter()
+            .map(|response| serde_json::from_value::<CustomProperty>(response.clone()))
+            .partition_map(|r| match r {
+                Ok(v) => Either::Left(v),
+                Err(v) => Either::Right(v),
+            });
+
+        failures.iter().for_each(|failure| {
+            error!(name="github", error=?failure, "Failure while converting GitHubResponse to CustomProperty");
+        });
+
+        custom_properties
+            .iter_mut()
+            .for_each(|custom_property| custom_property.clean());
+
+        Self {
+            custom_properties,
+            source: value.source().to_string(),
+        }
+    }
 }
 
 #[cfg(test)]

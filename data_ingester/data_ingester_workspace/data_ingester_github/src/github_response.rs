@@ -8,7 +8,7 @@ use tracing::warn;
 
 /// A collection of API responses from Github
 #[derive(Serialize, Debug)]
-pub(crate) struct GithubResponses {
+pub struct GithubResponses {
     inner: Vec<GithubResponse>,
 }
 
@@ -75,7 +75,7 @@ impl<'a> IntoIterator for &'a GithubResponses {
     }
 }
 
-pub(crate) struct GithubResponsesIterator<'a> {
+pub struct GithubResponsesIterator<'a> {
     current: usize,
     collection: &'a [GithubResponse],
 }
@@ -129,7 +129,7 @@ impl ToHecEvents for &GithubResponses {
 
 /// An  API responses from Github
 #[derive(Serialize, Debug)]
-pub(crate) struct GithubResponse {
+pub struct GithubResponse {
     #[serde(flatten)]
     response: SingleOrVec,
     #[serde(skip)]
@@ -170,7 +170,7 @@ impl<'a> IntoIterator for &'a GithubResponse {
     }
 }
 
-pub(crate) struct GithubResponseIterator<'a> {
+pub struct GithubResponseIterator<'a> {
     current: usize,
     collection: Vec<&'a serde_json::Value>,
 }
