@@ -19,7 +19,7 @@ use anyhow::{Context, Result};
 use artifacts::{Artifact, Artifacts};
 use bytes::Bytes;
 use contents::Contents;
-use custom_properties::{CustomProperterySetter, CustomProperties};
+use custom_properties::{CustomPropertySetter, CustomProperties};
 use data_ingester_sarif::{Sarif, SarifHecs};
 use data_ingester_supporting::keyvault::GitHubApp;
 use github_response::GithubNextLink;
@@ -176,7 +176,7 @@ impl OctocrabGit {
     pub(crate) async fn org_create_or_update_custom_property(
         &self,
         org: &str,
-        custom_property: &CustomProperterySetter,
+        custom_property: &CustomPropertySetter,
     ) -> Result<GithubResponses> {
         let url = format!(
             "/orgs/{}/properties/schema/{}",

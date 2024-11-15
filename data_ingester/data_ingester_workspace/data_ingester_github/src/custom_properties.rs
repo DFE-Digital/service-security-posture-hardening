@@ -7,7 +7,7 @@ use crate::github_response::{GithubResponse, GithubResponses};
 
 /// https://docs.github.com/en/rest/orgs/custom-properties?apiVersion=2022-11-28#create-or-update-custom-properties-for-an-organization
 #[derive(Debug, Deserialize, Serialize)]
-pub struct CustomProperterySetter {
+pub struct CustomPropertySetter {
     // The name of the property
     property_name: String,
 
@@ -45,7 +45,7 @@ fn allowed_values_cleaner_from_github<S: AsRef<str>>(value: S) -> String {
     }
 }
 
-impl CustomProperterySetter {
+impl CustomPropertySetter {
     pub fn new<N: Into<String>, D: Into<String>>(
         property_name: N,
         description: Option<D>,
@@ -94,7 +94,7 @@ impl CustomProperterySetter {
     pub fn from_fbp_portfolio<V: AsRef<[S]>, S: AsRef<str> + std::fmt::Debug>(
         allowed_values: V,
     ) -> Self {
-        CustomProperterySetter::new_single_select(
+        CustomPropertySetter::new_single_select(
             "portfolio",
             Some("The portfolio"),
             false,
@@ -105,7 +105,7 @@ impl CustomProperterySetter {
     pub fn from_fbp_service_line<V: AsRef<[S]>, S: AsRef<str> + std::fmt::Debug>(
         allowed_values: V,
     ) -> Self {
-        CustomProperterySetter::new_single_select(
+        CustomPropertySetter::new_single_select(
             "service_line",
             Some("The Service Line"),
             false,
@@ -115,7 +115,7 @@ impl CustomProperterySetter {
 
     pub fn from_fbp_product() -> Self {
         let mut product_setter =
-            CustomProperterySetter::new("product", Some("Product"), false, ValueType::String);
+            CustomPropertySetter::new("product", Some("Product"), false, ValueType::String);
         product_setter.values_editable_by = Some(ValuesEditableBy::OrgAndRepoActors);
         product_setter
     }
@@ -259,7 +259,7 @@ impl From<&GithubResponse> for CustomProperties {
 mod test {
     use data_ingester_financial_business_partners::fbp_results::FbpResult;
 
-    use crate::custom_properties::CustomProperterySetter;
+    use crate::custom_properties::CustomPropertySetter;
 
     fn fbp_results() -> FbpResult {
         FbpResult {
@@ -273,7 +273,7 @@ mod test {
     fn test_portfolio_setter() {
         let fbp = fbp_results();
 
-        let portfolio_setter = CustomProperterySetter::from_fbp_portfolio(fbp.portfolios());
+        let portfolio_setter = CustomPropertySetter::from_fbp_portfolio(fbp.portfolios());
         let mut json = serde_json::to_value(&portfolio_setter).unwrap();
 
         let mut expected_json = serde_json::to_value(serde_json::json!({
@@ -312,7 +312,7 @@ mod test {
         let fbp = fbp_results();
 
         let service_line_setter =
-            CustomProperterySetter::from_fbp_service_line(fbp.service_lines());
+            CustomPropertySetter::from_fbp_service_line(fbp.service_lines());
         let mut json = serde_json::to_value(&service_line_setter).unwrap();
 
         let mut expected_json = serde_json::to_value(serde_json::json!({
@@ -320,7 +320,7 @@ mod test {
             "value_type": "single_select",
             "required": false,
             "default_value": null,
-            "description": "The service line",
+            "description": "The Service Line",
             "allowed_values": fbp.service_lines(),
             "values_editable_by": "org_and_repo_actors",
         }))
@@ -348,8 +348,8 @@ mod test {
 
     #[test]
     fn test_product_setter() {
-        let product_setter: CustomProperterySetter<Vec<_>, &str> =
-            CustomProperterySetter::from_fbp_product();
+        let product_setter: CustomPropertySetter =
+            CustomPropertySetter::from_fbp_product();
 
         let json = serde_json::to_value(&product_setter).unwrap();
 
