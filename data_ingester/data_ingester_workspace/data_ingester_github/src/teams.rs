@@ -8,7 +8,7 @@ use serde_json::Value;
 
 /// Representation of a GitHub org to calculate nested team membership
 #[derive(Default, Debug)]
-pub(crate) struct GitHubTeamsOrg {
+pub struct GitHubTeamsOrg {
     /// Name of the Org
     name: String,
     /// Teams in the Org

@@ -1,5 +1,5 @@
 //! Entrypoint for running the collection
-use crate::{custom_properties::CustomProperterySetter, OctocrabGit};
+use crate::{custom_properties::CustomPropertySetter, OctocrabGit};
 use anyhow::{Context, Result};
 use data_ingester_financial_business_partners::fbp_results::FbpResult;
 use data_ingester_splunk::splunk::{set_ssphp_run, try_collect_send, Splunk, ToHecEvents};
@@ -385,10 +385,10 @@ async fn update_custom_properties(
     splunk: Arc<Splunk>,
     fbp_results: Arc<FbpResult>,
 ) -> Result<()> {
-    let portfolio_setter = CustomProperterySetter::from_fbp_portfolio(fbp_results.portfolios());
+    let portfolio_setter = CustomPropertySetter::from_fbp_portfolio(fbp_results.portfolios());
     let service_line_setter =
-        CustomProperterySetter::from_fbp_service_line(fbp_results.service_lines());
-    let product_setter = CustomProperterySetter::from_fbp_product();
+        CustomPropertySetter::from_fbp_service_line(fbp_results.service_lines());
+    let product_setter = CustomPropertySetter::from_fbp_product();
 
     for cps in [portfolio_setter, service_line_setter, product_setter] {
         let _repo_branch_rules = try_collect_send(

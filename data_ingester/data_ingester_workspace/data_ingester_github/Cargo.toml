@@ -7,6 +7,8 @@ edition = "2021"
 anyhow = { version = "1", features=["backtrace"]}
 base64 = "0.22"
 bytes = "1"
+clap = { version="4", features=["derive"]}
+csv = "1"
 data_ingester_financial_business_partners = { path = "../data_ingester_financial_business_partners" }
 data_ingester_sarif = { path = "../data_ingester_sarif" }
 data_ingester_splunk = { path = "../data_ingester_splunk" }
@@ -34,3 +36,9 @@ workspace = true
 
 [features]
 live_tests = []
+
+[[bin]]
+name = "update_custom_properties_from_csv"
+path = "src/update_custom_properties_from_csv.rs"
+test = false
+bench = false

@@ -2,6 +2,7 @@
 name = "data_ingester_axum_entrypoint"
 version = "0.1.0"
 edition = "2021"
+default-run = "data_ingester_axum_entrypoint"
 
 [dependencies]
 anyhow = { version = "1", features=["backtrace"]}
