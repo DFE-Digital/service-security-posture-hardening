@@ -1,7 +1,6 @@
 use data_ingester_splunk::splunk::ToHecEvents;
 use itertools::{Either, Itertools};
 use serde::{Deserialize, Serialize};
-use std::sync::OnceLock;
 use tracing::error;
 
 use crate::github_response::{GithubResponse, GithubResponses};
@@ -32,41 +31,31 @@ pub struct CustomPropertySetter {
     values_editable_by: Option<ValuesEditableBy>,
 }
 
-static SERVICE_LINE_CLEANER_DATA: OnceLock<[(String, String); 2]> = OnceLock::new();
+static SERVICE_LINE_CLEANER_DATA: [(&str, &str); 2] = [
+    (
+        "Northern Territorial\u{a0}Team & ESF",
+        // Non breaking space^
+        "Northen Territorial Team & ESF",
+    ),
+    (
+        "Digital Delivery – OIG (Protected)",
+        // EM Dash        ^
+        "Digital Delivery - OIG (Protected)",
+    ),
+];
+
 struct ServiceLineCleaner();
 
 impl ServiceLineCleaner {
     pub(crate) fn new() -> Self {
-        Self::init();
         Self()
-    }
-
-    fn init() {
-        let _ = SERVICE_LINE_CLEANER_DATA.get_or_init(|| {
-            [
-                (
-                    format!("Northen Territorial{}Team & ESF", '\u{00A0}'),
-                    // Non breaking space       ^
-                    "Northen Territorial Team & ESF".into(),
-                ),
-                (
-                    "Digital Delivery – OIG (Protected)".into(),
-                    // EM Dash        ^
-                    "Digital Delivery - OIG (Protected)".into(),
-                ),
-            ]
-        });
     }
 
     fn allowed_values_cleaner_to_github<'value, S: AsRef<str>>(
         &self,
         value: &'value S,
     ) -> &'value str {
-        let Some(service_line_data) = SERVICE_LINE_CLEANER_DATA.get() else {
-            return value.as_ref();
-        };
-
-        for (fbp, github) in service_line_data {
+        for (fbp, github) in SERVICE_LINE_CLEANER_DATA {
             if value.as_ref() == fbp {
                 return github;
             }
@@ -78,11 +67,7 @@ impl ServiceLineCleaner {
         &self,
         value: &'value S,
     ) -> &'value str {
-        let Some(service_line_data) = SERVICE_LINE_CLEANER_DATA.get() else {
-            return value.as_ref();
-        };
-
-        for (fbp, github) in service_line_data {
+        for (fbp, github) in SERVICE_LINE_CLEANER_DATA {
             if value.as_ref() == github {
                 return fbp;
             }
@@ -153,15 +138,25 @@ impl CustomPropertySetter {
         allowed_values: V,
     ) -> Self {
         let service_line_cleaner = ServiceLineCleaner::new();
-        let allowed_value_strings: Vec<String> = allowed_values
-            .as_ref()
-            .iter()
-            .map(|value| {
-                service_line_cleaner
-                    .allowed_values_cleaner_to_github(&value.as_ref())
-                    .to_string()
-            })
-            .collect();
+        let (allowed_value_strings, invalid_service_lines): (Vec<String>, Vec<String>) =
+            allowed_values
+                .as_ref()
+                .iter()
+                .map(|value| {
+                    service_line_cleaner
+                        .allowed_values_cleaner_to_github(&value.as_ref())
+                        .to_string()
+                })
+                .partition_map(|v| {
+                    if v.is_ascii() {
+                        Either::Left(v)
+                    } else {
+                        Either::Right(v)
+                    }
+                });
+
+        invalid_service_lines.iter().for_each(|sl|{
+            error!(name="github", failed_value=sl, "Failure while converting 'FBP Service Line' to GitHub CustomProperty allowed_value: {:?}", sl);});
 
         CustomPropertySetter::new_single_select(
             "service_line",
