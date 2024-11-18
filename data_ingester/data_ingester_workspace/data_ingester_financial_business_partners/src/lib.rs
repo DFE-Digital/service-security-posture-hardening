@@ -11,9 +11,7 @@ use tiberius::{AuthMethod, Client, Config, Query, QueryItem, Row};
 use tokio::net::TcpStream;
 use tokio_util::compat::TokioAsyncWriteCompatExt;
 
-pub async fn entrypoint(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
-    set_ssphp_run("fbp")?;
-
+async fn get_contact_details(secrets: Arc<Secrets>) -> Result<Vec<ContactDetails>> {
     let host = secrets
         .mssql_host
         .as_ref()
@@ -79,15 +77,24 @@ pub async fn entrypoint(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()
             contact_details.push(contact_details_row);
         }
     }
+    Ok(contact_details)
+}
 
-    let contact_details: Vec<HecEvent> = contact_details
+pub async fn entrypoint(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
+    set_ssphp_run("fbp")?;
+
+    let contact_details = get_contact_details(secrets)
+        .await
+        .context("Getting contact details from FBP")?;
+
+    let contact_details_hec: Vec<HecEvent> = contact_details
         .iter()
         .flat_map(|contact_detail| (&contact_detail).to_hec_events())
         .flat_map(|vec| vec.into_iter())
         .collect();
 
     let _ = splunk
-        .send_batch(contact_details.as_slice())
+        .send_batch(contact_details_hec.as_slice())
         .await
         .context("send to splunk");
 
@@ -282,11 +289,11 @@ impl ToHecEvents for &ContactDetails {
 #[cfg(feature = "live_tests")]
 #[cfg(test)]
 mod live_tests {
-    use std::{env, sync::Arc};
-
-    use anyhow::Context;
+    use anyhow::{Context, Result};
     use data_ingester_splunk::splunk::{set_ssphp_run, Splunk};
     use data_ingester_supporting::keyvault::get_keyvault_secrets;
+    use std::io::Write;
+    use std::{collections::HashSet, env, fs::File, sync::Arc};
 
     #[tokio::test]
     async fn test_entrypoint() -> anyhow::Result<()> {
@@ -305,6 +312,41 @@ mod live_tests {
         super::entrypoint(Arc::new(secrets), Arc::new(splunk))
             .await
             .expect("entrypoint to complete");
+        Ok(())
+    }
+
+    #[tokio::test]
+    #[ignore]
+    async fn write_contact_details() -> Result<()> {
+        let secrets = get_keyvault_secrets(
+            &env::var("KEY_VAULT_NAME").expect("Need KEY_VAULT_NAME enviornment variable"),
+        )
+        .await
+        .unwrap();
+
+        let contact_details = super::get_contact_details(Arc::new(secrets)).await?;
+        let mut set = HashSet::new();
+
+        for contact_detail in contact_details {
+            if let Some(service_line) = contact_detail.service_line {
+                let _ = set.insert(service_line);
+            }
+        }
+        for value in &set {
+            if !value.is_ascii() {
+                println!("'''{:?}'''", value);
+            }
+        }
+
+        let mut file = File::create("service_line.debug")?;
+        file.write_all(format!("{:?}", &set).as_bytes())?;
+
+        let json = serde_json::to_string_pretty(&set)?;
+        let mut file = File::create("service_line.json")?;
+        file.write_all(json.as_bytes())?;
+
+        assert!(false);
+
         Ok(())
     }
 }
