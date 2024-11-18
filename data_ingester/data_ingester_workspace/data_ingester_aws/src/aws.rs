@@ -2433,7 +2433,8 @@ mod live_tests {
     #[tokio::test]
     async fn test_aws_dfe_5x() -> Result<()> {
         let (splunk, aws) = setup().await?;
-        let result = aws.aws_dfe_5x().await?;
+        let zones = aws.aws_dfe_4x().await?;
+        let result = aws.aws_dfe_5x(zones).await?;
         assert!(!result.inner.is_empty());
         splunk.send_batch((&result).to_hec_events()?).await?;
         Ok(())

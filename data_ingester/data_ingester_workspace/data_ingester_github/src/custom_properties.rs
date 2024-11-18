@@ -311,8 +311,7 @@ mod test {
     fn test_service_line_setter() {
         let fbp = fbp_results();
 
-        let service_line_setter =
-            CustomPropertySetter::from_fbp_service_line(fbp.service_lines());
+        let service_line_setter = CustomPropertySetter::from_fbp_service_line(fbp.service_lines());
         let mut json = serde_json::to_value(&service_line_setter).unwrap();
 
         let mut expected_json = serde_json::to_value(serde_json::json!({
@@ -348,8 +347,7 @@ mod test {
 
     #[test]
     fn test_product_setter() {
-        let product_setter: CustomPropertySetter =
-            CustomPropertySetter::from_fbp_product();
+        let product_setter: CustomPropertySetter = CustomPropertySetter::from_fbp_product();
 
         let json = serde_json::to_value(&product_setter).unwrap();
 
