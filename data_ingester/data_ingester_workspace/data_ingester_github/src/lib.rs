@@ -19,7 +19,7 @@ use anyhow::{Context, Result};
 use artifacts::{Artifact, Artifacts};
 use bytes::Bytes;
 use contents::Contents;
-use custom_properties::{CustomPropertySetter, CustomProperties};
+use custom_properties::{CustomProperties, CustomPropertySetter};
 use data_ingester_sarif::{Sarif, SarifHecs};
 use data_ingester_supporting::keyvault::GitHubApp;
 use github_response::GithubNextLink;
