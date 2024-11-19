@@ -41,7 +41,7 @@ impl Validator {
             .await
             .context("Opening Splunk access via ACS")?;
 
-        let search = "| search index=ssphp_metrics_data sourcetype=financial_business_partners | stats values(product) by portfolio, service_line ";
+        let search = "| savedsearch ssphp_list_fbp_taxonomy";
 
         info!("Running splunk search '{}'", search);
 
