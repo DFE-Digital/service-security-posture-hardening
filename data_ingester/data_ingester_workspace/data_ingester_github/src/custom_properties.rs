@@ -1,9 +1,11 @@
+use std::sync::Arc;
+
+use crate::github_response::{GithubResponse, GithubResponses};
+use data_ingester_financial_business_partners::validator::{ValidationResult, Validator};
 use data_ingester_splunk::splunk::ToHecEvents;
 use itertools::{Either, Itertools};
 use serde::{Deserialize, Serialize};
 use tracing::error;
-
-use crate::github_response::{GithubResponse, GithubResponses};
 
 /// https://docs.github.com/en/rest/orgs/custom-properties?apiVersion=2022-11-28#create-or-update-custom-properties-for-an-organization
 #[derive(Debug, Deserialize, Serialize)]
@@ -204,9 +206,8 @@ pub(crate) enum ValuesEditableBy {
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub(crate) struct CustomProperties {
-    custom_properties: Vec<CustomProperty>,
+    pub(crate) custom_properties: Vec<CustomProperty>,
     source: String,
-    //    status: Option<u16>,
 }
 
 impl ToHecEvents for &CustomProperties {
@@ -236,6 +237,9 @@ pub(crate) struct CustomProperty {
     repository_name: String,
     repository_full_name: String,
     properties: Vec<Property>,
+    #[serde(skip_deserializing)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) validation_errors: Option<ValidationResult>,
 }
 
 impl CustomProperty {
@@ -258,6 +262,39 @@ impl CustomProperty {
                 }
                 _ => {}
             });
+    }
+
+    #[allow(dead_code)]
+    pub(crate) fn portfolio(&self) -> Option<&str> {
+        self.get_property_value("portfolio")
+    }
+
+    pub(crate) fn service_line(&self) -> Option<&str> {
+        self.get_property_value("service_line")
+    }
+
+    pub(crate) fn product(&self) -> Option<&str> {
+        self.get_property_value("product")
+    }
+
+    fn get_property_value(&self, key: &str) -> Option<&str> {
+        let product = self
+            .properties
+            .iter()
+            .find(|property| property.property_name == key);
+        product
+            .and_then(|property| property.value.as_ref())
+            .map(|value| match value {
+                VecOrString::VecString(_vec) => unreachable!("No '{}' should be a multivalue", key),
+                VecOrString::String(ref inner) => inner.as_str(),
+            })
+    }
+
+    pub(crate) fn validate(&mut self, validator: &Arc<Validator>) {
+        let results = validator.validate(self.product(), self.service_line(), self.product());
+        if !results.valid {
+            self.validation_errors = Some(results);
+        }
     }
 }
 
@@ -303,9 +340,9 @@ impl From<&GithubResponse> for CustomProperties {
             error!(name="github", error=?failure, "Failure while converting GitHubResponse to CustomProperty");
         });
 
-        custom_properties
-            .iter_mut()
-            .for_each(|custom_property| custom_property.clean());
+        custom_properties.iter_mut().for_each(|custom_property| {
+            custom_property.clean();
+        });
 
         Self {
             custom_properties,

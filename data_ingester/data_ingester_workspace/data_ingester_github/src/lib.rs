@@ -11,6 +11,8 @@ mod org_members;
 mod repos;
 mod teams;
 mod workflows;
+use std::sync::Arc;
+
 use crate::github_response::{GithubResponse, GithubResponses};
 use crate::org_members::org_member_query;
 use crate::repos::Repos;
@@ -20,6 +22,7 @@ use artifacts::{Artifact, Artifacts};
 use bytes::Bytes;
 use contents::Contents;
 use custom_properties::{CustomProperties, CustomPropertySetter};
+use data_ingester_financial_business_partners::validator::Validator;
 use data_ingester_sarif::{Sarif, SarifHecs};
 use data_ingester_supporting::keyvault::GitHubApp;
 use github_response::GithubNextLink;
@@ -227,13 +230,21 @@ impl OctocrabGit {
     pub(crate) async fn org_get_custom_property_values(
         &self,
         org: &str,
+        validator: Option<Arc<Validator>>,
     ) -> Result<CustomProperties> {
         let uri = format!("/orgs/{}/properties/values", org);
         let collection = self
             .get_collection(&uri)
             .await
             .context("Getting Custom Properties")?;
-        let custom_properties = collection.into();
+        let mut custom_properties: CustomProperties = collection.into();
+
+        if let Some(validator) = validator {
+            custom_properties
+                .custom_properties
+                .iter_mut()
+                .for_each(|cp| cp.validate(&validator));
+        }
         Ok(custom_properties)
     }
 
