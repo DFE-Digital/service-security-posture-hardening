@@ -53,7 +53,7 @@
           <query>
 | loadjob savedsearch="ssphp_app_account:$tkn_current_app$:ssphp_create_dashboard_dataset_service_DEV"
 
-| fields ssphp.service.portfolio, ssphp.service.service_line, ssphp.service.product, ssphp.assessment.source, ssphp.use_case.category, ssphp.use_case.id, ssphp.use_case.title, ssphp.assessment.display_name, ssphp.score.score, ssphp.score.compliance_status, ssphp.score.ciso_priority, ssphp.assessment.description, ssphp.score.color, ssphp.resource.id, ssphp.resource.tenant, ssphp.resource.subscription, ssphp.resource.resource_group, SSPHP_UID
+| fields ssphp.service.portfolio, ssphp.service.service_line, ssphp.service.product, ssphp.assessment.source, ssphp.use_case.category, ssphp.use_case.id, ssphp.use_case.title, ssphp.assessment.display_name, ssphp.score.score, ssphp.score.compliance_status, ssphp.score.ciso_priority, ssphp.assessment.description, ssphp.score.color, ssphp.resource.id, ssphp.resource.tenant, ssphp.resource.subscription, ssphp.resource.subscription_name, ssphp.resource.resource_group, SSPHP_UID
           </query>
         </search>
         <option name="count">1</option>
@@ -67,7 +67,7 @@
           <query>
 | search ssphp.service.portfolio=$tkn_portfolio|s$ AND ssphp.service.service_line=$tkn_service_line|s$ AND ssphp.service.product=$tkn_product|s$
 
-| fields ssphp.service.portfolio, ssphp.service.service_line, ssphp.service.product, ssphp.assessment.source, ssphp.use_case.category, ssphp.use_case.id, ssphp.use_case.title, ssphp.assessment.display_name, ssphp.score.score, ssphp.score.compliance_status, ssphp.score.ciso_priority, ssphp.assessment.description, ssphp.score.color, ssphp.resource.id, ssphp.resource.tenant, ssphp.resource.subscription, ssphp.resource.resource_group, SSPHP_UID
+| fields ssphp.service.portfolio, ssphp.service.service_line, ssphp.service.product, ssphp.assessment.source, ssphp.use_case.category, ssphp.use_case.id, ssphp.use_case.title, ssphp.assessment.display_name, ssphp.score.score, ssphp.score.compliance_status, ssphp.score.ciso_priority, ssphp.assessment.description, ssphp.score.color, ssphp.resource.id, ssphp.resource.tenant, ssphp.resource.subscription, ssphp.resource.subscription_name, ssphp.resource.resource_group, SSPHP_UID
           </query>
           <done>
             <set token="tkn_service_name">$result.ssphp.service.name$</set>
@@ -313,6 +313,7 @@
        service_details=mvjoin('service_details',"
 ")
 | table service_details
+| rename service_details as "Service Details"
           </query>
         </search>
         <option name="drilldown">none</option>
@@ -581,7 +582,7 @@ index=_audit user=$tkn__current_user_name|s$ action=search "makeresults" "user_d
       <html>
         <style>
           #m1{
-            width:50% !important;
+            width:88% !important;
           }
         </style>
       </html>
@@ -596,10 +597,11 @@ index=_audit user=$tkn__current_user_name|s$ action=search "makeresults" "user_d
       </input>
 
       <input type="radio" token="tkn_group_by" searchWhenChanged="true">
-        <label>Show By</label>
-        <choice value="L">List</choice>
-        <choice value="R">Resource</choice> 
-        <choice value="C">Control</choice>
+        <label>Show</label>
+        <choice value="L">Control Details</choice>
+        <choice value="R">Controls by Resource</choice> 
+        <choice value="C">Resources by Control</choice>
+        <choice value="S">Service Resource List</choice>
         <default>L</default>
         <initialValue>L</initialValue>
         <change>
@@ -607,14 +609,23 @@ index=_audit user=$tkn__current_user_name|s$ action=search "makeresults" "user_d
             <set token="tkn_show_by_list">true</set>
             <unset token="tkn_show_by_resource"></unset>
             <unset token="tkn_show_by_control"></unset>
+            <unset token="tkn_show_by_service"></unset>
           </condition>
           <condition value="R">
             <set token="tkn_show_by_resource">true</set>
             <unset token="tkn_show_by_list"></unset>
             <unset token="tkn_show_by_control"></unset>
+            <unset token="tkn_show_by_service"></unset>
           </condition>
           <condition value="C">
             <set token="tkn_show_by_control">true</set>
+            <unset token="tkn_show_by_list"></unset>
+            <unset token="tkn_show_by_resource"></unset>
+            <unset token="tkn_show_by_service"></unset>
+          </condition>
+          <condition value="S">
+            <set token="tkn_show_by_service">true</set>
+            <unset token="tkn_show_by_control"></unset>
             <unset token="tkn_show_by_list"></unset>
             <unset token="tkn_show_by_resource"></unset>
           </condition>
@@ -679,50 +690,6 @@ index=_audit user=$tkn__current_user_name|s$ action=search "makeresults" "user_d
     
 
 
-    <panel id="m2">
-      <html>
-        <style>
-          #m2{
-            width:19% !important;
-          }
-        </style>
-      </html>
-      
-      <table>
-        <search base="bs_1">
-          <query>
-| stats values(ssphp.resource.resource_group) as "Reource Groups" by ssphp.resource.subscription
-| rename ssphp.resource.subscription as "Subscriptions"
-          </query>
-        </search>
-      </table>
-    </panel>
-
-
-
-
-    <panel id="m3">
-      <html>
-        <style>
-          #m3{
-            width:19% !important;
-          }
-        </style>
-      </html>
-      
-      <table>
-        <search base="bs_1">
-          <query>
-| stats values(ssphp.resource.resource_group) as "Repositories"
-          </query>
-        </search>
-      </table>
-    </panel>
-
-
-
-
-
     
     <panel id="m4">
       <html>
@@ -763,7 +730,7 @@ index=_audit user=$tkn__current_user_name|s$ action=search "makeresults" "user_d
 
 
 <!-- #################################################################################################################################### --> 
-<!-- ########################################## Main Data Table === SHOW BY LIST ##################################################### --> 
+<!-- ############################################# Main Data Table === SHOW BY LIST ##################################################### --> 
 <!-- #################################################################################################################################### --> 
 
   <row depends="$debug$, $tkn_show_by_list$">
@@ -1034,6 +1001,88 @@ $tkn_search_filter$
       </table>
     </panel>
   </row>
+
+
+
+  
+
+
+<!-- #################################################################################################################################### --> 
+<!-- ########################################## Main Data Table === SHOW BY SERVICE RESOURCE LIST ####################################### --> 
+<!-- #################################################################################################################################### --> 
+
+
+  <row depends="$tkn_show_by_service$">
+    <panel>
+      <title>Azure Resources [$tkn_number_controls_service_azure$]</title>
+      <table>
+        <search base="bs_1">
+          <query>
+$tkn_category$
+
+$tkn_code_tools$
+
+$tkn_search_filter$
+
+| search (ssphp.resource.id=$tkn_resource_search$ OR ssphp.resource.tenant=$tkn_resource_search$ OR ssphp.resource.subscription_name=$tkn_resource_search$) AND ssphp.resource.id!=""
+
+| stats values(ssphp.resource.id) as ssphp.resource.id by ssphp.resource.tenant, ssphp.resource.subscription_name, ssphp.resource.resource_group
+| eval rcount=mvcount('ssphp.resource.id')
+| eventstats sum(rcount) as number_controls_service_azure
+
+| eval ssphp.resource.id=mvjoin('ssphp.resource.id',"
+
+")
+
+| rename ssphp.resource.tenant as Tenant, ssphp.resource.subscription_name as Subscription, ssphp.resource.resource_group as "Resource Group", ssphp.resource.id as "Resource ID"
+
+| sort 0 Tenant, Subscription, "Resource Group"
+          </query>
+          <done>
+            <eval token="tkn_number_controls_service_azure">if(isnotnull($result.number_controls_service_azure$),$result.number_controls_service_azure$,"0")</eval>
+          </done>
+        </search>
+        <option name="count">100</option>
+        <option name="dataOverlayMode">none</option>
+        <option name="percentagesRow">false</option>
+        <option name="rowNumbers">false</option>
+        <option name="totalsRow">false</option>
+        <option name="wrap">true</option>
+        <option name="drilldown">none</option>
+        <fields>Tenant, Subscription, "Resource Group", "Resource ID"</fields>
+      </table>
+    </panel>
+    
+
+    <panel>
+      <title>GitHub Resources [$tkn_controls_total_controls$]</title>
+      <table>
+        <search base="bs_1">
+          <query>
+$tkn_category$
+
+$tkn_code_tools$
+
+$tkn_search_filter$
+
+| stats values(ssphp.resource.resource_group) as "Repositories"
+          </query>
+          <done>
+            <eval token="tkn_controls_service">if(isnotnull($result.number_controls_service$),$result.number_controls_service$,"0")</eval>
+          </done>
+        </search>
+        <option name="count">100</option>
+        <option name="dataOverlayMode">none</option>
+        <option name="percentagesRow">false</option>
+        <option name="rowNumbers">false</option>
+        <option name="totalsRow">false</option>
+        <option name="wrap">true</option>
+        <option name="drilldown">none</option>
+      </table>
+    </panel>
+  </row>
+
+
 
 
 
