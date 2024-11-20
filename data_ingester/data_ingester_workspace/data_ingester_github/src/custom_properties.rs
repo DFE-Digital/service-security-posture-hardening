@@ -291,7 +291,7 @@ impl CustomProperty {
     }
 
     pub(crate) fn validate(&mut self, validator: &Arc<Validator>) {
-        let results = validator.validate(self.product(), self.service_line(), self.product());
+        let results = validator.validate(self.portfolio(), self.service_line(), self.product());
         if !results.valid {
             self.validation_errors = Some(results);
         }
@@ -386,7 +386,7 @@ mod test {
         // Check all allowed_values exist in the output object
         fbp.portfolios()
             .iter()
-            .flat_map(|po| serde_json::to_value(po))
+            .flat_map(serde_json::to_value)
             .for_each(|po| {
                 assert!(json
                     .get("allowed_values")
@@ -424,7 +424,7 @@ mod test {
         // Check all allowed_values exist in the output object
         fbp.service_lines()
             .iter()
-            .flat_map(|sl| serde_json::to_value(sl))
+            .flat_map(serde_json::to_value)
             .for_each(|sl| {
                 assert!(json
                     .get("allowed_values")

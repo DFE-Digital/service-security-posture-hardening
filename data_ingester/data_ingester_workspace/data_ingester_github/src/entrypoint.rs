@@ -432,6 +432,9 @@ mod live_tests {
 
     use crate::entrypoint::github_octocrab_entrypoint;
     use crate::entrypoint::github_set_custom_properties_entrypoint;
+    use crate::OctocrabGit;
+    use data_ingester_financial_business_partners::validator::Validator;
+    use tracing::error;
 
     #[tokio::test]
     async fn test_all_github() -> Result<()> {
@@ -472,6 +475,63 @@ mod live_tests {
         github_set_custom_properties_entrypoint(Arc::new(secrets), Arc::new(splunk))
             .await
             .context("Settings GitHub Custom Properties in test")?;
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_validate_custom_properties() -> Result<()> {
+        let secrets = get_keyvault_secrets(
+            &env::var("KEY_VAULT_NAME").expect("Need KEY_VAULT_NAME enviornment variable"),
+        )
+        .await
+        .unwrap();
+        let secrets = Arc::new(secrets);
+
+        let custom_property_validator = match Validator::from_splunk_fbp(secrets.clone()).await {
+            Ok(validator) => Some(Arc::new(validator)),
+            Err(err) => {
+                error!(name="github", error=?err, "Unable to build Custom property Validator");
+                None
+            }
+        };
+
+        let github_app = secrets.github_app.as_ref().unwrap();
+
+        let client = OctocrabGit::new_from_app(github_app).context("Build OctocrabGit")?;
+
+        let installations = client
+            .client
+            .apps()
+            .installations()
+            .send()
+            .await
+            .context("Getting installations for github app")?;
+
+        for installation in installations {
+            if installation.account.r#type != "Organization" {
+                continue;
+            }
+
+            let installation_client = client
+                .for_installation_id(installation.id)
+                .await
+                .context("build octocrabgit client")?;
+
+            let org_name = installation.account.login.to_string();
+
+            if org_name != "DFE-Digital" {
+                continue;
+            }
+
+            let custom_properties = installation_client
+                .org_get_custom_property_values(&org_name, custom_property_validator.clone())
+                .await?;
+            assert!(custom_properties
+                .custom_properties
+                .iter()
+                .any(|cp| cp.validation_errors.is_none()));
+        }
 
         Ok(())
     }
