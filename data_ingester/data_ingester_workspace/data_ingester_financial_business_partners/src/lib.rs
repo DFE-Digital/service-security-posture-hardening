@@ -1,4 +1,5 @@
 pub mod fbp_results;
+pub mod validator;
 
 use anyhow::{Context, Result};
 use data_ingester_splunk::splunk::{set_ssphp_run, HecEvent, Splunk, ToHecEvents};
