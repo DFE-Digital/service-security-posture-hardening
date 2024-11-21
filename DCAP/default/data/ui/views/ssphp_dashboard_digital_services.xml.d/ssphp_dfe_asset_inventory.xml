@@ -1,17 +1,18 @@
 <dashboard version="1.1" theme="dark">
   
-
 <label>DCAP Azure Asset Inventory</label>
-<description>_DEV v1.0.7</description>
+<description>_DEV v2.0.1</description>
+
 
 <init>
   <set token="tkn_resource_count">0</set>
 </init>
 
+  
+<!-- ####################################################################################################################################################### -->
+<!-- #################################################################### BASE SEARCHES  ################################################################### --> 
+<!-- ####################################################################################################################################################### -->
 
-
-
-<!-- ################### BASE SEARCHES ################### --> 
   <search id="base_1">
     <query>
 | inputlookup ssphp_bdmc_fbp.csv where portfolio!="Unallocated"
@@ -21,24 +22,8 @@
   
   <search id="base_2">
     <query>
-index="ssphp_asset_inventory_dev" (ssphp.resource.source="AZURE" OR ssphp.resource.source="GITHUB") earliest=-2d@d latest=now
-    [| inputlookup ssphp_last_asset_inventory_ssphp_run_DEV.csv where (inventory_type="azure" OR inventory_type="github")
-     | stats max(SSPHP_RUN) as SSPHP_RUN by inventory_type
-     | eval st="(ssphp.resource.source=\"".upper('inventory_type')."\" AND SSPHP_RUN=\"".'SSPHP_RUN'."\")"
-     | stats values(st) as st
-     | eval st="(".mvjoin('st'," OR ").")"
-     | return $st]
-    </query>
-  </search>
-  
-  
-  
-  
-  <search id="base_2_service">
-    <query>
 index="ssphp_asset_inventory_dev" 
     (ssphp.resource.source="AZURE" OR ssphp.resource.source="GITHUB") 
-    (ssphp.service.portfolio=$tkn_portfolio|s$ AND ssphp.service.service_line=$tkn_service_line|s$ AND ssphp.service.product=$tkn_product|s$) 
     earliest=-2d@d latest=now
 
     [| inputlookup ssphp_last_asset_inventory_ssphp_run_DEV.csv where (inventory_type="azure" OR inventory_type="github")
@@ -47,211 +32,363 @@ index="ssphp_asset_inventory_dev"
      | stats values(st) as st
      | eval st="(".mvjoin('st'," OR ").")"
      | return $st]
-
+     
+| table ssphp.resource.source,
+        ssphp.resource.tenant,
+        ssphp.resource.subscription,
+        ssphp.resource.subscription_name,
+        ssphp.resource.resource_group,
+        ssphp.resource.id,
+        ssphp.resource.name,
+        ssphp.resource.full_name,
+        ssphp.resource.type,
+        ssphp.service.portfolio,
+        ssphp.service.service_line,
+        ssphp.service.product,
+        ssphp.service.cost_centre.code,
+        ssphp.service.cost_centre.title,
+        ssphp.service.cost_centre.account_code, 
+        ssphp.service.cost_centre.activity_code,
+        ssphp.service.contacts.cost_centre_owner,
+        ssphp.service.contacts.cost_centre_owner_email,
+        ssphp.service.contacts.financial_business_partner_email,
+        ssphp.service.contacts.hosting_provider_email,
+        ssphp.service.contacts.hosting_support_email,
+        ssphp.service.contacts.product_owner_email
     </query>
   </search>
   
   
   
   
+  <search base="base_2" id="base_2_service">
+    <query>
+| search (ssphp.resource.source="AZURE" OR ssphp.resource.source="GITHUB") AND (ssphp.service.portfolio=$tkn_portfolio|s$ AND ssphp.service.service_line=$tkn_service_line|s$ AND ssphp.service.product=$tkn_product|s$) 
 
-<!-- ################### INPUTS ################### --> 
-  <fieldset submitButton="false">
-    <input type="radio" token="tkn_view" searchWhenChanged="true">
-      <label>Dashboard View</label>
-      <choice value="1">By Service</choice>
-      <choice value="2">By Azure Tenancy / Subscription</choice>
-      <choice value="3">By Search</choice>
-      <choice value="4">By Financial Business Partner</choice>
-      <default>1</default>
-      <initialValue>1</initialValue>
-      <change>
-        <condition value="1">
-          <set token="tkn_view_service">Y</set>
-          <unset token="tkn_view_search"></unset>
-          <unset token="tkn_view_fbp"></unset>
-          <unset token="tkn_view_sub"></unset>
-        </condition>
-        <condition value="2">
-          <set token="tkn_view_sub">Y</set>
-          <unset token="tkn_view_search"></unset>
-          <unset token="tkn_view_fbp"></unset>
-          <unset token="tkn_view_service"></unset>
-        </condition>
-        <condition value="3">
-          <set token="tkn_view_search">Y</set>
-          <unset token="tkn_view_service"></unset>
-          <unset token="tkn_view_fbp"></unset>
-          <unset token="tkn_view_sub"></unset>
-        </condition>
-        <condition value="4">
-          <set token="tkn_view_fbp">Y</set>
-          <unset token="tkn_view_search"></unset>
-          <unset token="tkn_view_service"></unset>
-          <unset token="tkn_view_sub"></unset>
-        </condition>
-      </change>
-    </input>
+| table ssphp.resource.source,
+        ssphp.resource.tenant,
+        ssphp.resource.subscription,
+        ssphp.resource.subscription_name,
+        ssphp.resource.resource_group,
+        ssphp.resource.id,
+        ssphp.resource.name,
+        ssphp.resource.full_name,
+        ssphp.resource.type,
+        ssphp.service.portfolio,
+        ssphp.service.service_line,
+        ssphp.service.product,
+        ssphp.service.cost_centre.code,
+        ssphp.service.cost_centre.title,
+        ssphp.service.cost_centre.account_code, 
+        ssphp.service.cost_centre.activity_code,
+        ssphp.service.contacts.cost_centre_owner,
+        ssphp.service.contacts.cost_centre_owner_email,
+        ssphp.service.contacts.financial_business_partner_email,
+        ssphp.service.contacts.hosting_provider_email,
+        ssphp.service.contacts.hosting_support_email,
+        ssphp.service.contacts.product_owner_email
+    </query>
+  </search>
+  
+  
+  
+  
+<!-- ####################################################################################################################################################### -->
+<!-- ############################################################## MENU / INPUTS ROW ###################################################################### --> 
+<!-- ####################################################################################################################################################### -->
+
+  <fieldset submitButton="false"></fieldset>
 
 
-    <input type="text" token="tkn_search_text" depends="$tkn_view_search$">
-      <label>Search Text</label>
+<!-- ############################################################## VIEW MENU ###################################################################### --> 
+
+  <row>
+    <panel id="menu_1">
+      <html>
+        <style>
+          #menu_1{
+            width:15% !important;
+          }
+        </style>
+      </html>
+      <input type="radio" token="tkn_view" searchWhenChanged="true">
+        <label>Dashboard View</label>
+        <choice value="1">By Service</choice>
+        <choice value="2">By Azure Tenancy / Subscription</choice>
+        <choice value="3">By Search</choice>
+        <default>1</default>
+        <initialValue>1</initialValue>
+        <change>
+          <condition value="1">
+            <set token="tkn_view_service">Y</set>
+            <unset token="tkn_view_search"></unset>
+            <unset token="tkn_view_sub"></unset>
+          </condition>
+          <condition value="2">
+            <set token="tkn_view_sub">Y</set>
+            <unset token="tkn_view_search"></unset>
+            <unset token="tkn_view_service"></unset>
+          </condition>
+          <condition value="3">
+            <set token="tkn_view_search">Y</set>
+            <unset token="tkn_view_service"></unset>
+            <unset token="tkn_view_sub"></unset>
+          </condition>
+        </change>
+      </input>
+  </panel>
+  
+
+<!-- ############################################################## SEARCH MENU ###################################################################### --> 
+  
+  <panel id="panel_search_menu_inputs" depends="$tkn_view_search$">
+    <html>
+      <style>
+        #panel_search_menu_inputs{
+          width:85% !important;
+        }
+      </style>
+    </html>
+
+    <input type="text" token="tkn_search_text">
+      <label>Search String</label>
       <default>*</default>
       <initialValue>*</initialValue>
     </input>
+  </panel>
+  
+
+<!-- ############################################################## SERVICE MENU ###################################################################### --> 
+      
+  <panel id="panel_service_menu_inputs" depends="$tkn_view_service$">
+    <html>
+        <style>
+          #panel_service_menu_inputs{
+            width:60% !important;
+          }
+        </style>
+      </html>
+      
+      <input type="dropdown" token="tkn_portfolio" searchWhenChanged="true">
+        <label>Portfolio</label>
+        <fieldForLabel>portfolio</fieldForLabel>
+        <fieldForValue>portfolio</fieldForValue>
+        <search base="base_1">
+          <query>
+  | fields portfolio
+  | dedup portfolio
+  | sort 0 portfolio
+          </query>
+        </search>
+        <change>
+          <unset token="form.tkn_service_line"></unset>
+          <unset token="form.tkn_product"></unset>
+          <unset token="form.tkn_type"></unset>
+          <set token="tkn_resource_count">0</set>
+        </change>
+      </input>
+      
+      <input type="dropdown" token="tkn_service_line" searchWhenChanged="true">
+        <label>Service Line</label>
+        <fieldForLabel>service_line</fieldForLabel>
+        <fieldForValue>service_line</fieldForValue>
+        <search base="base_1">
+          <query>
+  | search portfolio=$tkn_portfolio|s$
+  | fields service_line
+  | dedup service_line
+  | sort 0 service_line
+          </query>
+        </search>
+        <change>
+          <unset token="form.tkn_product"></unset>
+          <unset token="form.tkn_type"></unset>
+          <set token="tkn_resource_count">0</set>
+        </change>
+      </input>
+      
+      <input type="dropdown" token="tkn_product" searchWhenChanged="true">
+        <label>Product</label>
+        <fieldForLabel>product</fieldForLabel>
+        <fieldForValue>product</fieldForValue>
+        <search base="base_1">
+          <query>
+  | search portfolio=$tkn_portfolio|s$ AND service_line=$tkn_service_line|s$
+  | fields product
+  | dedup product
+  | sort 0 product
+          </query>
+        </search>
+        <change>
+          <unset token="form.tkn_type"></unset>
+          <set token="tkn_resource_count">0</set>
+        </change>
+      </input>
+  
+  
+      <input type="dropdown" token="tkn_type_service" searchWhenChanged="true">
+        <label>Azure Resource Type</label>
+        <fieldForLabel>resource_type_display</fieldForLabel>
+        <fieldForValue>resource_type</fieldForValue>
+        <search base="base_2_service">
+          <query>
+| search ssphp.resource.source="AZURE"
+  
+| fields ssphp.resource.type
+| rename ssphp.resource.type as resource_type
+| eval resource_type_display=replace('resource_type',"microsoft\.",""),
+         resource_type_display=replace('resource_type_display',"acr\.","")
+         
+| dedup resource_type_display
+  
+| table resource_type, resource_type_display
+| sort 0 resource_type_display
+          </query>
+        </search> 
+        <choice value="*">ALL</choice>
+        <default>*</default>
+      </input>
+  </panel>     
     
     
-    
-    <input type="dropdown" token="tkn_portfolio" searchWhenChanged="true" depends="$tkn_view_service$">
-      <label>Portfolio</label>
-      <fieldForLabel>portfolio</fieldForLabel>
-      <fieldForValue>portfolio</fieldForValue>
-      <search base="base_1">
+  <panel id="panel_service_ownership" depends="$tkn_view_service$">
+    <title>Ownership</title>
+    <html>
+        <style>
+          #panel_service_ownership{
+            width:25% !important;
+          }
+        </style>
+      </html>
+    <table>
+      <search base="base_2_service">
         <query>
-| fields portfolio
-| dedup portfolio
-| sort 0 portfolio
-        </query>
+
+| stats values(ssphp.service.cost_centre.code) as cost_centre_code, 
+      values(ssphp.service.cost_centre.title) as cost_centre_title, 
+      values(ssphp.service.cost_centre.account_code) as account_code, 
+      values(ssphp.service.cost_centre.activity_code) as activity_code,
+      values(ssphp.service.contacts.cost_centre_owner) as cost_centre_owner,
+      values(ssphp.service.contacts.cost_centre_owner_email) as cost_centre_owner_email,
+      values(ssphp.service.contacts.financial_business_partner_email) as financial_business_partner_email,
+      values(ssphp.service.contacts.hosting_provider_email) as hosting_provider_email,
+      values(ssphp.service.contacts.hosting_support_email) as hosting_support_email,
+      values(ssphp.service.contacts.product_owner_email) as product_owner_email
+
+| transpose
+| rename column as key, "row 1" as value
+      </query>
       </search>
-      <change>
-        <unset token="form.tkn_service_line"></unset>
-        <unset token="form.tkn_product"></unset>
-        <unset token="form.tkn_type"></unset>
-        <set token="tkn_resource_count">0</set>
-      </change>
-    </input>
-    
-    <input type="dropdown" token="tkn_service_line" searchWhenChanged="true" depends="$tkn_view_service$">
-      <label>Service Line</label>
-      <fieldForLabel>service_line</fieldForLabel>
-      <fieldForValue>service_line</fieldForValue>
-      <search base="base_1">
-        <query>
-| search portfolio=$tkn_portfolio|s$
-| fields service_line
-| dedup service_line
-| sort 0 service_line
-        </query>
-      </search>
-      <change>
-        <unset token="form.tkn_product"></unset>
-        <unset token="form.tkn_type"></unset>
-        <set token="tkn_resource_count">0</set>
-      </change>
-    </input>
-    
-    <input type="dropdown" token="tkn_product" searchWhenChanged="true" depends="$tkn_view_service$">
-      <label>Product</label>
-      <fieldForLabel>product</fieldForLabel>
-      <fieldForValue>product</fieldForValue>
-      <search base="base_1">
-        <query>
-| search portfolio=$tkn_portfolio|s$ AND service_line=$tkn_service_line|s$
-| fields product
-| dedup product
-| sort 0 product
-        </query>
-      </search>
-      <change>
-        <unset token="form.tkn_type"></unset>
-        <set token="tkn_resource_count">0</set>
-      </change>
-    </input>
+      <option name="count">100</option>
+      <option name="dataOverlayMode">none</option>
+      <option name="drilldown">none</option>
+      <option name="percentagesRow">false</option>
+      <option name="rowNumbers">false</option>
+      <option name="totalsRow">false</option>
+      <option name="wrap">true</option>
+    </table>
+  </panel>    
+  
 
 
-    <input type="dropdown" token="tkn_type_service" searchWhenChanged="true" depends="$tkn_view_service$">
-      <label>Resource Type</label>
-      <fieldForLabel>resource_type_display</fieldForLabel>
-      <fieldForValue>resource_type</fieldForValue>
-      <search>
-        <query>
-index="ssphp_asset_inventory_dev" 
-    (ssphp.resource.source="AZURE" OR ssphp.resource.source="GITHUB") 
-    (ssphp.service.portfolio=$tkn_portfolio|s$ AND ssphp.service.service_line=$tkn_service_line|s$ AND ssphp.service.product=$tkn_product|s$) 
-    earliest=-2d@d latest=now
 
-    [| inputlookup ssphp_last_asset_inventory_ssphp_run_DEV.csv where (inventory_type="azure" OR inventory_type="github")
-     | stats max(SSPHP_RUN) as SSPHP_RUN by inventory_type
-     | eval st="(ssphp.resource.source=\"".upper('inventory_type')."\" AND SSPHP_RUN=\"".'SSPHP_RUN'."\")"
-     | stats values(st) as st
-     | eval st="(".mvjoin('st'," OR ").")"
-     | return $st]
+<!-- ############################################################## AZURE SUBSCRIPTION / TENANCY MENU ###################################################################### -->   
+  
+  <panel id="panel_sub_menu_inputs" depends="$tkn_view_sub$">
+    <html>
+        <style>
+          #panel_sub_menu_inputs{
+            width:85% !important;
+          }
+        </style>
+      </html>
+      
+      <input type="dropdown" token="tkn_tenancy" searchWhenChanged="true">
+        <label>Tenancy</label>
+        <fieldForLabel>ssphp.resource.tenant</fieldForLabel>
+        <fieldForValue>ssphp.resource.tenant</fieldForValue>
+        <search base="base_2">
+          <query>
+| fields ssphp.resource.tenant
+| dedup ssphp.resource.tenant
+| sort 0 ssphp.resource.tenant
+| table ssphp.resource.tenant
+          </query>
+        </search>
+        <change>
+          <unset token="form.tkn_subscription"></unset>
+          <unset token="tkn_resource_group"></unset>
+          <set token="tkn_resource_count_sub">0</set>
+        </change>
+      </input>
+      
+      <input type="dropdown" token="tkn_subscription" searchWhenChanged="true">
+        <label>Subscription</label>
+        <fieldForLabel>ssphp.resource.subscription_name</fieldForLabel>
+        <fieldForValue>ssphp.resource.subscription</fieldForValue>
+        <search base="base_2">
+          <query>
+  | search ssphp.resource.tenant=$tkn_tenancy|s$
+  | fields ssphp.resource.subscription, ssphp.resource.subscription_name
+  | dedup ssphp.resource.subscription
+  | sort 0 ssphp.resource.subscription
+  | table ssphp.resource.subscription, ssphp.resource.subscription_name
+          </query>
+        </search>
+        <change>
+          <unset token="form.tkn_resource_group"></unset>
+          <set token="tkn_resource_count_sub">0</set>
+        </change>
+      </input>
+      
+      <input type="dropdown" token="tkn_resource_group" searchWhenChanged="true">
+        <label>Resource Group</label>
+        <fieldForLabel>ssphp.resource.resource_group</fieldForLabel>
+        <fieldForValue>ssphp.resource.resource_group</fieldForValue>
+        <search base="base_2">
+          <query>
+| search ssphp.resource.tenant=$tkn_tenancy|s$ AND ssphp.resource.subscription=$tkn_subscription|s$
+| fields ssphp.resource.resource_group
+| dedup ssphp.resource.resource_group
+| sort 0 ssphp.resource.resource_group
+| table ssphp.resource.resource_group
+          </query>
+        </search>
+        <change>
+          <set token="tkn_resource_count_sub">0</set>
+        </change>
+      </input>
+
+  
+  
+      <input type="dropdown" token="tkn_type_sub" searchWhenChanged="true">
+        <label>Azure Resource Type</label>
+        <fieldForLabel>resource_type_display</fieldForLabel>
+        <fieldForValue>resource_type</fieldForValue>
+        <search base="base_2">
+          <query>
+| search ssphp.resource.source="AZURE" AND ssphp.resource.tenant=$tkn_tenancy|s$ AND ssphp.resource.subscription=$tkn_subscription|s$ AND ssphp.resource.resource_group=$tkn_resource_group|s$
 
 | fields ssphp.resource.type
 | rename ssphp.resource.type as resource_type
 | eval resource_type_display=replace('resource_type',"microsoft\.",""),
-       resource_type_display=replace('resource_type_display',"acr\.","")
-       
+         resource_type_display=replace('resource_type_display',"acr\.","")
+         
 | dedup resource_type_display
-
+  
 | table resource_type, resource_type_display
 | sort 0 resource_type_display
-        </query>
-      </search> 
-      <choice value="*">ALL</choice>
-      <default>*</default>
-    </input>
-    
-    
+          </query>
+        </search> 
+        <choice value="*">ALL</choice>
+        <default>*</default>
+      </input>
+  </panel>     
 
 
 
+</row>
 
-    <input type="dropdown" token="tkn_tenancy" searchWhenChanged="true" depends="$tkn_view_sub$">
-      <label>Tenancy</label>
-      <fieldForLabel>tenantId</fieldForLabel>
-      <fieldForValue>tenantId</fieldForValue>
-      <search base="base_2">
-        <query>
-| fields tenantId
-| dedup tenantId
-| sort 0 tenantId
-        </query>
-      </search>
-      <change>
-        <unset token="form.tkn_subscription"></unset>
-        <unset token="tkn_resource_group"></unset>
-        <set token="tkn_resource_count_sub">0</set>
-      </change>
-    </input>
-    
-    <input type="dropdown" token="tkn_subscription" searchWhenChanged="true" depends="$tkn_view_sub$">
-      <label>Subscription</label>
-      <fieldForLabel>subscriptionId</fieldForLabel>
-      <fieldForValue>subscriptionId</fieldForValue>
-      <search base="base_2">
-        <query>
-| search tenantId=$tkn_tenancy|s$
-| fields subscriptionId
-| dedup subscriptionId
-| sort 0 subscriptionId
-        </query>
-      </search>
-      <change>
-        <unset token="form.tkn_resource_group"></unset>
-        <set token="tkn_resource_count_sub">0</set>
-      </change>
-    </input>
-    
-    <input type="dropdown" token="tkn_resource_group" searchWhenChanged="true" depends="$tkn_view_sub$">
-      <label>Resource Group</label>
-      <fieldForLabel>resourceGroup</fieldForLabel>
-      <fieldForValue>resourceGroup</fieldForValue>
-      <search base="base_2">
-        <query>
-| search tenantId=$tkn_tenancy|s$ AND subscriptionId=$tkn_subscription|s$
-| fields resourceGroup
-| dedup resourceGroup
-| sort 0 resourceGroup
-        </query>
-      </search>
-      <change>
-        <set token="tkn_resource_count_sub">0</set>
-      </change>
-    </input>
-
-
-  </fieldset>
 
 
 
@@ -261,40 +398,34 @@ index="ssphp_asset_inventory_dev"
 
 
   
-<!-- ######################################################### BY SERVICE ######################################################### --> 
+  
+  
+<!-- ####################################################################################################################################################### -->
+<!-- #################################################################### BY SERVICE TABLE ################################################################# --> 
+<!-- ####################################################################################################################################################### -->
+
 
   <row depends="$tkn_view_service$">
-    <panel id="panel1">
-      <title>Resources [$tkn_resource_count$]</title>
+    <panel id="panel_data_service_azure">
+      <title>Azure Resources [$tkn_resource_count_service_azure$]</title>
       <html>
         <style>
-          #panel1{
-            width:75% !important;
+          #panel_data_service_azure{
+            width:50% !important;
           }
         </style>
       </html>
       <table>
-        <search>
+        <search base="base_2_service">
           <query>
-index="ssphp_asset_inventory_dev" 
-    (ssphp.resource.source="AZURE" OR ssphp.resource.source="GITHUB") 
-    (ssphp.service.portfolio=$tkn_portfolio|s$ AND ssphp.service.service_line=$tkn_service_line|s$ AND ssphp.service.product=$tkn_product|s$) 
-    earliest=-2d@d latest=now
 
-    [| inputlookup ssphp_last_asset_inventory_ssphp_run_DEV.csv where (inventory_type="azure" OR inventory_type="github")
-     | stats max(SSPHP_RUN) as SSPHP_RUN by inventory_type
-     | eval st="(ssphp.resource.source=\"".upper('inventory_type')."\" AND SSPHP_RUN=\"".'SSPHP_RUN'."\")"
-     | stats values(st) as st
-     | eval st="(".mvjoin('st'," OR ").")"
-     | return $st]
-
-| search ssphp.resource.type=$tkn_type_service|s$
+| search ssphp.resource.source="AZURE" AND ssphp.resource.type=$tkn_type_service|s$
 | table ssphp.resource.tenant, ssphp.resource.subscription_name, ssphp.resource.resource_group, ssphp.resource.id
 
 | eventstats count
         </query>
           <done>
-            <set token="tkn_resource_count">$result.count$</set>
+            <set token="tkn_resource_count_service_azure">$result.count$</set>
           </done>
         </search>
         <option name="count">100</option>
@@ -307,84 +438,31 @@ index="ssphp_asset_inventory_dev"
         <fields>ssphp.resource.tenant, ssphp.resource.subscription_name, ssphp.resource.resource_group, ssphp.resource.id</fields>
       </table>
     </panel>
-    
-    
-    <panel id="panel2">
-      <title>Ownership</title>
+
+
+
+    <panel id="panel_data_service_github">
+      <title>Github Repos [$tkn_resource_count_service_github$]</title>
       <html>
-          <style>
-            #panel2{
-              width:25% !important;
-            }
-          </style>
-        </html>
+        <style>
+          #panel_data_service_github{
+            width:50% !important;
+          }
+        </style>
+      </html>
       <table>
-        <search>
+        <search base="base_2_service">
           <query>
-index="ssphp_asset_inventory_dev" 
-    (ssphp.resource.source="AZURE" OR ssphp.resource.source="GITHUB") 
-    (ssphp.service.portfolio=$tkn_portfolio|s$ AND ssphp.service.service_line=$tkn_service_line|s$ AND ssphp.service.product=$tkn_product|s$) 
-    earliest=-2d@d latest=now
+| search ssphp.resource.source="GITHUB"
+     
+| eval Organisation=mvindex(split('ssphp.resource.full_name',"/"),0)
 
-    [| inputlookup ssphp_last_asset_inventory_ssphp_run_DEV.csv where (inventory_type="azure" OR inventory_type="github")
-     | stats max(SSPHP_RUN) as SSPHP_RUN by inventory_type
-     | eval st="(ssphp.resource.source=\"".upper('inventory_type')."\" AND SSPHP_RUN=\"".'SSPHP_RUN'."\")"
-     | stats values(st) as st
-     | eval st="(".mvjoin('st'," OR ").")"
-     | return $st]
-
-| stats values(ssphp.service.cost_centre.code) as cost_centre_code, 
-        values(ssphp.service.cost_centre.title) as cost_centre_title, 
-        values(ssphp.service.cost_centre.account_code) as account_code, 
-        values(ssphp.service.cost_centre.activity_code) as activity_code,
-        values(ssphp.service.contacts.cost_centre_owner) as cost_centre_owner,
-        values(ssphp.service.contacts.cost_centre_owner_email) as cost_centre_owner_email,
-        values(ssphp.service.contacts.financial_business_partner_email) as financial_business_partner_email,
-        values(ssphp.service.contacts.hosting_provider_email) as hosting_provider_email,
-        values(ssphp.service.contacts.hosting_support_email) as hosting_support_email,
-        values(ssphp.service.contacts.product_owner_email) as product_owner_email
-
-| transpose
-| rename column as key, "row 1" as value
-        </query>
-        </search>
-        <option name="count">100</option>
-        <option name="dataOverlayMode">none</option>
-        <option name="drilldown">none</option>
-        <option name="percentagesRow">false</option>
-        <option name="rowNumbers">false</option>
-        <option name="totalsRow">false</option>
-        <option name="wrap">true</option>
-      </table>
-    </panel>
-  </row>
-  
-  
-  
-  
-  
-<!-- ################### BY TENANCY / SUBSCRIPTION ################### -->   
-  <row depends="$tkn_view_sub$">
-    <panel id="panel3">
-      <title>Resources [$tkn_resource_count$]</title>
-      <html>
-          <style>
-            #panel3{
-              width:75% !important;
-            }
-          </style>
-        </html>
-      <table>
-        <search base="base_2">
-          <query>
-| search tenantId=$tkn_tenancy|s$ AND subscriptionId=$tkn_subscription|s$ AND resourceGroup=$tkn_resource_group|s$
-
-| table tenantId, subscriptionId, resourceGroup, resource_id
+| stats values(ssphp.resource.name) as "Repo Name" by Organisation
 
 | eventstats count
         </query>
           <done>
-            <set token="tkn_resource_count_sub">$result.count$</set>
+            <set token="tkn_resource_count_service_github">$result.count$</set>
           </done>
         </search>
         <option name="count">100</option>
@@ -394,33 +472,127 @@ index="ssphp_asset_inventory_dev"
         <option name="rowNumbers">false</option>
         <option name="totalsRow">false</option>
         <option name="wrap">true</option>
-        <fields>tenantId, subscriptionId, resourceGroup, resource_id</fields>
+        <fields>Organisation, "Repo Name"</fields>
       </table>
     </panel>
-
   </row>
   
+  
+  
+  
+  
+  
+<!-- ####################################################################################################################################################### -->
+<!-- ############################################################### BY TENANCY / SUBSCRIPTION ############################################################# --> 
+<!-- ####################################################################################################################################################### -->
  
+  <row depends="$tkn_view_sub$">
+    <panel id="panel_data_subs_azure">
+      <title>Azure Resources [$tkn_resource_count_subs_azure$]</title>
+      <html>
+        <style>
+          #panel_data_subs_azure{
+            width:100% !important;
+          }
+          #table_sub th:nth-child(4) {
+            width: 200px;
+          }
+        </style>
+      </html>
+      <table id="table_sub">
+        <search base="base_2">
+          <query>
+| search ssphp.resource.source="AZURE" AND ssphp.resource.tenant=$tkn_tenancy|s$ AND ssphp.resource.subscription=$tkn_subscription|s$ AND ssphp.resource.resource_group=$tkn_resource_group|s$ AND ssphp.resource.type=$tkn_type_sub|s$
+
+| table ssphp.resource.tenant, ssphp.resource.subscription_name, ssphp.resource.resource_group, ssphp.resource.id, ssphp.service.*
+
+| eval Ownership=mvappend("Portfolio : ".'ssphp.service.portfolio', "Service Line : ".'ssphp.service.service_line', "Product : ".'ssphp.service.product'),
+       Ownership=if(isnotnull('ssphp.service.cost_centre.code') AND 'ssphp.service.cost_centre.code'!="null" AND 'ssphp.service.cost_centre.code'!="",mvappend('Ownership',"Cost Centre Code : ".'ssphp.service.cost_centre.code'),'Ownership'),
+       Ownership=if(isnotnull('ssphp.service.cost_centre.title') AND 'ssphp.service.cost_centre.title'!="null" AND 'ssphp.service.cost_centre.title'!="",mvappend('Ownership',"Cost Centre Title : ".'ssphp.service.cost_centre.title'),'Ownership'),
+       Ownership=if(isnotnull('ssphp.service.cost_centre.account_code') AND 'ssphp.service.cost_centre.account_code'!="null" AND 'ssphp.service.cost_centre.account_code'!="",mvappend('Ownership',"Account Code : ".'ssphp.service.cost_centre.account_code'),'Ownership'),
+       Ownership=if(isnotnull('ssphp.service.cost_centre.activity_code') AND 'ssphp.service.cost_centre.activity_code'!="null" AND 'ssphp.service.cost_centre.activity_code'!="",mvappend('Ownership',"Activity Code : ".'ssphp.service.cost_centre.activity_code'),'Ownership'),
+       Ownership=if(isnotnull('ssphp.service.contacts.cost_centre_owner') AND 'ssphp.service.contacts.cost_centre_owner'!="null" AND 'ssphp.service.contacts.cost_centre_owner'!="",mvappend('Ownership',"Cost Centre Owner : ".'ssphp.service.contacts.cost_centre_owner'),'Ownership'),
+       Ownership=if(isnotnull('ssphp.service.contacts.cost_centre_owner_email') AND 'ssphp.service.contacts.cost_centre_owner_email'!="null" AND 'sssphp.service.contacts.cost_centre_owner_email'!="",mvappend('Ownership',"Cost Centre Owner EMail : ".'ssphp.service.contacts.cost_centre_owner_email'),'Ownership'),
+       Ownership=if(isnotnull('ssphp.service.contacts.financial_business_partner_email') AND 'ssphp.service.contacts.financial_business_partner_email'!="null" AND 'ssphp.service.contacts.financial_business_partner_email'!="",mvappend('Ownership',"Financial Business Partner : ".'ssphp.service.contacts.financial_business_partner_email'),'Ownership'),
+       Ownership=if(isnotnull('ssphp.service.contacts.hosting_provider_email') AND 'ssphp.service.contacts.hosting_provider_email'!="null" AND 'ssphp.service.contacts.hosting_provider_email'!="",mvappend('Ownership',"Hosting Provider : ".'ssphp.service.contacts.hosting_provider_email'),'Ownership'),
+       Ownership=if(isnotnull('ssphp.service.contacts.hosting_support_email') AND 'ssphp.service.contacts.hosting_support_email'!="null" AND 'ssphp.service.contacts.hosting_support_email'!="",mvappend('Ownership',"Hosting Support : ".'ssphp.service.contacts.hosting_support_email'),'Ownership'),
+       Ownership=if(isnotnull('ssphp.service.contacts.product_owner_email') AND 'ssphp.service.contacts.product_owner_email'!="null" AND 'ssphp.service.contacts.product_owner_email'!="",mvappend('Ownership',"Product owner : ".'ssphp.service.contacts.product_owner_email'),'Ownership')
+
+| rename ssphp.resource.tenant as Tenancy, ssphp.resource.subscription_name as Subscription, ssphp.resource.resource_group as "Resource Group", ssphp.resource.id as "Resource ID"
+| eventstats count
+
+        </query>
+          <done>
+            <set token="tkn_resource_count_subs_azure">$result.count$</set>
+          </done>
+        </search>
+        <option name="count">100</option>
+        <option name="dataOverlayMode">none</option>
+        <option name="drilldown">none</option>
+        <option name="percentagesRow">false</option>
+        <option name="rowNumbers">false</option>
+        <option name="totalsRow">false</option>
+        <option name="wrap">true</option>
+        <fields>Tenancy, Subscription, "Resource Group", "Resource ID", Ownership</fields>
+      </table>
+    </panel>
+  </row>
+  
+  
+
+
+
   
   
   
-  
-<!-- ################### BY SEARCH ################### -->   
+<!-- ################################################################################################################################################ -->
+<!-- #################################################################### BY SEARCH ################################################################# --> 
+<!-- ################################################################################################################################################ -->
+
+
   <row depends="$tkn_view_search$">
-    <panel>
-      <title>Resources</title>
-      <table>
+    <panel id="panel_data_search_azure">
+      <title>Azure Resources [$tkn_resource_count_search_azure$]</title>
+      <html>
+        <style>
+          #panel_data_search_azure{
+            width:100% !important;
+          }
+          #table_search th:nth-child(4) {
+            width: 200px;
+          }
+        </style>
+      </html>
+      <table id="table_search">
         <search base="base_2">
           <query>
 
-| where like(_raw,"%$tkn_search_text$%")
+| makemv raw
+| foreach * 
+    [| eval raw=mvappend('raw','&lt;&lt;FIELD&gt;&gt;')]
 
-| table tenantId, subscriptionId, resourceGroup, resource_id, resource_type, portfolio, service_line, product, cost_centre_owner, cost_centre_owner_email
-        financial_business_partner_email,
-        hosting_provider_email,
-        hosting_support_email,
-        product_owner_email
+| search raw="*$tkn_search_text$*"
+
+| table ssphp.resource.tenant, ssphp.resource.subscription_name, ssphp.resource.resource_group, ssphp.resource.id, ssphp.service.*
+
+| eval Ownership=mvappend("Portfolio : ".'ssphp.service.portfolio', "Service Line : ".'ssphp.service.service_line', "Product : ".'ssphp.service.product'),
+       Ownership=if(isnotnull('ssphp.service.cost_centre.code') AND 'ssphp.service.cost_centre.code'!="null" AND 'ssphp.service.cost_centre.code'!="",mvappend('Ownership',"Cost Centre Code : ".'ssphp.service.cost_centre.code'),'Ownership'),
+       Ownership=if(isnotnull('ssphp.service.cost_centre.title') AND 'ssphp.service.cost_centre.title'!="null" AND 'ssphp.service.cost_centre.title'!="",mvappend('Ownership',"Cost Centre Title : ".'ssphp.service.cost_centre.title'),'Ownership'),
+       Ownership=if(isnotnull('ssphp.service.cost_centre.account_code') AND 'ssphp.service.cost_centre.account_code'!="null" AND 'ssphp.service.cost_centre.account_code'!="",mvappend('Ownership',"Account Code : ".'ssphp.service.cost_centre.account_code'),'Ownership'),
+       Ownership=if(isnotnull('ssphp.service.cost_centre.activity_code') AND 'ssphp.service.cost_centre.activity_code'!="null" AND 'ssphp.service.cost_centre.activity_code'!="",mvappend('Ownership',"Activity Code : ".'ssphp.service.cost_centre.activity_code'),'Ownership'),
+       Ownership=if(isnotnull('ssphp.service.contacts.cost_centre_owner') AND 'ssphp.service.contacts.cost_centre_owner'!="null" AND 'ssphp.service.contacts.cost_centre_owner'!="",mvappend('Ownership',"Cost Centre Owner : ".'ssphp.service.contacts.cost_centre_owner'),'Ownership'),
+       Ownership=if(isnotnull('ssphp.service.contacts.cost_centre_owner_email') AND 'ssphp.service.contacts.cost_centre_owner_email'!="null" AND 'sssphp.service.contacts.cost_centre_owner_email'!="",mvappend('Ownership',"Cost Centre Owner EMail : ".'ssphp.service.contacts.cost_centre_owner_email'),'Ownership'),
+       Ownership=if(isnotnull('ssphp.service.contacts.financial_business_partner_email') AND 'ssphp.service.contacts.financial_business_partner_email'!="null" AND 'ssphp.service.contacts.financial_business_partner_email'!="",mvappend('Ownership',"Financial Business Partner : ".'ssphp.service.contacts.financial_business_partner_email'),'Ownership'),
+       Ownership=if(isnotnull('ssphp.service.contacts.hosting_provider_email') AND 'ssphp.service.contacts.hosting_provider_email'!="null" AND 'ssphp.service.contacts.hosting_provider_email'!="",mvappend('Ownership',"Hosting Provider : ".'ssphp.service.contacts.hosting_provider_email'),'Ownership'),
+       Ownership=if(isnotnull('ssphp.service.contacts.hosting_support_email') AND 'ssphp.service.contacts.hosting_support_email'!="null" AND 'ssphp.service.contacts.hosting_support_email'!="",mvappend('Ownership',"Hosting Support : ".'ssphp.service.contacts.hosting_support_email'),'Ownership'),
+       Ownership=if(isnotnull('ssphp.service.contacts.product_owner_email') AND 'ssphp.service.contacts.product_owner_email'!="null" AND 'ssphp.service.contacts.product_owner_email'!="",mvappend('Ownership',"Product owner : ".'ssphp.service.contacts.product_owner_email'),'Ownership')
+
+| rename ssphp.resource.tenant as Tenancy, ssphp.resource.subscription_name as Subscription, ssphp.resource.resource_group as "Resource Group", ssphp.resource.id as "Resource ID"
+| eventstats count
         </query>
+          <done>
+            <set token="tkn_resource_count_search_azure">$result.count$</set>
+          </done>
         </search>
         <option name="count">100</option>
         <option name="dataOverlayMode">none</option>
@@ -429,35 +601,10 @@ index="ssphp_asset_inventory_dev"
         <option name="rowNumbers">false</option>
         <option name="totalsRow">false</option>
         <option name="wrap">true</option>
+        <fields>Tenancy, Subscription, "Resource Group", "Resource ID", Ownership</fields>
       </table>
     </panel>
   </row>
   
   
-  
-<!-- ################### BY FBP ################### -->   
-  <row depends="$tkn_view_fbp$">
-    <panel>
-      <title>Resources</title>
-      <table>
-        <search base="base_2">
-          <query>
-
-| eval service_line='service_line'."  [".'cost_centre_code'."]"
-| stats values(product) as product by portfolio, service_line
-| streamstats count by portfolio
-| eval portfolio=if(count=1,'portfolio',null())
-| fields - count
-        </query>
-        </search>
-        <option name="count">100</option>
-        <option name="dataOverlayMode">none</option>
-        <option name="drilldown">none</option>
-        <option name="percentagesRow">false</option>
-        <option name="rowNumbers">false</option>
-        <option name="totalsRow">false</option>
-        <option name="wrap">true</option>
-      </table>
-    </panel>
-  </row>
 </dashboard>
