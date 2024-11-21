@@ -23,11 +23,6 @@ impl From<Vec<SsphpListFbpTaxonomy>> for Validator {
                 .or_insert(HashMap::new())
                 .entry(fbp.service_line)
                 .or_insert(HashSet::from_iter(fbp.product.into_iter()));
-
-            // .or_insert(product.iter().fold(HashSet::new(), |mut hs, product| {
-            //     let _ = hs.insert(product.to_string());
-            //     hs
-            // }));
         }
         Validator(validator)
     }
