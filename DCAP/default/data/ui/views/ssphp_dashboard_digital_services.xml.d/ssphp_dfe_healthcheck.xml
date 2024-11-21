@@ -1,7 +1,7 @@
-<dashboard version="1.1" theme="dark" script="js/addtags.js, js/table_cell_color.js">
-  <label>DCAP Healthcheck Dashboard</label>
-  
-  
+<dashboard version="1.1" theme="dark">
+
+<label>DCAP Healthcheck Dashboard</label>
+<description>{{environment}} v2.0.1</description>
   
   <row>
     <panel>
@@ -106,7 +106,7 @@
     [| eval run_order=mvappend('run_order',strftime('&lt;&lt;FIELD&gt;&gt;',"%Y-%m-%d %H:%M:%S")." - "."&lt;&lt;FIELD&gt;&gt;")]
 | eval run_order=mvsort('run_order')
 
-| eval status=if(SSPHP_RUN_ssphp_bdmc_fbp&gt;'SSPHP_RUN_ssphp_cost_centre_owner_emals' AND 
+| eval status=if(SSPHP_RUN_ssphp_cost_centre_owner_emals>'SSPHP_RUN_ssphp_bdmc_fbp' AND 
                  SSPHP_RUN_ssphp_bdmc_resource_groups&gt;'SSPHP_RUN_ssphp_bdmc_fbp' AND
                  SSPHP_RUN_ssphp_bdmc&gt;'SSPHP_RUN_ssphp_bdmc_resource_groups' AND
                  SSPHP_RUN_ssphp_bdmc&gt;'SSPHP_RUN_ssphp_bdmc_fbp' AND
@@ -319,7 +319,7 @@
       <table>
         <search id="base_bdmc">
           <query>
-| loadjob savedsearch="ssphp_app_account:DCAP_DEV:ssphp_create_dashboard_dataset_service_DEV"
+| loadjob savedsearch="ssphp_app_account:{{app}}{{environment}}:ssphp_create_dashboard_dataset_service{{environment}}"
 
 | table ssphp.service.portfolio, ssphp.service.service_line, ssphp.service.product, ssphp.assessment.source, ssphp.use_case.category, ssphp.use_case.id, ssphp.use_case.title, ssphp.assessment.display_name, ssphp.score.score, ssphp.score.compliance_status, ssphp.score.ciso_priority, ssphp.assessment.description, ssphp.score.color, ssphp.resource.id, ssphp.resource.tenant, ssphp.resource.subscription, ssphp.resource.resource_group, SSPHP_UID, SSPHP_RUN
 
@@ -383,7 +383,63 @@ index="ssphp_metrics_data" earliest=-7d@d latest=now sourcetype!="data_ingester_
     <option name="useThousandSeparators">1</option>
       </single>
     </panel>
+
+
+
+
+    <panel>
+      <title>Use Case Outputs</title>
+      <single>
+        <search>
+          <query>
+index=ssphp_metrics_summary{{environment}} earliest=-3d@d latest=now
+| eval date=strftime('SSPHP_RUN',"%Y-%m-%d")
+| eventstats max(SSPHP_RUN) as max_SSPHP_RUN by date, ssphp.use_case.savedsearch
+| where SSPHP_RUN='max_SSPHP_RUN'
+
+
+| fields SSPHP_RUN, date, ssphp.use_case.savedsearch
+| eval days_since_start_of_time=SSPHP_RUN/24/60/60,
+       today=now()/24/60/60,
+       days_old=floor('today'-'days_since_start_of_time')
+| table SSPHP_RUN, date, ssphp.use_case.savedsearch, days_since_start_of_time, today, days_old
+| stats count by ssphp.use_case.savedsearch, days_old
+| eval day_{days_old}='count'
+| stats values(day_*) as day_* by ssphp.use_case.savedsearch
+| where NOT ('day_0'&gt;('day_1'*0.9) OR 'day_0'&lt;('day_1'*1.1))
+| rename day_0 as today, day_1 as yesterday
+| table ssphp.use_case.savedsearch, today, yesterday
+
+| append 
+    [| makeresults]
     
+| stats count
+
+| eval status=if(count&lt;2,"Healthy","Unhealthy"),
+       range=if('status'="Healthy","low","severe")
+| table status, range
+          </query>
+        </search>
+
+    <option name="drilldown">none</option>
+    <option name="colorBy">value</option>
+    <option name="colorMode">block</option>
+    <option name="drilldown">none</option>
+    <option name="numberPrecision">0</option>
+    <option name="rangeColors">["0x65a637","0x6db7c6","0xf7bc38","0xf58f39","0xd93f3c"]</option>
+    <option name="rangeValues">[0,30,70,100]</option>
+    <option name="showSparkline">1</option>
+    <option name="showTrendIndicator">1</option>
+    <option name="trellis.enabled">0</option>
+    <option name="trellis.scales.shared">1</option>
+    <option name="trellis.size">medium</option>
+    <option name="trendColorInterpretation">standard</option>
+    <option name="trendDisplayMode">absolute</option>
+    <option name="unitPosition">after</option>
+    <option name="useColors">0</option>
+    <option name="useThousandSeparators">1</option>
+      </single>
+    </panel>
 
   </row>
   

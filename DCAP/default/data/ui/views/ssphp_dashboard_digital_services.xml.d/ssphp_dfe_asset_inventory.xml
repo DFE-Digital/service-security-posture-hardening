@@ -1,7 +1,7 @@
 <dashboard version="1.1" theme="dark">
   
 <label>DCAP Azure Asset Inventory</label>
-<description>_DEV v2.0.1</description>
+<description>{{environment}} v2.0.1</description>
 
 
 <init>
@@ -22,11 +22,11 @@
   
   <search id="base_2">
     <query>
-index="ssphp_asset_inventory_dev" 
+index="ssphp_asset_inventory{{environment}}" 
     (ssphp.resource.source="AZURE" OR ssphp.resource.source="GITHUB") 
     earliest=-2d@d latest=now
 
-    [| inputlookup ssphp_last_asset_inventory_ssphp_run_DEV.csv where (inventory_type="azure" OR inventory_type="github")
+    [| inputlookup ssphp_last_asset_inventory_ssphp_run{{environment}}.csv where (inventory_type="azure" OR inventory_type="github")
      | stats max(SSPHP_RUN) as SSPHP_RUN by inventory_type
      | eval st="(ssphp.resource.source=\"".upper('inventory_type')."\" AND SSPHP_RUN=\"".'SSPHP_RUN'."\")"
      | stats values(st) as st
