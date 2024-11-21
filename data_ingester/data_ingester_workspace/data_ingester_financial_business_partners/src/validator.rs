@@ -100,15 +100,15 @@ impl Validator {
         let service_line_hashmap = portfolio.and_then(|portfolio| self.0.get(portfolio));
 
         let product_hashset = service_line.and_then(|service_line| {
-            service_line_hashmap.and_then(|portfolio_hashmap| portfolio_hashmap.get(service_line))
+            service_line_hashmap.and_then(|service_line_hashmap| service_line_hashmap.get(service_line))
         });
 
         let product_entry = product.and_then(|product| {
-            product_hashset.and_then(|service_line_hashmap| service_line_hashmap.get(product))
+            product_hashset.and_then(|product_hashset| product_hashset.get(product))
         });
 
         ValidationResult {
-            valid: service_line_hashmap.is_some() && product_entry.is_some(),
+            valid: product_entry.is_some(),
             portfolio_valid: service_line_hashmap.is_some(),
             service_line_valid: product_hashset.is_some(),
             product_valid: product_entry.is_some(),
