@@ -4,7 +4,7 @@
 mod action_runs;
 mod artifacts;
 mod contents;
-mod custom_properties;
+pub mod custom_properties;
 pub mod entrypoint;
 mod github_response;
 mod org_members;
@@ -21,7 +21,7 @@ use anyhow::{Context, Result};
 use artifacts::{Artifact, Artifacts};
 use bytes::Bytes;
 use contents::Contents;
-use custom_properties::{CustomProperties, CustomPropertySetter};
+use custom_properties::{CustomProperties, CustomPropertySetter, SetOrgRepoCustomProperties};
 use data_ingester_financial_business_partners::validator::Validator;
 use data_ingester_sarif::{Sarif, SarifHecs};
 use data_ingester_supporting::keyvault::GitHubApp;
@@ -39,9 +39,9 @@ use tracing::{error, info, warn};
 use workflows::{WorkflowRunJobs, WorkflowRuns};
 
 /// NewType for Octocrab provide additonal data source.
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct OctocrabGit {
-    client: Octocrab,
+    pub client: Octocrab,
 }
 
 impl OctocrabGit {
@@ -53,7 +53,7 @@ impl OctocrabGit {
         })
     }
 
-    fn new_from_app(github_app: &GitHubApp) -> Result<Self> {
+    pub fn new_from_app(github_app: &GitHubApp) -> Result<Self> {
         let key = jsonwebtoken::EncodingKey::from_rsa_der(&github_app.private_key); // .context("Building jsonwebtoken from gihtub app der key")?;
 
         let octocrab = Octocrab::builder()
@@ -226,8 +226,53 @@ impl OctocrabGit {
         Ok(github_responses)
     }
 
+    pub async fn org_create_or_update_custom_property_value(
+        &self,
+        org: &str,
+        setter: SetOrgRepoCustomProperties,
+    ) -> Result<GithubResponses> {
+        let url = format!("/orgs/{}/properties/values", org,);
+
+        let response = self.client._patch(&url, Some(&setter)).await?;
+
+        let status = response.status().as_u16();
+
+        let mut body = response
+            .collect()
+            .await
+            .context("collect body")?
+            .to_bytes()
+            .slice(0..);
+
+        if body.is_empty() {
+            body = "{}".into();
+        }
+
+        let response_body = match serde_json::from_slice::<serde_json::Value>(&body) {
+            Ok(ok) => ok,
+            Err(err) => {
+                let body_string = String::from_utf8(body.to_vec())
+                    .unwrap_or_else(|err| format!("Unable to decode body as UTF8: {}", err));
+                warn!(
+                    "Error decoding create_custom_property response: {}:{} ",
+                    err, body_string
+                );
+                anyhow::bail!(err)
+            }
+        };
+
+        let github_response = GithubResponse::new(
+            github_response::SingleOrVec::Single(response_body),
+            url,
+            status,
+        );
+
+        let github_responses = GithubResponses::from_response(github_response);
+        Ok(github_responses)
+    }
+
     /// Get the custom properties for an organisation
-    pub(crate) async fn org_get_custom_property_values(
+    pub async fn org_get_custom_property_values(
         &self,
         org: &str,
         validator: Option<Arc<Validator>>,

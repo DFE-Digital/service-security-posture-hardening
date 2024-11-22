@@ -46,14 +46,11 @@ static SERVICE_LINE_CLEANER_DATA: [(&str, &str); 2] = [
     ),
 ];
 
-struct ServiceLineCleaner();
+#[derive(Default)]
+pub struct ServiceLineCleaner();
 
 impl ServiceLineCleaner {
-    pub(crate) fn new() -> Self {
-        Self()
-    }
-
-    fn allowed_values_cleaner_to_github<'value, S: AsRef<str>>(
+    pub fn allowed_values_cleaner_to_github<'value, S: AsRef<str>>(
         &self,
         value: &'value S,
     ) -> &'value str {
@@ -65,7 +62,7 @@ impl ServiceLineCleaner {
         value.as_ref()
     }
 
-    fn allowed_values_cleaner_from_github<'value, S: AsRef<str>>(
+    pub fn allowed_values_cleaner_from_github<'value, S: AsRef<str>>(
         &self,
         value: &'value S,
     ) -> &'value str {
@@ -139,7 +136,7 @@ impl CustomPropertySetter {
     pub fn from_fbp_service_line<V: AsRef<[S]>, S: AsRef<str> + std::fmt::Debug>(
         allowed_values: V,
     ) -> Self {
-        let service_line_cleaner = ServiceLineCleaner::new();
+        let service_line_cleaner = ServiceLineCleaner::default();
         let (allowed_value_strings, invalid_service_lines): (Vec<String>, Vec<String>) =
             allowed_values
                 .as_ref()
@@ -182,7 +179,7 @@ impl CustomPropertySetter {
 
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
-pub(crate) enum ValueType {
+pub enum ValueType {
     String,
     SingleSelect,
     MultiSelect,
@@ -205,8 +202,8 @@ pub(crate) enum ValuesEditableBy {
 
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
-pub(crate) struct CustomProperties {
-    pub(crate) custom_properties: Vec<CustomProperty>,
+pub struct CustomProperties {
+    pub custom_properties: Vec<CustomProperty>,
     source: String,
 }
 
@@ -232,19 +229,19 @@ impl ToHecEvents for &CustomProperties {
 
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
-pub(crate) struct CustomProperty {
+pub struct CustomProperty {
     repository_id: u64,
-    repository_name: String,
+    pub repository_name: String,
     repository_full_name: String,
     properties: Vec<Property>,
     #[serde(skip_deserializing)]
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub(crate) validation_errors: Option<ValidationResult>,
+    pub validation_errors: Option<ValidationResult>,
 }
 
 impl CustomProperty {
     fn clean(&mut self) {
-        let service_line_cleaner = ServiceLineCleaner::new();
+        let service_line_cleaner = ServiceLineCleaner::default();
         self.properties
             .iter_mut()
             .for_each(|property| match property.value {
@@ -300,14 +297,26 @@ impl CustomProperty {
 
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
-pub(crate) struct Property {
-    property_name: String,
-    value: Option<VecOrString>,
+pub struct Property {
+    pub property_name: String,
+    pub value: Option<VecOrString>,
+}
+
+impl Property {
+    pub fn new_single_value<S1: Into<String>, S2: Into<String>>(
+        property_name: S1,
+        value: S2,
+    ) -> Self {
+        Self {
+            property_name: property_name.into(),
+            value: Some(VecOrString::String(value.into())),
+        }
+    }
 }
 
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(untagged)]
-enum VecOrString {
+pub enum VecOrString {
     VecString(Vec<String>),
     String(String),
 }
@@ -324,6 +333,12 @@ impl From<GithubResponses> for CustomProperties {
             source: value.source(),
         }
     }
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct SetOrgRepoCustomProperties {
+    pub repository_names: Vec<String>,
+    pub properties: Vec<Property>,
 }
 
 impl From<&GithubResponse> for CustomProperties {
