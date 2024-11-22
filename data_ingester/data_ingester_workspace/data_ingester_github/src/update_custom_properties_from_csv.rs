@@ -141,16 +141,11 @@ impl GitHubRepoCsv {
     fn from_file(csv_path: &str) -> Result<Self> {
         let mut rdr = csv::Reader::from_path(csv_path)
             .with_context(|| format!("Opening CSV file: {}", csv_path))?;
-        let service_line_cleaner = ServiceLineCleaner::default();
+
         let records: Vec<GitHubRepoOwner> = rdr
             .deserialize::<GitHubRepoOwner>()
             .filter_map(|record| match record {
-                Ok(mut record) => {
-                    record.service_line = service_line_cleaner
-                        .allowed_values_cleaner_to_github(&record.service_line)
-                        .to_string();
-                    Some(record)
-                }
+                Ok(record) => Some(record),
                 Err(err) => {
                     error!(name="update_custom_properties_from_csv", opertaion="csv", error=?err);
                     None
@@ -209,11 +204,15 @@ struct GitHubRepoOwner {
 
 impl From<&GitHubRepoOwner> for SetOrgRepoCustomProperties {
     fn from(value: &GitHubRepoOwner) -> Self {
+        let service_line_cleaner = ServiceLineCleaner::default();
+        let service_line =
+            service_line_cleaner.allowed_values_cleaner_to_github(&value.service_line);
+
         SetOrgRepoCustomProperties {
             repository_names: vec![value.repo_name.to_string()],
             properties: vec![
                 Property::new_single_value("portfolio", &value.portfolio),
-                Property::new_single_value("service_line", &value.service_line),
+                Property::new_single_value("service_line", service_line),
                 Property::new_single_value("product", &value.product),
             ],
         }
