@@ -17,6 +17,8 @@ use tracing_subscriber::EnvFilter;
 struct Args {
     #[arg(short, long)]
     csv: String,
+    #[arg(short, long)]
+    github_org_name: String,
 }
 
 static APP_NAME: &str = "github_csv_updater";
@@ -40,7 +42,7 @@ async fn main() -> Result<()> {
         .map(Arc::new)
         .context("Building Custom Property Validator")?;
 
-    let owner_data = load_csv(&args.csv)
+    let owner_data = load_csv(&args.csv, &args.github_org_name)
         .await
         .context("loading & validating CSV")?;
 
@@ -61,8 +63,12 @@ async fn main() -> Result<()> {
     debug!(name=APP_NAME, operation="current_tags", current_tags=?current_tags);
 
     for entry in owner_data.repos.iter() {
+        let entry_organization = entry
+            .organization
+            .as_ref()
+            .expect("Every entry needs to have an organisation");
         let currently_valid_tags = current_tags
-            .get(&entry.organization)
+            .get(entry_organization)
             .and_then(|repos| repos.get(&entry.repo_name))
             .and_then(|repo| repo.validation_errors.as_ref())
             .map(|validation| validation.valid)
@@ -74,11 +80,11 @@ async fn main() -> Result<()> {
 
         let client = github_clients
             .clients
-            .get(&entry.organization)
+            .get(entry_organization)
             .with_context(|| {
                 format!(
                     "Getting Github Installation client for {}",
-                    entry.organization
+                    entry_organization
                 )
             })?;
 
@@ -86,7 +92,7 @@ async fn main() -> Result<()> {
         info!(name=APP_NAME, operation="Setting custom properties", entry=?entry);
 
         let response = client
-            .org_create_or_update_custom_property_value(&entry.organization, setter)
+            .org_create_or_update_custom_property_value(entry_organization, setter)
             .await
             .with_context(|| format!("Setting Custom properties for {:?}", entry))?;
 
@@ -123,8 +129,8 @@ async fn current_tags(
     Ok(current_tags)
 }
 
-async fn load_csv(file_path: &str) -> Result<GitHubRepoCsv> {
-    let owner_data = GitHubRepoCsv::from_file(file_path)
+async fn load_csv(file_path: &str, org_name: &str) -> Result<GitHubRepoCsv> {
+    let owner_data = GitHubRepoCsv::from_file(file_path, org_name)
         .with_context(|| format!("Reading CSV file: {}", file_path))?;
 
     debug!(name="update_custom_properties_from_csv", operation="csv", csv_data=?owner_data);
@@ -138,14 +144,20 @@ struct GitHubRepoCsv {
 }
 
 impl GitHubRepoCsv {
-    fn from_file(csv_path: &str) -> Result<Self> {
+    fn from_file(csv_path: &str, org_name: &str) -> Result<Self> {
         let mut rdr = csv::Reader::from_path(csv_path)
             .with_context(|| format!("Opening CSV file: {}", csv_path))?;
 
         let records: Vec<GitHubRepoOwner> = rdr
             .deserialize::<GitHubRepoOwner>()
             .filter_map(|record| match record {
-                Ok(record) => Some(record),
+                Ok(mut record) => {
+                    if record.organization.is_none() {
+                        record.organization = Some(org_name.into());
+                    }
+                    record.remove_cost_centre_from_service_line();
+                    Some(record)
+                }
                 Err(err) => {
                     error!(name="update_custom_properties_from_csv", opertaion="csv", error=?err);
                     None
@@ -185,7 +197,12 @@ impl GitHubRepoCsv {
             HashMap::new();
         for repo in self.repos.iter() {
             let _ = org_repo_custom_property_setters
-                .entry(repo.organization.clone())
+                .entry(
+                    repo.organization
+                        .as_ref()
+                        .expect("entry must have organization")
+                        .clone(),
+                )
                 .and_modify(|vec| vec.push(repo.into()))
                 .or_default();
         }
@@ -195,11 +212,21 @@ impl GitHubRepoCsv {
 
 #[derive(Debug, Deserialize)]
 struct GitHubRepoOwner {
-    organization: String,
+    organization: Option<String>,
+    #[serde(alias = "Repo")]
     repo_name: String,
+    #[serde(alias = "Portfolio")]
     portfolio: String,
+    #[serde(alias = "Service Line [cost centre]")]
     service_line: String,
+    #[serde(alias = "Product")]
     product: String,
+}
+
+impl GitHubRepoOwner {
+    fn remove_cost_centre_from_service_line(&mut self) {
+        self.service_line.truncate(self.service_line.len() - 8)
+    }
 }
 
 impl From<&GitHubRepoOwner> for SetOrgRepoCustomProperties {
