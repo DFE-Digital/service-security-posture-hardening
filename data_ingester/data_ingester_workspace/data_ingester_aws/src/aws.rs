@@ -250,9 +250,11 @@ pub async fn aws(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
 
     let _ = try_collect_send("aws_dfe_3x", aws_client.aws_dfe_3x(), &splunk).await;
 
-    let _ = try_collect_send("aws_dfe_4x", aws_client.aws_dfe_4x(), &splunk).await;
+    let zones = try_collect_send("aws_dfe_4x", aws_client.aws_dfe_4x(), &splunk)
+        .await
+        .context("AWS 4x: Getting zones")?;
 
-    let _ = try_collect_send("aws_dfe_5x", aws_client.aws_dfe_5x(), &splunk).await;
+    let _ = try_collect_send("aws_dfe_5x", aws_client.aws_dfe_5x(zones), &splunk).await;
 
     info!("AWS Collection Complete");
 
@@ -1399,9 +1401,10 @@ impl AwsClient {
         })
     }
 
-    pub(crate) async fn aws_dfe_5x(&self) -> Result<RecordSets> {
-        let zones = self.aws_dfe_4x().await?;
-
+    pub(crate) async fn aws_dfe_5x(
+        &self,
+        zones: crate::aws_route53::HostedZones,
+    ) -> Result<RecordSets> {
         // Build resolver
         let resolver =
             TokioAsyncResolver::tokio(ResolverConfig::default(), ResolverOpts::default());
@@ -2430,7 +2433,8 @@ mod live_tests {
     #[tokio::test]
     async fn test_aws_dfe_5x() -> Result<()> {
         let (splunk, aws) = setup().await?;
-        let result = aws.aws_dfe_5x().await?;
+        let zones = aws.aws_dfe_4x().await?;
+        let result = aws.aws_dfe_5x(zones).await?;
         assert!(!result.inner.is_empty());
         splunk.send_batch((&result).to_hec_events()?).await?;
         Ok(())

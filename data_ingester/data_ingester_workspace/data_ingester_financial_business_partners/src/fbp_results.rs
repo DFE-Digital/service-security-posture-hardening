@@ -42,7 +42,7 @@ impl FbpResult {
         info!("Running splunk search '{}'", search);
 
         let fbp_results = search_client
-            .run_search::<FbpResult>(search)
+            .run_search::<Self>(search)
             .await
             .context("Running Splunk Search")?;
 

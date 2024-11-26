@@ -1,7 +1,7 @@
 //! Entrypoint for running the collection
-use crate::{custom_properties::CustomProperterySetter, OctocrabGit};
+use crate::{custom_properties::CustomPropertySetter, OctocrabGit};
 use anyhow::{Context, Result};
-use data_ingester_financial_business_partners::fbp_results::FbpResult;
+use data_ingester_financial_business_partners::{fbp_results::FbpResult, validator::Validator};
 use data_ingester_splunk::splunk::{set_ssphp_run, try_collect_send, Splunk, ToHecEvents};
 use data_ingester_supporting::keyvault::{GitHubApp, Secrets};
 use std::sync::Arc;
@@ -16,7 +16,15 @@ pub async fn github_octocrab_entrypoint(secrets: Arc<Secrets>, splunk: Arc<Splun
     info!("GIT_HASH: {}", env!("GIT_HASH"));
 
     if let Some(app) = secrets.github_app.as_ref() {
-        github_app(app, &splunk)
+        let custom_property_validator = match Validator::from_splunk_fbp(secrets.clone()).await {
+            Ok(validator) => Some(Arc::new(validator)),
+            Err(err) => {
+                error!(name="github", error=?err, "Unable to build Custom property Validator");
+                None
+            }
+        };
+
+        github_app(app, &splunk, custom_property_validator)
             .await
             .context("Running Collection for GitHub App")?;
     }
@@ -29,7 +37,11 @@ pub async fn github_octocrab_entrypoint(secrets: Arc<Secrets>, splunk: Arc<Splun
 /// Will iterate through all available Organization installations,
 /// build a client for that installation and collect the posture data
 /// for it.
-async fn github_app(github_app: &GitHubApp, splunk: &Arc<Splunk>) -> Result<()> {
+async fn github_app(
+    github_app: &GitHubApp,
+    splunk: &Arc<Splunk>,
+    custom_property_validator: Option<Arc<Validator>>,
+) -> Result<()> {
     let client = OctocrabGit::new_from_app(github_app).context("Build OctocrabGit")?;
     info!("Getting installations");
     let installations = client
@@ -59,6 +71,7 @@ async fn github_app(github_app: &GitHubApp, splunk: &Arc<Splunk>) -> Result<()> 
                 installation_client.clone(),
                 org_name.clone(),
                 splunk.clone(),
+                custom_property_validator.clone(),
             )),
         ));
     }
@@ -75,6 +88,7 @@ async fn github_collect_installation_org(
     github_client: OctocrabGit,
     org_name: String,
     splunk: Arc<Splunk>,
+    custom_property_validator: Option<Arc<Validator>>,
 ) -> Result<()> {
     github_client.wait_for_rate_limit().await?;
     let rate_limits = github_client.client.ratelimit().get().await?;
@@ -139,7 +153,7 @@ async fn github_collect_installation_org(
 
     let _org_custom_properties = try_collect_send(
         &format!("Custom properties for {org_name}"),
-        github_client.org_get_custom_property_values(&org_name),
+        github_client.org_get_custom_property_values(&org_name, custom_property_validator),
         &splunk,
     )
     .await;
@@ -385,10 +399,10 @@ async fn update_custom_properties(
     splunk: Arc<Splunk>,
     fbp_results: Arc<FbpResult>,
 ) -> Result<()> {
-    let portfolio_setter = CustomProperterySetter::from_fbp_portfolio(fbp_results.portfolios());
+    let portfolio_setter = CustomPropertySetter::from_fbp_portfolio(fbp_results.portfolios());
     let service_line_setter =
-        CustomProperterySetter::from_fbp_service_line(fbp_results.service_lines());
-    let product_setter = CustomProperterySetter::from_fbp_product();
+        CustomPropertySetter::from_fbp_service_line(fbp_results.service_lines());
+    let product_setter = CustomPropertySetter::from_fbp_product();
 
     for cps in [portfolio_setter, service_line_setter, product_setter] {
         let _repo_branch_rules = try_collect_send(
@@ -418,6 +432,9 @@ mod live_tests {
 
     use crate::entrypoint::github_octocrab_entrypoint;
     use crate::entrypoint::github_set_custom_properties_entrypoint;
+    use crate::OctocrabGit;
+    use data_ingester_financial_business_partners::validator::Validator;
+    use tracing::error;
 
     #[tokio::test]
     async fn test_all_github() -> Result<()> {
@@ -458,6 +475,63 @@ mod live_tests {
         github_set_custom_properties_entrypoint(Arc::new(secrets), Arc::new(splunk))
             .await
             .context("Settings GitHub Custom Properties in test")?;
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_validate_custom_properties() -> Result<()> {
+        let secrets = get_keyvault_secrets(
+            &env::var("KEY_VAULT_NAME").expect("Need KEY_VAULT_NAME enviornment variable"),
+        )
+        .await
+        .unwrap();
+        let secrets = Arc::new(secrets);
+
+        let custom_property_validator = match Validator::from_splunk_fbp(secrets.clone()).await {
+            Ok(validator) => Some(Arc::new(validator)),
+            Err(err) => {
+                error!(name="github", error=?err, "Unable to build Custom property Validator");
+                None
+            }
+        };
+
+        let github_app = secrets.github_app.as_ref().unwrap();
+
+        let client = OctocrabGit::new_from_app(github_app).context("Build OctocrabGit")?;
+
+        let installations = client
+            .client
+            .apps()
+            .installations()
+            .send()
+            .await
+            .context("Getting installations for github app")?;
+
+        for installation in installations {
+            if installation.account.r#type != "Organization" {
+                continue;
+            }
+
+            let installation_client = client
+                .for_installation_id(installation.id)
+                .await
+                .context("build octocrabgit client")?;
+
+            let org_name = installation.account.login.to_string();
+
+            if org_name != "DFE-Digital" {
+                continue;
+            }
+
+            let custom_properties = installation_client
+                .org_get_custom_property_values(&org_name, custom_property_validator.clone())
+                .await?;
+            assert!(custom_properties
+                .custom_properties
+                .iter()
+                .any(|cp| cp.validation_errors.is_none()));
+        }
 
         Ok(())
     }

@@ -1,16 +1,11 @@
 ---
-name: DCAP Production Deploy
+name: DCAP Dev Deploy
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - DCAP/**
   workflow_dispatch:
 
 jobs:
-  deploy:
+  deploy_dev:
 
     runs-on: ubuntu-latest
 
@@ -24,3 +19,4 @@ jobs:
           splunk_password: ${{ secrets.SPLUNK_PASSWORD }}
           splunk_acs_token: ${{ secrets.SPLUNK_ACS_TOKEN }}
           splunk_acs_stack: ${{ secrets.SPLUNK_ACS_STACK }}
+          production: 'false'
