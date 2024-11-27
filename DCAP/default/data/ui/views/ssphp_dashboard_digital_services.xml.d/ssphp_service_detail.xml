@@ -1,12 +1,9 @@
-{% if environment=="_DEV" %}
-  <dashboard theme="light" version="1.1" hideFilters="true" stylesheet="ssphp_DEV.css" script="js/addtags.js, js/table_cell_backcolor_multivalue.js">
-{% else %}
-  <dashboard theme="dark" version="1.1" hideFilters="true" stylesheet="ssphp.css" script="js/addtags.js, js/table_cell_backcolor_multivalue.js">
-{% endif %}
+<dashboard theme="dark" version="1.1" hideFilters="true" stylesheet="ssphp{{environment}}.css" script="js/addtags.js, js/table_cell_backcolor_multivalue.js">
+
 
 
 <label>Security Posture Continuous Assurance : Service Control Detail Dashboard</label>
-<description>{{environment}} v4.4.2</description>
+<description>{{environment}} v5.0.0</description>
   
   <init>
     <unset token="tkn_ready_event"></unset>
@@ -14,6 +11,11 @@
     <unset token="tkn_ready_highlight"></unset>
   </init>
 
+
+
+<!-- ################################################################################################################################################################# --> 
+<!-- ########################################################################## BASE SEARCH ########################################################################## --> 
+<!-- ################################################################################################################################################################# --> 
 
   <search id="bs_1">
     <query>
@@ -29,7 +31,7 @@
       </done>
   </search>
   
-  
+
   <row depends="$debug$">
     <panel>
       <table>
@@ -106,7 +108,13 @@
     </panel>
   </row>
   
-  
+
+
+
+<!-- ################################################################################################################################################################# --> 
+<!-- ########################################################################## MAIN SCORE PANEL ##################################################################### --> 
+<!-- ################################################################################################################################################################# --> 
+
   <row>
     <panel>
       <single>
@@ -125,13 +133,20 @@
     </panel>
   </row>
   
-  
+
+
+
+
+<!-- ################################################################################################################################################################# --> 
+<!-- ########################################################################## MAIN DISPLAY TABLE ################################################################### --> 
+<!-- ################################################################################################################################################################# --> 
+
   <row>
     <panel>
       <table id="table1">
         <search base="bs_1">
           <query>
-| fields - _raw, ssphp.score.score, ssphp.score.color, ssphp.use_case.version.last_changed*, ssphp.use_case.savedsearch
+| fields - _raw, ssphp.score.score, ssphp.score.color, ssphp.use_case.version.last_changed*, ssphp.use_case.savedsearch, ssphp.assessment.diagnosis, ssphp.assessment.solution
 
 | eval ssphp.score.ciso_priority=case('ssphp.score.ciso_priority'="1","DfE Mandated",
                                       'ssphp.score.ciso_priority'="2","Recommended",
@@ -314,7 +329,19 @@ ssphp.benchmark.version,Version,16"]
       </table>
     </panel>
   </row>  
-  
+
+
+
+
+
+<!-- ################################################################################################################################################################# --> 
+<!-- ########################################################################## UNDERLYING DATA ROWS ################################################################# --> 
+<!-- ################################################################################################################################################################# --> 
+
+
+
+<!-- ######################################################## DECIDE WHICH TYPE OF PANEL TO POPULATE / SHOW ################################################################# --> 
+
   <row depends="$debug$">
     <panel>
       <table>
@@ -331,21 +358,29 @@ ssphp.benchmark.version,Version,16"]
        end_text_nob="\\\"",
        div_text="\\\" AND \\\"",
        search_string=case(lower('ssphp.assessment.source')="dependabot",
-                                'start_text'.'cve_id'.'div_text'.'manifest'.'div_text'.'resource_id'.'div_text'.'use_case'.'end_text',
+                                'start_text'.'cve_id'.'div_text'.'manifest'.'div_text'.'ssphp.resource.full_name'.'div_text'.'use_case'.'end_text',
+                                
                           lower('ssphp.assessment.source')="secrets",
                                 "(source=".'start_text_nob'.'ssphp.assessment.url'.'end_text_nob'." OR ".'start_text_nob'.'ssphp.assessment.url'.'end_text_nob'.")",
+                                
                           lower('ssphp.assessment.source')="workflows",
                                 "| search repo_name=".'start_text_nob'.'ssphp.resource.id'.'end_text_nob',
+                                
                           lower('ssphp.assessment.source')="no tool",
                                 "(source=".'start_text_nob'."*".'ssphp.resource.id'."*".'end_text_nob'.")",
+                                
                           lower('ssphp.use_case.group_name')="sast",
                                 'start_text'.'ssphp.resource.id'.'div_text'.'ssphp.use_case.id'.'end_text',
+                                
                           lower('ssphp.use_case.group_name')="qualys",
-                                "| search QID=".'start_text_nob'.'ssphp.use_case.id'.'end_text_nob'." AND "."HOSTNAME=".'start_text_nob'.'ssphp.resource.name'.'end_text_nob',
+                                "| search QID=\"".'ssphp.use_case.id'."\" AND HOSTNAME=\"".'ssphp.resource.hostname'."\"",
+                                ```"| search QID=".'start_text_nob'.'ssphp.use_case.id'.'end_text_nob'." AND "."HOSTNAME=".'start_text_nob'.'ssphp.resource.name'.'end_text_nob',```
+                                
                           lower('ssphp.use_case.group_name')="ms-defender",
-                                'start_text'.'ssphp.resource.id'.'div_text'.'ssphp.use_case.id'.'end_text',
+                                "| search id=\"".'ssphp.assessment.id'."\"",
+                                
                           lower('ssphp.use_case.group_name')="repos",
-                                "| search ssphp.service.id=".'start_text_nob'.'ssphp.service.id'.'end_text_nob'." AND "."repo_name=".'start_text_nob'.'ssphp.resource.name'.'end_text_nob',
+                                "| search ssphp.service.cost_centre.code=".'start_text_nob'.'ssphp.service.cost_centre.code'.'end_text_nob'." AND "."repo_name=".'start_text_nob'.'ssphp.resource.name'.'end_text_nob',
                           1==1,"oops"),
        ss2=$tkn_saved_search_2|s$,
        output_panel=case('ss2'!="-",4,
@@ -354,16 +389,37 @@ ssphp.benchmark.version,Version,16"]
                          lower('ssphp.assessment.source')="workflows",3,
                          lower('ssphp.assessment.source')="no tool",1,
                          lower('ssphp.use_case.group_name')="sast",1,
-                         lower('ssphp.use_case.group_name')="qualys",2,
-                         lower('ssphp.use_case.group_name')="ms-defender",1,
+                         lower('ssphp.use_case.group_name')="qualys",6,
+                         lower('ssphp.use_case.group_name')="ms-defender",5,
                          lower('ssphp.use_case.group_name')="repos",3,
                          1==1,"oops")
             
 | table search_string, output_panel
           </query>
           <done>
+            <condition match="$result.output_panel$==6">
+              <set token="show_qualys_panel">true</set>
+              <unset token="show_defender_panel"></unset>
+              <unset token="show_2event_panel"></unset>
+              <unset token="show_table_panel"></unset>
+              <unset token="show_event_panel"></unset>
+              <unset token="show_highlight_panel"></unset>
+              <set token="tkn_use_case_search_string">$result.search_string$</set>
+            </condition>
+            <condition match="$result.output_panel$==5">
+              <set token="show_defender_panel">true</set>
+              <unset token="show_qualys_panel"></unset>
+              <unset token="show_2event_panel"></unset>
+              <unset token="show_table_panel"></unset>
+              <unset token="show_event_panel"></unset>
+              <unset token="show_highlight_panel"></unset>
+              <set token="tkn_use_case_search_string">$result.search_string$</set>
+            </condition>
+
             <condition match="$result.output_panel$==4">
               <set token="show_2event_panel">true</set>
+              <unset token="show_defender_panel"></unset>
+              <unset token="show_qualys_panel"></unset>
               <unset token="show_table_panel"></unset>
               <unset token="show_event_panel"></unset>
               <unset token="show_highlight_panel"></unset>
@@ -371,6 +427,8 @@ ssphp.benchmark.version,Version,16"]
             </condition>
             <condition match="$result.output_panel$==3">
               <set token="show_highlight_panel">true</set>
+              <unset token="show_defender_panel"></unset>
+              <unset token="show_qualys_panel"></unset>
               <unset token="show_table_panel"></unset>
               <unset token="show_event_panel"></unset>
               <unset token="show_2event_panel"></unset>
@@ -378,6 +436,8 @@ ssphp.benchmark.version,Version,16"]
             </condition>
             <condition match="$result.output_panel$==2">
               <set token="show_table_panel">true</set>
+              <unset token="show_defender_panel"></unset>
+              <unset token="show_qualys_panel"></unset>
               <unset token="show_highlight_panel"></unset>
               <unset token="show_event_panel"></unset>
               <unset token="show_2event_panel"></unset>
@@ -385,6 +445,8 @@ ssphp.benchmark.version,Version,16"]
             </condition>
             <condition match="$result.output_panel$==1">
               <set token="show_event_panel">true</set>
+              <unset token="show_defender_panel"></unset>
+              <unset token="show_qualys_panel"></unset>
               <unset token="show_highlight_panel"></unset>
               <unset token="show_table_panel"></unset>
               <unset token="show_2event_panel"></unset>
@@ -396,7 +458,9 @@ ssphp.benchmark.version,Version,16"]
     </panel>
 
 
-<!-- ############################## Get the 2 saved searches ############################## --> 
+
+<!-- ######################################################## GET THE UNDERLYING SAVED SEARCHES TO USE ################################################################# --> 
+
     <panel>
       <table>
         <search>
@@ -448,8 +512,66 @@ ssphp.benchmark.version,Version,16"]
 
 
 
-<!-- ########################################################################## UNDERLYING DATA Row ########################################################################## --> 
-  
+<!-- ########################################################################## UNDERLYING DATA PANELS ########################################################################## --> 
+
+
+<!-- ######################################################## DEFENDER ROW ################################################################# --> 
+
+
+  <row depends="$show_defender_panel$">
+    <panel>
+      <title>Underlying MS-Defender Data</title>
+      <event>
+        <search>
+          <query>
+`ssphp_metrics_data_index{{environment}}` sourcetype="azure_resource_graph" type="microsoft.security/assessments" earliest=-2d@d latest=now
+    [| search `ssphp_metrics_data_index{{environment}}` sourcetype="azure_resource_graph" type="microsoft.security/assessments" earliest=-2d@d latest=now
+     | stats max(SSPHP_RUN) as SSPHP_RUN
+     | return SSPHP_RUN]
+
+$tkn_use_case_search_string$
+          </query>
+          <done>
+            <set token="tkn_ready_event">true</set>
+          </done>
+        </search>
+      </event>
+    </panel>
+  </row>
+
+
+
+<!-- ######################################################## QUALYS ROW ################################################################# --> 
+
+
+  <row depends="$show_qualys_panel$">
+    
+    <panel>
+      <title>Underlying Qualys Data</title>
+      <table>
+        <search>
+          <query>
+| loadjob savedsearch="ssphp_app_account:DCAP{{environment}}:ssphp_vulnerabilities_create_data{{environment}}"
+
+$tkn_use_case_search_string$
+
+| lookup qualys_kb_lookup QID OUTPUT TITLE, DIAGNOSIS, SOLUTION, CONSEQUENCE, CVE
+          </query>
+          <done>
+            <set token="tkn_ready_panel">true</set>
+          </done>
+        </search>
+      </table>
+    </panel>    
+  </row>
+    
+
+
+
+
+<!-- ######################################################## EVENT ROW ################################################################# --> 
+
+
   <row depends="$show_event_panel$">
     <panel>
       <title>Underlying Data</title>
@@ -465,7 +587,9 @@ $tkn_use_case_search_text_1$
       </event>
     </panel>
   </row>
-  
+
+
+<!-- ######################################################## EVENT 2 ROW ################################################################# --> 
 
   <row depends="$show_2event_panel$">
     <panel>
@@ -499,6 +623,9 @@ $tkn_use_case_search_text_2$
   </row>
 
 
+
+<!-- ######################################################## TABLE ROW ################################################################# --> 
+
   <row depends="$show_table_panel$">
     <panel>
       <title>Underlying Data</title>
@@ -515,6 +642,9 @@ $tkn_use_case_search_text_1$
     </panel>
   </row>
 
+
+
+<!-- ######################################################## HIGHLIGHT ROW ################################################################# --> 
 
   <row depends="$debug$">
     <html>
