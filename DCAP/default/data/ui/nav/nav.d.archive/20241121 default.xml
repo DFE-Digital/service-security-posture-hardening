@@ -10,21 +10,21 @@
       <a href="ssphp_foundational_systems_service?form.tkn__service=github">GitHub</a>
     </collection>
     <a href="ssphp_foundational_systems_history">Control Progress</a>
+    <a href="ssphp_foundational_systems_list_controls">Control List</a>
+    <a href="ssphp_dashboard_usage">Dashboard Usage</a>
     <a href="ssphp_foundational_systems_dashboard_help">Dashboard Help</a>
   </collection>
 
 {% if environment=="_DEV" %}
   <collection label="DfE Digital Services" >
-    <a href="ssphp_dfe_service">Service Posture</a>
+    <collection label="Services" >
+      <a href="ssphp_dfe_service?tkn__service=das">Apprenticeships</a>
+      <a href="ssphp_dfe_service?tkn__service=s165">Teaching Qualification Service</a>
+      <a href="ssphp_dfe_service?tkn__service=s194">CISO Continuous Assurance</a>
+    </collection>
     <a href="ssphp_critical_vulnerabilities">Vulnerability Management</a>
-    <a href="ssphp_dfe_asset_inventory">Asset Inventory</a>
+    <a href="ssphp_dfe_service_bdmc">BDMC : Not CMDB</a>
     <a href="ssphp_foundational_systems_dashboard_help">Dashboard Help</a>
-  </collection>
-
-  <collection label="DCAP Utilities" >
-    <a href="ssphp_dfe_healthcheck">DCAP Healthcheck</a>
-    <a href="ssphp_foundational_systems_list_controls">Control List</a>
-    <a href="ssphp_dashboard_usage">Dashboard Usage</a>
   </collection>
 {% endif %}
 </nav>
