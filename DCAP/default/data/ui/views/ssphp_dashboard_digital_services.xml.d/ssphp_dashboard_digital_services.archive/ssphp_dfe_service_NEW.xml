@@ -1,7 +1,7 @@
 <dashboard version="1.1" theme="light" script="js/addtags.js, js/table_cell_color.js">
 
   <label>IN DEVELOPMENT ---- Security Posture Continuous Assurance : DfE Service Dashboard</label>
-  <description>_DEV v3.3.28</description>
+  <description>{{environment}} v3.3.28</description>
   
   <init>
     <set token="form.tkn_fields">C</set>
@@ -49,7 +49,7 @@
       <table>
         <search id="bs_1">
           <query>
-`ssphp_summary_index_DEV` earliest=-2d@d latest=now
+`ssphp_summary_index{{environment}}` earliest=-2d@d latest=now
 
 | eventstats max(SSPHP_RUN) as max_SSPHP_RUN by ssphp.use_case.id
 | where SSPHP_RUN='max_SSPHP_RUN'
@@ -357,7 +357,7 @@
           <query>
   | makeresults
 
-  `ssphp_metrics_eval_field_colors_DEV`
+  `ssphp_metrics_eval_field_colors{{environment}}`
 
   | table tkn_*
           </query>
@@ -668,7 +668,7 @@ index=_audit user=$tkn__current_user_name|s$ action=search "makeresults" "user_d
         <fieldForValue>tools</fieldForValue>
         <search>
           <query>
-`ssphp_summary_index_DEV` earliest=-2d@d latest=now ssphp.use_case.category="CODE_SCAN"
+`ssphp_summary_index{{environment}}` earliest=-2d@d latest=now ssphp.use_case.category="CODE_SCAN"
 
 | search NOT ssphp.assessment.sub_source="true"
 
@@ -867,7 +867,7 @@ $tkn_code_tools$
        ssphp.score.score='ssphp.score.score'."|".'ssphp.score.color',
        ssphp.score.compliance_status='ssphp.score.compliance_status'."|".'ssphp.score.color'
 
-`ssphp_add_display_colours_DEV`
+`ssphp_add_display_colours{{environment}}`
 
 ``` sort the lines properly ```
 | fillnull value=0 n3

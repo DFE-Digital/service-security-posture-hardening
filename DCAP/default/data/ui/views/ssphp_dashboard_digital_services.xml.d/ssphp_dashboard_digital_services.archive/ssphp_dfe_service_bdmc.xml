@@ -5,7 +5,7 @@
 {% endif %}  
 
 <label>BDMC : Not CMDB</label>
-<description>_DEV v1.0.6</description>
+<description>{{environment}} v1.0.6</description>
 
 <init>
   <set token="tkn_resource_count">0</set>

@@ -70,10 +70,10 @@
 | search NOT ssphp.assessment.sub_source="true"
 
 ```temp - for development period only till data timed out```
-| search NOT (ssphp.use_case.savedsearch="ssphp_use_case_github_sast_2-0_DEV" OR 
-              ssphp.use_case.savedsearch="ssphp_use_case_github_sast_3-0_DEV" OR 
-              ssphp.use_case.savedsearch="ssphp_use_case_github_sast_2-1_DEV" OR 
-              ssphp.use_case.savedsearch="ssphp_use_case_github_sast_2-2_DEV")
+| search NOT (ssphp.use_case.savedsearch="ssphp_use_case_github_sast_2-0{{environment}}" OR 
+              ssphp.use_case.savedsearch="ssphp_use_case_github_sast_3-0{{environment}}" OR 
+              ssphp.use_case.savedsearch="ssphp_use_case_github_sast_2-1{{environment}}" OR 
+              ssphp.use_case.savedsearch="ssphp_use_case_github_sast_2-2{{environment}}")
 
 | eval ssphp.assessment.categories=mvappend('ssphp.assessment.categories','ssphp.assessment.categories{}'),
        ssphp.assessment.tactics=mvappend('ssphp.assessment.tactics','ssphp.assessment.tactics{}'),
@@ -411,10 +411,10 @@
 | search NOT ssphp.assessment.sub_source="true"
 
 ```temp - for development period only till data timed out```
-| search NOT (ssphp.use_case.savedsearch="ssphp_use_case_github_sast_2-0_DEV" OR 
-              ssphp.use_case.savedsearch="ssphp_use_case_github_sast_3-0_DEV" OR 
-              ssphp.use_case.savedsearch="ssphp_use_case_github_sast_2-1_DEV" OR 
-              ssphp.use_case.savedsearch="ssphp_use_case_github_sast_2-2_DEV")
+| search NOT (ssphp.use_case.savedsearch="ssphp_use_case_github_sast_2-0{{environment}}" OR 
+              ssphp.use_case.savedsearch="ssphp_use_case_github_sast_3-0{{environment}}" OR 
+              ssphp.use_case.savedsearch="ssphp_use_case_github_sast_2-1{{environment}}" OR 
+              ssphp.use_case.savedsearch="ssphp_use_case_github_sast_2-2{{environment}}")
 
 | fields ssphp.assessment.source
 | dedup ssphp.assessment.source

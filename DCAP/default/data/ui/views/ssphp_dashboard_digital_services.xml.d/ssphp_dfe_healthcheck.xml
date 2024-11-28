@@ -1,7 +1,7 @@
 <dashboard version="1.1" theme="dark">
 
 <label>DCAP Healthcheck Dashboard</label>
-<description>{{environment}} v2.0.1</description>
+<description>{{environment}} v3.0.0</description>
   
   <row>
     <panel>

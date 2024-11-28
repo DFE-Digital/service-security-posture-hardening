@@ -1,7 +1,7 @@
 <dashboard theme="dark" version="1.1" hideFilters="true">
 
 <label>DCAP Control Progress</label>
-<description>_DEV 1.1.4</description>
+<description>{{environment}} 1.1.4</description>
   
   <search id="bs_1">
     <query>

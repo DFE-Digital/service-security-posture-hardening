@@ -23,7 +23,7 @@
 
   <collection label="DCAP Utilities" >
     <a href="ssphp_dfe_healthcheck">DCAP Healthcheck</a>
-    <a href="ssphp_foundational_systems_list_controls">Control List</a>
+    <a href="ssphp_foundational_systems_list_controls">Controls List</a>
     <a href="ssphp_dashboard_usage">Dashboard Usage</a>
   </collection>
 {% endif %}

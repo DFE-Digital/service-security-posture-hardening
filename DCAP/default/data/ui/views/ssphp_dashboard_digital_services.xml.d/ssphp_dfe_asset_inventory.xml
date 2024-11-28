@@ -1,7 +1,7 @@
 <dashboard version="1.1" theme="dark">
   
 <label>DCAP Azure Asset Inventory</label>
-<description>{{environment}} v2.0.1</description>
+<description>{{environment}} v3.0.0</description>
 
 
 <init>
@@ -552,7 +552,7 @@ index="ssphp_asset_inventory{{environment}}"
 
   <row depends="$tkn_view_search$">
     <panel id="panel_data_search_azure">
-      <title>Azure Resources [$tkn_resource_count_search_azure$]</title>
+      <title>Matching Azure Resources [$tkn_resource_count_search_azure$]</title>
       <html>
         <style>
           #panel_data_search_azure{
