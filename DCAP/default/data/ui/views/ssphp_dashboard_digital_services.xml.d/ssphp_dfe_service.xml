@@ -1,7 +1,7 @@
 <dashboard version="1.1" theme="dark" script="js/addtags.js, js/table_cell_color.js">
 
 <label>Security Posture Continuous Assurance : DfE Service Dashboard</label>
-<description>_DEV v4.0.0</description>
+<description>{{environment}} v4.0.0</description>
   
   <init>
     <set token="form.tkn_fields">C</set>
@@ -1057,11 +1057,11 @@ $tkn_search_filter$
       <table id="table_azure_resource_table">
         <search>
           <query>
-index="ssphp_asset_inventory_dev" 
+index="ssphp_asset_inventory{{environment}}" 
     (ssphp.resource.source="AZURE") 
     earliest=-2d@d latest=now
 
-    [| inputlookup ssphp_last_asset_inventory_ssphp_run_DEV.csv where inventory_type="azure"
+    [| inputlookup ssphp_last_asset_inventory_ssphp_run{{environment}}.csv where inventory_type="azure"
      | stats max(SSPHP_RUN) as SSPHP_RUN
      | return SSPHP_RUN]
 
@@ -1108,11 +1108,11 @@ index="ssphp_asset_inventory_dev"
       <table>
         <search>
           <query>
-index="ssphp_asset_inventory_dev" 
+index="ssphp_asset_inventory{{environment}}" 
     (ssphp.resource.source="GITHUB") 
     earliest=-2d@d latest=now
 
-    [| inputlookup ssphp_last_asset_inventory_ssphp_run_DEV.csv where inventory_type="github"
+    [| inputlookup ssphp_last_asset_inventory_ssphp_run{{environment}}.csv where inventory_type="github"
      | stats max(SSPHP_RUN) as SSPHP_RUN
      | return SSPHP_RUN]
 
