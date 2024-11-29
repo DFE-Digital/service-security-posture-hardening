@@ -7,7 +7,7 @@
 
 
 <label>Security Posture Continuous Assurance : Service Control Detail Dashboard</label>
-<description>{{environment}} v6.0.0</description>
+<description>{{environment}} v6.0.4</description>
   
   <init>
     <unset token="tkn_ready_event"></unset>
@@ -150,7 +150,7 @@
       <table id="table1">
         <search base="bs_1">
           <query>
-| fields - _raw, ssphp.score.score, ssphp.score.color, ssphp.use_case.version.last_changed*, ssphp.use_case.savedsearch, ssphp.assessment.diagnosis, ssphp.assessment.solution
+| fields - _raw, ssphp.score.score, ssphp.score.color, ssphp.use_case.version.last_changed*, ssphp.assessment.diagnosis, ssphp.assessment.solution
 
 | eval ssphp.score.ciso_priority=case('ssphp.score.ciso_priority'="1","DfE Mandated",
                                       'ssphp.score.ciso_priority'="2","Recommended",
@@ -173,20 +173,22 @@ ssphp.assessment.title,Title,03
 ssphp.assessment.name,Name,04
 ssphp.assessment.display_name,Display Name,05
 ssphp.assessment.description,Description,06
-ssphp.assessment.state,State,07
-ssphp.assessment.status,Status,08
-ssphp.assessment.implementationEffort,Implementation Effort,09
-ssphp.assessment.managementProvider,Provider,10
-ssphp.assessment.policyDefinitionId,Policy Definition,11
-ssphp.assessment.remediationDescription,Remediation,12
-ssphp.assessment.userImpact,User Impact,13
-ssphp.assessment.securityIssue,Security Issue,14
-ssphp.assessment.severity,Severity,15
-ssphp.assessment.status.code,Status Code,16
-ssphp.assessment.status.firstEvaluationDate,First Evaluation Date,17
-ssphp.assessment.status.statusChangeDate,Stats Changed Date,18
-ssphp.assessment.type,Type,19
-ssphp.assessment.assessmentType,Assessment Type,20
+ssphp.assessment.description_rule,Assessment Rule,07
+ssphp.assessment.description_url,Assessment URL,08
+ssphp.assessment.state,State,09
+ssphp.assessment.status,Status,10
+ssphp.assessment.implementationEffort,Implementation Effort,11
+ssphp.assessment.managementProvider,Provider,12
+ssphp.assessment.policyDefinitionId,Policy Definition,13
+ssphp.assessment.remediationDescription,Remediation,14
+ssphp.assessment.userImpact,User Impact,15
+ssphp.assessment.securityIssue,Security Issue,16
+ssphp.assessment.severity,Severity,17
+ssphp.assessment.status.code,Status Code,18
+ssphp.assessment.status.firstEvaluationDate,First Evaluation Date,19
+ssphp.assessment.status.statusChangeDate,Stats Changed Date,20
+ssphp.assessment.type,Type,21
+ssphp.assessment.assessmentType,Assessment Type,22
 ssphp.assessment.consequence,Consequence,32
 ssphp.assessment.cve,CVE,30
 ssphp.assessment.diagnosis,Diagnosis,31
@@ -203,6 +205,7 @@ ssphp.use_case.title,Title,5
 ssphp.use_case.version.last_changed_by,Last Changed By,8
 ssphp.use_case.version.last_changed_date,Last Changed Date,9
 ssphp.use_case.version.number,Version,7
+ssphp.use_case.savedsearch,Saved Search,8
 ssphp.service.display_name,Service Name,3
 ssphp.service.division,Division,6
 ssphp.service.group,Group,5
@@ -374,7 +377,7 @@ ssphp.benchmark.version,Version,16"]
                                 "(source=".'start_text_nob'."*".'ssphp.resource.id'."*".'end_text_nob'.")",
                                 
                           lower('ssphp.use_case.group_name')="sast",
-                                'start_text'.'ssphp.resource.id'.'div_text'.'ssphp.use_case.id'.'end_text',
+                                'start_text'.'ssphp.resource.id'.'div_text'.'ssphp.use_case.id'.'div_text'.'ssphp.assessment.description_url'.'div_text'.'ssphp.assessment.description_rule'.'end_text',
                                 
                           lower('ssphp.use_case.group_name')="qualys",
                                 "| search QID=\"".'ssphp.use_case.id'."\" AND HOSTNAME=\"".'ssphp.resource.hostname'."\"",
