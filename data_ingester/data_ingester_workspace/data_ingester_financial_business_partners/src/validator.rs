@@ -100,7 +100,8 @@ impl Validator {
         let service_line_hashmap = portfolio.and_then(|portfolio| self.0.get(portfolio));
 
         let product_hashset = service_line.and_then(|service_line| {
-            service_line_hashmap.and_then(|service_line_hashmap| service_line_hashmap.get(service_line))
+            service_line_hashmap
+                .and_then(|service_line_hashmap| service_line_hashmap.get(service_line))
         });
 
         let product_entry = product.and_then(|product| {
