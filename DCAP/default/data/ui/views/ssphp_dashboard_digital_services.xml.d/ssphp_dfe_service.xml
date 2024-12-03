@@ -1,7 +1,7 @@
 <dashboard version="1.1" theme="dark" script="js/addtags.js, js/table_cell_color.js">
 
 <label>Security Posture Continuous Assurance : DfE Service Dashboard</label>
-<description>{{environment}} v4.1.4</description>
+<description>{{environment}} v4.1.7</description>
   
   <init>
     <set token="form.tkn_fields">C</set>
@@ -425,7 +425,75 @@ index=_audit user=$tkn__current_user_name|s$ action=search "makeresults" "user_d
   </row>
 
   
-  
+
+
+<!-- ######################################################################################################################################### -->
+<!-- ###################################################### TOP TOP SCORE ROW ################################################################ -->
+<!-- ######################################################################################################################################### -->
+
+
+<!-- ###################################################### CONFIG #################################################################### -->
+  <row depends="$tkn_ready$,$debug$">
+    <panel>
+      <table>
+        <search base="bs_1">
+          <query>
+| search (ssphp.use_case.category="POSTURE" OR ssphp.use_case.category="REPOS") AND ssphp.resource.id="***" 
+
+| eval is_bad=if('ssphp.score.ciso_priority'="DfE Mandated" AND mvindex(split('ssphp.score.score',"|"),0)!="100",1,0)
+| stats count, sum(is_bad) as is_bad by ssphp.resource.id
+| eval is_bad=if('is_bad'>0,1,0)
+| stats sum(is_bad) as total_resources_with_config_issues
+            </query>
+          <done>
+            <set token="tkn_config_number_total_resources">$result.total_resources_with_config_issues$</set>
+          </done>
+        </search>
+      </table>
+    </panel>
+  </row>
+
+
+<!-- ###################################################### ALERTS #################################################################### -->
+  <row depends="$tkn_ready$,$debug$">
+    <panel>
+      <table>
+        <search base="bs_1">
+          <query>
+| search (ssphp.use_case.category="VULNERABILITY" OR ssphp.use_case.category="CODE_SCAN") AND ssphp.resource.id="***" 
+
+| eval is_bad=if('ssphp.score.ciso_priority'="DfE Mandated" AND mvindex(split('ssphp.score.score',"|"),0)!="100",1,0)
+| stats count, sum(is_bad) as is_bad by ssphp.resource.id
+| eval is_bad=if('is_bad'>0,1,0)
+| stats sum(is_bad) as total_resources_with_alerts
+            </query>
+          <done>
+            <set token="tkn_alerts_number_total_resources">$result.total_resources_with_alerts$</set>
+          </done>
+        </search>
+      </table>
+    </panel>
+  </row>
+
+
+
+  <row depends="$tkn_ready$">
+    <panel>
+      <html>
+        <div id="div_header" style="background:grey;color:white;font-weight:bold;font-size:$tkn_font_size_2$%;text-align:center;padding:$tkn_padding_2$">$tkn_config_number_total_resources$</div> 
+        <div id="div_header" style="background:grey;color:white;font-size:100%;text-align:center">RESOURCES : NON-COMPLIANT CONFIG</div> 
+      </html>
+    </panel>
+
+    <panel>
+      <html>
+        <div id="div_header" style="background:grey;color:white;font-weight:bold;font-size:$tkn_font_size_2$%;text-align:center;padding:$tkn_padding_2$">$tkn_alerts_number_total_resources$</div> 
+        <div id="div_header" style="background:grey;color:white;font-size:100%;text-align:center">RESOURCES : NON-COMPLIANT ALERTS</div> 
+      </html>
+    </panel>
+  </row>
+
+
 
 <!-- ######################################################################################################################################### -->
 <!-- ###################################################### TOP SCORE ROW #################################################################### -->
@@ -706,22 +774,6 @@ index=_audit user=$tkn__current_user_name|s$ action=search "makeresults" "user_d
 
     <panel depends="$tkn_ready$,$tkn_show_abs$">
       <html>
-        <div id="div_header" style="background:$tkn_vulnerability_color$;color:white;font-weight:bold;font-size:$tkn_font_size_2$%;text-align:center;padding:$tkn_padding_2$">$tkn_vulnerability_abs$</div> 
-        <div id="div_header" style="background:$tkn_vulnerability_color$;color:white;font-size:80%;text-align:center">Compliant Virtual Machines</div>
-        <div id="div_header" style="background:$tkn_vulnerability_color$;color:white;font-size:100%;text-align:center">VM VULNERABILITY</div> 
-      </html>
-    </panel>
-    <panel depends="$tkn_ready$,$tkn_show_perc$">
-      <html>
-        <div id="div_header" style="background:$tkn_vulnerability_color$;color:white;font-weight:bold;font-size:$tkn_font_size_2$%;text-align:center;padding:$tkn_padding_2$">$tkn_vulnerability_perc_passed_resources$</div> 
-        <div id="div_header" style="background:$tkn_vulnerability_color$;color:white;font-size:80%;text-align:center">Compliant Virtual Machines</div>
-        <div id="div_header" style="background:$tkn_vulnerability_color$;color:white;font-size:100%;text-align:center">VM VULNERABILITY</div> 
-      </html>
-    </panel>
-    
-
-    <panel depends="$tkn_ready$,$tkn_show_abs$">
-      <html>
         <div id="div_header" style="background:$tkn_repos_color$;color:white;font-weight:bold;font-size:$tkn_font_size_2$%;text-align:center;padding:$tkn_padding_2$">$tkn_repos_abs$</div> 
         <div id="div_header" style="background:$tkn_repos_color$;color:white;font-size:80%;text-align:center">GitHub Repos Compliant with CIS Benchmarks</div>
         <div id="div_header" style="background:$tkn_repos_color$;color:white;font-size:100%;text-align:center">REPOS</div> 
@@ -748,6 +800,22 @@ index=_audit user=$tkn__current_user_name|s$ action=search "makeresults" "user_d
         <div id="div_header" style="background:$tkn_codescan_color$;color:white;font-weight:bold;font-size:$tkn_font_size_2$%;text-align:center;padding:$tkn_padding_2$">$tkn_codescan_perc_passed_resources$</div> 
         <div id="div_header" style="background:$tkn_codescan_color$;color:white;font-size:80%;text-align:center">Compliant GitHub Repos</div>
         <div id="div_header" style="background:$tkn_codescan_color$;color:white;font-size:100%;text-align:center">CODE SCANNING</div> 
+      </html>
+    </panel>
+    
+
+    <panel depends="$tkn_ready$,$tkn_show_abs$">
+      <html>
+        <div id="div_header" style="background:$tkn_vulnerability_color$;color:white;font-weight:bold;font-size:$tkn_font_size_2$%;text-align:center;padding:$tkn_padding_2$">$tkn_vulnerability_abs$</div> 
+        <div id="div_header" style="background:$tkn_vulnerability_color$;color:white;font-size:80%;text-align:center">Compliant Virtual Machines</div>
+        <div id="div_header" style="background:$tkn_vulnerability_color$;color:white;font-size:100%;text-align:center">VM VULNERABILITY</div> 
+      </html>
+    </panel>
+    <panel depends="$tkn_ready$,$tkn_show_perc$">
+      <html>
+        <div id="div_header" style="background:$tkn_vulnerability_color$;color:white;font-weight:bold;font-size:$tkn_font_size_2$%;text-align:center;padding:$tkn_padding_2$">$tkn_vulnerability_perc_passed_resources$</div> 
+        <div id="div_header" style="background:$tkn_vulnerability_color$;color:white;font-size:80%;text-align:center">Compliant Virtual Machines</div>
+        <div id="div_header" style="background:$tkn_vulnerability_color$;color:white;font-size:100%;text-align:center">VM VULNERABILITY</div> 
       </html>
     </panel>
   </row>
