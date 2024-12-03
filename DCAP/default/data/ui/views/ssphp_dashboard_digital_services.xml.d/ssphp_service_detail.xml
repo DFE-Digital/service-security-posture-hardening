@@ -7,7 +7,7 @@
 
 
 <label>Security Posture Continuous Assurance : Service Control Detail Dashboard</label>
-<description>{{environment}} v6.0.0</description>
+<description>{{environment}} v6.0.6</description>
   
   <init>
     <unset token="tkn_ready_event"></unset>
@@ -150,7 +150,7 @@
       <table id="table1">
         <search base="bs_1">
           <query>
-| fields - _raw, ssphp.score.score, ssphp.score.color, ssphp.use_case.version.last_changed*, ssphp.use_case.savedsearch, ssphp.assessment.diagnosis, ssphp.assessment.solution
+| fields - _raw, ssphp.score.score, ssphp.score.color, ssphp.use_case.version.last_changed*, ssphp.assessment.diagnosis, ssphp.assessment.solution
 
 | eval ssphp.score.ciso_priority=case('ssphp.score.ciso_priority'="1","DfE Mandated",
                                       'ssphp.score.ciso_priority'="2","Recommended",
@@ -165,81 +165,7 @@
        Value=mvindex(split('field'," :: "),1)
 | table Field, Value
 
-| append 
-    [| makeresults format=csv data="Field,display_text,order
-ssphp.assessment.source,Source,01
-ssphp.assessment.id,ID,02
-ssphp.assessment.title,Title,03
-ssphp.assessment.name,Name,04
-ssphp.assessment.display_name,Display Name,05
-ssphp.assessment.description,Description,06
-ssphp.assessment.state,State,07
-ssphp.assessment.status,Status,08
-ssphp.assessment.implementationEffort,Implementation Effort,09
-ssphp.assessment.managementProvider,Provider,10
-ssphp.assessment.policyDefinitionId,Policy Definition,11
-ssphp.assessment.remediationDescription,Remediation,12
-ssphp.assessment.userImpact,User Impact,13
-ssphp.assessment.securityIssue,Security Issue,14
-ssphp.assessment.severity,Severity,15
-ssphp.assessment.status.code,Status Code,16
-ssphp.assessment.status.firstEvaluationDate,First Evaluation Date,17
-ssphp.assessment.status.statusChangeDate,Stats Changed Date,18
-ssphp.assessment.type,Type,19
-ssphp.assessment.assessmentType,Assessment Type,20
-ssphp.assessment.consequence,Consequence,32
-ssphp.assessment.cve,CVE,30
-ssphp.assessment.diagnosis,Diagnosis,31
-ssphp.assessment.firstEvaluationDate,First Evaluation Date,34
-ssphp.assessment.solution,Solution,33
-ssphp.assessment.statusChangeDate,Status Changed Date,35
-ssphp.use_case.category,Category,1
-ssphp.use_case.group,Group,2
-ssphp.use_case.group_name,Group Name,3
-ssphp.use_case.id,Use Case ID,4
-ssphp.use_case.savedsearch,Saved Search,10
-ssphp.use_case.severity,Severity,6
-ssphp.use_case.title,Title,5
-ssphp.use_case.version.last_changed_by,Last Changed By,8
-ssphp.use_case.version.last_changed_date,Last Changed Date,9
-ssphp.use_case.version.number,Version,7
-ssphp.service.display_name,Service Name,3
-ssphp.service.division,Division,6
-ssphp.service.group,Group,5
-ssphp.service.id,Service ID,1
-ssphp.service.name,Service,2
-ssphp.service.portfolio,Portfolio,4
-ssphp.resource.id,Resource ID,1
-ssphp.resource.name,Resource Name,2
-ssphp.resource.type,Resource Type,3
-ssphp.resource.dependency.ecosystem,Ecosystem,6
-ssphp.resource.dependency.manifest_path,Manifest Path,5
-ssphp.resource.dependency.package_name,Package Name,4
-ssphp.score.ciso_priority,Control Type,3
-ssphp.score.color,Score Color,2
-ssphp.score.denominator,Score Denominator,4
-ssphp.score.numerator,Score Numerator,5
-ssphp.score.score,Score,1
-ssphp.score.scoring_narrative,Scoring Narrative,6
-ssphp.score.threshold.green,Threshold Green,7
-ssphp.score.threshold.orange,Thrshold Orange,8
-ssphp.score.threshold.red,Threshold Red,9
-ssphp.benchmark.control.number, Control,01
-ssphp.benchmark.control.group, Control Group,02
-ssphp.benchmark.control.title,Title,03
-ssphp.benchmark.control.description,Description,04
-ssphp.benchmark.control.profile_applicability,Profile Applicability,05
-ssphp.benchmark.control.rationale,Rationale,06
-ssphp.benchmark.control.impact,Impact,07
-ssphp.benchmark.control.level,Level,08
-ssphp.benchmark.controls.ig1,IG1,09
-ssphp.benchmark.controls.ig2,IG2,10
-ssphp.benchmark.controls.ig3,IG3,11
-ssphp.benchmark.document.date,Document Date,12
-ssphp.benchmark.document.name,Document Name,13
-ssphp.benchmark.document.version,Document Version,14
-ssphp.benchmark.origin,Origin,15
-ssphp.benchmark.version,Version,16"]
+`ssphp_service_detail_field_naming{{environment}}`
 
 | stats values(*) as * by Field
 
@@ -374,7 +300,7 @@ ssphp.benchmark.version,Version,16"]
                                 "(source=".'start_text_nob'."*".'ssphp.resource.id'."*".'end_text_nob'.")",
                                 
                           lower('ssphp.use_case.group_name')="sast",
-                                'start_text'.'ssphp.resource.id'.'div_text'.'ssphp.use_case.id'.'end_text',
+                                'start_text'.'ssphp.resource.id'.'div_text'.'ssphp.use_case.id'.'div_text'.'ssphp.assessment.description_url'.'div_text'.'ssphp.assessment.description_rule'.'end_text',
                                 
                           lower('ssphp.use_case.group_name')="qualys",
                                 "| search QID=\"".'ssphp.use_case.id'."\" AND HOSTNAME=\"".'ssphp.resource.hostname'."\"",

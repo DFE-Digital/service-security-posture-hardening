@@ -1,7 +1,7 @@
 <dashboard version="1.1" theme="dark" script="js/addtags.js, js/table_cell_color.js">
 
 <label>Security Posture Continuous Assurance : DfE Service Dashboard</label>
-<description>{{environment}} v4.0.0</description>
+<description>{{environment}} v4.1.4</description>
   
   <init>
     <set token="form.tkn_fields">C</set>
@@ -24,7 +24,7 @@
 
 
 <!-- ######################################################################################################################################### -->
-<!-- ############################################################################ BASE SEARCHES ############################################## -->
+<!-- ########################################################## BASE SEARCHES ################################################################ -->
 <!-- ######################################################################################################################################### -->
 
   <row depends="$debug$">
@@ -431,6 +431,164 @@ index=_audit user=$tkn__current_user_name|s$ action=search "makeresults" "user_d
 <!-- ###################################################### TOP SCORE ROW #################################################################### -->
 <!-- ######################################################################################################################################### -->
 
+
+<!-- ###################################################### POSTURE #################################################################### -->
+  <row depends="$tkn_ready$,$debug$">
+    <panel>
+      <table>
+        <search base="bs_1">
+          <query>
+| search ssphp.use_case.category="POSTURE" AND ssphp.resource.id="***" 
+
+| eval rg=coalesce('ssphp.resource.tenant'."/".'ssphp.resource.subscription'."/".'ssphp.resource.resource_group',"-")
+
+| stats count, sum(eval(if('ssphp.score.ciso_priority'="DfE Mandated" AND mvindex(split('ssphp.score.score',"|"),0)!="100",1,0))) as rg_bad by rg
+| stats count as rg_total, sum(eval(if('rg_bad'>0,1,0))) as rg_bad
+
+| eval rg_good='rg_total'-'rg_bad'
+
+| eval number_total_resources='rg_total',
+       number_passed_resources='rg_good',
+       perc_passed_resources=floor(('number_passed_resources'*100)/'number_total_resources')." %",
+       abs='number_passed_resources'." / ".'number_total_resources',
+       color=case(isnull('perc_passed_resources') OR 'perc_passed_resources'="","#171D21",
+                                  'perc_passed_resources'=100,"#6AB187",
+                                  1==1,"#D32D41"),  
+       abs=if(isnull('abs'),"-",'abs')
+
+| table number_total_resources, number_passed_resources, perc_passed_resources, abs, color
+            </query>
+          <done>
+            <set token="tkn_posture_number_total_resources">$result.number_total_resources$</set>
+            <set token="tkn_posture_number_passed_resources">$result.number_passed_resources$</set>
+            <set token="tkn_posture_perc_passed_resources">$result.perc_passed_resources$</set>
+            <set token="tkn_posture_abs">$result.abs$</set>
+            <set token="tkn_posture_color">$result.color$</set>
+          </done>
+        </search>
+      </table>
+    </panel>
+  </row>
+
+
+
+<!-- ###################################################### VULNERABILITY #################################################################### -->
+  <row depends="$tkn_ready$,$debug$">
+    <panel>
+      <table>
+        <search base="bs_1">
+          <query>
+| search ssphp.use_case.category="VULNERABILITY" AND ssphp.resource.id="***" AND ssphp.resource.id="*/virtualmachines/*"
+
+| stats count, sum(eval(if('ssphp.score.ciso_priority'="DfE Mandated" AND mvindex(split('ssphp.score.score',"|"),0)!="100",1,0))) as rid_bad by ssphp.resource.id
+| stats count as rid_total, sum(eval(if('rid_bad'>0,1,0))) as rid_bad
+
+| eval rid_good='rid_total'-'rid_bad'
+
+| eval number_total_resources='rid_total',
+       number_passed_resources='rid_good',
+       perc_passed_resources=floor(('number_passed_resources'*100)/'number_total_resources')." %",
+       abs='number_passed_resources'." / ".'number_total_resources',
+       color=case(isnull('perc_passed_resources') OR 'perc_passed_resources'="","#171D21",
+                                  'perc_passed_resources'=100,"#6AB187",
+                                  1==1,"#D32D41"),  
+       abs=if(isnull('abs'),"-",'abs')
+
+| table number_total_resources, number_passed_resources, perc_passed_resources, abs, color
+            </query>
+          <done>
+            <set token="tkn_vulnerability_number_total_resources">$result.number_total_resources$</set>
+            <set token="tkn_vulnerability_number_passed_resources">$result.number_passed_resources$</set>
+            <set token="tkn_vulnerability_perc_passed_resources">$result.perc_passed_resources$</set>
+            <set token="tkn_vulnerability_abs">$result.abs$</set>
+            <set token="tkn_vulnerability_color">$result.color$</set>
+          </done>
+        </search>
+      </table>
+    </panel>
+  </row>
+
+
+
+<!-- ###################################################### REPOS #################################################################### -->
+  <row depends="$tkn_ready$,$debug$">
+    <panel>
+      <table>
+        <search base="bs_1">
+          <query>
+| search ssphp.use_case.category="REPOS" AND ssphp.resource.id="***"
+
+| stats count, sum(eval(if('ssphp.score.ciso_priority'="DfE Mandated" AND mvindex(split('ssphp.score.score',"|"),0)!="100",1,0))) as rid_bad by ssphp.resource.id
+| stats count as rid_total, sum(eval(if('rid_bad'>0,1,0))) as rid_bad
+
+| eval rid_good='rid_total'-'rid_bad'
+
+| eval number_total_resources='rid_total',
+       number_passed_resources='rid_good',
+       perc_passed_resources=floor(('number_passed_resources'*100)/'number_total_resources')." %",
+       abs='number_passed_resources'." / ".'number_total_resources',
+       color=case(isnull('perc_passed_resources') OR 'perc_passed_resources'="","#171D21",
+                                  'perc_passed_resources'=100,"#6AB187",
+                                  1==1,"#D32D41"),  
+       abs=if(isnull('abs'),"-",'abs')
+
+| table number_total_resources, number_passed_resources, perc_passed_resources, abs, color
+            </query>
+          <done>
+            <set token="tkn_repos_number_total_resources">$result.number_total_resources$</set>
+            <set token="tkn_repos_number_passed_resources">$result.number_passed_resources$</set>
+            <set token="tkn_repos_perc_passed_resources">$result.perc_passed_resources$</set>
+            <set token="tkn_repos_abs">$result.abs$</set>
+            <set token="tkn_repos_color">$result.color$</set>
+          </done>
+        </search>
+      </table>
+    </panel>
+  </row>
+
+
+
+<!-- ###################################################### CODE_SCAN #################################################################### -->
+  <row depends="$tkn_ready$,$debug$">
+    <panel>
+      <table>
+        <search base="bs_1">
+          <query>
+| search ssphp.use_case.category="CODE_SCAN" AND ssphp.resource.id="***"
+
+| eval ssphp.resource.id=if(mvcount('ssphp.resource.id')>1,mvindex('ssphp.resource.id',0),'ssphp.resource.id')
+
+| stats count, sum(eval(if('ssphp.score.ciso_priority'="DfE Mandated" AND mvindex(split('ssphp.score.score',"|"),0)!="100",1,0))) as rid_bad by ssphp.resource.id
+| stats count as rid_total, sum(eval(if('rid_bad'>0,1,0))) as rid_bad
+
+| eval rid_good='rid_total'-'rid_bad'
+
+| eval number_total_resources='rid_total',
+       number_passed_resources='rid_good',
+       perc_passed_resources=floor(('number_passed_resources'*100)/'number_total_resources')." %",
+       abs='number_passed_resources'." / ".'number_total_resources',
+       color=case(isnull('perc_passed_resources') OR 'perc_passed_resources'="","#171D21",
+                                  'perc_passed_resources'=100,"#6AB187",
+                                  1==1,"#D32D41"),  
+       abs=if(isnull('abs'),"-",'abs')
+
+| table number_total_resources, number_passed_resources, perc_passed_resources, abs, color
+            </query>
+          <done>
+            <set token="tkn_codescan_number_total_resources">$result.number_total_resources$</set>
+            <set token="tkn_codescan_number_passed_resources">$result.number_passed_resources$</set>
+            <set token="tkn_codescan_perc_passed_resources">$result.perc_passed_resources$</set>
+            <set token="tkn_codescan_abs">$result.abs$</set>
+            <set token="tkn_codescan_color">$result.color$</set>
+          </done>
+        </search>
+      </table>
+    </panel>
+  </row>
+
+
+
+<!-- ###################################################### vvvv OLD VERSION VVVV ####################################################################
   <row depends="$tkn_ready$,$debug$">
     <panel>
       <table>
@@ -527,7 +685,7 @@ index=_audit user=$tkn__current_user_name|s$ action=search "makeresults" "user_d
       </table>
     </panel>
   </row>
-  
+###################################################### ^^^^ OLD VERSION ^^^^ #################################################################### -->
 
   <row depends="$tkn_ready$">
     <panel depends="$tkn_ready$,$tkn_show_abs$">

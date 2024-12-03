@@ -1,0 +1,45 @@
+<dashboard version="1.1" theme="dark">
+  
+<label>DCAP Use Case Inventory</label>
+<description>{{environment}} v1.0.0</description>
+
+  <row>
+    <panel>
+      <title>Use Cases : Digital Services</title>
+      <table>
+        <search>
+          <query>`ssphp_summary_index_DEV` (NOT ssphp.type="exclusion") (NOT ssphp.source.foundational_system="*") earliest=-2d@d latest=now
+
+| rex field=ssphp.use_case.title "^(?&lt;Title&gt;.*) \[.*"
+| fields - max_SSPHP_RUN
+
+| eval "Use Case"=case(Title="Microsoft Defender Assessment",'Title',
+                   Title="Qualys Vulnerability Assessment",'Title',
+                   Title="Dependabot Security Advsory",'Title',
+                   split('ssphp.use_case.savedsearch',"_")="cis",'Title'." [CIS ".mvindex(split('ssphp.use_case.savedsearch',"_"),6)."]",
+                   'ssphp.use_case.category'="CODE_SCAN","Code Scanning",
+                   1==1,"OOOPS"),
+        Title=if('Title'="Github" AND like('ssphp.use_case.savedsearch',"%_cis_%"),"GitHub CIS Benchmark Assessment [".'ssphp.benchmark.control.title'."]",'Title'),
+        ```Group='ssphp.use_case.group'." : ".mvjoin('ssphp.use_case.group_name'," &amp; ")```
+        Group='ssphp.use_case.group'." : ".'ssphp.use_case.group_name'
+                   
+| stats ```values(Group) as Group,```
+        values(Title) as Title```,
+        values(ssphp.use_case.savedsearch) as ssphp.use_case.savedsearch,```
+        
+        by Group, "Use Case"</query>
+          <earliest>-30m@m</earliest>
+          <latest>now</latest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="count">100</option>
+        <option name="dataOverlayMode">none</option>
+        <option name="drilldown">none</option>
+        <option name="percentagesRow">false</option>
+        <option name="rowNumbers">false</option>
+        <option name="totalsRow">false</option>
+        <option name="wrap">true</option>
+      </table>
+    </panel>
+  </row>
+</dashboard>
