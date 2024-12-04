@@ -760,14 +760,14 @@ index=_audit user=$tkn__current_user_name|s$ action=search "makeresults" "user_d
       <html>
         <div id="div_header" style="background:$tkn_posture_color$;color:white;font-weight:bold;font-size:$tkn_font_size_2$%;text-align:center;padding:$tkn_padding_2$">$tkn_posture_abs$</div> 
         <div id="div_header" style="background:$tkn_posture_color$;color:white;font-size:80%;text-align:center">Compliant Resource Groups</div>
-        <div id="div_header" style="background:$tkn_posture_color$;color:yellow;font-size:100%;text-align:center">POSTURE</div> 
+        <div id="div_header" style="background:$tkn_posture_color$;color:yellow;font-size:100%;text-align:center">POSTURE CONFIGURATION</div> 
       </html>
     </panel>
     <panel depends="$tkn_ready$,$tkn_show_perc$">
       <html>
         <div id="div_header" style="background:$tkn_posture_color$;color:white;font-weight:bold;font-size:$tkn_font_size_2$%;text-align:center;padding:$tkn_padding_2$">$tkn_posture_perc_passed_resources$</div> 
         <div id="div_header" style="background:$tkn_posture_color$;color:white;font-size:80%;text-align:center">Compliant Resource Groups</div>
-        <div id="div_header" style="background:$tkn_posture_color$;color:yellow;font-size:100%;text-align:center">POSTURE</div> 
+        <div id="div_header" style="background:$tkn_posture_color$;color:yellow;font-size:100%;text-align:center">POSTURE CONFIGURATION</div> 
       </html>
     </panel>
     
@@ -776,14 +776,14 @@ index=_audit user=$tkn__current_user_name|s$ action=search "makeresults" "user_d
       <html>
         <div id="div_header" style="background:$tkn_repos_color$;color:white;font-weight:bold;font-size:$tkn_font_size_2$%;text-align:center;padding:$tkn_padding_2$">$tkn_repos_abs$</div> 
         <div id="div_header" style="background:$tkn_repos_color$;color:white;font-size:80%;text-align:center">GitHub Repos Compliant with CIS Benchmarks</div>
-        <div id="div_header" style="background:$tkn_repos_color$;color:yellow;font-size:100%;text-align:center">REPOS</div> 
+        <div id="div_header" style="background:$tkn_repos_color$;color:yellow;font-size:100%;text-align:center">REPOSITORY CONFIGURATION</div> 
       </html>
     </panel>
     <panel depends="$tkn_ready$,$tkn_show_perc$">
       <html>
         <div id="div_header" style="background:$tkn_repos_color$;color:white;font-weight:bold;font-size:$tkn_font_size_2$%;text-align:center;padding:$tkn_padding_2$">$tkn_repos_perc_passed_resources$</div> 
         <div id="div_header" style="background:$tkn_repos_color$;color:white;font-size:80%;text-align:center">GitHub Repos Compliant with CIS Benchmarks</div>
-        <div id="div_header" style="background:$tkn_repos_color$;color:yellow;font-size:100%;text-align:center">REPOS</div> 
+        <div id="div_header" style="background:$tkn_repos_color$;color:yellow;font-size:100%;text-align:center">REPOSITORY CONFIGURATION</div> 
       </html>
     </panel>
     
@@ -792,14 +792,14 @@ index=_audit user=$tkn__current_user_name|s$ action=search "makeresults" "user_d
       <html>
         <div id="div_header" style="background:$tkn_codescan_color$;color:white;font-weight:bold;font-size:$tkn_font_size_2$%;text-align:center;padding:$tkn_padding_2$">$tkn_codescan_abs$</div> 
         <div id="div_header" style="background:$tkn_codescan_color$;color:white;font-size:80%;text-align:center">Compliant GitHub Repos</div>
-        <div id="div_header" style="background:$tkn_codescan_color$;color:yellow;font-size:100%;text-align:center">CODE SCANNING</div> 
+        <div id="div_header" style="background:$tkn_codescan_color$;color:yellow;font-size:100%;text-align:center">CODE SCANNING ALERTS</div> 
       </html>
     </panel>
     <panel depends="$tkn_ready$,$tkn_show_perc$">
       <html>
         <div id="div_header" style="background:$tkn_codescan_color$;color:white;font-weight:bold;font-size:$tkn_font_size_2$%;text-align:center;padding:$tkn_padding_2$">$tkn_codescan_perc_passed_resources$</div> 
         <div id="div_header" style="background:$tkn_codescan_color$;color:white;font-size:80%;text-align:center">Compliant GitHub Repos</div>
-        <div id="div_header" style="background:$tkn_codescan_color$;color:yellow;font-size:100%;text-align:center">CODE SCANNING</div> 
+        <div id="div_header" style="background:$tkn_codescan_color$;color:yellow;font-size:100%;text-align:center">CODE SCANNING ALERTS</div> 
       </html>
     </panel>
     
@@ -808,14 +808,14 @@ index=_audit user=$tkn__current_user_name|s$ action=search "makeresults" "user_d
       <html>
         <div id="div_header" style="background:$tkn_vulnerability_color$;color:white;font-weight:bold;font-size:$tkn_font_size_2$%;text-align:center;padding:$tkn_padding_2$">$tkn_vulnerability_abs$</div> 
         <div id="div_header" style="background:$tkn_vulnerability_color$;color:white;font-size:80%;text-align:center">Compliant Virtual Machines</div>
-        <div id="div_header" style="background:$tkn_vulnerability_color$;color:yellow;font-size:100%;text-align:center">VM VULNERABILITY</div> 
+        <div id="div_header" style="background:$tkn_vulnerability_color$;color:yellow;font-size:100%;text-align:center">VM VULNERABILITY ALERTS</div> 
       </html>
     </panel>
     <panel depends="$tkn_ready$,$tkn_show_perc$">
       <html>
         <div id="div_header" style="background:$tkn_vulnerability_color$;color:white;font-weight:bold;font-size:$tkn_font_size_2$%;text-align:center;padding:$tkn_padding_2$">$tkn_vulnerability_perc_passed_resources$</div> 
         <div id="div_header" style="background:$tkn_vulnerability_color$;color:white;font-size:80%;text-align:center">Compliant Virtual Machines</div>
-        <div id="div_header" style="background:$tkn_vulnerability_color$;color:yellow;font-size:100%;text-align:center">VM VULNERABILITY</div> 
+        <div id="div_header" style="background:$tkn_vulnerability_color$;color:yellow;font-size:100%;text-align:center">VM VULNERABILITY ALERTS</div> 
       </html>
     </panel>
   </row>
