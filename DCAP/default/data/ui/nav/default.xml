@@ -18,7 +18,7 @@
     <a href="ssphp_dfe_service">Service Posture</a>
     <a href="ssphp_critical_vulnerabilities">Vulnerability Management</a>
     <a href="ssphp_dfe_asset_inventory">Asset Inventory</a>
-    <a href="ssphp_foundational_systems_dashboard_help">Dashboard Help</a>
+    <a href="ssphp_digital_services_dashboard_help">Dashboard Help</a>
   </collection>
 
   <collection label="DCAP Utilities" >
