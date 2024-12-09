@@ -47,7 +47,9 @@ resource "azurerm_linux_function_app" "SSPHP_rust" {
     RUST_BACKTRACE                 = "1"
     RUST_LOG                       = "info"
     FUNCTIONS_EXTENSION_VERSION    = "~4"
-    linuxFxVersion                 = ""
+    # linuxFxVersion Value taken from this command
+    # az functionapp list-runtimes --os linux --query "[].{stack:join(' ', [runtime, version]), LinuxFxVersion:linux_fx_version, SupportedFunctionsVersions:to_string(supported_functions_versions[])}" --output table
+    linuxFxVersion = ""
     # https://github.com/Azure/azure-functions-host/issues/8021
     alwaysOn = true
   }
