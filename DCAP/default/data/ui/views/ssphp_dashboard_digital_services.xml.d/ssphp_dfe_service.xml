@@ -1,7 +1,7 @@
 <dashboard version="1.1" theme="dark" script="js/addtags.js, js/table_cell_color.js">
 
 <label>Security Posture Continuous Assurance : DfE Service Dashboard</label>
-<description>{{environment}} v4.1.18</description>
+<description>{{environment}} v4.1.19</description>
   
   <init>
     <set token="form.tkn_fields">C</set>
@@ -550,11 +550,11 @@ index=_audit user=$tkn__current_user_name|s$ action=search "makeresults" "user_d
 | table number_total_resources, number_passed_resources, perc_passed_resources, abs, color
             </query>
           <done>
-            <set token="tkn_posture_number_total_resources">$result.number_total_resources$</set>
-            <set token="tkn_posture_number_passed_resources">$result.number_passed_resources$</set>
-            <set token="tkn_posture_perc_passed_resources">$result.perc_passed_resources$</set>
-            <set token="tkn_posture_abs">$result.abs$</set>
-            <set token="tkn_posture_color">$result.color$</set>
+            <eval token="tkn_posture_number_total_resources">if(isnotnull($result.number_total_resources$),$result.number_total_resources$,"-")</eval>
+            <eval token="tkn_posture_number_passed_resources">if(isnotnull($result.number_passed_resources$),$result.number_passed_resources$,"-")</eval>
+            <eval token="tkn_posture_perc_passed_resources">if(isnotnull($result.perc_passed_resources$),$result.perc_passed_resources$,"-")</eval>
+            <eval token="tkn_posture_abs">if(isnotnull($result.abs$),$result.abs$,"-")</eval>
+            <eval token="tkn_posture_color">if(isnotnull($result.color$),$result.color$,"#D32D41")</eval>
           </done>
         </search>
       </table>
@@ -588,11 +588,11 @@ index=_audit user=$tkn__current_user_name|s$ action=search "makeresults" "user_d
 | table number_total_resources, number_passed_resources, perc_passed_resources, abs, color
             </query>
           <done>
-            <set token="tkn_vulnerability_number_total_resources">$result.number_total_resources$</set>
-            <set token="tkn_vulnerability_number_passed_resources">$result.number_passed_resources$</set>
-            <set token="tkn_vulnerability_perc_passed_resources">$result.perc_passed_resources$</set>
-            <set token="tkn_vulnerability_abs">$result.abs$</set>
-            <set token="tkn_vulnerability_color">$result.color$</set>
+            <eval token="tkn_vulnerability_number_total_resources">if(isnotnull($result.number_total_resources$),$result.number_total_resources$,"-")</eval>
+            <eval token="tkn_vulnerability_number_passed_resources">if(isnotnull($result.number_passed_resources$),$result.number_passed_resources$,"-")</eval>
+            <eval token="tkn_vulnerability_perc_passed_resources">if(isnotnull($result.perc_passed_resources$),$result.perc_passed_resources$,"-")</eval>
+            <eval token="tkn_vulnerability_abs">if(isnotnull($result.abs$),$result.abs$,"-")</eval>
+            <eval token="tkn_vulnerability_color">if(isnotnull($result.color$),$result.color$,"#D32D41")</eval>
           </done>
         </search>
       </table>
@@ -626,11 +626,11 @@ index=_audit user=$tkn__current_user_name|s$ action=search "makeresults" "user_d
 | table number_total_resources, number_passed_resources, perc_passed_resources, abs, color
             </query>
           <done>
-            <set token="tkn_repos_number_total_resources">$result.number_total_resources$</set>
-            <set token="tkn_repos_number_passed_resources">$result.number_passed_resources$</set>
-            <set token="tkn_repos_perc_passed_resources">$result.perc_passed_resources$</set>
-            <set token="tkn_repos_abs">$result.abs$</set>
-            <set token="tkn_repos_color">$result.color$</set>
+            <eval token="tkn_repos_number_total_resources">if(isnotnull($result.number_total_resources$),$result.number_total_resources$,"-")</eval>
+            <eval token="tkn_repos_number_passed_resources">if(isnotnull($result.number_passed_resources$),$result.number_passed_resources$,"-")</eval>
+            <eval token="tkn_repos_perc_passed_resources">if(isnotnull($result.perc_passed_resources$),$result.perc_passed_resources$,"-")</eval>
+            <eval token="tkn_repos_abs">if(isnotnull($result.abs$),$result.abs$,"-")</eval>
+            <eval token="tkn_repos_color">if(isnotnull($result.color$),$result.color$,"#D32D41")</eval>
           </done>
         </search>
       </table>
@@ -666,11 +666,11 @@ index=_audit user=$tkn__current_user_name|s$ action=search "makeresults" "user_d
 | table number_total_resources, number_passed_resources, perc_passed_resources, abs, color
             </query>
           <done>
-            <set token="tkn_codescan_number_total_resources">$result.number_total_resources$</set>
-            <set token="tkn_codescan_number_passed_resources">$result.number_passed_resources$</set>
-            <set token="tkn_codescan_perc_passed_resources">$result.perc_passed_resources$</set>
-            <set token="tkn_codescan_abs">$result.abs$</set>
-            <set token="tkn_codescan_color">$result.color$</set>
+            <eval token="tkn_codescan_number_total_resources">if(isnotnull($result.number_total_resources$),$result.number_total_resources$,"-")</eval>
+            <eval token="tkn_codescan_number_passed_resources">if(isnotnull($result.number_passed_resources$),$result.number_passed_resources$,"-")</eval>
+            <eval token="tkn_codescan_perc_passed_resources">if(isnotnull($result.perc_passed_resources$),$result.perc_passed_resources$,"-")</eval>
+            <eval token="tkn_codescan_abs">if(isnotnull($result.abs$),$result.abs$,"-")</eval>
+            <eval token="tkn_codescan_color">if(isnotnull($result.color$),$result.color$,"#D32D41")</eval>
           </done>
         </search>
       </table>
