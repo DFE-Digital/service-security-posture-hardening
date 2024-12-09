@@ -1,11 +1,11 @@
 use anyhow::Result;
 use hickory_proto::rr::record_type::RecordType;
 use hickory_resolver::config::*;
-use hickory_resolver::TokioAsyncResolver;
+use hickory_resolver::TokioResolver;
 
 pub async fn resolve_txt_record<T: AsRef<str>>(domain: T) -> Result<Vec<String>> {
     // Construct a new Resolver with default configuration options
-    let resolver = TokioAsyncResolver::tokio(ResolverConfig::default(), ResolverOpts::default());
+    let resolver = TokioResolver::tokio(ResolverConfig::default(), ResolverOpts::default());
 
     // Lookup the TXT record associated with a name.
     let response = resolver.lookup(domain.as_ref(), RecordType::TXT).await?;

@@ -9,7 +9,7 @@ use hickory_proto::rr::record_type::RecordType;
 use hickory_proto::rr::RData;
 use hickory_resolver::config::*;
 use hickory_resolver::Name;
-use hickory_resolver::TokioAsyncResolver;
+use hickory_resolver::TokioResolver;
 
 use anyhow::{bail, Context, Result};
 use aws_config::meta::region::RegionProviderChain;
@@ -1407,7 +1407,7 @@ impl AwsClient {
     ) -> Result<RecordSets> {
         // Build resolver
         let resolver =
-            TokioAsyncResolver::tokio(ResolverConfig::default(), ResolverOpts::default());
+            TokioResolver::tokio(ResolverConfig::default(), ResolverOpts::default());
 
         let mut sets = vec![];
 
