@@ -18,12 +18,18 @@ pub async fn resolve_txt_record<T: AsRef<str>>(domain: T) -> Result<Vec<String>>
     Ok(txts)
 }
 
-#[tokio::test]
-async fn test_resolve_txt_record() -> Result<()> {
-    let result = resolve_txt_record("www.gmail.com").await?;
-    assert!(!result.is_empty());
-    for txt in result {
-        assert!(txt.contains("google-site-verification"));
+#[cfg(feature = "live_tests")]
+#[cfg(test)]
+mod test {
+    use crate::dns::resolve_txt_record;
+
+    #[tokio::test]
+    async fn test_resolve_txt_record() -> Result<()> {
+        let result = resolve_txt_record("www.gmail.com").await?;
+        assert!(!result.is_empty());
+        for txt in result {
+            assert!(txt.contains("google-site-verification"));
+        }
+        Ok(())
     }
-    Ok(())
 }

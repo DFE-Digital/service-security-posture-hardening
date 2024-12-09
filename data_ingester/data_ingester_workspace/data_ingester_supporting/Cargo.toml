@@ -18,3 +18,6 @@ tracing = "0"
 
 [lints]
 workspace = true
+
+[features]
+live_tests = []
