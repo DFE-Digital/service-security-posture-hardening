@@ -29,8 +29,4 @@ module "data_ingester" {
   key_vault_name       = local.key_vault_name
   key_vault_object_ids = local.key_vault_object_ids
   tags                 = local.tags
-  vnet = {
-    name        = "ssphp_test_vnet",
-    subnet_name = "default"
-  }
 }
