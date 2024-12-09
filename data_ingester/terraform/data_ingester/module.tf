@@ -36,11 +36,3 @@ resource "azurerm_storage_container" "tfstate" {
   storage_account_name  = azurerm_storage_account.tfstate.name
   container_access_type = "private"
 }
-
-resource "azurerm_application_insights" "SSPHP" {
-  name                = "SSPHP-Metrics"
-  location            = azurerm_resource_group.tfstate.location
-  resource_group_name = azurerm_resource_group.tfstate.name
-  application_type    = "other"
-  tags                = var.tags
-}

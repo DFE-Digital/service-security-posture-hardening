@@ -1,12 +1,12 @@
 terraform {
   required_providers {
     github = {
-      source = "integrations/github"
+      source  = "integrations/github"
       version = "6.2.3"
     }
   }
 
-  required_version = "~> 1.9.5"  
+  required_version = "~> 1.9.5"
 
 }
 
@@ -42,12 +42,12 @@ resource "github_repository" "pass_main_branch_protection" {
     }
   }
 
-  vulnerability_alerts   = true  
+  vulnerability_alerts = true
 }
 
 resource "github_repository_dependabot_security_updates" "dependabot" {
-  repository  = github_repository.pass_main_branch_protection.name
-  enabled     = true
+  repository = github_repository.pass_main_branch_protection.name
+  enabled    = true
 }
 
 resource "github_repository_file" "security_md" {
@@ -65,14 +65,14 @@ resource "github_branch_protection" "main_branch" {
   depends_on = [
     github_repository_file.security_md
   ]
-  
+
   repository_id = github_repository.pass_main_branch_protection.node_id
 
-  pattern          = "main"
-  enforce_admins   = true
-  allows_deletions = false
+  pattern                         = "main"
+  enforce_admins                  = true
+  allows_deletions                = false
   require_conversation_resolution = true
-  require_signed_commits = true
+  require_signed_commits          = true
 
   required_status_checks {
     strict   = true
@@ -80,9 +80,9 @@ resource "github_branch_protection" "main_branch" {
   }
 
   required_pull_request_reviews {
-    dismiss_stale_reviews  = true
-    restrict_dismissals    = true
-    require_code_owner_reviews = true
+    dismiss_stale_reviews           = true
+    restrict_dismissals             = true
+    require_code_owner_reviews      = true
     required_approving_review_count = 2
   }
 
@@ -93,6 +93,6 @@ data "github_user" "gh_user" {
 }
 
 variable "github_username" {
-  type = string
+  type    = string
   default = "akinnane"
 }

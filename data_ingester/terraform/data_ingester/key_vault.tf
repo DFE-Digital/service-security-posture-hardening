@@ -71,36 +71,6 @@ resource "azurerm_key_vault" "SSPHP" {
       "List",
     ]
   }
-
-  dynamic "access_policy" {
-    for_each = azurerm_linux_function_app.SSPHP_rust-vnet
-
-    content {
-      tenant_id = access_policy.value["identity"][0].tenant_id
-      object_id = access_policy.value["identity"][0].principal_id
-
-      key_permissions = [
-        "Get",
-        "List"
-      ]
-
-      secret_permissions = [
-        "Get",
-        "List",
-      ]
-
-      storage_permissions = [
-        "Get",
-        "List",
-      ]
-
-      certificate_permissions = [
-        "Get",
-        "List",
-      ]
-
-    }
-  }
 }
 
 resource "azurerm_key_vault_certificate" "example" {
