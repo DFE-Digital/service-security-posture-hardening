@@ -39,12 +39,17 @@ resource "azurerm_linux_function_app" "SSPHP_rust" {
   }
 
   zip_deploy_file = data.archive_file.data_ingester_rust.output_path
+  # https://learn.microsoft.com/en-us/azure/azure-functions/functions-app-settings
   app_settings = {
     WEBSITE_RUN_FROM_PACKAGE       = "1"
     APPINSIGHTS_INSTRUMENTATIONKEY = azurerm_application_insights.SSPHP.instrumentation_key
     KEY_VAULT_NAME                 = var.key_vault_name
     RUST_BACKTRACE                 = "1"
     RUST_LOG                       = "info"
+    FUNCTIONS_EXTENSION_VERSION    = "~4"
+    linuxFxVersion                 = ""
+    # https://github.com/Azure/azure-functions-host/issues/8021
+    alwaysOn = true
   }
 }
 
