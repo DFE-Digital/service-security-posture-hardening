@@ -22,6 +22,7 @@ pub async fn resolve_txt_record<T: AsRef<str>>(domain: T) -> Result<Vec<String>>
 #[cfg(test)]
 mod test {
     use crate::dns::resolve_txt_record;
+    use anyhow::Result;
 
     #[tokio::test]
     async fn test_resolve_txt_record() -> Result<()> {

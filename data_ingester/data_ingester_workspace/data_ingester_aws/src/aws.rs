@@ -1498,16 +1498,7 @@ impl AwsClient {
                         in_route53: false,
                     });
 
-                    let data = match record.data() {
-                        Some(data) => data,
-                        None => {
-                            this_set.errors.push(Route53LookupErrors {
-                                context: "record.data() in None".to_string(),
-                                error: "".to_string(),
-                            });
-                            continue;
-                        }
-                    };
+                    let data = record.data();
 
                     let in_route53 = match data {
                         RData::A(a) => resource_records
