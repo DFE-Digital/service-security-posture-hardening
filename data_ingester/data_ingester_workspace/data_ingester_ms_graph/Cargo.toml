@@ -22,8 +22,8 @@ serde_json = "1"
 serde_with = "3"
 tokio = { version = "1", features = ["full"] }
 toml = "0"
-hickory-proto = "0"
-hickory-resolver = { version = "0", features = ["dns-over-rustls"] }
+hickory-proto = "0.25.0-alpha.4"
+hickory-resolver = { version = "0.25.0-alpha.4", features = ["dns-over-rustls"] }
 url = "2"
 tracing = "0"
 
