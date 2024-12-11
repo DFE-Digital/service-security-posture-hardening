@@ -153,7 +153,6 @@ mod test {
 
     use crate::Sonar;
 
-    #[derive(Clone)]
     struct TestClient {
         client: Sonar,
         orgs: Vec<String>,
@@ -199,7 +198,7 @@ mod test {
             let result = test_client.client.list_projects(&org).await?;
             assert!(result.paging.total > 0);
             let hec_events = (&result).to_hec_events()?;
-            test_client.splunk.send_batch(&hec_events).await?;
+            test_client.splunk.send_batch(hec_events).await?;
         }
         Ok(())
     }
