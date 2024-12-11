@@ -43,6 +43,10 @@ pub async fn qualys_qvs(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()
         &search_results.iter().take(2).collect::<Vec<&Cve>>()
     );
 
+    if search_results.len() == 0 {
+        anyhow::bail!("No Qualys results from Splunk")
+    }
+
     let mut qualys_client = Qualys::new(
         secrets
             .qualys_username
