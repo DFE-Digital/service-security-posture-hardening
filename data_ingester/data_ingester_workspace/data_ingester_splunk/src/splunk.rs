@@ -2,16 +2,11 @@ use anyhow::Context;
 use itertools::Itertools;
 use reqwest::header::HeaderMap;
 use reqwest::header::HeaderValue;
-use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc::Sender;
-use tokio::time::Instant;
 // #[cfg(test)]
-use std::borrow::Borrow;
 use std::collections::HashMap;
-use std::sync::Arc;
 use std::sync::LazyLock;
-use std::time::Duration;
 use tracing::error;
 use tracing::info;
 use tracing::warn;
@@ -21,13 +16,10 @@ use std::fmt::Debug;
 use std::future::Future;
 use std::sync::RwLock;
 use std::time::{SystemTime, UNIX_EPOCH};
-use uuid::Uuid;
 use tokio::sync::mpsc::channel;
+use uuid::Uuid;
 
 use crate::tasks::AckTask;
-use crate::tasks::HecAckQuery;
-use crate::tasks::HecAckQueryResponse;
-use crate::tasks::HecAckResponse;
 use crate::tasks::SendingTask;
 
 // Legacy, just used for tests and logs
@@ -50,8 +42,8 @@ pub struct HecEvent {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub(crate) struct HecFields {
-    pub(crate) resend_count: i32,
+pub struct HecFields {
+    pub resend_count: i32,
 }
 
 impl HecEvent {
@@ -99,9 +91,9 @@ impl HecEvent {
         })
     }
 
-    pub(crate) fn serialize(&self) -> Result<String> {
-        Ok(serde_json::to_string(self)?)
-    }
+    // pub(crate) fn serialize(&self) -> Result<String> {
+    //     Ok(serde_json::to_string(self)?)
+    // }
 }
 #[derive(Serialize, Deserialize)]
 struct SsphpEvent<T> {
@@ -206,9 +198,9 @@ pub trait ToHecEvents {
 
 //#[derive(Debug, Clone)]
 pub struct Splunk {
-//    pub(crate) client: Client,
-//    pub(crate) url: String,
+    #[allow(unused)]
     pub(crate) sending_task: SendingTask,
+    #[allow(unused)]
     pub(crate) ack_task: AckTask,
     pub(crate) send_tx: Sender<HecEvent>,
 }
@@ -229,16 +221,16 @@ impl Splunk {
             .default_headers(Splunk::headers(token)?)
             .connection_verbose(false)
             .build()?;
-        // let start = SystemTime::now();
-        // let client_creation_time = start.duration_since(UNIX_EPOCH)?;
+
         let (send_tx, send_rx) = channel::<HecEvent>(1000);
         let (ack_tx, ack_rx) = channel(1000);
 
-        let sending_task = SendingTask::new(client.clone(), send_rx, ack_tx.clone(), url.clone());
-        let ack_task = AckTask::new(client.clone(), send_tx.clone(), ack_rx, url.clone());
+        let sending_task = SendingTask::new(client.clone(), send_rx, ack_tx.clone(), url.clone())
+            .context("Building Splunk Sending Task")?;
+        let ack_task = AckTask::new(client.clone(), send_tx.clone(), ack_rx, url.clone())
+            .context("Building Splunk Ack Task")?;
 
         Ok(Self {
-//            url,
             sending_task,
             ack_task,
             send_tx,
@@ -262,10 +254,7 @@ impl Splunk {
     //     let _response = self.client.execute(request).await.unwrap();
     // }
 
-    pub async fn send_batch(
-        &self,
-        events: impl IntoIterator<Item = HecEvent>,
-    ) -> Result<()> {
+    pub async fn send_batch(&self, events: impl IntoIterator<Item = HecEvent>) -> Result<()> {
         for event in events {
             self.send_tx.send(event).await?;
         }
@@ -411,51 +400,6 @@ impl Splunk {
     // }
 }
 
-struct HecBatch {
-    ack_id: i32,
-    batch: String,
-}
-
-// Needs Splunk Creds
-
-pub(crate) fn batch_lines<I, T: Serialize>(it: &mut I) -> Option<String>
-where
-    I: Iterator<Item = T>,
-    //    I: std::fmt::Debug,
-{
-    const MAX: usize = 1024 * 950;
-    const resend_size_increase: usize = ",\"SSPHP_RESEND_COUNT\":1".len();
-
-    let mut lines = String::with_capacity(MAX);
-
-    let mut size: usize = 0;
-    while size < MAX {
-        match it.next() {
-            None => {
-                break;
-            }
-            Some(x) => {
-                let json = match serde_json::to_string(&x) {
-                    Ok(json) => json,
-                    Err(err) => {
-                        error!("Failed to serialize Item for Splunk:  {err}");
-                        continue;
-                    }
-                };
-                size += json.len() + resend_size_increase;
-                lines.push_str(json.as_str());
-                lines.push('\n');
-            }
-        }
-    }
-
-    if lines.is_empty() {
-        None
-    } else {
-        Some(lines)
-    }
-}
-
 pub(crate) fn batch_lines_events<'a, I>(it: &mut I) -> Option<(String, Vec<HecEvent>)>
 where
     I: Iterator<Item = &'a HecEvent>,
@@ -463,7 +407,8 @@ where
     //    I: std::fmt::Debug,
 {
     const MAX: usize = 1024 * 950;
-    const resend_size_increase: usize = ",\"SSPHP_RESEND_COUNT\":1".len();
+    // TODO CHANGE THIS TO ACTUAL VALUE
+    const RESEND_SIZE_INCREASE: usize = ",\"SSPHP_RESEND_COUNT\":1".len();
 
     let mut lines = String::with_capacity(MAX);
     let mut events = Vec::new();
@@ -481,7 +426,7 @@ where
                         continue;
                     }
                 };
-                size += json.len() + resend_size_increase;
+                size += json.len() + RESEND_SIZE_INCREASE;
                 lines.push_str(json.as_str());
                 lines.push('\n');
                 events.push(x.clone());
@@ -565,7 +510,7 @@ pub(crate) mod live_tests {
 
         let data = std::collections::HashMap::from([("aktest", "fromrust")]);
         let he = HecEvent::new(&data, "msgraph_rust", "test_event").unwrap();
-        splunk.send_batch([he]).await;
+        splunk.send_batch([he]).await?;
         Ok(())
     }
 

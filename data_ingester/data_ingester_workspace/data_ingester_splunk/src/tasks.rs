@@ -1,6 +1,5 @@
 use crate::splunk::HecEvent;
 use crate::splunk::HecFields;
-use crate::splunk::Splunk;
 use anyhow::Context;
 use anyhow::Result;
 use itertools::Itertools;
@@ -10,9 +9,7 @@ use reqwest::StatusCode;
 use serde::Deserialize;
 use serde::Serialize;
 use std::collections::HashMap;
-use std::sync::Arc;
 use std::time::Duration;
-use tokio::sync::mpsc::channel;
 use tokio::sync::mpsc::Receiver;
 use tokio::sync::mpsc::Sender;
 use tokio::task::JoinHandle;
@@ -50,20 +47,10 @@ pub(crate) struct HecAckQueryResponse {
     pub(crate) acks: HashMap<String, bool>,
 }
 
-struct Tasks {
-    sending_task: SendingTask,
-    ack_task: AckTask,
-}
-
 //#[derive(Debug, Clone)]
 pub(crate) struct AckTask {
-    splunk: Client,
-    join: Option<JoinHandle<Result<()>>>,
-    send_tx: Option<Sender<HecEvent>>,
-    //    send_tx: Option<Sender<HecBatch>>,
-    ack_rx: Option<Receiver<HecBatch>>,
-    //    ack_tx: Option<Sender<HecBatch>>,
-    url: String,
+    #[allow(unused)]
+    join: JoinHandle<Result<()>>,
 }
 
 impl AckTask {
@@ -72,36 +59,21 @@ impl AckTask {
         send_tx: Sender<HecEvent>,
         ack_rx: Receiver<HecBatch>,
         url: String,
-    ) -> Self {
-        Self {
-            splunk,
-            join: None,
-            send_tx: Some(send_tx),
-            ack_rx: Some(ack_rx),
-            url,
-        }
+    ) -> Result<Self> {
+        let join =
+            Self::spawn_task(splunk, ack_rx, send_tx, url).context("Starting Splunk Ack Task")?;
+        Ok(Self { join })
     }
 
-    fn spawn_task(&mut self) -> Result<()> {
-        if self.join.is_some() {
-            anyhow::bail!("This sender has already spawned");
-        }
-
-        if self.ack_rx.is_none() {
-            anyhow::bail!("This sender has already spawned");
-        }
-
-        let ack_url = format!("{}/ack", &self.url);
-        let splunk = self.splunk.clone();
-        let ack_rx = self
-            .ack_rx
-            .take()
-            .expect("Sending Channel must be initialised");
-        let send_tx = self.send_tx.clone().expect("ack_tx should be present");
-
+    fn spawn_task(
+        splunk: Client,
+        ack_rx: Receiver<HecBatch>,
+        send_tx: Sender<HecEvent>,
+        url: String,
+    ) -> Result<JoinHandle<Result<()>>> {
+        let ack_url = format!("{}/ack", &url);
         let join_handle = tokio::spawn(Self::ack_task(splunk, ack_rx, send_tx, ack_url));
-        self.join = Some(join_handle);
-        Ok(())
+        Ok(join_handle)
     }
 
     async fn send_hec_ack_query(
@@ -115,7 +87,7 @@ impl AckTask {
         };
 
         let response = splunk
-            .post(&ack_url.to_string())
+            .post(ack_url.to_string())
             .json(&ack_query)
             .send()
             .await
@@ -187,10 +159,8 @@ impl AckTask {
                 })
                 .for_each(|(ack_id, state)| {
                     dbg!(&ack_id, state);
-                    if *state {
-                        if to_be_acked.remove(&ack_id).is_none() {
-                            error!(name="Splunk", operation="HecAck", ack_id=?ack_id, "ack_id not found in known acks");
-                        }
+                    if *state && to_be_acked.remove(&ack_id).is_none() {
+                        error!(name="Splunk", operation="HecAck", ack_id=?ack_id, "ack_id not found in known acks");
                     }
                 });
             let _ = Self::resend_events(&mut to_be_acked, send_tx.clone()).await;
@@ -224,7 +194,13 @@ impl AckTask {
                     Some(HecFields { resend_count: 1 })
                 };
 
-                send_tx.send(event).await;
+                let send_result = send_tx.send(event).await;
+                match send_result {
+                    Ok(_) => {}
+                    Err(err) => {
+                        error!(name="SplunkHec", operation="Transmitting HecEvent to SendingTask", error=?err);
+                    }
+                };
             }
         }
         Ok(())
@@ -232,14 +208,8 @@ impl AckTask {
 }
 
 pub(crate) struct SendingTask {
-    splunk: Client,
-    join: Option<JoinHandle<Result<()>>>,
-    send_rx: Option<Receiver<HecEvent>>,
-    //    send_tx: Option<Sender<String>>,
-    // send_rx: Option<Receiver<HecEvent>>,
-    // send_tx: Option<Sender<HecEvent>>,
-    ack_tx: Option<Sender<HecBatch>>,
-    url: String,
+    #[allow(unused)]
+    join: JoinHandle<Result<()>>,
 }
 
 impl SendingTask {
@@ -248,23 +218,26 @@ impl SendingTask {
         send_rx: Receiver<HecEvent>,
         ack_tx: Sender<HecBatch>,
         url: String,
-    ) -> Self {
-        SendingTask {
-            splunk,
-            join: None,
-            send_rx: Some(send_rx),
-            ack_tx: Some(ack_tx),
-            url
-        }
+    ) -> Result<Self> {
+        let join = Self::spawn_task(splunk, send_rx, ack_tx, url)
+            .context("Starting Splunk Sending Task")?;
+
+        Ok(SendingTask {
+            join,
+            // splunk,
+            // send_rx: Some(send_rx),
+            // ack_tx: Some(ack_tx),
+            // url
+        })
     }
 
-    async fn send_batch_to_splunk(splunk: &Client, batch: &str, url: &str) -> Result<HecAckResponse> {
+    async fn send_batch_to_splunk(
+        splunk: &Client,
+        batch: &str,
+        url: &str,
+    ) -> Result<HecAckResponse> {
         let response: Response = loop {
-            let response = splunk
-                .post(url.clone())
-                .body(batch.to_string())
-                .send()
-                .await;
+            let response = splunk.post(url).body(batch.to_string()).send().await;
 
             let response = match response {
                 Ok(response) => response,
@@ -338,9 +311,10 @@ impl SendingTask {
 
             for batch in batches.into_iter() {
                 dbg!(&batch);
-                let response_ack = Self::send_batch_to_splunk(&splunk, &batch.0, sending_url.as_str())
-                    .await
-                    .context("sending batch to Splunk")?;
+                let response_ack =
+                    Self::send_batch_to_splunk(&splunk, &batch.0, sending_url.as_str())
+                        .await
+                        .context("sending batch to Splunk")?;
 
                 let hec_batch = HecBatch {
                     ack_id: response_ack.ack_id,
@@ -361,62 +335,51 @@ impl SendingTask {
         Ok(())
     }
 
-    fn spawn_task(&mut self) -> Result<()> {
-        if self.join.is_some() {
-            anyhow::bail!("This sender has already spawned");
-        }
-
-        if self.send_rx.is_none() {
-            anyhow::bail!("send_rx is not set");
-        }
-
-        let join_handle = tokio::spawn(Self::sending_task(
-            self.splunk.clone(),
-            self.send_rx
-                .take()
-                .expect("Sending Channel must be initialised"),
-            self.ack_tx.take().expect("ack_tx should be set"),
-            self.url.clone(),
-        ));
-        self.join = Some(join_handle);
-        Ok(())
+    fn spawn_task(
+        splunk: Client,
+        send_rx: Receiver<HecEvent>,
+        ack_tx: Sender<HecBatch>,
+        url: String,
+    ) -> Result<JoinHandle<Result<()>>> {
+        let join_handle = tokio::spawn(Self::sending_task(splunk, send_rx, ack_tx, url));
+        Ok(join_handle)
     }
 }
 
-#[cfg(feature = "live_tests")]
-#[cfg(test)]
-mod test {
-    use std::{collections::HashMap, sync::Arc};
+// #[cfg(feature = "live_tests")]
+// #[cfg(test)]
+// mod test {
+//     use std::{collections::HashMap, sync::Arc};
 
-    use crate::{
-        splunk::{live_tests::splunk_client, HecEvent},
-        tasks::{AckTask, SendingTask},
-    };
-    use anyhow::Result;
-    use tokio::sync::mpsc::channel;
+//     use crate::{
+//         splunk::{live_tests::splunk_client, HecEvent},
+//         tasks::{AckTask, SendingTask},
+//     };
+//     use anyhow::Result;
+//     use tokio::sync::mpsc::channel;
 
-    // #[tokio::test]
-    // async fn build_sending_task() -> Result<()> {
-    //     let splunk = splunk_client().await?;
-    //     let splunk = Arc::new(splunk);
-    //     let (send_tx, send_rx) = channel::<HecEvent>(1000);
-    //     let (ack_tx, ack_rx) = channel(1000);
-    //     let mut sending_task = SendingTask::new(splunk.clone(), send_rx, ack_tx.clone(), splunk.url.clone());
-    //     let mut ack_task = AckTask::new(splunk, send_tx.clone(), ack_rx);
-    //     sending_task.spawn_task()?;
-    //     ack_task.spawn_task()?;
-    //     let mut test_data = HashMap::new();
-    //     for i in 0..1000 {
-    //         test_data.insert("foo", "bar");
-    //         let test_hec_event = HecEvent::new_with_ssphp_run(&test_data, "test", "test", i)?;
-    //         send_tx.send(test_hec_event).await;
-    //         tokio::time::sleep(tokio::time::Duration::from_millis(20)).await;
-    //     }
+// #[tokio::test]
+// async fn build_sending_task() -> Result<()> {
+//     let splunk = splunk_client().await?;
+//     let splunk = Arc::new(splunk);
+//     let (send_tx, send_rx) = channel::<HecEvent>(1000);
+//     let (ack_tx, ack_rx) = channel(1000);
+//     let mut sending_task = SendingTask::new(splunk.clone(), send_rx, ack_tx.clone(), splunk.url.clone());
+//     let mut ack_task = AckTask::new(splunk, send_tx.clone(), ack_rx);
+//     sending_task.spawn_task()?;
+//     ack_task.spawn_task()?;
+//     let mut test_data = HashMap::new();
+//     for i in 0..1000 {
+//         test_data.insert("foo", "bar");
+//         let test_hec_event = HecEvent::new_with_ssphp_run(&test_data, "test", "test", i)?;
+//         send_tx.send(test_hec_event).await;
+//         tokio::time::sleep(tokio::time::Duration::from_millis(20)).await;
+//     }
 
-    //     //let text = test_hec_event.serialize()?;
+//     //let text = test_hec_event.serialize()?;
 
-    //     tokio::time::sleep(tokio::time::Duration::from_secs(10)).await;
-    //     assert!(false);
-    //     Ok(())
-    // }
-}
+//     tokio::time::sleep(tokio::time::Duration::from_secs(10)).await;
+//     assert!(false);
+//     Ok(())
+// }
+// }

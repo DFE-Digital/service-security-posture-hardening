@@ -35,14 +35,10 @@ impl SplunkTask {
         splunk: Arc<Splunk>,
         mut rx: tokio::sync::mpsc::UnboundedReceiver<HecEvent>,
     ) {
-        const AVG_EVENT_SIZE: usize = 341;
-        const LIMIT_SPLUNK_HEC_BYTES: usize = 1_000_000;
-        const LIMIT_EVENTS: usize = LIMIT_SPLUNK_HEC_BYTES / AVG_EVENT_SIZE;
-
         loop {
-            let event = match rx.recv().await{
+            let event = match rx.recv().await {
                 Some(event) => event,
-                // Is the channel closed?                
+                // Is the channel closed?
                 None => break,
             };
 
