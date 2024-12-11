@@ -1,7 +1,7 @@
 <dashboard version="1.1" theme="dark" script="js/addtags.js, js/table_cell_color.js">
 
 <label>Security Posture Continuous Assurance : DfE Service Dashboard</label>
-<description>{{environment}} v4.1.19</description>
+<description>{{environment}} v4.1.22</description>
   
   <init>
     <set token="form.tkn_fields">C</set>
@@ -52,7 +52,7 @@
           <query>
 | loadjob savedsearch="ssphp_app_account:$tkn_current_app$:ssphp_create_dashboard_dataset_service{{environment}}"
 
-| fields ssphp.service.portfolio, ssphp.service.service_line, ssphp.service.product, ssphp.assessment.source, ssphp.use_case.category, ssphp.use_case.id, ssphp.use_case.title, ssphp.assessment.display_name, ssphp.score.score, ssphp.score.compliance_status, ssphp.score.ciso_priority, ssphp.assessment.description, ssphp.score.color, ssphp.resource.id, ssphp.resource.tenant, ssphp.resource.subscription, ssphp.resource.subscription_name, ssphp.resource.resource_group, SSPHP_UID
+| fields ssphp.service.portfolio, ssphp.service.service_line, ssphp.service.product, ssphp.assessment.source, ssphp.use_case.category, ssphp.use_case.id, ssphp.use_case.title, ssphp.assessment.display_name, ssphp.score.score, ssphp.score.compliance_status, ssphp.score.ciso_priority, ssphp.assessment.description, ssphp.score.color, ssphp.resource.id, ssphp.resource.tenant, ssphp.resource.subscription, ssphp.resource.subscription_name, ssphp.resource.resource_group, ssphp.score.remediation_priority, SSPHP_UID
           </query>
         </search>
         <option name="count">1</option>
@@ -66,7 +66,7 @@
           <query>
 | search ssphp.service.portfolio=$tkn_portfolio|s$ AND ssphp.service.service_line=$tkn_service_line|s$ AND ssphp.service.product=$tkn_product|s$
 
-| fields ssphp.service.portfolio, ssphp.service.service_line, ssphp.service.product, ssphp.assessment.source, ssphp.use_case.category, ssphp.use_case.id, ssphp.use_case.title, ssphp.assessment.display_name, ssphp.score.score, ssphp.score.compliance_status, ssphp.score.ciso_priority, ssphp.assessment.description, ssphp.score.color, ssphp.resource.id, ssphp.resource.tenant, ssphp.resource.subscription, ssphp.resource.subscription_name, ssphp.resource.resource_group, SSPHP_UID
+| fields ssphp.service.portfolio, ssphp.service.service_line, ssphp.service.product, ssphp.assessment.source, ssphp.use_case.category, ssphp.use_case.id, ssphp.use_case.title, ssphp.assessment.display_name, ssphp.score.score, ssphp.score.compliance_status, ssphp.score.ciso_priority, ssphp.assessment.description, ssphp.score.color, ssphp.resource.id, ssphp.resource.tenant, ssphp.resource.subscription, ssphp.resource.subscription_name, ssphp.resource.resource_group, ssphp.score.remediation_priority, SSPHP_UID
           </query>
           <done>
             <set token="tkn_service_name">$result.ssphp.service.name$</set>
@@ -1022,13 +1022,22 @@ $tkn_code_tools$
 $tkn_search_filter$
 
 ``` sort the lines properly ```
-| fillnull value=0 n3
+```| fillnull value=0 n3
 | eval n4=case('ssphp.score.ciso_priority'="DfE Mandated",1,'ssphp.score.ciso_priority'="Recommended",2,'ssphp.score.ciso_priority'="Desirable",3,1==1,4),
         n5=case(match('ssphp.score.compliance_status',"^Non-Compliant.*"),1,match('ssphp.score.compliance_status',"^Compliant.*"),2,1==1,3),
         sort_field='n4'.'n5'
-| sort 0 sort_field, ssphp.use_case.id
+| sort 0 sort_field, ssphp.use_case.id```
 
-| table ssphp.service.portfolio, ssphp.service.service_line, ssphp.service.product, ssphp.use_case.id, ssphp.use_case.title, ssphp.assessment.display_name, ssphp.score.score, ssphp.score.compliance_status, ssphp.score.ciso_priority, ssphp.assessment.description, ssphp.score.color, ssphp.resource.id, SSPHP_UID
+| eval n4=case('ssphp.score.ciso_priority'="DfE Mandated",1,'ssphp.score.ciso_priority'="Recommended",2,'ssphp.score.ciso_priority'="Desirable",3,1==1,4)
+| sort 0 n4, ssphp.score.remediation_priority
+| streamstats count as rank
+| streamstats window=2 range("ssphp.score.remediation_priority") as range
+
+| eval rank=if(rank=1 OR range != 0, rank, null())
+| streamstats sum(eval(if(isnotnull('rank'),1,0))) as rank
+| sort 0 rank
+
+| table ssphp.service.portfolio, ssphp.service.service_line, ssphp.service.product, ssphp.use_case.id, ssphp.use_case.title, ssphp.assessment.display_name, ssphp.score.score, ssphp.score.compliance_status, ssphp.score.ciso_priority, ssphp.assessment.description, ssphp.score.color, ssphp.resource.id, ssphp.score.remediation_priority, rank, SSPHP_UID
 
 
 | eval "DfE Service"='ssphp.service.id'
@@ -1040,7 +1049,8 @@ $tkn_search_filter$
          ssphp.score.compliance_status as "Compliance Status",
          ssphp.score.ciso_priority as "Control Type",
          ssphp.assessment.description as "Description",
-         ssphp.resource.id as "Resource Details"
+         ssphp.resource.id as "Resource Details",
+         rank as "Remediation Priority"
 
 | eventstats count as number_controls_total
 | eval number_controls_total_string=tostring('number_controls_total', "commas")
@@ -1057,7 +1067,7 @@ $tkn_search_filter$
         <option name="totalsRow">false</option>
         <option name="wrap">true</option>
         <option name="drilldown">row</option>
-        <fields>"Use Case","Control Title","Score","Compliance Status","Control Type","Description","Resource Details"</fields>
+        <fields>"Use Case","Control Title","Score","Compliance Status","Control Type","Description","Resource Details","Remediation Priority"</fields>
         <drilldown>
           <link target="_blank">/app/$tkn_current_app$/ssphp_service_detail?tkn__uid=$row.SSPHP_UID$</link>
         </drilldown>
