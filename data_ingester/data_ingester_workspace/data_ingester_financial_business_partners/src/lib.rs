@@ -95,7 +95,7 @@ pub async fn entrypoint(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()
         .collect();
 
     let _ = splunk
-        .send_batch(contact_details_hec.as_slice())
+        .send_batch(contact_details_hec)
         .await
         .context("send to splunk");
 

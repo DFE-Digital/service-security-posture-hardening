@@ -117,7 +117,7 @@ pub async fn threagile(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()>
 
         let splunk_events = (&risks).to_hec_events()?;
 
-        splunk.send_batch(&splunk_events).await?;
+        splunk.send_batch(splunk_events).await?;
     }
 
     Ok(())

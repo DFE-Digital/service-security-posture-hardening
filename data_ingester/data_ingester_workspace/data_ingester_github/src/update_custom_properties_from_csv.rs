@@ -176,13 +176,13 @@ impl GitHubRepoCsv {
     }
 
     fn is_valid(&self, validator: &Validator) -> Result<()> {
-        if self.repos.iter().map(|repo| {
+        if self.repos.iter().all(|repo| {
             let result = validator.validate(Some(&repo.portfolio), Some(&repo.service_line), Some(&repo.product));
             if !result.valid {
                 error!(name=APP_NAME, operation="vaildate CSV against FBP", csv_entry=?repo, validation_errors=?result);
             }
             result.valid
-        }).all(|result| result) {
+        }) {
             Ok(())
         } else {
             anyhow::bail!("CSV validation errors");

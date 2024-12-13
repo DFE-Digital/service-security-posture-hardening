@@ -35,22 +35,15 @@ impl SplunkTask {
         splunk: Arc<Splunk>,
         mut rx: tokio::sync::mpsc::UnboundedReceiver<HecEvent>,
     ) {
-        const AVG_EVENT_SIZE: usize = 341;
-        const LIMIT_SPLUNK_HEC_BYTES: usize = 1_000_000;
-        const LIMIT_EVENTS: usize = LIMIT_SPLUNK_HEC_BYTES / AVG_EVENT_SIZE;
-
-        let mut events = Vec::with_capacity(LIMIT_EVENTS);
         loop {
-            let count = rx.recv_many(&mut events, LIMIT_EVENTS).await;
+            let event = match rx.recv().await {
+                Some(event) => event,
+                // Is the channel closed?
+                None => break,
+            };
 
-            // Is the channel closed?
-            if count == 0 {
-                break;
-            }
-
-            match splunk.send_batch(&events).await {
+            match splunk.send_batch([event]).await {
                 Ok(_) => {
-                    events.clear();
                     continue;
                 }
                 Err(err) => error!("Failed to send event to Splunk: {}", err),

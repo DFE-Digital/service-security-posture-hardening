@@ -1406,8 +1406,7 @@ impl AwsClient {
         zones: crate::aws_route53::HostedZones,
     ) -> Result<RecordSets> {
         // Build resolver
-        let resolver =
-            TokioResolver::tokio(ResolverConfig::default(), ResolverOpts::default());
+        let resolver = TokioResolver::tokio(ResolverConfig::default(), ResolverOpts::default());
 
         let mut sets = vec![];
 

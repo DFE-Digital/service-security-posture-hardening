@@ -147,7 +147,7 @@ async fn github_collect_installation_org(
         .context("Creating HEC events for calculated team members")?;
 
     splunk
-        .send_batch(&team_member_events)
+        .send_batch(team_member_events)
         .await
         .context("Sending Calculated teams and members to Splunk")?;
 
@@ -427,7 +427,9 @@ mod live_tests {
 
     use anyhow::{Context, Result};
     use data_ingester_financial_business_partners::ContactDetails;
+    use data_ingester_splunk::splunk::HecEvent;
     use data_ingester_splunk::splunk::Splunk;
+    use data_ingester_splunk::splunk::ToHecEvents;
     use data_ingester_supporting::keyvault::get_keyvault_secrets;
 
     use crate::entrypoint::github_octocrab_entrypoint;
@@ -468,9 +470,13 @@ mod live_tests {
             secrets.splunk_token.as_ref().context("No value")?,
         )?;
 
-        let contact_details = ContactDetails::generate_contact_details(10);
+        let contact_details: Vec<HecEvent> = ContactDetails::generate_contact_details(10)
+            .into_iter()
+            .flat_map(|contact_details| (&contact_details).to_hec_events().ok())
+            .flatten()
+            .collect();
 
-        splunk.send_into_hec_batch(&contact_details).await?;
+        splunk.send_batch(contact_details).await?;
 
         github_set_custom_properties_entrypoint(Arc::new(secrets), Arc::new(splunk))
             .await

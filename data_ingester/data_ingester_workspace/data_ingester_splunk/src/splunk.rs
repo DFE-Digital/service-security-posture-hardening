@@ -1,24 +1,23 @@
-use anyhow::Context;
+use anyhow::{anyhow, Context, Result};
 use itertools::Itertools;
-use reqwest::header::HeaderMap;
-use reqwest::header::HeaderValue;
-use reqwest::Client;
+use reqwest::{
+    header::{HeaderMap, HeaderValue},
+    Client, ClientBuilder,
+};
 use serde::{Deserialize, Serialize};
-// #[cfg(test)]
-use std::borrow::Borrow;
-use std::collections::HashMap;
-use std::sync::LazyLock;
-use tracing::debug;
-use tracing::error;
-use tracing::info;
-use tracing::warn;
-// #[cfg(test)]
-use anyhow::{anyhow, Result};
-use std::fmt::Debug;
-use std::future::Future;
-use std::sync::RwLock;
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::{
+    collections::HashMap,
+    fmt::Debug,
+    future::Future,
+    sync::{LazyLock, RwLock},
+    time::{SystemTime, UNIX_EPOCH},
+};
+use tokio::sync::mpsc::{channel, Sender};
+use tracing::{error, info, warn};
 use uuid::Uuid;
+
+use crate::tasks::AckTask;
+use crate::tasks::SendingTask;
 
 // Legacy, just used for tests and logs
 static SSPHP_RUN: RwLock<u64> = RwLock::new(0_u64);
@@ -29,12 +28,19 @@ pub(crate) static SSPHP_RUN_NEW: LazyLock<RwLock<HashMap<String, u64>>> = LazyLo
     RwLock::new(hm)
 });
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct HecEvent {
     pub source: String,
     pub sourcetype: String,
     pub host: String,
     pub event: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub fields: Option<HecFields>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct HecFields {
+    pub resend_count: i32,
 }
 
 impl HecEvent {
@@ -51,6 +57,7 @@ impl HecEvent {
             sourcetype: sourcetype.to_string(),
             host: hostname,
             event: serde_json::to_string(&ssphp_event)?,
+            fields: None,
         })
     }
 
@@ -69,12 +76,54 @@ impl HecEvent {
             sourcetype: sourcetype.to_string(),
             host: hostname,
             event: serde_json::to_string(&ssphp_event)?,
+            fields: None,
         })
+    }
+
+    pub fn increase_resend_count(&mut self) {
+        if let Some(ref mut fields) = self.fields {
+            fields.resend_count += 1;
+        } else {
+            self.fields = Some(HecFields { resend_count: 1 })
+        };
     }
 }
 
+#[cfg(test)]
+mod test_hec_event {
+    use std::collections::HashMap;
+
+    use super::HecEvent;
+
+    #[test]
+    fn increase_resend_count() {
+        let mut event =
+            HecEvent::new::<HashMap<String, String>>(&HashMap::new(), "source", "sourcetype")
+                .expect("To be able to build HecEvent");
+        assert!(event.fields.is_none());
+        event.increase_resend_count();
+        assert!(event.fields.is_some());
+        assert_eq!(
+            event
+                .fields
+                .as_ref()
+                .map(|fields| fields.resend_count)
+                .unwrap(),
+            1
+        );
+        event.increase_resend_count();
+        assert_eq!(
+            event
+                .fields
+                .as_ref()
+                .map(|fields| fields.resend_count)
+                .unwrap(),
+            2
+        );
+    }
+}
 #[derive(Serialize, Deserialize)]
-struct SsphpEvent<T> {
+struct SsphpEvent<T: Serialize> {
     #[serde(rename = "SSPHP_RUN")]
     ssphp_run: u64,
     #[serde(flatten)]
@@ -171,31 +220,51 @@ pub trait ToHecEvents {
     fn ssphp_run_key(&self) -> &str;
 }
 
-#[derive(Debug, Clone)]
 pub struct Splunk {
-    client: Client,
-    url: String,
-    //    client_creation_time: u64,
+    #[allow(unused)]
+    pub(crate) sending_task: SendingTask,
+    #[allow(unused)]
+    pub(crate) ack_task: AckTask,
+    pub(crate) send_tx: Sender<HecEvent>,
 }
 
 unsafe impl Send for Splunk {}
 unsafe impl Sync for Splunk {}
 
 #[derive(Debug, Serialize, Deserialize, Default)]
-pub struct Message {
+pub(crate) struct Message {
     pub event: String,
 }
 
 impl Splunk {
     pub fn new(host: &str, token: &str) -> Result<Self> {
-        let url = format!("https://{}/services/collector", host);
-        let client = reqwest::ClientBuilder::new()
-            .danger_accept_invalid_certs(true)
+        let url = format!("https://{}", host);
+
+        let client = Self::new_request_client(token).context("Building Reqwest Client")?;
+
+        let (send_tx, send_rx) = channel::<HecEvent>(1000);
+        let (ack_tx, ack_rx) = channel(1000);
+
+        let sending_task = SendingTask::new(client.clone(), send_rx, ack_tx.clone(), url.clone())
+            .context("Building Splunk Sending Task")?;
+        let ack_task = AckTask::new(client.clone(), send_tx.clone(), ack_rx, url.clone(), None)
+            .context("Building Splunk Ack Task")?;
+
+        Ok(Self {
+            sending_task,
+            ack_task,
+            send_tx,
+        })
+    }
+
+    /// Create a Request Client for Splunk
+    pub(crate) fn new_request_client(token: &str) -> Result<Client> {
+        let client = ClientBuilder::new()
+            .danger_accept_invalid_certs(false)
             .default_headers(Splunk::headers(token)?)
+            .connection_verbose(false)
             .build()?;
-        // let start = SystemTime::now();
-        // let client_creation_time = start.duration_since(UNIX_EPOCH)?;
-        Ok(Self { client, url })
+        Ok(client)
     }
 
     fn headers(token: &str) -> Result<HeaderMap> {
@@ -205,111 +274,15 @@ impl Splunk {
         _ = headers.insert("Authorization", auth);
         let channel = Uuid::new_v4().to_string();
         _ = headers.insert("X-Splunk-Request-Channel", channel.parse()?);
+
         Ok(headers)
     }
 
-    #[cfg(test)]
-    pub async fn send(&self, event: &HecEvent) {
-        let request = self.client.post(&self.url).json(event).build().unwrap();
-        let _response = self.client.execute(request).await.unwrap();
-    }
-
-    // TODO enable token acknowledgement
-    pub async fn send_batch(
-        &self,
-        events: impl IntoIterator<Item = impl Borrow<HecEvent> + Serialize>,
-    ) -> Result<()> {
-        for batch in events.into_iter().batching(batch_lines) {
-            let request = self
-                .client
-                .post(&self.url)
-                .body(batch)
-                .build()
-                .context("building request")?;
-            let _response = self
-                .client
-                .execute(request)
-                .await
-                .context("sending to splunk")?;
+    pub async fn send_batch(&self, events: impl IntoIterator<Item = HecEvent>) -> Result<()> {
+        for event in events {
+            self.send_tx.send(event).await?;
         }
         Ok(())
-    }
-
-    pub async fn send_into_hec_batch<H: ToHecEvents>(
-        &self,
-        events: impl IntoIterator<Item = H>,
-    ) -> Result<()> {
-        for batch in events
-            .into_iter()
-            .flat_map(|e| e.to_hec_events())
-            .batching(batch_lines)
-        {
-            let request = self
-                .client
-                .post(&self.url)
-                .body(batch)
-                .build()
-                .context("building request")?;
-
-            let _response = self
-                .client
-                .execute(request)
-                .await
-                .context("sending to splunk")?;
-        }
-        Ok(())
-    }
-
-    #[deprecated(note = "Use `tracing` instead.")]
-    pub async fn log(&self, message: &str) -> Result<()> {
-        debug!("{}", &message);
-        self.send_batch(&[HecEvent::new(
-            &Message {
-                event: message.to_owned(),
-            },
-            "data_ingester_rust",
-            "data_ingester_rust_logs",
-        )?])
-        .await?;
-        Ok(())
-    }
-}
-
-// Needs Splunk Creds
-
-fn batch_lines<I, T: Serialize>(it: &mut I) -> Option<String>
-where
-    I: Iterator<Item = T>,
-    //    I: std::fmt::Debug,
-{
-    let max = 1024 * 950;
-    let mut lines = String::with_capacity(max);
-
-    let mut size = 0;
-    while size < max {
-        match it.next() {
-            None => {
-                break;
-            }
-            Some(x) => {
-                let json = match serde_json::to_string(&x) {
-                    Ok(json) => json,
-                    Err(err) => {
-                        error!("Failed to serialize Item for Splunk:  {err}");
-                        continue;
-                    }
-                };
-                size += json.len();
-                lines.push_str(json.as_str());
-                lines.push('\n');
-            }
-        }
-    }
-
-    if lines.is_empty() {
-        None
-    } else {
-        Some(lines)
     }
 }
 
@@ -343,7 +316,7 @@ where
                 }
             };
 
-            match splunk.send_batch(&hec_events).await {
+            match splunk.send_batch(hec_events).await {
                 Ok(()) => {
                     info!("Sent {}", &name);
                 }
@@ -367,26 +340,29 @@ pub(crate) mod live_tests {
     use data_ingester_supporting::keyvault::get_keyvault_secrets;
     use std::{collections::HashMap, env};
 
-    #[tokio::test]
-    async fn send_to_splunk() -> Result<()> {
+    pub(crate) async fn splunk_client() -> Result<Splunk> {
         let secrets = get_keyvault_secrets(&env::var("KEY_VAULT_NAME")?).await?;
         let splunk = Splunk::new(
             secrets.splunk_host.as_ref().context("No value")?,
             secrets.splunk_token.as_ref().context("No value")?,
         )?;
+        Ok(splunk)
+    }
+
+    #[tokio::test]
+    async fn send_to_splunk() -> Result<()> {
+        let splunk = splunk_client().await?;
+
         let data = std::collections::HashMap::from([("aktest", "fromrust")]);
         let he = HecEvent::new(&data, "msgraph_rust", "test_event").unwrap();
-        splunk.send(&he).await;
+        splunk.send_batch([he]).await?;
         Ok(())
     }
 
     #[tokio::test]
     async fn send_batch_to_splunk() -> Result<()> {
-        let secrets = get_keyvault_secrets(&env::var("KEY_VAULT_NAME")?).await?;
-        let splunk = Splunk::new(
-            secrets.splunk_host.as_ref().context("No value")?,
-            secrets.splunk_token.as_ref().context("No value")?,
-        )?;
+        let splunk = splunk_client().await?;
+
         let mut events = Vec::new();
         let data = HashMap::from([("aktest0", "fromrust")]);
         let he = HecEvent::new(&data, "msgraph_rust", "test_event").unwrap();
@@ -395,7 +371,7 @@ pub(crate) mod live_tests {
         let data1 = HashMap::from([("aktest1", "fromrust")]);
         let he1 = HecEvent::new(&data1, "msgraph_rust", "test_event").unwrap();
         events.push(he1);
-        splunk.send_batch(&events[..]).await.unwrap();
+        splunk.send_batch(events).await.unwrap();
         Ok(())
     }
 }

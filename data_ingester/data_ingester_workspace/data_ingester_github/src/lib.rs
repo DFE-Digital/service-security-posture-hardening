@@ -833,7 +833,6 @@ mod test {
 
     use tokio::sync::OnceCell;
 
-    #[derive(Clone)]
     struct TestClient {
         client: OctocrabGit,
         org_name: String,
@@ -1055,7 +1054,7 @@ mod test {
     #[tokio::test]
     async fn test_github_download_artifact() -> Result<()> {
         let client = TestClient::new().await;
-        let mut total_hec_events = vec![];
+        let mut total_hec_events = 0;
         for repo in client.repos().iter() {
             let repo_name = client.repo_name(&repo.name);
             let sarif_hecs = client
@@ -1066,11 +1065,10 @@ mod test {
             let hec_events = (&sarif_hecs)
                 .to_hec_events()
                 .context("Convert SarifHec to HecEvents")?;
-
-            client.splunk.send_batch(&hec_events).await?;
-            total_hec_events.extend(hec_events);
+            total_hec_events += hec_events.len();
+            client.splunk.send_batch(hec_events).await?;
         }
-        assert!(!total_hec_events.is_empty());
+        assert!(total_hec_events > 0);
         Ok(())
     }
 
@@ -1102,7 +1100,7 @@ mod test {
                 .to_hec_events()
                 .context("Convert SarifHec to HecEvents")?;
 
-            client.splunk.send_batch(&hec_events).await?;
+            client.splunk.send_batch(hec_events).await?;
         }
         Ok(())
     }
@@ -1120,7 +1118,7 @@ mod test {
                 .to_hec_events()
                 .context("Convert workflow_runs to HecEvents")?;
 
-            client.splunk.send_batch(&hec_events).await?;
+            client.splunk.send_batch(hec_events).await?;
         }
         Ok(())
     }
@@ -1145,7 +1143,7 @@ mod test {
                 .to_hec_events()
                 .context("Convert SarifHec to HecEvents")?;
 
-            client.splunk.send_batch(&hec_events).await?;
+            client.splunk.send_batch(hec_events).await?;
         }
         Ok(())
     }
