@@ -91,7 +91,12 @@ impl SendingTask {
                     // Log error and resend batch if this fails.
                     error!(name="SplunkHec", operation="Send Hec payload", error=?err);
                     sleep(Duration::from_millis(200)).await;
-                    continue;
+                    if retry_count > 5 {
+                        anyhow::bail!("Failed connecting to Splunk HEC");
+                    } else {
+                        retry_count += 1;
+                        continue;
+                    }
                 }
             };
 
@@ -743,7 +748,6 @@ mod test {
         // Wait for AckTask to make a HTTP request to Mockito
         sleep(Duration::from_millis(200)).await;
 
-        // Check we've haven't recieved a requset to retransmit
         let resend_event = send_rx.try_recv();
         assert!(resend_event.is_ok());
     }
