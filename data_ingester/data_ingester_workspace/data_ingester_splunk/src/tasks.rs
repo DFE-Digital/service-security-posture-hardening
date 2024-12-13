@@ -766,7 +766,7 @@ mod test {
         send_hec_batch(ack_tx).await;
 
         // Wait for AckTask to make a HTTP request to Mockito
-        sleep(Duration::from_millis(200)).await;
+        sleep(Duration::from_millis(400)).await;
 
         let resend_event = send_rx.try_recv().expect("Resend message should exist");
 
