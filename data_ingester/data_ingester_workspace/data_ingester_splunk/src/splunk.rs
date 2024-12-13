@@ -1,22 +1,19 @@
-use anyhow::Context;
+use anyhow::{anyhow, Context, Result};
 use itertools::Itertools;
-use reqwest::header::HeaderMap;
-use reqwest::header::HeaderValue;
+use reqwest::{
+    header::{HeaderMap, HeaderValue},
+    Client, ClientBuilder,
+};
 use serde::{Deserialize, Serialize};
-use tokio::sync::mpsc::Sender;
-// #[cfg(test)]
-use std::collections::HashMap;
-use std::sync::LazyLock;
-use tracing::error;
-use tracing::info;
-use tracing::warn;
-// #[cfg(test)]
-use anyhow::{anyhow, Result};
-use std::fmt::Debug;
-use std::future::Future;
-use std::sync::RwLock;
-use std::time::{SystemTime, UNIX_EPOCH};
-use tokio::sync::mpsc::channel;
+use std::{
+    collections::HashMap,
+    fmt::Debug,
+    future::Future,
+    sync::{LazyLock, RwLock},
+    time::{SystemTime, UNIX_EPOCH},
+};
+use tokio::sync::mpsc::{channel, Sender};
+use tracing::{error, info, warn};
 use uuid::Uuid;
 
 use crate::tasks::AckTask;
@@ -51,11 +48,7 @@ impl HecEvent {
         let ssphp_run = *SSPHP_RUN
             .read()
             .expect("Should always be able to read SSPHP_RUN");
-        let ssphp_event = SsphpEvent {
-            ssphp_run,
-            event,
-            resend_count: None,
-        };
+        let ssphp_event = SsphpEvent { ssphp_run, event };
         let hostname = hostname::get()?
             .into_string()
             .unwrap_or("NO HOSTNAME".to_owned());
@@ -74,11 +67,7 @@ impl HecEvent {
         sourcetype: &str,
         ssphp_run: u64,
     ) -> Result<HecEvent> {
-        let ssphp_event = SsphpEvent {
-            ssphp_run,
-            event,
-            resend_count: None,
-        };
+        let ssphp_event = SsphpEvent { ssphp_run, event };
         let hostname = hostname::get()?
             .into_string()
             .unwrap_or("NO HOSTNAME".to_owned());
@@ -91,19 +80,54 @@ impl HecEvent {
         })
     }
 
-    // pub(crate) fn serialize(&self) -> Result<String> {
-    //     Ok(serde_json::to_string(self)?)
-    // }
+    pub fn increase_resend_count(&mut self) {
+        if let Some(ref mut fields) = self.fields {
+            fields.resend_count += 1;
+        } else {
+            self.fields = Some(HecFields { resend_count: 1 })
+        };
+    }
+}
+
+#[cfg(test)]
+mod test_hec_event {
+    use std::collections::HashMap;
+
+    use super::HecEvent;
+
+    #[test]
+    fn increase_resend_count() {
+        let mut event =
+            HecEvent::new::<HashMap<String, String>>(&HashMap::new(), "source", "sourcetype")
+                .expect("To be able to build HecEvent");
+        assert!(event.fields.is_none());
+        event.increase_resend_count();
+        assert!(event.fields.is_some());
+        assert_eq!(
+            event
+                .fields
+                .as_ref()
+                .map(|fields| fields.resend_count)
+                .unwrap(),
+            1
+        );
+        event.increase_resend_count();
+        assert_eq!(
+            event
+                .fields
+                .as_ref()
+                .map(|fields| fields.resend_count)
+                .unwrap(),
+            2
+        );
+    }
 }
 #[derive(Serialize, Deserialize)]
-struct SsphpEvent<T> {
+struct SsphpEvent<T: Serialize> {
     #[serde(rename = "SSPHP_RUN")]
     ssphp_run: u64,
     #[serde(flatten)]
     event: T,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    #[serde(rename = "SSPHP_RESEND_COUNT")]
-    resend_count: Option<i32>,
 }
 
 pub fn set_ssphp_run(ssphp_run_key: &str) -> Result<()> {
@@ -196,7 +220,6 @@ pub trait ToHecEvents {
     fn ssphp_run_key(&self) -> &str;
 }
 
-//#[derive(Debug, Clone)]
 pub struct Splunk {
     #[allow(unused)]
     pub(crate) sending_task: SendingTask,
@@ -215,19 +238,16 @@ pub(crate) struct Message {
 
 impl Splunk {
     pub fn new(host: &str, token: &str) -> Result<Self> {
-        let url = format!("https://{}/services/collector", host);
-        let client = reqwest::ClientBuilder::new()
-            .danger_accept_invalid_certs(true)
-            .default_headers(Splunk::headers(token)?)
-            .connection_verbose(false)
-            .build()?;
+        let url = format!("https://{}", host);
+
+        let client = Self::new_request_client(token).context("Building Reqwest Client")?;
 
         let (send_tx, send_rx) = channel::<HecEvent>(1000);
         let (ack_tx, ack_rx) = channel(1000);
 
         let sending_task = SendingTask::new(client.clone(), send_rx, ack_tx.clone(), url.clone())
             .context("Building Splunk Sending Task")?;
-        let ack_task = AckTask::new(client.clone(), send_tx.clone(), ack_rx, url.clone())
+        let ack_task = AckTask::new(client.clone(), send_tx.clone(), ack_rx, url.clone(), None)
             .context("Building Splunk Ack Task")?;
 
         Ok(Self {
@@ -235,6 +255,16 @@ impl Splunk {
             ack_task,
             send_tx,
         })
+    }
+
+    /// Create a Request Client for Splunk
+    pub(crate) fn new_request_client(token: &str) -> Result<Client> {
+        let client = ClientBuilder::new()
+            .danger_accept_invalid_certs(false)
+            .default_headers(Splunk::headers(token)?)
+            .connection_verbose(false)
+            .build()?;
+        Ok(client)
     }
 
     fn headers(token: &str) -> Result<HeaderMap> {
@@ -248,196 +278,11 @@ impl Splunk {
         Ok(headers)
     }
 
-    // #[cfg(test)]
-    // pub async fn send(&self, event: &HecEvent) {
-    //     let request = self.client.post(&self.url).json(event).build().unwrap();
-    //     let _response = self.client.execute(request).await.unwrap();
-    // }
-
     pub async fn send_batch(&self, events: impl IntoIterator<Item = HecEvent>) -> Result<()> {
         for event in events {
             self.send_tx.send(event).await?;
         }
         Ok(())
-    }
-
-    // /// Send a batch with indexer acknowledgement
-    // pub async fn send_batch(
-    //     &self,
-    //     events: impl IntoIterator<Item = impl Borrow<HecEvent> + Serialize>,
-    // ) -> Result<()> {
-    //     let mut batches: Vec<String> = events.into_iter().batching(batch_lines).collect();
-
-    //     let mut acks: HashMap<i32, usize> = HashMap::with_capacity(batches.len());
-
-    //     let initial_batch_size = batches.len();
-
-    //     let start_instant = Instant::now();
-    //     let max_delay = Duration::from_secs(60);
-    //     let mut resends = 0;
-
-    //     let ack_url = format!("{}/ack", &self.url);
-
-    //     #[allow(clippy::never_loop)]
-    //     loop {
-    //         // Send all batches
-    //         for (index, batch) in batches.iter().enumerate() {
-    //             let response_ack = self
-    //                 .client
-    //                 .post(&self.url)
-    //                 .body(batch.clone())
-    //                 .send()
-    //                 .await
-    //                 .context("sending to splunk")?
-    //                 .json::<HecAckResponse>()
-    //                 .await
-    //                 .context("Convert Splunk HEC response to HecAckResponse")?;
-
-    //             let _ = acks.insert(response_ack.ack_id, index);
-    //         }
-
-    //         //tokio::time::sleep(Duration::from_millis(0)).await;
-    //         let mut delay_between_polls = Duration::from_millis(1);
-
-    //         // Poll for acks util all complete/true or timeout is reached
-    //         loop {
-    //             // Check for Ack status
-    //             let acks_for_query = acks.keys().copied().collect();
-    //             let ack_query = HecAckQuery {
-    //                 acks: acks_for_query,
-    //             };
-
-    //             let response = self
-    //                 .client
-    //                 .post(&ack_url)
-    //                 .json(&ack_query)
-    //                 .send()
-    //                 .await
-    //                 .context("Sending HecAckQuery to Splunk")?;
-
-    //             let body = response.text().await.context("Getting ack query body")?;
-    //             let ack_response = match serde_json::from_str::<HecAckQueryResponse>(&body) {
-    //                 Ok(hec_ack_query_response) => hec_ack_query_response,
-    //                 Err(err) => {
-    //                     error!(name="SplunkHec", operation="HecAck", error=?err, ack_query=?ack_query, body=?body, "failed to build HecAckQueryResponse");
-    //                     anyhow::bail!("failed to build HecAckQueryResponse");
-    //                 }
-    //             };
-
-    //             // If the ack state is true, parse an int from the
-    //             // returned string and remove it from future acks
-    //             // and future batches.
-    //             ack_response
-    //                 .acks
-    //                 .iter()
-    //                 .filter_map(|(_ack_id, state)| {
-    //                     if *state {
-    //                         match _ack_id.parse::<i32>() {
-    //                             Ok(ack_id) => Some(ack_id),
-    //                             Err(err) => {
-    //                                 error!(name="SplunkHec", operation="HecAck", error=?err, "Unable to parse i32 from Splunk HecAckID");
-    //                                 None
-    //                             },
-    //                         }
-    //                     } else {
-    //                         None
-    //                     }
-    //                 })
-    //                 .for_each(|ack_id| {
-    //                     if let Some(batch_index) = acks.remove(&ack_id) {
-    //                         let _ = batches.remove(batch_index);
-    //                     } else {
-    //                         error!(name="Splunk", operation="HecAck", "ack_id not found in known acks");
-    //                     }
-    //                 });
-
-    //             // Break if we have successfully indexed all data
-    //             if acks.is_empty() || batches.is_empty() {
-    //                 break;
-    //             }
-
-    //             // Give up if we've waited too long
-    //             if delay_between_polls > max_delay {
-    //                 error!(
-    //                     name = "SplunkHec",
-    //                     operation = "HecAck",
-    //                     unindexed_event_count = acks.len()
-    //                 );
-    //                 break;
-    //             }
-
-    //             // Wait between polls
-    //             tokio::time::sleep(delay_between_polls).await;
-    //             delay_between_polls *= 2;
-    //         }
-
-    //         // break if we've successfully indexed all data
-    //         if acks.is_empty() || batches.is_empty() {
-    //             break;
-    //         } else {
-    //             resends += 1;
-    //         }
-
-    //         // Do not resend events.
-    //         // Remove this to enable retransmission of failed acks.
-    //         break;
-    //     }
-
-    //     // Log events where we would have resent data
-    //     if resends > 0 {
-    //         let end_instant = Instant::now();
-    //         let elapsed_time = (end_instant - start_instant).as_millis();
-    //         info!(
-    //             name = "SplunkHec",
-    //             operation = "HecResend",
-    //             elapsed_time = elapsed_time,
-    //             initial_batch_size = initial_batch_size,
-    //             resends = resends
-    //         );
-    //     }
-
-    //     Ok(())
-    // }
-}
-
-pub(crate) fn batch_lines_events<'a, I>(it: &mut I) -> Option<(String, Vec<HecEvent>)>
-where
-    I: Iterator<Item = &'a HecEvent>,
-    //    T: Serialize,
-    //    I: std::fmt::Debug,
-{
-    const MAX: usize = 1024 * 950;
-    // TODO CHANGE THIS TO ACTUAL VALUE
-    const RESEND_SIZE_INCREASE: usize = ",\"SSPHP_RESEND_COUNT\":1".len();
-
-    let mut lines = String::with_capacity(MAX);
-    let mut events = Vec::new();
-    let mut size: usize = 0;
-    while size < MAX {
-        match it.next() {
-            None => {
-                break;
-            }
-            Some(x) => {
-                let json = match serde_json::to_string(&x) {
-                    Ok(json) => json,
-                    Err(err) => {
-                        error!("Failed to serialize Item for Splunk:  {err}");
-                        continue;
-                    }
-                };
-                size += json.len() + RESEND_SIZE_INCREASE;
-                lines.push_str(json.as_str());
-                lines.push('\n');
-                events.push(x.clone());
-            }
-        }
-    }
-
-    if lines.is_empty() {
-        None
-    } else {
-        Some((lines, events))
     }
 }
 
