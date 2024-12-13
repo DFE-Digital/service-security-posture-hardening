@@ -755,7 +755,7 @@ mod test {
     #[tokio::test]
     async fn test_ack_task_retransmit_increments_resend_count() {
         let (_ack_task, ack_tx, mut send_rx, mut mock_server, _tracing_guard) =
-            setup_ack_task(Some(Duration::from_millis(1))).await;
+            setup_ack_task(Some(Duration::from_nanos(1))).await;
 
         let _mock = mock_server
             .mock("POST", "/services/collector/ack")
@@ -765,8 +765,7 @@ mod test {
 
         send_hec_batch(ack_tx).await;
 
-        // Wait for AckTask to make a HTTP request to Mockito
-        sleep(Duration::from_millis(400)).await;
+        sleep(Duration::from_millis(200)).await;
 
         let resend_event = send_rx.try_recv().expect("Resend message should exist");
 
