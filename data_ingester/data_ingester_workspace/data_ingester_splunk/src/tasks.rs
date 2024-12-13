@@ -122,9 +122,9 @@ impl SendingTask {
             } else if status.is_server_error() {
                 log_failed(status);
                 if retry_count > 5 {
-                    retry_count += 1;
                     anyhow::bail!("Server Error when sending HEC to Splunk");
                 } else {
+                    retry_count += 1;
                     continue;
                 };
             }
