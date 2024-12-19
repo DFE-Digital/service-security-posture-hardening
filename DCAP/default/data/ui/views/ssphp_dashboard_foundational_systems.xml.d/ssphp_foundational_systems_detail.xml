@@ -401,7 +401,7 @@
             width:25% !important;
           }
         </style>
-        <div><span><a href="ssphp_foundational_systems_dashboard_help?tkn_detail=true" class="btn btn-primary" style="color:black;background-color:grey;text-align:center;display:block;float:right;width:30%;" target="_blank">Dashboard Help</a></span></div> 
+        <div><span><a href="ssphp_foundational_systems_dashboard_help?tkn_detail=true" class="btn btn-primary" style="color:black;background-color:grey;text-align:center;display:block;float:right;width:30%;" target="_blank">Dashboard Information</a></span></div> 
       </html>
     </panel>
   </row>
