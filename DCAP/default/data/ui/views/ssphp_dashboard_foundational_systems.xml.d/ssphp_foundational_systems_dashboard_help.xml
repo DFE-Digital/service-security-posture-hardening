@@ -4,7 +4,7 @@
   <dashboard theme="dark" version="1.1" hideFilters="true"> 
 {% endif %}  
 
-    <label>Security Posture Continuous Assurance : Foundational Systems Dashboard Help</label>
+    <label>Security Posture Continuous Assurance : Foundational Systems Dashboard Information</label>
     <description>{{environment}} v1.0.2</description>
 
   <fieldset submitButton="false">
