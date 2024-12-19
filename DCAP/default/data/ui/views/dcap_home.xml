@@ -22,9 +22,9 @@
                                     dfe_ssphp_service_user_azure, azure, 04"]
 | eval service=coalesce('service',"-"),
        priority=if('service'="-",99,'priority'),
-       link_target=if('service'="-",
-                      "/en-GB/app/{{app}}{{environment}}/ssphp_foundational_systems_posture",
-                      "/en-GB/app/{{app}}{{environment}}/ssphp_foundational_systems_service?form.tkn__service=".'service')
+       link_target=case('user_roles'="dfe_ssphp_service_power","/en-GB/app/{{app}}{{environment}}/ssphp_dfe_service",
+                        'service'="-","/en-GB/app/{{app}}{{environment}}/ssphp_foundational_systems_posture",
+                        1==1,"/en-GB/app/{{app}}{{environment}}/ssphp_foundational_systems_service?form.tkn__service=".'service')
 
 | sort 1 priority
 
