@@ -5,7 +5,7 @@
 {% endif %}  
 
   <label>Security Posture Continuous Assurance : Service Dashboard</label>
-  <description>{{environment}} v2.1.10</description>
+  <description>{{environment}} v2.1.13</description>
 
   
   <init>
@@ -190,8 +190,7 @@
   <row>
     <panel>
       <html>
-        <div id="div_header" style="font-size:175%;color:yellow;">$tkn_current_service$</div> 
-        <div id="div_header" style="font-size:120%">Control Details &amp; Scores [$tkn_controls_total$]</div> 
+        <div id="div_header" style="font-size:175%; color:yellow;">$tkn_current_service$</div>
       </html>
     </panel>
 
@@ -309,6 +308,7 @@
 
   <row depends="$tkn_ready$">
     <panel>
+      <title>Control Details &amp; Scores [$tkn_controls_total$]</title>
       <table id="table1">
         <search>
           <query>
