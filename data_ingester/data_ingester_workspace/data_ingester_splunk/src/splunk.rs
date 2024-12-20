@@ -242,8 +242,8 @@ impl Splunk {
 
         let client = Self::new_request_client(token).context("Building Reqwest Client")?;
 
-        let (send_tx, send_rx) = channel::<HecEvent>(1000);
-        let (ack_tx, ack_rx) = channel(1000);
+        let (send_tx, send_rx) = channel::<HecEvent>(5000);
+        let (ack_tx, ack_rx) = channel(5000);
 
         let sending_task = SendingTask::new(client.clone(), send_rx, ack_tx.clone(), url.clone())
             .context("Building Splunk Sending Task")?;

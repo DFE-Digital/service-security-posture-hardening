@@ -303,7 +303,7 @@ impl AckTask {
 
             // If there is nothing to ACK, sleep and poll channel again
             if to_be_acked.is_empty() {
-                sleep(Duration::from_secs(1)).await;
+                sleep(Duration::from_millis(20)).await;
                 continue;
             }
 
