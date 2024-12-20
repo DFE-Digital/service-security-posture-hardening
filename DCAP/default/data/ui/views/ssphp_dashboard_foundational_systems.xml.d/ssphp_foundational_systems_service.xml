@@ -5,7 +5,7 @@
 {% endif %}  
 
   <label>Security Posture Continuous Assurance : Service Dashboard</label>
-  <description>{{environment}} v2.1.20</description>
+  <description>{{environment}} v2.1.22</description>
 
 <!-- ## -->   
   <init>
@@ -15,7 +15,7 @@
     <unset token="tkn_ready"></unset>
 
     <set token="tkn_colour_tile">pebble</set>
-    <set token="tkn_colour_null_line">green</set>
+    <set token="tkn_colour_null_line">#85F415</set>
     <set token="tkn_colour_text">#bebebe</set>
     <set token="tkn_margin">25</set>
   </init>

@@ -5,7 +5,7 @@
 {% endif %}  
 
     <label>Security Posture Continuous Assurance : Foundational Systems Dashboard Information</label>
-    <description>{{environment}} v1.0.2</description>
+    <description>{{environment}} v1.0.3</description>
 
   <fieldset submitButton="false">
     {% include 'default/data/ui/views/ssphp_dashboard_templates.d/ssphp_footer_menu_template.xml' %}
