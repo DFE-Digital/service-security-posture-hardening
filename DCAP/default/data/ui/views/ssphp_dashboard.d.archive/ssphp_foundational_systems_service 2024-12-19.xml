@@ -1,23 +1,18 @@
 {% if environment=="_DEV" %}
-  <dashboard version="1.1" theme="dark" hideFilters="true" script="js/table_cell_color.js">
+  <dashboard version="1.1" theme="light" hideFilters="true" script="js/table_cell_color.js">
 {% else %}
   <dashboard version="1.1" theme="dark" hideFilters="true" script="js/table_cell_color.js">
 {% endif %}  
 
   <label>Security Posture Continuous Assurance : Service Dashboard</label>
-  <description>{{environment}} v2.1.20</description>
+  <description>{{environment}} v2.0.28</description>
 
-<!-- ## -->   
+  
   <init>
-<!-- #    <set token="form.tkn_fields">N,C</set># --> 
-    <set token="tkn_fields">N,C</set>
-    <set token="tkn_controls_compliant_abs"></set>
+    <set token="form.tkn_fields">C</set>
+    <set token="tkn_fields">C</set>
+    <set token="tkn_controls_compliant_text"></set>
     <unset token="tkn_ready"></unset>
-
-    <set token="tkn_colour_tile">pebble</set>
-    <set token="tkn_colour_null_line">green</set>
-    <set token="tkn_colour_text">#bebebe</set>
-    <set token="tkn_margin">25</set>
   </init>
 
   <fieldset submitButton="false">
@@ -123,139 +118,73 @@
         <search>
           <query>
 | loadjob savedsearch="{{splunk_user}}:$tkn_current_app$:ssphp_create_dashboard_dataset_posture{{environment}}"
-| where 'line_type'="summary"
+| where 'line_type'="summary" AND match(lower('ssphp.source.foundational_system'),$tkn__service|s$)
 
-| eval compliant_abs_c=mvindex(split('compliant_abs'," of "),0),
-       compliant_abs_t=mvindex(split('compliant_abs'," of "),1)
-
-| appendpipe
-    [| stats sum(compliant_abs_c) as compliant_abs_c, 
-             sum(compliant_abs_t) as compliant_abs_t
-             
-     `ssphp_metrics_eval_field_colors{{environment}}`
-     
-     | eval ssphp.source.foundational_system="ALL",
-            compliant_abs='compliant_abs_c'." of ".'compliant_abs_t',
-            compliant_perc=floor(('compliant_abs_c'*100)/'compliant_abs_t'),
-            compliant_color=if('compliant_perc'=100,'tkn_colour_green','tkn_colour_red')]
-
-| eval tfs=$tkn__service|s$,
-       target_fs=if(tfs=".*","ALL",'tfs')
-       
-| eval compliant_line_width=round((100-(2*25))*(('compliant_perc')/100)),
-       compliant_line_non_width=(100-(2*25))-'compliant_line_width',
-
-       ssphp.score.ciso_priority=case('ssphp.score.ciso_priority'=1,"DfE Mandated",
+| eval ssphp.score.ciso_priority=case('ssphp.score.ciso_priority'=1,"DfE Mandated",
                                       'ssphp.score.ciso_priority'=2,"Recommended",
                                       1==1,"Desirable"),
        ssphp.score.score='ssphp.score.score'."|".'ssphp.score.color'
-
-| where match(lower('ssphp.source.foundational_system'),lower('target_fs'))
-
-
-| table ssphp.source.foundational_system, compliant_abs, compliant_perc, compliant_color, compliant_line_width, compliant_line_non_width
+| table ssphp.source.foundational_system, compliant_abs, compliant_perc, compliant_color
           </query>
           <latest>now</latest>
           <earliest>0</earliest>
           <sampleRatio>1</sampleRatio>
           <done>
-            <set token="tkn_controls_compliant_abs">$result.compliant_abs$</set>
+            <set token="tkn_controls_ciso">$result.number_controls_ciso_1$</set>
+            <set token="tkn_controls_compliant_text">$result.compliant_abs$</set>
             <set token="tkn_controls_compliant_perc">$result.compliant_perc$</set>
-            <set token="tkn_controls_compliant_colour">$result.compliant_color$</set>
-            <set token="tkn_compliant_line_width">$result.compliant_line_width$</set>
-            <set token="tkn_compliant_line_non_width">$result.compliant_line_non_width$</set>
+            <set token="tkn_controls_compliant_text_colour">$result.compliant_color$</set>
           </done>
         </search>
       </table>
     </panel>
   </row>
 
-
-
-  
-  
-  
-
-<!-- ################### STYLE ROW ################### -->  
-  <row depends="$debug$">
-    <panel>
+  <row>
+    <panel depends="$tkn_ready$,$tkn_show_abs$">
       <html>
-        <style>
-          .absolute {
-            text-align: center !important;
-            color: $tkn_colour_text$ !important;
-            font-size: 300% !important;
-            text-align: center !important;
-            line-height: 2.5 !important;
-          }
-          .undervalue {
-            text-align: center !important;
-            color: $tkn_colour_text$ !important;
-            font-size: 120% !important;
-            text-align: center !important;
-            line-height: 1.5 !important;
-          }
-          .line{
-            color: $tkn_colour_tile$;
-            height: 4px;
-            margin-bottom: 10px;
-          }
-        </style>
+        <div id="div_header" style="background:$tkn_controls_compliant_text_colour$;color:white;font-weight:bold;font-size:800%;text-align:center;padding:50">$tkn_controls_compliant_text$</div> 
+        <div id="div_header" style="background:$tkn_controls_compliant_text_colour$;color:white;font-size:100%;text-align:center">$tkn_current_service$ Compliant of # DfE Mandated Controls</div> 
+      </html>
+    </panel>
+
+    <panel depends="$tkn_show_perc$">
+      <html>
+        <div id="div_header" style="background:$tkn_controls_compliant_text_colour$;color:white;font-weight:bold;font-size:800%;text-align:center;padding:50">$tkn_controls_compliant_perc$%</div> 
+        <div id="div_header" style="background:$tkn_controls_compliant_text_colour$;color:white;font-size:100%;text-align:center">Percentage $tkn_current_service$ Compliant of DfE Mandated Controls</div> 
       </html>
     </panel>
   </row>
-  
-  
 
-  <row>
-    <panel>
-      <html>
-        <div id="div_header" style="font-size:200%; color:$tkn_colour_text$;">$tkn_current_service$</div>
-      </html>
-    </panel>
-
-    <panel depends="$tkn_ready$,$tkn_show_abs$">
-      <html>
-        <div class="absolute" style="background: $tkn_colour_tile$;">$tkn_controls_compliant_abs$</div>
-        <div style="display: flex;">
-          <div class="line" style="width: $tkn_margin$%; border-bottom: 5px solid $tkn_colour_tile$;"/>
-          <div class="line" style="width: $tkn_compliant_line_width$%; border-bottom: 5px solid $tkn_colour_null_line$;"/>
-          <div class="line" style="width: $tkn_compliant_line_non_width$%; border-bottom: 5px solid $tkn_controls_compliant_colour$;"/>
-          <div class="line" style="width: $tkn_margin$%; border-bottom: 5px solid $tkn_colour_tile$;"/>
-        </div>
-        <div class="undervalue" style="background: $tkn_colour_tile$;">$tkn_current_service$ Compliant of # DfE Mandated Controls</div>
-      </html>
-    </panel>
-    
-    <panel depends="$tkn_show_perc$">
-      <html>
-        <div class="absolute" style="background: $tkn_colour_tile$;">$tkn_controls_compliant_perc$%</div>
-        <div style="display: flex;">
-          <div class="line" style="width: $tkn_margin$%; border-bottom: 5px solid $tkn_colour_tile$;"/>
-          <div class="line" style="width: $tkn_compliant_line_width$%; border-bottom: 5px solid $tkn_colour_null_line$;"/>
-          <div class="line" style="width: $tkn_compliant_line_non_width$%; border-bottom: 5px solid $tkn_controls_compliant_colour$;"/>
-          <div class="line" style="width: $tkn_margin$%; border-bottom: 5px solid $tkn_colour_tile$;"/>
-        </div>
-        <div class="undervalue" style="background: $tkn_colour_tile$;">Percentage $tkn_current_service$ Compliant of DfE Mandated Controls</div>
-      </html>
-    </panel>
 
 
 <!-- ################### Main Data Table Filters ################### --> 
+
+  <row depends="$tkn_ready$">
+    <panel>
+      <html>
+        <div id="div_header" style="font-size:175%;color:yellow;">$tkn_current_service$</div> 
+        <div id="div_header" style="font-size:120%">Control Details &amp; Scores [$tkn_controls_total$]</div> 
+      </html>
+    </panel>
+
 
     <panel>
       <input type="checkbox" token="tkn_fields" searchWhenChanged="true">
         <label>Show Only</label>
         <choice value="N">Non-Compliant</choice>
         <choice value="C">DfE Mandated</choice>
-<!--         <default>N,C</default>--> 
-        <initialValue>N,C</initialValue>
         <change>
           <eval token="tkn_fields">if(isnull($tkn_fields$), &quot; &quot;, $tkn_fields$)</eval>
         </change>
       </input>
     </panel>
 
+    <panel>
+      <html>
+        <div><span><a href="ssphp_foundational_systems_dashboard_help?tkn_service=true" class="btn btn-primary" style="color:black;background-color:grey;text-align:center;display:block;float:right;width:30%;" target="_blank">Dashboard Information</a></span></div> 
+      </html>
+    </panel>
     
 <!-- Search to build filter text --> 
     <panel depends="$debug$">
@@ -330,7 +259,6 @@
 
   <row depends="$tkn_ready$">
     <panel>
-      <title>Control Details &amp; Scores [$tkn_controls_total$]</title>
       <table id="table1">
         <search>
           <query>

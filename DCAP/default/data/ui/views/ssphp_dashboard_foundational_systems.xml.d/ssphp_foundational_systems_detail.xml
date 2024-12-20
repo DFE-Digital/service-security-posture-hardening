@@ -1,11 +1,11 @@
 {% if environment=="_DEV" %}
-  <dashboard theme="light" version="1.1" hideFilters="true" stylesheet="ssphp_DEV.css" script="js/addtags.js, js/table_cell_backcolor_multivalue.js">
+  <dashboard theme="dark" version="1.1" hideFilters="true" stylesheet="ssphp_DEV.css" script="js/addtags.js, js/table_cell_backcolor_multivalue.js">
 {% else %}
   <dashboard theme="dark" version="1.1" hideFilters="true" stylesheet="ssphp.css" script="js/addtags.js, js/table_cell_backcolor_multivalue.js">
 {% endif %}
 
   <label>Security Posture Continuous Assurance : Control Detail Dashboard</label>
-  <description>{{environment}} v3.1.9</description>
+  <description>{{environment}} v3.2.7</description>
   
   <init>
     <unset token="tkn_show_dashboard"></unset>
@@ -24,11 +24,18 @@
 
     <set token="tkn_github_1_cis_doc_link">https://educationgovuk-my.sharepoint.com/personal/ian_pearl_education_gov_uk/Documents/CIS%20BENCHMARK%20DOCS/CIS%20GitHub%20Benchmark%20v1.0.0.pdf</set>
     <set token="tkn_github_1_cis_doc_name">CIS GitHub Benchmark v1.0.0.pdf</set>
+
+    <set token="tkn_colour_tile">pebble</set>
+    <set token="tkn_colour_null_line">green</set>
+    <set token="tkn_colour_text">#bebebe</set>
+    <set token="tkn_margin">25</set>
+    <set token="tkn_compliant_line_non_width">50</set>
   </init>
 
   <fieldset submitButton="false">
     {% include 'default/data/ui/views/ssphp_dashboard_templates.d/ssphp_footer_menu_template.xml' %}
   </fieldset>
+
 
   <row depends="$debug$">
     <panel>
@@ -191,7 +198,7 @@
   <row depends="$tkn_show_dashboard$">
     <panel depends="$tkn_show_cis_panels$">
       <html>
-        <span class="header_r0" style="color:	cyan">$tkn_fs$ $tkn_notfs$</span>
+        <span class="header_r0" style="color:	$tkn_colour_text$">$tkn_fs$ $tkn_notfs$</span>
         <br></br>
         <span class="header_r1" style="color:	darkcyan">CIS Title</span>
         <span class="header_r2">$tkn_control_title$</span>
@@ -204,9 +211,9 @@
     
     <panel depends="$tkn_show_dfe_panels$">
       <html>
-        <span class="header_r0" style="color:	cyan">$tkn_fs$ $tkn_notfs$</span>
+        <span class="header_r0" style="color:	$tkn_colour_text$">$tkn_fs$ $tkn_notfs$</span>
         <br></br>
-        <span class="header_r1" style="color:	yellow">DfE Benchmark</span>
+        <span class="header_r1" style="color:	$tkn_colour_text$">DfE Benchmark</span>
         <br></br>
         <span class="header_r1" style="color:	darkcyan">Title</span>
         <span class="header_r2">$tkn_control_title$</span>
@@ -222,17 +229,44 @@
         <br></br>
       </html>
     </panel>    
-    
-    
-    
-    
+
+
+    <panel depends="$debug$">
+      <html>
+        <style>
+          .absolute {
+            text-align: center !important;
+            color: $tkn_colour_text$ !important;
+            font-size: 500% !important;
+            text-align: center !important;
+            line-height: 2.5 !important;
+          }
+          .undervalue {
+            text-align: center !important;
+            color: $tkn_colour_text$ !important;
+            font-size: 120% !important;
+            text-align: center !important;
+            line-height: 1.5 !important;
+          }
+          .line{
+            color: $tkn_colour_tile$;
+            height: 4px;
+            margin-bottom: 10px;
+          }
+        </style>
+      </html>
+    </panel>
 
     <panel>
       <html>
         <span class="header_r1" style="color:	darkcyan">Score</span>
         <br></br>
-        <div id="div_header" style="background:$tkn_score_color$;color:white;font-weight:bold;font-size:800%;text-align:center;padding:50">$tkn_score$</div> 
-        <br></br>
+        <div class="absolute" style="background: $tkn_colour_tile$;">$tkn_score$</div>
+        <div style="display: flex;">
+          <div class="line" style="width: $tkn_margin$%; border-bottom: 5px solid $tkn_colour_tile$;"/>
+          <div class="line" style="width: $tkn_compliant_line_non_width$%; border-bottom: 5px solid $tkn_color$;"/>
+          <div class="line" style="width: $tkn_margin$%; border-bottom: 5px solid $tkn_colour_tile$;"/>
+        </div>
       </html>
     </panel>
 
@@ -312,7 +346,7 @@
             width:50% !important;
           }
         </style>
-        <span class="header_r1" style="color:	yellow">CIS Foundations Benchmark</span>
+        <span class="header_r1" style="color:	$tkn_colour_text$">CIS Foundations Benchmark</span>
         <br></br>
         <span class="header_r1" style="color:	darkcyan">CIS Description</span>
         <span class="header_r2">$tkn_control_description$</span>
@@ -357,7 +391,7 @@
             width:25% !important;
           }
         </style>
-        <span class="header_r1" style="color:	yellow">CIS Navigator Critical Security Controls</span>
+        <span class="header_r1" style="color:	$tkn_colour_text$">CIS Navigator Critical Security Controls</span>
         <br></br>
         <span class="header_r1" style="color:	darkcyan">Safeguard</span>
         <span class="header_r2">$tkn_cis_controls$</span>
@@ -380,28 +414,12 @@
 <!-- ########################################################################## SCORING EXPLANATION DATA Row ########################################################################## --> 
 
   <row depends="$tkn_show_dashboard$">
-    <panel id="panel99a">
+    <panel>
       <html>
-        <style>
-          #panel99a{
-            width:75% !important;
-          }
-        </style>
         <!-- ## <span class="header_r1" style="color:	darkcyan">Scoring Narrative</span>## -->
         <span class="header_r1" style="color:	darkcyan">Compliance</span>
         <span class="header_r2" style="white-space:pre-line">$tkn_scoring_narrative$</span>
         <br></br>
-      </html>
-    </panel>
-
-    <panel id="panel99b">
-      <html>
-        <style>
-          #panel99b{
-            width:25% !important;
-          }
-        </style>
-        <div><span><a href="ssphp_foundational_systems_dashboard_help?tkn_detail=true" class="btn btn-primary" style="color:black;background-color:grey;text-align:center;display:block;float:right;width:30%;" target="_blank">Dashboard Information</a></span></div> 
       </html>
     </panel>
   </row>
