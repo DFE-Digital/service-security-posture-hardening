@@ -5,7 +5,7 @@
 {% endif %}
 
   <label>Security Posture Continuous Assurance : Control Detail Dashboard</label>
-  <description>{{environment}} v3.2.7</description>
+  <description>{{environment}} v3.2.9</description>
   
   <init>
     <unset token="tkn_show_dashboard"></unset>
@@ -26,7 +26,7 @@
     <set token="tkn_github_1_cis_doc_name">CIS GitHub Benchmark v1.0.0.pdf</set>
 
     <set token="tkn_colour_tile">pebble</set>
-    <set token="tkn_colour_null_line">green</set>
+    <set token="tkn_colour_null_line">#85F415</set>
     <set token="tkn_colour_text">#bebebe</set>
     <set token="tkn_margin">25</set>
     <set token="tkn_compliant_line_non_width">50</set>
