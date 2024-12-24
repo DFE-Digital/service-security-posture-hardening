@@ -1,8 +1,74 @@
 <dashboard version="1.1" theme="dark">
 
 <label>DCAP Healthcheck Dashboard</label>
-<description>{{environment}} v3.0.0</description>
+<description>{{environment}} v3.1.1</description>
+
+
+
+  <!-- base search -->
+  <search id="base_1">
+    <query>
+| rest /servicesNS/-/-/saved/searches splunk_server=local
+| rename title as savedsearch_name
+| fields savedsearch_name, cron_schedule, disabled, eai:acl.app
+
+| stats values(*) as * by savedsearch_name
+
+| rex field=cron_schedule "^(?&lt;cron_min&gt;[^ ]*) (?&lt;cron_hour&gt;[^ ]*) .*"
+| eval cron_min=substr("00".'cron_min',len("00".'cron_min')-1),
+       cron_hour=substr("00".'cron_hour',len("00".'cron_hour')-1),
+       target_run_time='cron_hour'.":".'cron_min',
+       outcome="bad",
+       errors="not run"
+| sort 0 target_run_time, savedsearch_name
+| fields savedsearch_name, target_run_time, cron_schedule, disabled, eai:acl.app, outcome, errors
+
+| join type=outer savedsearch_name
+    [| search index=_internal (user="ssphp_app_account" OR user="nobody" OR user="*@education.gov.uk") savedsearch_name="ssphp*" earliest=$tkn_start_date$ latest=$tkn_end_date$
+
+     | eval scheduled_time=strftime('scheduled_time',"%Y-%m-%d %H:%M:%S")
+     | fields _time, savedsearch_name, savedsearch_id, app, start_time, run_time, scheduled_time, status, result_count, host, sid
+
+     | stats min(_time) as start_time, max(_time) as completed_time, values(*) as * by sid
+
+     | eval start_time=strftime('start_time',"%Y-%m-%d %H:%M:%S"),
+            completed_time=strftime('completed_time',"%Y-%m-%d %H:%M:%S")
+
+     | fillnull value=0 result_count, run_time
+     | eventstats avg(run_time) as avg_run_time, avg(result_count) as avg_result_count by savedsearch_name
+     | fillnull value=0 avg_run_time, avg_result_count
+
+     | table savedsearch_name, savedsearch_id, app, scheduled_time, start_time, run_time, avg_run_time, avg_result_count, completed_time, result_count, status
+     | sort 0 - scheduled_time
+
+     | makemv errors
+     | eval errors=if(run_time&lt;'avg_run_time'/10,"run time too short",null()),
+            errors=if(run_time>'avg_run_time'*10,mvappend('errors',"run time too long"),'errors'),
+            errors=if(result_count&lt;avg_result_count*0.1,mvappend('errors',"result count too low"),'errors'),
+            errors=if(result_count&gt;avg_result_count*10,mvappend('errors',"result count too high"),'errors'),
+            errors=if(like('status',"success"),'errors',mvappend('errors',"status not success")),
+            errors=if(isnull('errors'),"-",'errors')
+
+     | eval outcome=if(errors="-","good","bad")
+
+     ```| search outcome="bad"```
+     | eval run_date=substr('scheduled_time',0,10),
+            target_date=strftime($tkn_date$,"%Y-%m-%d")
+     | where run_date='target_date'
+
+     | table avg_result_count, avg_run_time, completed_time, errors, outcome, result_count, run_date, run_time, savedsearch_name, scheduled_time, start_time, status, target_date, outcome]
+     
+| table savedsearch_name, target_run_time, cron_schedule, disabled, eai:acl.app, avg_result_count, avg_run_time, completed_time, errors, outcome, result_count, run_date, run_time, scheduled_time, start_time, status, target_date, outcome  
+    </query>
+    <earliest>0</earliest>
+    <latest>now</latest>
+    <sampleRatio>1</sampleRatio>
+  </search>
   
+  
+
+
+
   <row>
     <panel>
       <title>FBP Data Ingestion Age</title>
@@ -442,5 +508,97 @@ index=ssphp_metrics_summary{{environment}} earliest=-3d@d latest=now
     </panel>
 
   </row>
+
+
+
+<row>
+  <panel>
+    <input type="dropdown" token="tkn_date" searchWhenChanged="true">
+      <label>Date</label>
+      <fieldForLabel>date</fieldForLabel>
+      <fieldForValue>starttime</fieldForValue>
+      <selectFirstChoice>true</selectFirstChoice>
+      <search>
+        <query>
+| gentimes start=-30 end=1
+| eval date=strftime('starttime',"%Y-%m-%d")
+| sort 0 - date
+| table date, starttime
+        </query>
+      </search>
+    </input>
+    
+    <input type="radio" token="tkn_app" searchWhenChanged="true">
+      <label>App</label>
+      <choice value="DCAP">DCAP</choice>
+      <choice value="DCAP_DEV">DCAP_DEV</choice>
+      <default>DCAP</default>
+    </input>
+    
+    <input type="radio" token="tkn_show" searchWhenChanged="true">
+      <label>Show</label>
+      <choice value="*">ALL</choice>
+      <choice value="bad">Bad Only</choice>
+      <default>bad</default>
+    </input>
+  </panel>
+</row>
+
+
+  
+  <row depends="$debug$">
+    <panel>
+      <table>
+        <search>
+          <query>
+| makeresults
+
+| eval endtime=$tkn_date$,
+       endtime='endtime'+(24*60*60)-1,
+       starttime='endtime'-(30*24*60*60)
+| table starttime, endtime
+          </query>
+          <done>
+            <set token="tkn_start_date">$result.starttime$</set>
+            <set token="tkn_end_date">$result.endtime$</set>
+          </done>
+        </search>
+      </table>
+    </panel>
+  </row>
+  
+  
+  <row>
+    <panel>
+      <title>SavedSearches [$tkn_count$]</title>
+      <table>
+        <search base="base_1">
+          <query>
+| search eai:acl.app=$tkn_app|s$ AND cron_schedule!="" AND disabled=0 AND outcome=$tkn_show$
+
+| eventstats count
+          </query>
+          <done>
+            <set token="tkn_count">$result.count$</set>
+          </done>
+        </search>
+        <option name="count">100</option>
+        <option name="dataOverlayMode">none</option>
+        <option name="drilldown">none</option>
+        <option name="percentagesRow">false</option>
+        <option name="rowNumbers">false</option>
+        <option name="totalsRow">false</option>
+        <option name="wrap">true</option>
+        <fields>savedsearch_name, target_run_time, cron_schedule, disabled, eai:acl.app, avg_result_count, avg_run_time, completed_time, errors, outcome, result_count, run_date, run_time, scheduled_time, start_time, status, target_date, outcome  </fields>
+      </table>
+    </panel>
+  </row>
+
+
+
+
+
+
+
   
 </dashboard>
