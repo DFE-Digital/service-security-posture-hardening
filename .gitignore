@@ -24,3 +24,4 @@ TA_SSPHP/tests/SPLUNK_HOME
 rustc-ice*.txt
 *.profraw
 *.zip
+**~$*.xlsx
