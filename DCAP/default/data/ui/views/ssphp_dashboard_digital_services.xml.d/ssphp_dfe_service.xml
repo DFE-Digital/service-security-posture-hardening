@@ -1,7 +1,7 @@
 <dashboard version="1.1" theme="dark" script="js/addtags.js, js/table_cell_color.js">
 
 <label>Security Posture Continuous Assurance : DfE Service Dashboard</label>
-<description>{{environment}} v4.1.22</description>
+<description>{{environment}} v4.1.24</description>
   
   <init>
     <set token="form.tkn_fields">C</set>
@@ -419,7 +419,7 @@
       <table>
         <search>
           <query>
-index=_audit user=$tkn__current_user_name|s$ action=search "makeresults" "user_dashboard_token" provenance="UI:Dashboard:ip_sandbox" NOT ("index=_internal" OR "index=_audit") earliest=-30d latest=now
+index=_audit user=$tkn__current_user_name|s$ action=search "makeresults" "user_dashboard_token" provenance="UI:Dashboard:ssphp_dfe_service" NOT ("index=_internal" OR "index=_audit") earliest=-30d latest=now
 | rex field=_raw "^[\s\S]*\"\&gt;\&gt;\&gt;\&gt;\"\.\"(?&lt;portfolio&gt;[^\"]*)\"\.\"::\"\.\"(?&lt;service_line&gt;[^\"]*)\"\.\"::\"\.\"(?&lt;product&gt;[^\"]*)\"\.\"::\"\.\"(?&lt;user&gt;[^\"]*)\"\.\"::\"\.\"(?&lt;app&gt;[^\"]*)[\s\S]*$"
 | eval previous_dashboard_token="&gt;&gt;&gt;&gt;".'portfolio'."::".'service_line'."::".'product'."::".'user'."::".'app'."&lt;&lt;&lt;&lt;",
        time=strftime(_time,"%Y-%m-%d %H:%M:%S")
