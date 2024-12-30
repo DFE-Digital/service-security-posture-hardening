@@ -31,4 +31,6 @@
 
 {% endif %}
 
+<a href="ssphp_dashboard_report_issue" target="_blank">Report an Issue</a>
+
 </nav>

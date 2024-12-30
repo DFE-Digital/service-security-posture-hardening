@@ -5,20 +5,22 @@
 {% endif %}  
 
   <label>Security Posture Continuous Assurance : Service Dashboard</label>
-  <description>{{environment}} v2.1.22</description>
+  <description>{{environment}} v2.1.27</description>
 
-<!-- ## -->   
+
   <init>
-<!-- #    <set token="form.tkn_fields">N,C</set># --> 
     <set token="tkn_fields">N,C</set>
     <set token="tkn_controls_compliant_abs"></set>
-    <unset token="tkn_ready"></unset>
 
     <set token="tkn_colour_tile">pebble</set>
-    <set token="tkn_colour_null_line">#85F415</set>
+    <set token="tkn_colour_compliant_line">#ECECEC</set>
+    <set token="tkn_colour_compliant_line_100">#85F415</set>
+    <set token="tkn_colour_non_compliant_line">#FF4B4B</set>
     <set token="tkn_colour_text">#bebebe</set>
     <set token="tkn_margin">25</set>
+    <unset token="tkn_ready"></unset>
   </init>
+
 
   <fieldset submitButton="false">
     <input type="dropdown" token="tkn__service" searchWhenChanged="true">
@@ -136,11 +138,11 @@
      
      | eval ssphp.source.foundational_system="ALL",
             compliant_abs='compliant_abs_c'." of ".'compliant_abs_t',
-            compliant_perc=floor(('compliant_abs_c'*100)/'compliant_abs_t'),
-            compliant_color=if('compliant_perc'=100,'tkn_colour_green','tkn_colour_red')]
+            compliant_perc=floor(('compliant_abs_c'*100)/'compliant_abs_t')]
 
 | eval tfs=$tkn__service|s$,
-       target_fs=if(tfs=".*","ALL",'tfs')
+       target_fs=if(tfs=".*","ALL",'tfs'),
+       compliant_color=if(compliant_perc=100,$tkn_colour_compliant_line_100|s$,$tkn_colour_compliant_line|s$)
        
 | eval compliant_line_width=round((100-(2*25))*(('compliant_perc')/100)),
        compliant_line_non_width=(100-(2*25))-'compliant_line_width',
@@ -219,8 +221,8 @@
         <div class="absolute" style="background: $tkn_colour_tile$;">$tkn_controls_compliant_abs$</div>
         <div style="display: flex;">
           <div class="line" style="width: $tkn_margin$%; border-bottom: 5px solid $tkn_colour_tile$;"/>
-          <div class="line" style="width: $tkn_compliant_line_width$%; border-bottom: 5px solid $tkn_colour_null_line$;"/>
-          <div class="line" style="width: $tkn_compliant_line_non_width$%; border-bottom: 5px solid $tkn_controls_compliant_colour$;"/>
+          <div class="line" style="width: $tkn_compliant_line_width$%; border-bottom: 5px solid $tkn_controls_compliant_colour$;"/>
+          <div class="line" style="width: $tkn_compliant_line_non_width$%; border-bottom: 5px solid $tkn_colour_non_compliant_line$;"/>
           <div class="line" style="width: $tkn_margin$%; border-bottom: 5px solid $tkn_colour_tile$;"/>
         </div>
         <div class="undervalue" style="background: $tkn_colour_tile$;">$tkn_current_service$ Compliant of # DfE Mandated Controls</div>
@@ -232,8 +234,8 @@
         <div class="absolute" style="background: $tkn_colour_tile$;">$tkn_controls_compliant_perc$%</div>
         <div style="display: flex;">
           <div class="line" style="width: $tkn_margin$%; border-bottom: 5px solid $tkn_colour_tile$;"/>
-          <div class="line" style="width: $tkn_compliant_line_width$%; border-bottom: 5px solid $tkn_colour_null_line$;"/>
-          <div class="line" style="width: $tkn_compliant_line_non_width$%; border-bottom: 5px solid $tkn_controls_compliant_colour$;"/>
+          <div class="line" style="width: $tkn_compliant_line_width$%; border-bottom: 5px solid $tkn_controls_compliant_colour$;"/>
+          <div class="line" style="width: $tkn_compliant_line_non_width$%; border-bottom: 5px solid $tkn_colour_non_compliant_line$;"/>
           <div class="line" style="width: $tkn_margin$%; border-bottom: 5px solid $tkn_colour_tile$;"/>
         </div>
         <div class="undervalue" style="background: $tkn_colour_tile$;">Percentage $tkn_current_service$ Compliant of DfE Mandated Controls</div>
@@ -392,6 +394,22 @@ $tkn_search_filter$
       </table>
     </panel>
   </row>
+  
+
+  
+<!-- ################### ISSUE REPORTING BUTTON ################
+
+  <row>
+    <panel>
+      <html>
+        <div style="display:flex; justify-content:flex-end; width:100%; padding:0;">
+          <button id="showButton" class="btn"><a href="/app/DCAP{{environment}}/ssphp_dashboard_report_issue" target="_blank">Report an Issue</a></button>
+        </div>
+      </html>
+    </panel>
+  </row>
+### -->  
+
 
 {% include 'default/data/ui/views/ssphp_dashboard_templates.d/ssphp_footer_template.xml' %}
 

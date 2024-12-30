@@ -5,7 +5,7 @@
 {% endif %}
 
   <label>Security Posture Continuous Assurance : Control Detail Dashboard</label>
-  <description>{{environment}} v3.2.9</description>
+  <description>{{environment}} v3.2.11</description>
   
   <init>
     <unset token="tkn_show_dashboard"></unset>
@@ -454,6 +454,22 @@
       </table>
     </panel>
   </row>
+  
+
+  
+<!-- ################### ISSUE REPORTING BUTTON ################
+
+  <row>
+    <panel>
+      <html>
+        <div style="display:flex; justify-content:flex-end; width:100%; padding:0;">
+          <button id="showButton" class="btn"><a href="/app/DCAP{{environment}}/ssphp_dashboard_report_issue" target="_blank">Report an Issue</a></button>
+        </div>
+      </html>
+    </panel>
+  </row>
+### -->  
+
 
 
 <!-- ########################################################################## UNDERLYING DATA Row ########################################################################## --> 

@@ -1,0 +1,26 @@
+{% if environment=="_DEV" %}
+  <dashboard theme="dark" version="1.1" hideFilters="true">
+{% else %}
+  <dashboard theme="dark" version="1.1" hideFilters="true"> 
+{% endif %}  
+
+<label>Security Posture Continuous Assurance : Reporting Issues</label>
+<description>{{environment}} v1.0.1</description>
+
+
+
+    <row>
+      <panel>
+        <html>
+<div style="font-size:175%;color:orange;">How to Report an Issue</div><br></br>
+Go to our <a href="https://ukgovernmentdfe.slack.com/archives/C086DMDA4DV/p1735566822892519">DCAP Slack Channel</a>. <br></br>
+Upload a screenshot and send us a description of the issue. <br></br>
+We will create a ticket and look at the Issue as soon as possible. <br></br>
+We will communicate any status updates back to you using the Slack Channel.<br></br>
+Thanks for your help.<br></br>
+        </html>
+      </panel>
+
+    </row>
+
+  </dashboard>

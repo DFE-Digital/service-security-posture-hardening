@@ -1,16 +1,18 @@
 {% if environment=="_DEV" %}
-<dashboard version="1.1" theme="dark" hideFilters="true" script="js/table_cell_color.js">
+<dashboard version="1.1" theme="dark" hideFilters="true">
 {% else %}
-<dashboard version="1.1" theme="dark" hideFilters="true" script="js/table_cell_color.js">
+<dashboard version="1.1" theme="dark" hideFilters="true">
 {% endif %}  
 
 
   <label>Foundational Systems : Security Posture Compliance Status Dashboard</label>
-  <description>{{environment}} v6.0.2</description>
+  <description>{{environment}} v6.0.7</description>
 
   <init>
     <set token="tkn_colour_tile">pebble</set>
-    <set token="tkn_colour_null_line">#85F415</set>
+    <set token="tkn_colour_compliant_line">#ECECEC</set>
+    <set token="tkn_colour_compliant_line_100">#85F415</set>
+    <set token="tkn_colour_non_compliant_line">#FF4B4B</set>
     <set token="tkn_colour_text">#bebebe</set>
     <set token="tkn_margin">20</set>
     <unset token="tkn_ready"></unset>
@@ -68,7 +70,7 @@
           <query>
   | makeresults
 
-  `ssphp_metrics_eval_field_colors{{environment}}`
+  `ssphp_metrics_eval_field_colors_DEV`
 
   | table tkn_*
           </query>
@@ -135,8 +137,8 @@
         </div>
         <div style="display: flex;">
           <div class="line" style="width: $tkn_margin$%; border-bottom: 5px solid $tkn_colour_tile$;"/>
-          <div class="line" style="width: $tkn_AAD_compliant_line_width$%; border-bottom: 5px solid $tkn_colour_null_line$;"/>
-          <div class="line" style="width: $tkn_AAD_compliant_line_non_width$%; border-bottom: 5px solid $tkn_AAD_color$;"/>
+          <div class="line" style="width: $tkn_AAD_compliant_line_width$%; border-bottom: 5px solid $tkn_AAD_color$;"/>
+          <div class="line" style="width: $tkn_AAD_compliant_line_non_width$%; border-bottom: 5px solid $tkn_colour_non_compliant_line$;"/>
           <div class="line" style="width: $tkn_margin$%; border-bottom: 5px solid $tkn_colour_tile$;"/>
         </div>
         <div class="undervalue" style="background:$tkn_colour_tile$;">
@@ -152,8 +154,8 @@
         </div>
         <div style="display: flex;">
           <div class="line" style="width: $tkn_margin$%; border-bottom: 5px solid $tkn_colour_tile$;"/>
-          <div class="line" style="width: $tkn_AZURE_compliant_line_width$%; border-bottom: 5px solid $tkn_colour_null_line$;"/>
-          <div class="line" style="width: $tkn_AZURE_compliant_line_non_width$%; border-bottom: 5px solid $tkn_AZURE_color$;"/>
+          <div class="line" style="width: $tkn_AZURE_compliant_line_width$%; border-bottom: 5px solid $tkn_AZURE_color$;"/>
+          <div class="line" style="width: $tkn_AZURE_compliant_line_non_width$%; border-bottom: 5px solid $tkn_colour_non_compliant_line$;"/>
           <div class="line" style="width: $tkn_margin$%; border-bottom: 5px solid $tkn_colour_tile$;"/>
         </div>
         <div class="undervalue" style="background:$tkn_colour_tile$;">
@@ -169,8 +171,8 @@
         </div>
         <div style="display: flex;">
           <div class="line" style="width: $tkn_margin$%; border-bottom: 5px solid $tkn_colour_tile$;"/>
-          <div class="line" style="width: $tkn_DNS_compliant_line_width$%; border-bottom: 5px solid $tkn_colour_null_line$;"/>
-          <div class="line" style="width: $tkn_DNS_compliant_line_non_width$%; border-bottom: 5px solid $tkn_DNS_color$;"/>
+          <div class="line" style="width: $tkn_DNS_compliant_line_width$%; border-bottom: 5px solid $tkn_DNS_color$;"/>
+          <div class="line" style="width: $tkn_DNS_compliant_line_non_width$%; border-bottom: 5px solid $tkn_colour_non_compliant_line$;"/>
           <div class="line" style="width: $tkn_margin$%; border-bottom: 5px solid $tkn_colour_tile$;"/>
         </div>
         <div class="undervalue" style="background:$tkn_colour_tile$;">
@@ -186,8 +188,8 @@
         </div>
         <div style="display: flex;">
           <div class="line" style="width: $tkn_margin$%; border-bottom: 5px solid $tkn_colour_tile$;"/>
-          <div class="line" style="width: $tkn_M365_compliant_line_width$%; border-bottom: 5px solid $tkn_colour_null_line$;"/>
-          <div class="line" style="width: $tkn_M365_compliant_line_non_width$%; border-bottom: 5px solid $tkn_M365_color$;"/>
+          <div class="line" style="width: $tkn_M365_compliant_line_width$%; border-bottom: 5px solid $tkn_M365_color$;"/>
+          <div class="line" style="width: $tkn_M365_compliant_line_non_width$%; border-bottom: 5px solid $tkn_colour_non_compliant_line$;"/>
           <div class="line" style="width: $tkn_margin$%; border-bottom: 5px solid $tkn_colour_tile$;"/>
         </div>
         <div class="undervalue" style="background:$tkn_colour_tile$;">
@@ -203,8 +205,8 @@
         </div>
         <div style="display: flex;">
           <div class="line" style="width: $tkn_margin$%; border-bottom: 5px solid $tkn_colour_tile$;"/>
-          <div class="line" style="width: $tkn_GITHUB_compliant_line_width$%; border-bottom: 5px solid $tkn_colour_null_line$;"/>
-          <div class="line" style="width: $tkn_GITHUB_compliant_line_non_width$%; border-bottom: 5px solid $tkn_GITHUB_color$;"/>
+          <div class="line" style="width: $tkn_GITHUB_compliant_line_width$%; border-bottom: 5px solid $tkn_GITHUB_color$;"/>
+          <div class="line" style="width: $tkn_GITHUB_compliant_line_non_width$%; border-bottom: 5px solid $tkn_colour_non_compliant_line$;"/>
           <div class="line" style="width: $tkn_margin$%; border-bottom: 5px solid $tkn_colour_tile$;"/>
         </div>
         <div class="undervalue" style="background:$tkn_colour_tile$;">
@@ -223,11 +225,12 @@
       <table>
         <search>
           <query>
-| loadjob savedsearch="ssphp_app_account:$tkn_current_app$:ssphp_create_dashboard_dataset_posture{{environment}}"
+| loadjob savedsearch="ssphp_app_account:$tkn_current_app$:ssphp_create_dashboard_dataset_posture_DEV"
 | search line_type="summary" AND ssphp.source.foundational_system="*"
 
 | eval compliant_line_width=round((100-(2*$tkn_margin$))*(('compliant_perc')/100)),
        compliant_line_non_width=(100-(2*$tkn_margin$))-'compliant_line_width',
+       compliant_color=if(compliant_perc=100,$tkn_colour_compliant_line_100|s$,$tkn_colour_compliant_line|s$),
        compliant_perc='compliant_perc'."%",
        view=$tkn_view|s$,
        compliant_both=if('view'="abs",'compliant_abs','compliant_perc')
@@ -280,6 +283,24 @@
       </table>
     </panel>
   </row>
+  
+
+  
+<!-- ################### ISSUE REPORTING BUTTON ################
+
+  <row>
+    <panel>
+      <html>
+        <div style="display:flex; justify-content:flex-end; width:100%; padding:0;">
+          <button id="showButton" class="btn"><a href="/app/DCAP{{environment}}/ssphp_dashboard_report_issue" target="_blank">Report an Issue</a></button>
+        </div>
+      </html>
+    </panel>
+  </row>
+### -->  
+
+
+
   <row depends="$tkn_show_footer$">
     <panel depends="$debug$">
       <table>
@@ -323,7 +344,7 @@
       <table>
         <search>
           <query>
-    | tstats max(_time) as last_run where `ssphp_metrics_data_index{{environment}}` by index, sourcetype
+    | tstats max(_time) as last_run where `ssphp_metrics_data_index_DEV` by index, sourcetype
     | eval last_run=strftime('last_run',"%Y-%m-%d %H:%M:%S")
     | table index, sourcetype, last_run
     | sort 0 - last_run
@@ -338,7 +359,7 @@
       <table>
         <search>
           <query>
-`ssphp_summary_index{{environment}}` earliest=-30d@d latest=now ssphp.use_case.savedsearch="*{{environment}}"
+`ssphp_summary_index_DEV` earliest=-30d@d latest=now ssphp.use_case.savedsearch="*{{environment}}"
 | stats values(ssphp.use_case.savedsearch) as ssphp.use_case.savedsearch, max(SSPHP_RUN) as SSPHP_RUN by ssphp.use_case.id
 | eval last_run=strftime('SSPHP_RUN',"%Y-%m-%d %H:%M:%S")
 | table ssphp.use_case.id, ssphp.use_case.savedsearch, last_run, SSPHP_RUN
