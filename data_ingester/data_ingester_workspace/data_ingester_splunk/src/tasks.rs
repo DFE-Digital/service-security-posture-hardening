@@ -12,7 +12,7 @@ use tokio::{
     task::JoinHandle,
     time::{sleep, Duration, Instant},
 };
-use tracing::error;
+use tracing::{error, info};
 
 #[derive(Debug, Clone)]
 pub(crate) struct HecBatch {
@@ -113,6 +113,25 @@ impl SendingTask {
                 );
             };
 
+            // https://docs.splunk.com/Documentation/Splunk/8.2.0/Data/TroubleshootHTTPEventCollector
+            // Status code	HTTP status code ID	HTTP status code	Status message
+            // 0	        200	                OK               	Success
+            // 1	        403             	Forbidden        	Token disabled
+            // 2	        401               	Unauthorized	        Token is required
+            // 3	        401	                Unauthorized	        Invalid authorization
+            // 4	        403	                Forbidden       	Invalid token
+            // 5	        400	                Bad Request       	No data
+            // 6	        400              	Bad Request      	Invalid data format
+            // 7	        400              	Bad Request	        Incorrect index
+            // 8	        500             	Internal Error   	Internal server error
+            // 9	        503	                Service Unavailable 	Server is busy
+            // 10	        400	                Bad Request      	Data channel is missing
+            // 11	        400              	Bad Request      	Invalid data channel
+            // 12	        400              	Bad Request      	Event field is required
+            // 13	        400               	Bad Request     	Event field cannot be blank
+            // 14	        400	                Bad Request      	ACK is disabled
+            // 15	        400	                Bad Request	        Error in handling indexed fields
+            // 16	        400	                Bad Request     	Query string authorization is not enabled
             if status.is_success() {
                 break response;
             } else if status.is_client_error() {
@@ -124,6 +143,9 @@ impl SendingTask {
             } else if status.is_redirection() {
                 log_failed(status);
                 anyhow::bail!("redirect when sending to Splunk. Should not happen");
+            } else if status.as_u16() == 503 {
+                log_failed(status);
+                continue;
             } else if status.is_server_error() {
                 log_failed(status);
                 if retry_count > 5 {
@@ -181,10 +203,12 @@ impl SendingTask {
                 };
 
                 // Send batch to Ack Task
-                match ack_tx.send(hec_batch).await {
-                    Ok(_) => {}
+                match ack_tx.reserve().await {
+                    Ok(permit) => {
+                        permit.send(hec_batch);
+                    }
                     Err(err) => {
-                        error!(operation="SplunkHec", operation="Send Ack & Batch to ack_task", error=?err);
+                        error!(operation="SplunkHec", operation="Reserve HecBatch on ack_task", error=?err)
                     }
                 }
             }
@@ -285,17 +309,19 @@ impl AckTask {
         timeout: Duration,
     ) -> Result<()> {
         let mut to_be_acked: HashMap<u32, HecBatch> = HashMap::with_capacity(3200);
-
+        let mut last_ack_time = Instant::now();
+        let pause_between_acks = Duration::from_secs(1);
         'main: loop {
             // Get messages from channel
-            loop {
+
+            'recv: loop {
                 let ack = ack_rx.try_recv();
                 match ack {
                     Ok(ack) => {
                         let _ = to_be_acked.insert(ack.ack_id, ack);
                     }
                     Err(err) => match err {
-                        Empty => break,
+                        Empty => break 'recv,
                         Disconnected => break 'main,
                     },
                 };
@@ -307,8 +333,15 @@ impl AckTask {
                 continue;
             }
 
+            // Only ack once per pause_between_acks interval
+            if Instant::now() - last_ack_time < pause_between_acks {
+                sleep(Duration::from_millis(20)).await;
+                continue;
+            }
+
             // Query SplunkHEC for ACK statuses
             let ack_response = Self::send_hec_ack_query(&splunk, &ack_url, &to_be_acked).await?;
+            last_ack_time = Instant::now();
 
             // If the ack state is true, parse an int from the
             // returned string and remove it from future acks
@@ -334,9 +367,9 @@ impl AckTask {
                         error!(name="Splunk", operation="HecAck", ack_id=?ack_id, "ack_id not found in known acks");
                     }
                 });
-
-            let _ = Self::resend_events(&mut to_be_acked, send_tx.clone(), &timeout).await;
-            sleep(Duration::from_secs(2)).await;
+            if !to_be_acked.is_empty() {
+                let _ = Self::resend_events(&mut to_be_acked, send_tx.clone(), &timeout).await;
+            }
         }
         Ok(())
     }
@@ -347,6 +380,7 @@ impl AckTask {
         timeout: &Duration,
     ) -> Result<()> {
         let now = Instant::now();
+        let pre_resend_to_be_acked_len = to_be_acked.len();
 
         let resend_batches: Vec<HecBatch> = to_be_acked
             .extract_if(|_k, hecbatch| {
@@ -355,6 +389,15 @@ impl AckTask {
             })
             .map(|(_k, batch)| batch)
             .collect();
+        let post_resend_to_be_acked_len = to_be_acked.len();
+
+        // Only send info! if there is a difference, used to reduce log spam
+        if pre_resend_to_be_acked_len != post_resend_to_be_acked_len {
+            info!(name="Splunk", operation="HecAck",
+              pre_resend_to_be_acked_len=?pre_resend_to_be_acked_len,
+              post_resend_to_be_acked_len=?post_resend_to_be_acked_len,
+              "to_be_acked len()s");
+        }
 
         for batch in resend_batches.into_iter() {
             for mut event in batch.batch.into_iter() {
@@ -374,6 +417,7 @@ impl AckTask {
                 };
             }
         }
+
         Ok(())
     }
 }
@@ -676,7 +720,7 @@ mod test {
             .expect("Sending on channel shouldn't fail");
 
         // Wait for AckTask to make a HTTP request to Mockito
-        sleep(Duration::from_millis(50)).await;
+        sleep(Duration::from_millis(1500)).await;
     }
 
     #[tokio::test]

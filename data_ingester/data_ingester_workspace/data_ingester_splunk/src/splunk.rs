@@ -280,7 +280,14 @@ impl Splunk {
 
     pub async fn send_batch(&self, events: impl IntoIterator<Item = HecEvent>) -> Result<()> {
         for event in events {
-            self.send_tx.send(event).await?;
+            match self.send_tx.reserve().await {
+                Ok(permit) => {
+                    permit.send(event);
+                }
+                Err(err) => {
+                    error!(operation="SplunkHec", operation="Reserve HecBatch on self.send_tx failed", error=?err)
+                }
+            }
         }
         Ok(())
     }
