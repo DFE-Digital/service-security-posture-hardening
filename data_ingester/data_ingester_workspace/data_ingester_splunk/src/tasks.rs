@@ -389,6 +389,15 @@ impl AckTask {
             })
             .map(|(_k, batch)| batch)
             .collect();
+        let post_resend_to_be_acked_len = to_be_acked.len();
+
+        // Only send info! if there is a difference, used to reduce log spam
+        if pre_resend_to_be_acked_len != post_resend_to_be_acked_len {
+            info!(name="Splunk", operation="HecAck",
+              pre_resend_to_be_acked_len=?pre_resend_to_be_acked_len,
+              post_resend_to_be_acked_len=?post_resend_to_be_acked_len,
+              "to_be_acked len()s");
+        }
 
         for batch in resend_batches.into_iter() {
             for mut event in batch.batch.into_iter() {
@@ -408,11 +417,7 @@ impl AckTask {
                 };
             }
         }
-        let post_resend_to_be_acked_len = to_be_acked.len();
-        info!(name="Splunk", operation="HecAck",
-              pre_resend_to_be_acked_len=?pre_resend_to_be_acked_len,
-              post_resend_to_be_acked_len=?post_resend_to_be_acked_len,
-              "to_be_acked len()s");
+
         Ok(())
     }
 }
