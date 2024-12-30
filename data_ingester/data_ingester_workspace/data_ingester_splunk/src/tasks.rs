@@ -367,7 +367,9 @@ impl AckTask {
                         error!(name="Splunk", operation="HecAck", ack_id=?ack_id, "ack_id not found in known acks");
                     }
                 });
-            let _ = Self::resend_events(&mut to_be_acked, send_tx.clone(), &timeout).await;
+            if !to_be_acked.is_empty() {
+                let _ = Self::resend_events(&mut to_be_acked, send_tx.clone(), &timeout).await;
+            }
         }
         Ok(())
     }
@@ -713,7 +715,7 @@ mod test {
             .expect("Sending on channel shouldn't fail");
 
         // Wait for AckTask to make a HTTP request to Mockito
-        sleep(Duration::from_millis(50)).await;
+        sleep(Duration::from_millis(1500)).await;
     }
 
     #[tokio::test]
