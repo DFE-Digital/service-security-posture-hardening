@@ -22,7 +22,7 @@
   
   <search id="bs_1">
     <query>
-| loadjob savedsearch="{{splunk_user}}:$tkn_current_app$:ssphp_show_defender_assessments_with_static_data{{environment}}"
+| loadjob savedsearch="{{splunk_user}}:{{app}}{{environment}}:ssphp_show_defender_assessments_with_static_data{{environment}}"
 | search properties.status.code=$tkn_show_status|s$
 | table *
     </query>

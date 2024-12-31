@@ -45,7 +45,7 @@
       </table>
     </panel>
     
-<!-- #```| loadjob savedsearch="{{splunk_user}}:$tkn_current_app$:ssphp_create_dashboard_dataset_service{{environment}}"```# -->
+<!-- #```| loadjob savedsearch="{{splunk_user}}:{{app}}{{environment}}:ssphp_create_dashboard_dataset_service{{environment}}"```# -->
     <panel>
       <table>
         <search id="bs_0">

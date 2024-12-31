@@ -70,7 +70,7 @@
           <query>
   | makeresults
 
-  `ssphp_metrics_eval_field_colors_DEV`
+  `ssphp_metrics_eval_field_colors{{environment}}`
 
   | table tkn_*
           </query>
@@ -225,7 +225,7 @@
       <table>
         <search>
           <query>
-| loadjob savedsearch="ssphp_app_account:$tkn_current_app$:ssphp_create_dashboard_dataset_posture_DEV"
+| loadjob savedsearch="{{splunk_user}}:{{app}}{{environment}}:ssphp_create_dashboard_dataset_posture{{environment}}"
 | search line_type="summary" AND ssphp.source.foundational_system="*"
 
 | eval compliant_line_width=round((100-(2*$tkn_margin$))*(('compliant_perc')/100)),
@@ -344,7 +344,7 @@
       <table>
         <search>
           <query>
-    | tstats max(_time) as last_run where `ssphp_metrics_data_index_DEV` by index, sourcetype
+    | tstats max(_time) as last_run where `ssphp_metrics_data_index{{environment}}` by index, sourcetype
     | eval last_run=strftime('last_run',"%Y-%m-%d %H:%M:%S")
     | table index, sourcetype, last_run
     | sort 0 - last_run

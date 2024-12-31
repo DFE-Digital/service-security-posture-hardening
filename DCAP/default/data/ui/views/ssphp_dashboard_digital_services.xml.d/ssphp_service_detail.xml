@@ -481,7 +481,7 @@ $tkn_use_case_search_string$
       <table>
         <search>
           <query>
-| loadjob savedsearch="ssphp_app_account:DCAP{{environment}}:ssphp_vulnerabilities_create_data{{environment}}"
+| loadjob savedsearch="{{splunk_user}}:{{app}}{{environment}}:ssphp_vulnerabilities_create_data{{environment}}"
 
 $tkn_use_case_search_string$
 

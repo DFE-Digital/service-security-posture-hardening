@@ -124,7 +124,7 @@
       <table>
         <search>
           <query>
-| loadjob savedsearch="{{splunk_user}}:$tkn_current_app$:ssphp_create_dashboard_dataset_posture{{environment}}"
+| loadjob savedsearch="{{splunk_user}}:{{app}}{{environment}}:ssphp_create_dashboard_dataset_posture{{environment}}"
 | where 'line_type'="summary"
 
 | eval compliant_abs_c=mvindex(split('compliant_abs'," of "),0),
@@ -336,7 +336,7 @@
       <table id="table1">
         <search>
           <query>
-| loadjob savedsearch="{{splunk_user}}:$tkn_current_app$:ssphp_create_dashboard_dataset_posture{{environment}}"
+| loadjob savedsearch="{{splunk_user}}:{{app}}{{environment}}:ssphp_create_dashboard_dataset_posture{{environment}}"
 | where 'line_type'="detail" AND match(lower('ssphp.source.foundational_system'),$tkn__service|s$)
 
 | eval ssphp.score.ciso_priority=case('ssphp.score.ciso_priority'=1,"DfE Mandated",

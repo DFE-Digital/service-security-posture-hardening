@@ -391,7 +391,7 @@
       <table>
         <search id="base_bdmc">
           <query>
-| loadjob savedsearch="ssphp_app_account:DCAP_DEV:ssphp_create_dashboard_dataset_service_DEV"
+| loadjob savedsearch="{{splunk_user}}:{{app}}{{environment}}:ssphp_create_dashboard_dataset_service{{environment}}"
 
 | table ssphp.service.portfolio, ssphp.service.service_line, ssphp.service.product, ssphp.assessment.source, ssphp.use_case.category, ssphp.use_case.id, ssphp.use_case.title, ssphp.assessment.display_name, ssphp.score.score, ssphp.score.compliance_status, ssphp.score.ciso_priority, ssphp.assessment.description, ssphp.score.color, ssphp.resource.id, ssphp.resource.tenant, ssphp.resource.subscription, ssphp.resource.resource_group, SSPHP_UID, SSPHP_RUN
 
@@ -464,7 +464,7 @@ index="ssphp_metrics_data" earliest=-7d@d latest=now sourcetype!="data_ingester_
       <single>
         <search>
           <query>
-index=ssphp_metrics_summary_DEV earliest=-3d@d latest=now
+index=ssphp_metrics_summary earliest=-3d@d latest=now
 | eval date=strftime('SSPHP_RUN',"%Y-%m-%d")
 | eventstats max(SSPHP_RUN) as max_SSPHP_RUN by date, ssphp.use_case.savedsearch
 | where SSPHP_RUN='max_SSPHP_RUN'
