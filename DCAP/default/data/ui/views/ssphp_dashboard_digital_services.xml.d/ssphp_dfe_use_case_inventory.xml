@@ -8,7 +8,7 @@
       <title>Use Cases : Digital Services</title>
       <table>
         <search>
-          <query>`ssphp_summary_index_DEV` (NOT ssphp.type="exclusion") (NOT ssphp.source.foundational_system="*") earliest=-2d@d latest=now
+          <query>`ssphp_summary_index` (NOT ssphp.type="exclusion") (NOT ssphp.source.foundational_system="*") earliest=-2d@d latest=now
 
 | rex field=ssphp.use_case.title "^(?&lt;Title&gt;.*) \[.*"
 | fields - max_SSPHP_RUN

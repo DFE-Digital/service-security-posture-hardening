@@ -207,7 +207,7 @@
       <table>
         <search>
           <query>
-| loadjob savedsearch="{{splunk_user}}:$tkn_current_app$:ssphp_create_dashboard_dataset_maturity{{environment}}"
+| loadjob savedsearch="{{splunk_user}}:{{app}}{{environment}}:ssphp_create_dashboard_dataset_maturity{{environment}}"
 
 $tkn_type$
 

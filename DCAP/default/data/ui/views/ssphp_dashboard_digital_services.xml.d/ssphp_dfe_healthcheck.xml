@@ -1,7 +1,7 @@
 <dashboard version="1.1" theme="dark">
 
 <label>DCAP Healthcheck Dashboard</label>
-<description>{{environment}} v3.1.1</description>
+<description>_DEV v3.1.4</description>
 
 
 
@@ -42,12 +42,13 @@
      | sort 0 - scheduled_time
 
      | makemv errors
-     | eval errors=if(run_time&lt;'avg_run_time'/10,"run time too short",null()),
-            errors=if(run_time>'avg_run_time'*10,mvappend('errors',"run time too long"),'errors'),
-            errors=if(result_count&lt;avg_result_count*0.1,mvappend('errors',"result count too low"),'errors'),
-            errors=if(result_count&gt;avg_result_count*10,mvappend('errors',"result count too high"),'errors'),
+     | eval errors=if(run_time&lt;'avg_run_time'*$tkn_sensitivity_lower_run_time$,"run time too short",null()),
+            errors=if(run_time>'avg_run_time'*$tkn_sensitivity_upper_run_time$,mvappend('errors',"run time too long"),'errors'),
+            errors=if(result_count&lt;avg_result_count*$tkn_sensitivity_lower_result_count$,mvappend('errors',"result count too low"),'errors'),
+            errors=if(result_count&gt;avg_result_count*$tkn_sensitivity_upper_result_count$,mvappend('errors',"result count too high"),'errors'),
             errors=if(like('status',"success"),'errors',mvappend('errors',"status not success")),
             errors=if(isnull('errors'),"-",'errors')
+
 
      | eval outcome=if(errors="-","good","bad")
 
@@ -58,7 +59,12 @@
 
      | table avg_result_count, avg_run_time, completed_time, errors, outcome, result_count, run_date, run_time, savedsearch_name, scheduled_time, start_time, status, target_date, outcome]
      
-| table savedsearch_name, target_run_time, cron_schedule, disabled, eai:acl.app, avg_result_count, avg_run_time, completed_time, errors, outcome, result_count, run_date, run_time, scheduled_time, start_time, status, target_date, outcome  
+| table target_date, run_date, savedsearch_name, eai:acl.app, disabled,
+        outcome, errors, 
+        result_count, avg_result_count,
+        cron_schedule, target_run_time, scheduled_time,
+        start_time, completed_time, run_time, avg_run_time,
+        status
     </query>
     <earliest>0</earliest>
     <latest>now</latest>
@@ -385,7 +391,7 @@
       <table>
         <search id="base_bdmc">
           <query>
-| loadjob savedsearch="ssphp_app_account:{{app}}{{environment}}:ssphp_create_dashboard_dataset_service{{environment}}"
+| loadjob savedsearch="{{splunk_user}}:{{app}}{{environment}}:ssphp_create_dashboard_dataset_service{{environment}}"
 
 | table ssphp.service.portfolio, ssphp.service.service_line, ssphp.service.product, ssphp.assessment.source, ssphp.use_case.category, ssphp.use_case.id, ssphp.use_case.title, ssphp.assessment.display_name, ssphp.score.score, ssphp.score.compliance_status, ssphp.score.ciso_priority, ssphp.assessment.description, ssphp.score.color, ssphp.resource.id, ssphp.resource.tenant, ssphp.resource.subscription, ssphp.resource.resource_group, SSPHP_UID, SSPHP_RUN
 
@@ -458,7 +464,7 @@ index="ssphp_metrics_data" earliest=-7d@d latest=now sourcetype!="data_ingester_
       <single>
         <search>
           <query>
-index=ssphp_metrics_summary{{environment}} earliest=-3d@d latest=now
+index=ssphp_metrics_summary earliest=-3d@d latest=now
 | eval date=strftime('SSPHP_RUN',"%Y-%m-%d")
 | eventstats max(SSPHP_RUN) as max_SSPHP_RUN by date, ssphp.use_case.savedsearch
 | where SSPHP_RUN='max_SSPHP_RUN'
@@ -511,6 +517,15 @@ index=ssphp_metrics_summary{{environment}} earliest=-3d@d latest=now
 
 
 
+  <row>
+    <panel>
+      <html>
+        <div>Failed SavedSearches &amp; Use Cases</div> 
+      </html>
+    </panel> 
+  </row>
+
+
 <row>
   <panel>
     <input type="dropdown" token="tkn_date" searchWhenChanged="true">
@@ -542,8 +557,30 @@ index=ssphp_metrics_summary{{environment}} earliest=-3d@d latest=now
       <default>bad</default>
     </input>
   </panel>
+  
+  <panel>
+    <input type="text" token="tkn_sensitivity_lower_run_time" searchWhenChanged="true">
+      <label>Run Time Lower Sensitivity</label>
+      <default>.1</default>
+    </input>
+    
+    <input type="text" token="tkn_sensitivity_upper_run_time" searchWhenChanged="true">
+      <label>Run Time Upper Sensitivity</label>
+      <default>10</default>
+    </input>
+    
+    <input type="text" token="tkn_sensitivity_lower_result_count" searchWhenChanged="true">
+      <label>Result Count Lower Sensitivity</label>
+      <default>.1</default>
+    </input>
+    
+    <input type="text" token="tkn_sensitivity_upper_result_count" searchWhenChanged="true">
+      <label>Result Count Upper Sensitivity</label>
+      <default>10</default>
+    </input>
+    
+  </panel>
 </row>
-
 
   
   <row depends="$debug$">
@@ -568,6 +605,7 @@ index=ssphp_metrics_summary{{environment}} earliest=-3d@d latest=now
   </row>
   
   
+  
   <row>
     <panel>
       <title>SavedSearches [$tkn_count$]</title>
@@ -589,7 +627,7 @@ index=ssphp_metrics_summary{{environment}} earliest=-3d@d latest=now
         <option name="rowNumbers">false</option>
         <option name="totalsRow">false</option>
         <option name="wrap">true</option>
-        <fields>savedsearch_name, target_run_time, cron_schedule, disabled, eai:acl.app, avg_result_count, avg_run_time, completed_time, errors, outcome, result_count, run_date, run_time, scheduled_time, start_time, status, target_date, outcome  </fields>
+        <fields>target_date, savedsearch_name, eai:acl.app, disabled, outcome, errors, result_count, avg_result_count, cron_schedule, target_run_time, scheduled_time, start_time, completed_time, run_time, avg_run_time, status</fields>
       </table>
     </panel>
   </row>

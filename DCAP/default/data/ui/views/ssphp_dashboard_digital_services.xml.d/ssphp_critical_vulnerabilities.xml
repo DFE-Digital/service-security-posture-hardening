@@ -16,7 +16,7 @@
       <table>
         <search id="bs_1">
           <query>
-| loadjob savedsearch="ssphp_app_account:$tkn_current_app$:ssphp_vulnerabilities_create_data{{environment}}"
+| loadjob savedsearch="{{splunk_user}}:{{app}}{{environment}}:ssphp_vulnerabilities_create_data{{environment}}"
 
 | lookup qualys_kb_lookup QID OUTPUT TITLE, DIAGNOSIS, SOLUTION, CONSEQUENCE, CVE
 
