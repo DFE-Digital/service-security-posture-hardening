@@ -42,11 +42,13 @@ async fn main() -> Result<()> {
         .map(Arc::new)
         .context("Building Custom Property Validator")?;
 
-    let owner_data = load_csv(&args.csv, &args.github_org_name)
+    let mut owner_data = load_csv(&args.csv, &args.github_org_name)
         .await
         .context("loading & validating CSV")?;
 
     debug!(name="update_custom_properties_from_csv", operation="validator", custom_property_validtor=?custom_property_validator);
+
+    owner_data.retain_valid(&custom_property_validator);
 
     owner_data
         .is_valid(&custom_property_validator)
@@ -88,14 +90,13 @@ async fn main() -> Result<()> {
                 )
             })?;
 
-        let setter = entry.into();
+        let setter: SetOrgRepoCustomProperties = entry.into();
         info!(name=APP_NAME, operation="Setting custom properties", entry=?entry);
 
         let response = client
             .org_create_or_update_custom_property_value(entry_organization, setter)
             .await
             .with_context(|| format!("Setting Custom properties for {:?}", entry))?;
-
         info!(name=APP_NAME, operation="Setting custom properties", response=?response);
     }
 
@@ -187,6 +188,16 @@ impl GitHubRepoCsv {
         } else {
             anyhow::bail!("CSV validation errors");
         }
+    }
+
+    fn retain_valid(&mut self, validator: &Validator) {
+        self.repos.retain(|repo| {
+            let result = validator.validate(Some(&repo.portfolio), Some(&repo.service_line), Some(&repo.product));
+            if !result.valid {
+                error!(name=APP_NAME, operation="vaildate CSV against FBP", csv_entry=?repo, validation_errors=?result);
+            }
+            result.valid
+        });
     }
 
     #[allow(dead_code)]
