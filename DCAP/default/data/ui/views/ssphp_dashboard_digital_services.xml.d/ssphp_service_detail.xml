@@ -1,18 +1,24 @@
-{% if environment=="_DEV" %}
-<dashboard theme="light" version="1.1" hideFilters="true" stylesheet="ssphp{{environment}}.css" script="js/addtags.js, js/table_cell_backcolor_multivalue.js">
-{% else %}
 <dashboard theme="dark" version="1.1" hideFilters="true" stylesheet="ssphp{{environment}}.css" script="js/addtags.js, js/table_cell_backcolor_multivalue.js">
-{% endif %}
-
 
 
 <label>Security Posture Continuous Assurance : Service Control Detail Dashboard</label>
-<description>{{environment}} v6.0.6</description>
+<description>{{environment}} v6.1.6</description>
   
   <init>
     <unset token="tkn_ready_event"></unset>
     <unset token="tkn_ready_panel"></unset>
     <unset token="tkn_ready_highlight"></unset>
+
+    <set token="tkn_colour_tile">pebble</set>
+    <set token="tkn_colour_null_line">#85F415</set>
+    <set token="tkn_colour_text">#bebebe</set>
+    <set token="tkn_margin">40</set>
+    <set token="tkn_margin_100">20</set>
+    <set token="tkn_compliant_line_non_width">50</set>
+    <set token="tkn_colour_compliant_line">#ECECEC</set>
+    <set token="tkn_colour_non_compliant_line">#FF4B4B</set>
+    <set token="tkn_font_size_1">900</set>
+    <set token="tkn_font_size_2">400</set>
   </init>
 
 
@@ -119,13 +125,20 @@
 <!-- ########################################################################## MAIN SCORE PANEL ##################################################################### --> 
 <!-- ################################################################################################################################################################# --> 
 
-  <row>
+  <row depends="$debug$">
     <panel>
       <single>
         <search base="bs_1">
           <query>
-| fields ssphp.score.score
+
+| eval score_Line_colour=if('ssphp.score.score'=100, $tkn_colour_compliant_line|s$, $tkn_colour_non_compliant_line|s$)
+
+| table ssphp.score.score, score_Line_colour
           </query>
+          <done>
+            <set token="tkn_score">$result.ssphp.score.score$</set>
+            <set token="tkn_score_Line_colour">$result.score_Line_colour$</set>
+          </done>
         </search>
         <option name="colorMode">block</option>
         <option name="rangeColors">["0xd41f1f","0x118832"]</option>
@@ -136,7 +149,59 @@
       </single>
     </panel>
   </row>
+
+
   
+
+<!-- ################### STYLE ROW ################### -->  
+  <row depends="$debug$">
+    <panel>
+      <html>
+        <style>
+          .absolute {
+            text-align: center !important;
+            color: $tkn_colour_text$ !important;
+            font-size: $tkn_font_size_1$% !important;
+            font-weight: bold;
+            text-align: center !important;
+            line-height: 1.5 !important;
+          }
+          .undervalue {
+            text-align: center !important;
+            color: $tkn_colour_text$ !important;
+            font-size: 100% !important;
+            text-align: center !important;
+            line-height: 1.5 !important;
+          }
+          .undervalue2 {
+            text-align: center !important;
+            color: $tkn_colour_text$ !important;
+            font-size: 80% !important;
+            text-align: center !important;
+            line-height: 1.5 !important;
+          }
+          .line{
+            color: $tkn_colour_tile$;
+            height: 4px;
+            margin-bottom: 20px;
+          }
+        </style>
+      </html>
+    </panel>
+  </row>
+  
+  <row>
+    <panel>
+      <html>
+        <div class="absolute" style="background: $tkn_colour_tile$;">$tkn_score$</div>
+        <div style="display: flex;">
+          <div class="line" style="width: $tkn_margin$%; border-bottom: 5px solid $tkn_colour_tile$;"/>
+          <div class="line" style="width: $tkn_margin_100$%; border-bottom: 5px solid $tkn_score_Line_colour$;"/>
+          <div class="line" style="width: $tkn_margin$%; border-bottom: 5px solid $tkn_colour_tile$;"/>
+        </div>
+      </html>
+    </panel>
+   </row> 
 
 
 

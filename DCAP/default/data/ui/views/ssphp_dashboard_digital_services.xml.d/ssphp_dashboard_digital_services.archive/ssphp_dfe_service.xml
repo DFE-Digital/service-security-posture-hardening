@@ -1,7 +1,7 @@
 <dashboard version="1.1" theme="dark" script="js/addtags.js, js/table_cell_color.js">
 
 <label>Security Posture Continuous Assurance : DfE Service Dashboard</label>
-<description>{{environment}} v4.2.0</description>
+<description>{{environment}} v4.1.26</description>
   
   <init>
     <set token="form.tkn_fields">C</set>
@@ -12,16 +12,10 @@
     <set token="tkn_padding_2">30</set>
     <unset token="tkn_ready"></unset>
 
+
     <set token="tokHideAll">true</set>
     
-    <set token="tkn_dashboard_start">1</set>
-    
-    <set token="tkn_colour_tile">pebble</set>
-    <set token="tkn_colour_compliant_line">#ECECEC</set>
-    <set token="tkn_colour_compliant_line_100">#85F415</set>
-    <set token="tkn_colour_non_compliant_line">#FF4B4B</set>
-    <set token="tkn_colour_text">#bebebe</set>
-    <set token="tkn_margin">20</set> 
+    <set token="tkn_dashboard_start">1</set> 
   </init>
 
 
@@ -51,12 +45,12 @@
       </table>
     </panel>
     
-<!-- #```| loadjob savedsearch="{{splunk_user}}:{{app}}{{environment}}:ssphp_create_dashboard_dataset_service_DEV"```# -->
+<!-- #```| loadjob savedsearch="{{splunk_user}}:{{app}}{{environment}}:ssphp_create_dashboard_dataset_service{{environment}}"```# -->
     <panel>
       <table>
         <search id="bs_0">
           <query>
-| loadjob savedsearch="{{splunk_user}}:{{app}}{{environment}}:ssphp_create_dashboard_dataset_service_DEV"
+| loadjob savedsearch="ssphp_app_account:$tkn_current_app$:ssphp_create_dashboard_dataset_service{{environment}}"
 
 | fields ssphp.service.portfolio, ssphp.service.service_line, ssphp.service.product, ssphp.assessment.source, ssphp.use_case.category, ssphp.use_case.id, ssphp.use_case.title, ssphp.assessment.display_name, ssphp.score.score, ssphp.score.compliance_status, ssphp.score.ciso_priority, ssphp.assessment.description, ssphp.score.color, ssphp.resource.id, ssphp.resource.tenant, ssphp.resource.subscription, ssphp.resource.subscription_name, ssphp.resource.resource_group, ssphp.score.remediation_priority, SSPHP_UID
           </query>
@@ -301,11 +295,11 @@
 | lookup ssphp_cost_centre_owner_emals.csv cost_centre_owner OUTPUT email as cost_centre_owner_email
 
 | append 
-    [| search index="ssphp_asset_inventory_DEV" 
+    [| search index="ssphp_asset_inventory{{environment}}" 
     (ssphp.resource.source="AZURE" OR ssphp.resource.source="GITHUB") AND (ssphp.service.portfolio=$tkn_portfolio|s$ AND ssphp.service.service_line=$tkn_service_line|s$ AND ssphp.service.product=$tkn_product|s$)
     earliest=-2d@d latest=now
 
-         [| inputlookup ssphp_last_asset_inventory_ssphp_run_DEV.csv where (inventory_type="azure" OR inventory_type="github")
+         [| inputlookup ssphp_last_asset_inventory_ssphp_run{{environment}}.csv where (inventory_type="azure" OR inventory_type="github")
           | stats max(SSPHP_RUN) as SSPHP_RUN by inventory_type
           | eval st="(ssphp.resource.source=\"".upper('inventory_type')."\" AND SSPHP_RUN=\"".'SSPHP_RUN'."\")"
           | stats values(st) as st
@@ -387,7 +381,7 @@
           <query>
   | makeresults
 
-  `ssphp_metrics_eval_field_colors_DEV`
+  `ssphp_metrics_eval_field_colors{{environment}}`
 
   | table tkn_*
           </query>
@@ -506,18 +500,18 @@ index=_audit user=$tkn__current_user_name|s$ action=search "makeresults" "user_d
   <row depends="$tkn_ready$">
     <panel>
       <html>
-        <div id="div_header" style="background:$tkn_colour_tile$;color:$tkn_colour_text$;font-weight:bold;font-size:$tkn_font_size_2$%;text-align:center;padding:$tkn_padding_2$">$tkn_config_number_total_resources$</div> 
-        <div id="div_header" style="background:$tkn_colour_tile$;color:$tkn_colour_text$;font-size:80%;text-align:center">Non-Compliant Resources</div>
-        <div id="div_header" style="background:$tkn_colour_tile$;color:$tkn_colour_text$;font-size:100%;text-align:center">CONFIGURATION</div> 
+        <div id="div_header" style="background:darkslategrey;color:white;font-weight:bold;font-size:$tkn_font_size_2$%;text-align:center;padding:$tkn_padding_2$">$tkn_config_number_total_resources$</div> 
+        <div id="div_header" style="background:darkslategrey;color:white;font-size:80%;text-align:center">Non-Compliant Resources</div>
+        <div id="div_header" style="background:darkslategrey;color:yellow;font-size:100%;text-align:center">CONFIGURATION</div> 
 
       </html>
     </panel>
 
     <panel>
       <html>
-        <div id="div_header" style="background:$tkn_colour_tile$;color:$tkn_colour_text$;font-weight:bold;font-size:$tkn_font_size_2$%;text-align:center;padding:$tkn_padding_2$">$tkn_alerts_number_total_resources$</div> 
-        <div id="div_header" style="background:$tkn_colour_tile$;color:$tkn_colour_text$;font-size:80%;text-align:center">Non-Compliant Resources</div>
-        <div id="div_header" style="background:$tkn_colour_tile$;color:$tkn_colour_text$;font-size:100%;text-align:center">ALERTS</div> 
+        <div id="div_header" style="background:darkslategrey;color:white;font-weight:bold;font-size:$tkn_font_size_2$%;text-align:center;padding:$tkn_padding_2$">$tkn_alerts_number_total_resources$</div> 
+        <div id="div_header" style="background:darkslategrey;color:white;font-size:80%;text-align:center">Non-Compliant Resources</div>
+        <div id="div_header" style="background:darkslategrey;color:yellow;font-size:100%;text-align:center">ALERTS</div> 
       </html>
     </panel>
   </row>
@@ -532,7 +526,6 @@ index=_audit user=$tkn__current_user_name|s$ action=search "makeresults" "user_d
 <!-- ###################################################### POSTURE #################################################################### -->
   <row depends="$tkn_ready$,$debug$">
     <panel>
-      <title>posture</title>
       <table>
         <search base="bs_1">
           <query>
@@ -547,30 +540,59 @@ index=_audit user=$tkn__current_user_name|s$ action=search "makeresults" "user_d
 
 | eval number_total_resources='rg_total',
        number_passed_resources='rg_good',
-       perc_passed_resources=floor(('number_passed_resources'*100)/'number_total_resources'),
+       perc_passed_resources=floor(('number_passed_resources'*100)/'number_total_resources')." %",
        abs='number_passed_resources'." / ".'number_total_resources',
+       color=case(isnull('perc_passed_resources') OR 'perc_passed_resources'="","#171D21",
+                                  'perc_passed_resources'=100,"#6AB187",
+                                  1==1,"#D32D41"),  
        abs=if(isnull('abs'),"-",'abs')
 
-| eval compliant_line_width=round((100-(2*$tkn_margin$))*(('perc_passed_resources')/100)),
-       compliant_line_non_width=(100-(2*$tkn_margin$))-'compliant_line_width',
-       compliant_color=if(perc_passed_resources=100,$tkn_colour_compliant_line_100|s$,$tkn_colour_compliant_line|s$),
-       perc_passed_resources='perc_passed_resources'."%",
-       view=$tkn_view|s$,
-       compliant_both=if('view'="a",'abs','perc_passed_resources')
-
-| table number_total_resources, number_passed_resources, perc_passed_resources, abs, compliant_both, compliant_line_width, compliant_line_non_width, compliant_color
+| table number_total_resources, number_passed_resources, perc_passed_resources, abs, color
             </query>
           <done>
             <eval token="tkn_posture_number_total_resources">if(isnotnull($result.number_total_resources$),$result.number_total_resources$,"-")</eval>
             <eval token="tkn_posture_number_passed_resources">if(isnotnull($result.number_passed_resources$),$result.number_passed_resources$,"-")</eval>
             <eval token="tkn_posture_perc_passed_resources">if(isnotnull($result.perc_passed_resources$),$result.perc_passed_resources$,"-")</eval>
             <eval token="tkn_posture_abs">if(isnotnull($result.abs$),$result.abs$,"-")</eval>
-            
-            
-            <set token="tkn_posture_compliant_both">$result.compliant_both$</set>
-            <set token="tkn_posture_compliant_color">$result.compliant_color$</set>
-            <set token="tkn_posture_compliant_line_width">$result.compliant_line_width$</set>
-            <set token="tkn_posture_compliant_line_non_width">$result.compliant_line_non_width$</set>
+            <eval token="tkn_posture_color">if(isnotnull($result.color$),$result.color$,"#D32D41")</eval>
+          </done>
+        </search>
+      </table>
+    </panel>
+  </row>
+
+
+
+<!-- ###################################################### VULNERABILITY #################################################################### -->
+  <row depends="$tkn_ready$,$debug$">
+    <panel>
+      <table>
+        <search base="bs_1">
+          <query>
+| search ssphp.use_case.category="VULNERABILITY" AND ssphp.resource.id="***" AND ssphp.resource.id="*/virtualmachines/*"
+
+| stats count, sum(eval(if('ssphp.score.ciso_priority'="DfE Mandated" AND mvindex(split('ssphp.score.score',"|"),0)!="100",1,0))) as rid_bad by ssphp.resource.id
+| stats count as rid_total, sum(eval(if('rid_bad'>0,1,0))) as rid_bad
+
+| eval rid_good='rid_total'-'rid_bad'
+
+| eval number_total_resources='rid_total',
+       number_passed_resources='rid_good',
+       perc_passed_resources=floor(('number_passed_resources'*100)/'number_total_resources')." %",
+       abs='number_passed_resources'." / ".'number_total_resources',
+       color=case(isnull('perc_passed_resources') OR 'perc_passed_resources'="","#171D21",
+                                  'perc_passed_resources'=100,"#6AB187",
+                                  1==1,"#D32D41"),  
+       abs=if(isnull('abs'),"-",'abs')
+
+| table number_total_resources, number_passed_resources, perc_passed_resources, abs, color
+            </query>
+          <done>
+            <eval token="tkn_vulnerability_number_total_resources">if(isnotnull($result.number_total_resources$),$result.number_total_resources$,"-")</eval>
+            <eval token="tkn_vulnerability_number_passed_resources">if(isnotnull($result.number_passed_resources$),$result.number_passed_resources$,"-")</eval>
+            <eval token="tkn_vulnerability_perc_passed_resources">if(isnotnull($result.perc_passed_resources$),$result.perc_passed_resources$,"-")</eval>
+            <eval token="tkn_vulnerability_abs">if(isnotnull($result.abs$),$result.abs$,"-")</eval>
+            <eval token="tkn_vulnerability_color">if(isnotnull($result.color$),$result.color$,"#D32D41")</eval>
           </done>
         </search>
       </table>
@@ -582,7 +604,6 @@ index=_audit user=$tkn__current_user_name|s$ action=search "makeresults" "user_d
 <!-- ###################################################### REPOS #################################################################### -->
   <row depends="$tkn_ready$,$debug$">
     <panel>
-      <title>repos</title>
       <table>
         <search base="bs_1">
           <query>
@@ -595,30 +616,21 @@ index=_audit user=$tkn__current_user_name|s$ action=search "makeresults" "user_d
 
 | eval number_total_resources='rid_total',
        number_passed_resources='rid_good',
-       perc_passed_resources=floor(('number_passed_resources'*100)/'number_total_resources'),
+       perc_passed_resources=floor(('number_passed_resources'*100)/'number_total_resources')." %",
        abs='number_passed_resources'." / ".'number_total_resources',
+       color=case(isnull('perc_passed_resources') OR 'perc_passed_resources'="","#171D21",
+                                  'perc_passed_resources'=100,"#6AB187",
+                                  1==1,"#D32D41"),  
        abs=if(isnull('abs'),"-",'abs')
 
-| eval compliant_line_width=round((100-(2*$tkn_margin$))*(('perc_passed_resources')/100)),
-       compliant_line_non_width=(100-(2*$tkn_margin$))-'compliant_line_width',
-       compliant_color=if(perc_passed_resources=100,$tkn_colour_compliant_line_100|s$,$tkn_colour_compliant_line|s$),
-       perc_passed_resources='perc_passed_resources'."%",
-       view=$tkn_view|s$,
-       compliant_both=if('view'="a",'abs','perc_passed_resources')
-
-| table number_total_resources, number_passed_resources, perc_passed_resources, abs, compliant_both, compliant_line_width, compliant_line_non_width, compliant_color
+| table number_total_resources, number_passed_resources, perc_passed_resources, abs, color
             </query>
           <done>
             <eval token="tkn_repos_number_total_resources">if(isnotnull($result.number_total_resources$),$result.number_total_resources$,"-")</eval>
             <eval token="tkn_repos_number_passed_resources">if(isnotnull($result.number_passed_resources$),$result.number_passed_resources$,"-")</eval>
             <eval token="tkn_repos_perc_passed_resources">if(isnotnull($result.perc_passed_resources$),$result.perc_passed_resources$,"-")</eval>
             <eval token="tkn_repos_abs">if(isnotnull($result.abs$),$result.abs$,"-")</eval>
-            
-            
-            <set token="tkn_repos_compliant_both">$result.compliant_both$</set>
-            <set token="tkn_repos_compliant_color">$result.compliant_color$</set>
-            <set token="tkn_repos_compliant_line_width">$result.compliant_line_width$</set>
-            <set token="tkn_repos_compliant_line_non_width">$result.compliant_line_non_width$</set>
+            <eval token="tkn_repos_color">if(isnotnull($result.color$),$result.color$,"#D32D41")</eval>
           </done>
         </search>
       </table>
@@ -627,10 +639,9 @@ index=_audit user=$tkn__current_user_name|s$ action=search "makeresults" "user_d
 
 
 
-<!-- ###################################################### CODE SCAN #################################################################### -->
+<!-- ###################################################### CODE_SCAN #################################################################### -->
   <row depends="$tkn_ready$,$debug$">
     <panel>
-      <title>code scan</title>
       <table>
         <search base="bs_1">
           <query>
@@ -645,30 +656,21 @@ index=_audit user=$tkn__current_user_name|s$ action=search "makeresults" "user_d
 
 | eval number_total_resources='rid_total',
        number_passed_resources='rid_good',
-       perc_passed_resources=floor(('number_passed_resources'*100)/'number_total_resources'),
+       perc_passed_resources=floor(('number_passed_resources'*100)/'number_total_resources')." %",
        abs='number_passed_resources'." / ".'number_total_resources',
+       color=case(isnull('perc_passed_resources') OR 'perc_passed_resources'="","#171D21",
+                                  'perc_passed_resources'=100,"#6AB187",
+                                  1==1,"#D32D41"),  
        abs=if(isnull('abs'),"-",'abs')
 
-| eval compliant_line_width=round((100-(2*$tkn_margin$))*(('perc_passed_resources')/100)),
-       compliant_line_non_width=(100-(2*$tkn_margin$))-'compliant_line_width',
-       compliant_color=if(perc_passed_resources=100,$tkn_colour_compliant_line_100|s$,$tkn_colour_compliant_line|s$),
-       perc_passed_resources='perc_passed_resources'."%",
-       view=$tkn_view|s$,
-       compliant_both=if('view'="a",'abs','perc_passed_resources')
-
-| table number_total_resources, number_passed_resources, perc_passed_resources, abs, compliant_both, compliant_line_width, compliant_line_non_width, compliant_color
+| table number_total_resources, number_passed_resources, perc_passed_resources, abs, color
             </query>
           <done>
             <eval token="tkn_codescan_number_total_resources">if(isnotnull($result.number_total_resources$),$result.number_total_resources$,"-")</eval>
             <eval token="tkn_codescan_number_passed_resources">if(isnotnull($result.number_passed_resources$),$result.number_passed_resources$,"-")</eval>
             <eval token="tkn_codescan_perc_passed_resources">if(isnotnull($result.perc_passed_resources$),$result.perc_passed_resources$,"-")</eval>
-            <eval token="codescan_abs">if(isnotnull($result.abs$),$result.abs$,"-")</eval>
-            
-            
-            <set token="tkn_codescan_compliant_both">$result.compliant_both$</set>
-            <set token="tkn_codescan_compliant_color">$result.compliant_color$</set>
-            <set token="tkn_codescan_compliant_line_width">$result.compliant_line_width$</set>
-            <set token="tkn_codescan_compliant_line_non_width">$result.compliant_line_non_width$</set>
+            <eval token="tkn_codescan_abs">if(isnotnull($result.abs$),$result.abs$,"-")</eval>
+            <eval token="tkn_codescan_color">if(isnotnull($result.color$),$result.color$,"#D32D41")</eval>
           </done>
         </search>
       </table>
@@ -676,167 +678,71 @@ index=_audit user=$tkn__current_user_name|s$ action=search "makeresults" "user_d
   </row>
 
 
-
-<!-- ###################################################### VULNERABILITY #################################################################### -->
-  <row depends="$tkn_ready$,$debug$">
-    <panel>
-      <title>vulnerability</title>
-      <table>
-        <search base="bs_1">
-          <query>
-| search ssphp.use_case.category="VULNERABILITY" AND ssphp.resource.id="***" AND ssphp.resource.id="*/virtualmachines/*"
-
-| stats count, sum(eval(if('ssphp.score.ciso_priority'="DfE Mandated" AND mvindex(split('ssphp.score.score',"|"),0)!="100",1,0))) as rid_bad by ssphp.resource.id
-| stats count as rid_total, sum(eval(if('rid_bad'>0,1,0))) as rid_bad
-
-| eval rid_good='rid_total'-'rid_bad'
-
-| eval number_total_resources='rid_total',
-       number_passed_resources='rid_good',
-       perc_passed_resources=floor(('number_passed_resources'*100)/'number_total_resources'),
-       abs='number_passed_resources'." / ".'number_total_resources',
-       abs=if(isnull('abs'),"-",'abs')
-
-| eval compliant_line_width=round((100-(2*$tkn_margin$))*(('perc_passed_resources')/100)),
-       compliant_line_non_width=(100-(2*$tkn_margin$))-'compliant_line_width',
-       compliant_color=if(perc_passed_resources=100,$tkn_colour_compliant_line_100|s$,$tkn_colour_compliant_line|s$),
-       perc_passed_resources='perc_passed_resources'."%",
-       view=$tkn_view|s$,
-       compliant_both=if('view'="a",'abs','perc_passed_resources')
-
-| table number_total_resources, number_passed_resources, perc_passed_resources, abs, compliant_both, compliant_line_width, compliant_line_non_width, compliant_color
-            </query>
-          <done>
-            <eval token="tkn_vulnerability_number_total_resources">if(isnotnull($result.number_total_resources$),$result.number_total_resources$,"-")</eval>
-            <eval token="tkn_vulnerability_number_passed_resources">if(isnotnull($result.number_passed_resources$),$result.number_passed_resources$,"-")</eval>
-            <eval token="tkn_vulnerability_perc_passed_resources">if(isnotnull($result.perc_passed_resources$),$result.perc_passed_resources$,"-")</eval>
-            <eval token="vulnerability_abs">if(isnotnull($result.abs$),$result.abs$,"-")</eval>
-            
-            
-            <set token="tkn_vulnerability_compliant_both">$result.compliant_both$</set>
-            <set token="tkn_vulnerability_compliant_color">$result.compliant_color$</set>
-            <set token="tkn_vulnerability_compliant_line_width">$result.compliant_line_width$</set>
-            <set token="tkn_vulnerability_compliant_line_non_width">$result.compliant_line_non_width$</set>
-          </done>
-        </search>
-      </table>
-    </panel>
-  </row>
-
-
-  
-
-<!-- ################### STYLE ROW ################### -->  
-  <row depends="$debug$">
-    <panel>
-      <html>
-        <style>
-          .absolute {
-            text-align: center !important;
-            color: $tkn_colour_text$ !important;
-            font-size: $tkn_font_size_2$% !important;
-            font-weight: bold;
-            text-align: center !important;
-            line-height: 1.5 !important;
-          }
-          .undervalue {
-            text-align: center !important;
-            color: $tkn_colour_text$ !important;
-            font-size: 100% !important;
-            text-align: center !important;
-            line-height: 1.5 !important;
-          }
-          .undervalue2 {
-            text-align: center !important;
-            color: $tkn_colour_text$ !important;
-            font-size: 80% !important;
-            text-align: center !important;
-            line-height: 1.5 !important;
-          }
-          .line{
-            color: $tkn_colour_tile$;
-            height: 4px;
-            margin-bottom: 20px;
-          }
-        </style>
-      </html>
-    </panel>
-  </row>
-  
-
-<!-- ################### DISPLAY ROW ################### -->
 
   <row depends="$tkn_ready$">
-    <panel depends="$tkn_ready$">
+    <panel depends="$tkn_ready$,$tkn_show_abs$">
       <html>
-        <div class="absolute" style="background:$tkn_colour_tile$;">$tkn_posture_compliant_both$</div>
-        <div style="display: flex;">
-          <div class="line" style="width: $tkn_margin$%; border-bottom: 5px solid $tkn_colour_tile$;"/>
-          
-          <div class="line" style="width: $tkn_posture_compliant_line_width$%;   border-bottom: 5px solid $tkn_posture_compliant_color$;"/>
-          <div class="line" style="width: $tkn_posture_compliant_line_non_width$%;   border-bottom: 5px solid $tkn_colour_non_compliant_line$;"/>
-          
-          <div class="line" style="width: $tkn_margin$%; border-bottom: 5px solid $tkn_colour_tile$;"/>
-        </div>
-        <div class="undervalue2" style="background:$tkn_colour_tile$;">Compliant Resource Groups</div>
-        <div class="undervalue" style="background:$tkn_colour_tile$;">POSTURE CONFIGURATION</div>
+        <div id="div_header" style="background:$tkn_posture_color$;color:white;font-weight:bold;font-size:$tkn_font_size_2$%;text-align:center;padding:$tkn_padding_2$">$tkn_posture_abs$</div> 
+        <div id="div_header" style="background:$tkn_posture_color$;color:white;font-size:80%;text-align:center">Compliant Resource Groups</div>
+        <div id="div_header" style="background:$tkn_posture_color$;color:yellow;font-size:100%;text-align:center">POSTURE CONFIGURATION</div> 
+      </html>
+    </panel>
+    <panel depends="$tkn_ready$,$tkn_show_perc$">
+      <html>
+        <div id="div_header" style="background:$tkn_posture_color$;color:white;font-weight:bold;font-size:$tkn_font_size_2$%;text-align:center;padding:$tkn_padding_2$">$tkn_posture_perc_passed_resources$</div> 
+        <div id="div_header" style="background:$tkn_posture_color$;color:white;font-size:80%;text-align:center">Compliant Resource Groups</div>
+        <div id="div_header" style="background:$tkn_posture_color$;color:yellow;font-size:100%;text-align:center">POSTURE CONFIGURATION</div> 
       </html>
     </panel>
     
 
-    <panel depends="$tkn_ready$">
+    <panel depends="$tkn_ready$,$tkn_show_abs$">
       <html>
-        <div class="absolute" style="background:$tkn_colour_tile$;">$tkn_repos_compliant_both$</div>
-        <div style="display: flex;">
-          <div class="line" style="width: $tkn_margin$%; border-bottom: 5px solid $tkn_colour_tile$;"/>
-          
-          <div class="line" style="width: $tkn_repos_compliant_line_width$%;   border-bottom: 5px solid $tkn_repos_compliant_color$;"/>
-          <div class="line" style="width: $tkn_repos_compliant_line_non_width$%;   border-bottom: 5px solid $tkn_colour_non_compliant_line$;"/>
-          
-          <div class="line" style="width: $tkn_margin$%; border-bottom: 5px solid $tkn_colour_tile$;"/>
-        </div>
-        <div class="undervalue2" style="background:$tkn_colour_tile$;">GitHub Repos Compliant with CIS Benchmarks</div>
-        <div class="undervalue" style="background:$tkn_colour_tile$;">REPOSITORY CONFIGURATION</div>
+        <div id="div_header" style="background:$tkn_repos_color$;color:white;font-weight:bold;font-size:$tkn_font_size_2$%;text-align:center;padding:$tkn_padding_2$">$tkn_repos_abs$</div> 
+        <div id="div_header" style="background:$tkn_repos_color$;color:white;font-size:80%;text-align:center">GitHub Repos Compliant with CIS Benchmarks</div>
+        <div id="div_header" style="background:$tkn_repos_color$;color:yellow;font-size:100%;text-align:center">REPOSITORY CONFIGURATION</div> 
+      </html>
+    </panel>
+    <panel depends="$tkn_ready$,$tkn_show_perc$">
+      <html>
+        <div id="div_header" style="background:$tkn_repos_color$;color:white;font-weight:bold;font-size:$tkn_font_size_2$%;text-align:center;padding:$tkn_padding_2$">$tkn_repos_perc_passed_resources$</div> 
+        <div id="div_header" style="background:$tkn_repos_color$;color:white;font-size:80%;text-align:center">GitHub Repos Compliant with CIS Benchmarks</div>
+        <div id="div_header" style="background:$tkn_repos_color$;color:yellow;font-size:100%;text-align:center">REPOSITORY CONFIGURATION</div> 
       </html>
     </panel>
     
 
-    <panel depends="$tkn_ready$">
+    <panel depends="$tkn_ready$,$tkn_show_abs$">
       <html>
-        <div class="absolute" style="background:$tkn_colour_tile$;">$tkn_codescan_compliant_both$</div>
-        <div style="display: flex;">
-          <div class="line" style="width: $tkn_margin$%; border-bottom: 5px solid $tkn_colour_tile$;"/>
-          
-          <div class="line" style="width: $tkn_codescan_compliant_line_width$%;   border-bottom: 5px solid $tkn_codescan_compliant_color$;"/>
-          <div class="line" style="width: $tkn_codescan_compliant_line_non_width$%;   border-bottom: 5px solid $tkn_colour_non_compliant_line$;"/>
-          
-          <div class="line" style="width: $tkn_margin$%; border-bottom: 5px solid $tkn_colour_tile$;"/>
-        </div>
-        <div class="undervalue2" style="background:$tkn_colour_tile$;">Compliant GitHub Repos</div>
-        <div class="undervalue" style="background:$tkn_colour_tile$;">CODE SCANNING ALERTS</div>
+        <div id="div_header" style="background:$tkn_codescan_color$;color:white;font-weight:bold;font-size:$tkn_font_size_2$%;text-align:center;padding:$tkn_padding_2$">$tkn_codescan_abs$</div> 
+        <div id="div_header" style="background:$tkn_codescan_color$;color:white;font-size:80%;text-align:center">Compliant GitHub Repos</div>
+        <div id="div_header" style="background:$tkn_codescan_color$;color:yellow;font-size:100%;text-align:center">CODE SCANNING ALERTS</div> 
+      </html>
+    </panel>
+    <panel depends="$tkn_ready$,$tkn_show_perc$">
+      <html>
+        <div id="div_header" style="background:$tkn_codescan_color$;color:white;font-weight:bold;font-size:$tkn_font_size_2$%;text-align:center;padding:$tkn_padding_2$">$tkn_codescan_perc_passed_resources$</div> 
+        <div id="div_header" style="background:$tkn_codescan_color$;color:white;font-size:80%;text-align:center">Compliant GitHub Repos</div>
+        <div id="div_header" style="background:$tkn_codescan_color$;color:yellow;font-size:100%;text-align:center">CODE SCANNING ALERTS</div> 
       </html>
     </panel>
     
 
-    <panel depends="$tkn_ready$">
+    <panel depends="$tkn_ready$,$tkn_show_abs$">
       <html>
-        <div class="absolute" style="background:$tkn_colour_tile$;">$tkn_vulnerability_compliant_both$</div>
-        <div style="display: flex;">
-          <div class="line" style="width: $tkn_margin$%; border-bottom: 5px solid $tkn_colour_tile$;"/>
-          
-          <div class="line" style="width: $tkn_vulnerability_compliant_line_width$%;   border-bottom: 5px solid $tkn_vulnerability_compliant_color$;"/>
-          <div class="line" style="width: $tkn_vulnerability_compliant_line_non_width$%;   border-bottom: 5px solid $tkn_colour_non_compliant_line$;"/>
-          
-          <div class="line" style="width: $tkn_margin$%; border-bottom: 5px solid $tkn_colour_tile$;"/>
-        </div>
-        <div class="undervalue2" style="background:$tkn_colour_tile$;">Compliant Virtual Machines</div>
-        <div class="undervalue" style="background:$tkn_colour_tile$;">VM VULNERABILITY ALERTS</div>
+        <div id="div_header" style="background:$tkn_vulnerability_color$;color:white;font-weight:bold;font-size:$tkn_font_size_2$%;text-align:center;padding:$tkn_padding_2$">$tkn_vulnerability_abs$</div> 
+        <div id="div_header" style="background:$tkn_vulnerability_color$;color:white;font-size:80%;text-align:center">Compliant Virtual Machines</div>
+        <div id="div_header" style="background:$tkn_vulnerability_color$;color:yellow;font-size:100%;text-align:center">VM VULNERABILITY ALERTS</div> 
+      </html>
+    </panel>
+    <panel depends="$tkn_ready$,$tkn_show_perc$">
+      <html>
+        <div id="div_header" style="background:$tkn_vulnerability_color$;color:white;font-weight:bold;font-size:$tkn_font_size_2$%;text-align:center;padding:$tkn_padding_2$">$tkn_vulnerability_perc_passed_resources$</div> 
+        <div id="div_header" style="background:$tkn_vulnerability_color$;color:white;font-size:80%;text-align:center">Compliant Virtual Machines</div>
+        <div id="div_header" style="background:$tkn_vulnerability_color$;color:yellow;font-size:100%;text-align:center">VM VULNERABILITY ALERTS</div> 
       </html>
     </panel>
   </row>
-  
-  
-  
 
 
 <!-- #################################################################################################################################### --> 
@@ -845,6 +751,8 @@ index=_audit user=$tkn__current_user_name|s$ action=search "makeresults" "user_d
 
 
   <row>
+
+      
     <panel id="m1">
       <html>
         <style>
@@ -929,7 +837,7 @@ index=_audit user=$tkn__current_user_name|s$ action=search "makeresults" "user_d
         <fieldForValue>tools</fieldForValue>
         <search>
           <query>
-`ssphp_summary_index_DEV` earliest=-2d@d latest=now ssphp.use_case.category="CODE_SCAN"
+`ssphp_summary_index{{environment}}` earliest=-2d@d latest=now ssphp.use_case.category="CODE_SCAN"
 
 | search NOT ssphp.assessment.sub_source="true"
 
@@ -1002,7 +910,7 @@ index=_audit user=$tkn__current_user_name|s$ action=search "makeresults" "user_d
     <panel>
       <html>
         <div style="display:flex; justify-content:flex-end; width:100%; padding:0;">
-          <button id="showButton" class="btn"><a href="/app/DCAP_DEV/ssphp_dashboard_report_issue" target="_blank">Report an Issue</a></button>
+          <button id="showButton" class="btn"><a href="/app/DCAP{{environment}}/ssphp_dashboard_report_issue" target="_blank">Report an Issue</a></button>
         </div>
       </html>
     </panel>
@@ -1323,11 +1231,11 @@ $tkn_search_filter$
       <table id="table_azure_resource_table">
         <search>
           <query>
-index="ssphp_asset_inventory_DEV" 
+index="ssphp_asset_inventory{{environment}}" 
     (ssphp.resource.source="AZURE") 
     earliest=-2d@d latest=now
 
-    [| inputlookup ssphp_last_asset_inventory_ssphp_run_DEV.csv where inventory_type="azure"
+    [| inputlookup ssphp_last_asset_inventory_ssphp_run{{environment}}.csv where inventory_type="azure"
      | stats max(SSPHP_RUN) as SSPHP_RUN
      | return SSPHP_RUN]
 
@@ -1374,11 +1282,11 @@ index="ssphp_asset_inventory_DEV"
       <table>
         <search>
           <query>
-index="ssphp_asset_inventory_DEV" 
+index="ssphp_asset_inventory{{environment}}" 
     (ssphp.resource.source="GITHUB") 
     earliest=-2d@d latest=now
 
-    [| inputlookup ssphp_last_asset_inventory_ssphp_run_DEV.csv where inventory_type="github"
+    [| inputlookup ssphp_last_asset_inventory_ssphp_run{{environment}}.csv where inventory_type="github"
      | stats max(SSPHP_RUN) as SSPHP_RUN
      | return SSPHP_RUN]
 
@@ -1416,7 +1324,7 @@ index="ssphp_asset_inventory_DEV"
 <!-- ###################################################### FOOTER ROW ################################################################## -->
 <!-- #################################################################################################################################### --> 
 
-  <row depends="$debug$">
+<row depends="$debug$">
     <panel>
         <table>
             <search>
@@ -1445,7 +1353,7 @@ index="ssphp_asset_inventory_DEV"
     <panel>
         <html>Current User : $tkn__current_user_name$&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;Current App : $tkn__current_application$&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;User Service : $tkn__current_user_service$&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;Version : 5d9adba8cb2408f9193f00c611ddf74a974241ae</html>
     </panel>
-  </row>
+</row>
 
 
 </dashboard>

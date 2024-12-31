@@ -1,11 +1,8 @@
-{% if environment=="_DEV" %}
-  <dashboard theme="dark" version="1.1" hideFilters="true" stylesheet="ssphp_DEV.css" script="js/addtags.js, js/table_cell_backcolor_multivalue.js">
-{% else %}
-  <dashboard theme="dark" version="1.1" hideFilters="true" stylesheet="ssphp.css" script="js/addtags.js, js/table_cell_backcolor_multivalue.js">
-{% endif %}
+<dashboard theme="dark" version="1.1" hideFilters="true" stylesheet="ssphp{{environment}}.css" script="js/addtags.js, js/table_cell_backcolor_multivalue.js">
+
 
   <label>Security Posture Continuous Assurance : Control Detail Dashboard</label>
-  <description>{{environment}} v3.2.11</description>
+  <description>{{environment}} v3.3.0</description>
   
   <init>
     <unset token="tkn_show_dashboard"></unset>
