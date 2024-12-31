@@ -51,12 +51,12 @@
       </table>
     </panel>
     
-<!-- #```| loadjob savedsearch="{{splunk_user}}:{{app}}{{environment}}:ssphp_create_dashboard_dataset_service_DEV"```# -->
+<!-- #```| loadjob savedsearch="{{splunk_user}}:{{app}}{{environment}}:ssphp_create_dashboard_dataset_service{{environment}}"```# -->
     <panel>
       <table>
         <search id="bs_0">
           <query>
-| loadjob savedsearch="{{splunk_user}}:{{app}}{{environment}}:ssphp_create_dashboard_dataset_service_DEV"
+| loadjob savedsearch="{{splunk_user}}:{{app}}{{environment}}:ssphp_create_dashboard_dataset_service{{environment}}"
 
 | fields ssphp.service.portfolio, ssphp.service.service_line, ssphp.service.product, ssphp.assessment.source, ssphp.use_case.category, ssphp.use_case.id, ssphp.use_case.title, ssphp.assessment.display_name, ssphp.score.score, ssphp.score.compliance_status, ssphp.score.ciso_priority, ssphp.assessment.description, ssphp.score.color, ssphp.resource.id, ssphp.resource.tenant, ssphp.resource.subscription, ssphp.resource.subscription_name, ssphp.resource.resource_group, ssphp.score.remediation_priority, SSPHP_UID
           </query>
@@ -301,11 +301,11 @@
 | lookup ssphp_cost_centre_owner_emals.csv cost_centre_owner OUTPUT email as cost_centre_owner_email
 
 | append 
-    [| search index="ssphp_asset_inventory_DEV" 
+    [| search index="ssphp_asset_inventory{{environment}}" 
     (ssphp.resource.source="AZURE" OR ssphp.resource.source="GITHUB") AND (ssphp.service.portfolio=$tkn_portfolio|s$ AND ssphp.service.service_line=$tkn_service_line|s$ AND ssphp.service.product=$tkn_product|s$)
     earliest=-2d@d latest=now
 
-         [| inputlookup ssphp_last_asset_inventory_ssphp_run_DEV.csv where (inventory_type="azure" OR inventory_type="github")
+         [| inputlookup ssphp_last_asset_inventory_ssphp_run{{environment}}.csv where (inventory_type="azure" OR inventory_type="github")
           | stats max(SSPHP_RUN) as SSPHP_RUN by inventory_type
           | eval st="(ssphp.resource.source=\"".upper('inventory_type')."\" AND SSPHP_RUN=\"".'SSPHP_RUN'."\")"
           | stats values(st) as st
@@ -387,7 +387,7 @@
           <query>
   | makeresults
 
-  `ssphp_metrics_eval_field_colors_DEV`
+  `ssphp_metrics_eval_field_colors{{environment}}`
 
   | table tkn_*
           </query>
@@ -929,7 +929,7 @@ index=_audit user=$tkn__current_user_name|s$ action=search "makeresults" "user_d
         <fieldForValue>tools</fieldForValue>
         <search>
           <query>
-`ssphp_summary_index_DEV` earliest=-2d@d latest=now ssphp.use_case.category="CODE_SCAN"
+`ssphp_summary_index{{environment}}` earliest=-2d@d latest=now ssphp.use_case.category="CODE_SCAN"
 
 | search NOT ssphp.assessment.sub_source="true"
 
@@ -1002,7 +1002,7 @@ index=_audit user=$tkn__current_user_name|s$ action=search "makeresults" "user_d
     <panel>
       <html>
         <div style="display:flex; justify-content:flex-end; width:100%; padding:0;">
-          <button id="showButton" class="btn"><a href="/app/DCAP_DEV/ssphp_dashboard_report_issue" target="_blank">Report an Issue</a></button>
+          <button id="showButton" class="btn"><a href="/app/DCAP{{environment}}/ssphp_dashboard_report_issue" target="_blank">Report an Issue</a></button>
         </div>
       </html>
     </panel>
@@ -1323,11 +1323,11 @@ $tkn_search_filter$
       <table id="table_azure_resource_table">
         <search>
           <query>
-index="ssphp_asset_inventory_DEV" 
+index="ssphp_asset_inventory{{environment}}" 
     (ssphp.resource.source="AZURE") 
     earliest=-2d@d latest=now
 
-    [| inputlookup ssphp_last_asset_inventory_ssphp_run_DEV.csv where inventory_type="azure"
+    [| inputlookup ssphp_last_asset_inventory_ssphp_run{{environment}}.csv where inventory_type="azure"
      | stats max(SSPHP_RUN) as SSPHP_RUN
      | return SSPHP_RUN]
 
@@ -1374,11 +1374,11 @@ index="ssphp_asset_inventory_DEV"
       <table>
         <search>
           <query>
-index="ssphp_asset_inventory_DEV" 
+index="ssphp_asset_inventory{{environment}}" 
     (ssphp.resource.source="GITHUB") 
     earliest=-2d@d latest=now
 
-    [| inputlookup ssphp_last_asset_inventory_ssphp_run_DEV.csv where inventory_type="github"
+    [| inputlookup ssphp_last_asset_inventory_ssphp_run{{environment}}.csv where inventory_type="github"
      | stats max(SSPHP_RUN) as SSPHP_RUN
      | return SSPHP_RUN]
 
