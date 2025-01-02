@@ -1,7 +1,7 @@
 <dashboard version="1.1" theme="dark">
 
 <label>DCAP Healthcheck Dashboard</label>
-<description>_DEV v3.1.4</description>
+<description>_DEV v3.2.0</description>
 
 
 
@@ -273,15 +273,75 @@
       <single>
         <search>
           <query>
-| inputlookup ssphp_bdmc.csv
+index=ssphp_asset_inventory earliest=-7d@d latest=now
+| eval date=strftime('SSPHP_RUN',"%Y-%m-%d")
 
-| table SSPHP_RUN, resource_id, product_key
+| stats count, max(SSPHP_RUN) as SSPHP_RUN, dc(ssphp.service.product_key) as number_product_keys by date
+| eventstats exactperc50(count) as median_count, exactperc50(number_product_keys) as median_product_keys
 
-| stats count, max(SSPHP_RUN) as SSPHP_RUN, dc(product_key) as no_product_key
+| eval run_age=round((now() - SSPHP_RUN)/60/60)
 
-| eval ssphp_run_age=round((now() - SSPHP_RUN)/60/60)
+| eval status=if(count&gt;('median_count'*.9) AND run_age&lt;24 AND number_product_keys&gt;('median_product_keys'*.9),"Healthy","Unhealthy"),
+       range=if('status'="Healthy","low","severe")
+| table status, range, date, SSPHP_RUN, run_age, count, median_count, number_product_keys, median_product_keys
 
-| eval status=if(count>750000 AND ssphp_run_age&lt;24 AND no_product_key&gt;250,"Healthy","Unhealthy"),
+| sort 1 - date
+          </query>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="colorBy">value</option>
+        <option name="colorMode">block</option>
+        <option name="drilldown">none</option>
+        <option name="numberPrecision">0</option>
+        <option name="rangeColors">["0x65a637","0x6db7c6","0xf7bc38","0xf58f39","0xd93f3c"]</option>
+        <option name="rangeValues">[0,30,70,100]</option>
+        <option name="showSparkline">1</option>
+        <option name="showTrendIndicator">1</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+        <option name="trendColorInterpretation">standard</option>
+        <option name="trendDisplayMode">absolute</option>
+        <option name="unitPosition">after</option>
+        <option name="useColors">0</option>
+        <option name="useThousandSeparators">1</option>
+      </single>
+    </panel>
+  </row>
+
+  <row>
+    <panel>
+      <title>Ingestion Completions</title>
+      <single>
+        <search>
+          <query>
+index="ssphp_metrics_data" source="data_ingester_rust" stage=* earliest=-7d@d latest=now
+| eval date=strftime('_time',"%Y-%m-%d")
+| rename metadata.level as level
+| table _time, date, name, stage, complete, level
+
+| eventstats max(date) as max_date by name
+| where date='max_date'
+
+| sort name, - _time
+| eval stage=if(stage="Complete",'stage'."::".'complete','stage')
+| fields - _time, max_date, level, complete
+| stats values(*) as * by name
+| eval today=strftime(now(),"%Y-%m-%d")
+| sort 0 name
+
+| eval status=if(date='today' AND mvcount(mvfilter(match('stage',"Complete::true")))&gt;0 AND mvcount(mvfilter(match('stage',"Lock")))&gt;0 AND mvcount(mvfilter(match('stage',"Start")))&gt;0,
+                 "Healthy","Unhealthy"),
+       range=if('status'="Healthy","low","severe")
+| table status, range, date, name, stage
+
+| append
+    [| makeresults
+     | eval status="Unhealthy"
+     | table status]
+| stats sum(eval(if(status="Unhealthy",1,0))) as number_unhealthy
+
+| eval status=if('number_unhealthy'=1,"Healthy","Unhealthy"),
        range=if('status'="Healthy","low","severe")
 | table status, range
           </query>
@@ -306,7 +366,6 @@
     <option name="useThousandSeparators">1</option>
       </single>
     </panel>
-
 
 
     <panel>
@@ -399,14 +458,9 @@
         </search>
       </table>
     </panel>
-  </row>
-  
 
 
 
-  
-  
-  <row>
     <panel>
       <title>Sourcetype Data Update Timing</title>
       <single>
