@@ -43,7 +43,7 @@ pub async fn qualys_qvs(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()
         &search_results.iter().take(2).collect::<Vec<&Cve>>()
     );
 
-    if search_results.len() == 0 {
+    if search_results.is_empty() {
         anyhow::bail!("No Qualys results from Splunk")
     }
 
@@ -56,6 +56,7 @@ pub async fn qualys_qvs(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()
             .qualys_password
             .as_ref()
             .context("No Qualys password")?,
+        None,
     )?;
 
     info!("Getting data from Qualys QVS");

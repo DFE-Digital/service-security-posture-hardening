@@ -1698,11 +1698,13 @@ dependencies = [
  "data_ingester_splunk",
  "data_ingester_splunk_search",
  "data_ingester_supporting",
+ "mockito",
  "reqwest 0.12.9",
  "serde",
  "serde_json",
  "tokio",
  "tracing",
+ "tracing-subscriber",
 ]
 
 [[package]]

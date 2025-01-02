@@ -1,13 +1,14 @@
 pub mod entrypoint;
+mod limits;
 mod qvs;
 use anyhow::{Context, Result};
+use limits::QualysLimits;
 use qvs::Qvs;
 use reqwest::{
     header::{HeaderMap, HeaderValue},
     Client, Method, RequestBuilder,
 };
-use tokio::time::{sleep, Duration};
-use tracing::{debug, info, warn};
+use tracing::{info, warn};
 
 /// A simple Qualys client
 #[derive(Debug, Default)]
@@ -16,115 +17,28 @@ pub struct Qualys {
     username: String,
     password: String,
     limits: QualysLimits,
-}
-
-/// Limits to use when throttling Qualys requests
-#[derive(Debug)]
-#[allow(dead_code)]
-struct QualysLimits {
-    rate_limit: usize,
-    rate_window_seconds: usize,
-    rate_remaining: usize,
-    rate_to_wait_seconds: usize,
-    concurrency_limit: usize,
-    concurrency_running: usize,
-}
-
-impl Default for QualysLimits {
-    /// Express/Consultant
-    /// API Service Concurrency Limit per Subscription (per API): 1 call
-    /// Rate Limit per Subscription (per API): 50 calls per Day
-    ///
-    /// Standard API
-    /// Service Concurrency Limit per Subscription (per API): 2 calls
-    /// Rate Limit per Subscription (per API): 300 calls per Hour
-    ///
-    /// Enterprise API Service
-    /// Concurrency Limit per Subscription (per API): 5 calls
-    /// Rate Limit per Subscription (per API): 750 calls per Hour
-    ///
-    /// Premium API Service
-    /// Concurrency Limit per Subscription (per API): 10 calls
-    /// Rate Limit per Subscription (per API): 2000 calls per Hour
-    ///
-    /// https://cdn2.qualys.com/docs/qualys-api-limits.pdf
-    ///
-    fn default() -> Self {
-        Self {
-            rate_limit: 300,
-            rate_window_seconds: 60 * 60,
-            rate_remaining: 300,
-            rate_to_wait_seconds: 0,
-            concurrency_limit: 2,
-            concurrency_running: 0,
-        }
-    }
-}
-
-impl QualysLimits {
-    /// Extract a limit header or provide a default value
-    /// TODO check default value is sane
-    fn get_usize_from_header(headers: &HeaderMap, key: &str) -> usize {
-        static DEFAULT: usize = 0;
-        headers
-            .get(key)
-            .map(|h| {
-                h.to_str()
-                    .unwrap_or_default()
-                    .parse::<usize>()
-                    .unwrap_or(DEFAULT)
-            })
-            .unwrap_or(DEFAULT)
-    }
-
-    /// Extract limit headers from a [reqwest::HeaderMap]
-    pub(crate) fn from_headers(headers: &HeaderMap) -> Self {
-        debug!("Qualys response headers: {:?}", headers);
-        let limits = Self {
-            rate_limit: QualysLimits::get_usize_from_header(headers, "X-RateLimit-Limit"),
-            rate_window_seconds: QualysLimits::get_usize_from_header(
-                headers,
-                "X-RateLimit-Window-Sec",
-            ),
-            rate_remaining: QualysLimits::get_usize_from_header(headers, "X-RateLimit-Remaining"),
-            rate_to_wait_seconds: QualysLimits::get_usize_from_header(
-                headers,
-                "X-RateLimit-ToWait-Sec",
-            ),
-            concurrency_limit: QualysLimits::get_usize_from_header(
-                headers,
-                "X-Concurrency-Limit-Limit",
-            ),
-            concurrency_running: QualysLimits::get_usize_from_header(
-                headers,
-                "X-Concurrency-Limit-Running",
-            ),
-        };
-        debug!("Qualys parsed limits: {:?}", limits);
-        limits
-    }
-
-    /// Wait for the rate limit to expire
-    async fn wait(&self) {
-        if self.rate_remaining > 1 && self.rate_to_wait_seconds > 0 {
-            sleep(Duration::from_secs(self.rate_to_wait_seconds as u64)).await;
-        }
-    }
+    host: String,
 }
 
 impl Qualys {
     /// Create a new Qualys client using basic auth
-    pub fn new(username: &str, password: &str) -> Result<Self> {
+    pub fn new(username: &str, password: &str, host: Option<&str>) -> Result<Self> {
         let client = reqwest::ClientBuilder::new()
             .default_headers(Qualys::headers().context("Building Qualys headers")?)
             .build()
             .context("Building Qualys reqwest client")?;
         info!("Qualys client: {:?}", client);
+        let host = if let Some(host) = host {
+            host.to_string()
+        } else {
+            "https://qualysapi.qg2.apps.qualys.eu".to_string()
+        };
         Ok(Self {
             client,
             username: username.to_string(),
             password: password.to_string(),
             limits: QualysLimits::default(),
+            host,
         })
     }
 
@@ -162,35 +76,213 @@ impl Qualys {
         // 450 comes from
         // https://github.com/buddybergman/Qualys-Get_QVS_Data/blob/e86fb599b783b871c8fbc1bc2fc1cadd9ec14b08/Get_Qualys_QVS_Details.py#L26
         for chunk in cves.chunks(450) {
-            let cve = chunk.join(",").to_string();
-            let url = format!("https://qualysapi.qg2.apps.qualys.eu/api/2.0/fo/knowledge_base/qvs/?action=list&details=All&cve={}", cve);
-            let response = match self.request(Method::GET, &url).send().await {
-                Ok(r) => r,
-                Err(e) => {
-                    warn!("Error while getting Qualys QVS data: {:?}", e);
-                    continue;
-                }
-            };
+            let mut retries = 5;
+            'retry: loop {
+                let cve = chunk.join(",").to_string();
+                let url = format!(
+                    "{}/api/2.0/fo/knowledge_base/qvs/?action=list&details=All&cve={}",
+                    self.host, cve
+                );
+                info!(url=?url);
+                let response = match self.request(Method::GET, &url).send().await {
+                    Ok(r) => r,
+                    Err(err) => {
+                        warn!(error=?err, "Error while getting Qualys QVS data");
+                        retries -= 1;
+                        if retries > 0 {
+                            continue 'retry;
+                        } else {
+                            break 'retry;
+                        }
+                    }
+                };
 
-            // TODO: Use limits to throttle requests
-            self.limits = QualysLimits::from_headers(response.headers());
-            info!("Qualys limits: {:?}", self.limits);
-            self.limits.wait().await;
+                self.limits = QualysLimits::from_headers(response.headers());
+                info!("Qualys limits: {:?}", self.limits);
+                self.limits.wait().await;
 
-            let response_text = response.text().await?;
-            let qvs_ = match serde_json::from_str::<Qvs>(&response_text) {
-                Ok(qvs) => qvs,
-                Err(e) => {
-                    warn!(
-                        "Error while deserializing Qualys QVS data: {:?},\nResponse body: {}",
-                        e, &response_text
-                    );
-
-                    anyhow::bail!("Failed deserializing Qvs JSON");
-                }
-            };
-            qvs.extend(qvs_);
+                let response_text = response.text().await?;
+                let qvs_ = match serde_json::from_str::<Qvs>(&response_text) {
+                    Ok(qvs) => qvs,
+                    Err(err) => {
+                        warn!(error=?err, response_body=?response_text,
+                            "Error while deserializing Qualys QVS data",
+                        );
+                        retries -= 1;
+                        if retries > 0 {
+                            continue 'retry;
+                        } else {
+                            anyhow::bail!("Failed deserializing Qvs JSON");
+                        }
+                    }
+                };
+                qvs.extend(qvs_);
+                break 'retry;
+            }
         }
         Ok(qvs)
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use mockito::{Server, ServerGuard};
+    use tokio::time::Instant;
+    use tracing::{info, subscriber::DefaultGuard};
+
+    use crate::{qvs::Qvs, Qualys};
+
+    async fn setup() -> (Qualys, ServerGuard, DefaultGuard) {
+        // Start tracing
+        let subscriber = tracing_subscriber::FmtSubscriber::new();
+        let tracing_guard = tracing::subscriber::set_default(subscriber);
+
+        // Start Mockito server
+        let mock_server = Server::new_async().await;
+
+        // Setup SendingTask
+        let url = format!("http://{}", mock_server.host_with_port());
+
+        let qualys = Qualys::new("username", "password", Some(&url)).unwrap();
+        (qualys, mock_server, tracing_guard)
+    }
+
+    fn mock_response() -> Qvs {
+        Qvs::default()
+    }
+
+    fn mock_response_body() -> String {
+        serde_json::to_string(&mock_response()).expect("Serialization shouldn't fail")
+    }
+
+    #[tokio::test]
+    async fn test_qualys_get_single_cve() {
+        let (mut qualys, mut mock_server, _tracing_guard) = setup().await;
+
+        let mock = mock_server
+            .mock("GET", "/api/2.0/fo/knowledge_base/qvs/")
+            .match_query("action=list&details=All&cve=TEST-CVE")
+            .with_status(200)
+            .with_body(mock_response_body())
+            .create();
+
+        let _ = qualys.get_qvs(&["TEST-CVE".to_string()]).await.unwrap();
+
+        mock.assert();
+    }
+
+    #[tokio::test]
+    async fn test_qualys_get_single_cve_failed_serialization_then_success() {
+        let (mut qualys, mut mock_server, _tracing_guard) = setup().await;
+
+        let mock_bad_response = mock_server
+            .mock("GET", "/api/2.0/fo/knowledge_base/qvs/")
+            .match_query("action=list&details=All&cve=TEST-CVE")
+            .with_status(200)
+            .with_body("BAD_BODY")
+            .expect(1)
+            .create();
+
+        let mock_good_response = mock_server
+            .mock("GET", "/api/2.0/fo/knowledge_base/qvs/")
+            .match_query("action=list&details=All&cve=TEST-CVE")
+            .with_status(200)
+            .with_body(mock_response_body())
+            .expect(1)
+            .create();
+
+        let _ = qualys.get_qvs(&["TEST-CVE".to_string()]).await.unwrap();
+
+        mock_bad_response.assert();
+        mock_good_response.assert();
+    }
+
+    #[tokio::test]
+    async fn test_qualys_get_single_cve_failed_serialization() {
+        let (mut qualys, mut mock_server, _tracing_guard) = setup().await;
+
+        let mock_bad_response = mock_server
+            .mock("GET", "/api/2.0/fo/knowledge_base/qvs/")
+            .match_query("action=list&details=All&cve=TEST-CVE")
+            .with_status(200)
+            .with_body("BAD_BODY")
+            .expect(5)
+            .create();
+
+        let result = qualys.get_qvs(&["TEST-CVE".to_string()]).await;
+
+        mock_bad_response.assert();
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_qualys_get_multiple_batches() {
+        let (mut qualys, mut mock_server, _tracing_guard) = setup().await;
+
+        let mut cves: Vec<String> = (0..450).map(|x| x.to_string()).collect();
+        info!(cves_len=?cves.len());
+        let query = format!("action=list&details=All&cve={}", cves.join(","));
+
+        let mock_first_batch = mock_server
+            .mock("GET", "/api/2.0/fo/knowledge_base/qvs/")
+            .match_query(query.as_str())
+            .with_status(200)
+            .with_body(mock_response_body())
+            .expect(1)
+            .create();
+
+        let mock_second_batch = mock_server
+            .mock("GET", "/api/2.0/fo/knowledge_base/qvs/")
+            .match_query("action=list&details=All&cve=450")
+            .with_status(200)
+            .with_body(mock_response_body())
+            .expect(1)
+            .create();
+
+        cves.push("450".to_string());
+
+        let _ = qualys.get_qvs(&cves).await.unwrap();
+
+        mock_first_batch.assert();
+        mock_second_batch.assert();
+    }
+
+    #[tokio::test]
+    async fn test_qualys_get_multiple_batches_with_rate_limit() {
+        let (mut qualys, mut mock_server, _tracing_guard) = setup().await;
+
+        let mut cves: Vec<String> = (0..450).map(|x| x.to_string()).collect();
+        info!(cves_len=?cves.len());
+        let query = format!("action=list&details=All&cve={}", cves.join(","));
+
+        let mock_first_batch = mock_server
+            .mock("GET", "/api/2.0/fo/knowledge_base/qvs/")
+            .match_query(query.as_str())
+            .with_status(200)
+            .with_body(mock_response_body())
+            .with_header("X-RateLimit-Remaining", "0")
+            .with_header("X-RateLimit-ToWait-Sec", "1")
+            .expect(1)
+            .create();
+
+        let mock_second_batch = mock_server
+            .mock("GET", "/api/2.0/fo/knowledge_base/qvs/")
+            .match_query("action=list&details=All&cve=450")
+            .with_status(200)
+            .with_body(mock_response_body())
+            .expect(1)
+            .create();
+
+        cves.push("450".to_string());
+
+        let before = Instant::now();
+        let _ = qualys.get_qvs(&cves).await.unwrap();
+        let after = Instant::now();
+        let duration = after - before;
+
+        mock_first_batch.assert();
+        mock_second_batch.assert();
+
+        assert!(duration > tokio::time::Duration::from_secs(1));
     }
 }
