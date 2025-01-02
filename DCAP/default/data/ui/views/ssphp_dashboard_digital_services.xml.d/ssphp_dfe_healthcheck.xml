@@ -528,13 +528,13 @@ index=ssphp_metrics_summary earliest=-3d@d latest=now
 | eval days_since_start_of_time=SSPHP_RUN/24/60/60,
        today=now()/24/60/60,
        days_old=floor('today'-'days_since_start_of_time')
-| table SSPHP_RUN, date, ssphp.use_case.savedsearch, days_since_start_of_time, today, days_old
+| fields SSPHP_RUN, date, ssphp.use_case.savedsearch, days_since_start_of_time, today, days_old
 | stats count by ssphp.use_case.savedsearch, days_old
 | eval day_{days_old}='count'
 | stats values(day_*) as day_* by ssphp.use_case.savedsearch
 | where NOT ('day_0'&gt;('day_1'*0.9) OR 'day_0'&lt;('day_1'*1.1))
 | rename day_0 as today, day_1 as yesterday
-| table ssphp.use_case.savedsearch, today, yesterday
+| fields ssphp.use_case.savedsearch, today, yesterday
 
 | append 
     [| makeresults]
