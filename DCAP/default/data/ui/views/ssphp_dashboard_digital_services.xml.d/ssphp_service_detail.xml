@@ -2,23 +2,26 @@
 
 
 <label>Security Posture Continuous Assurance : Service Control Detail Dashboard</label>
-<description>{{environment}} v6.1.6</description>
+<description>{{environment}} v6.1.13</description>
   
   <init>
     <unset token="tkn_ready_event"></unset>
     <unset token="tkn_ready_panel"></unset>
+
     <unset token="tkn_ready_highlight"></unset>
 
     <set token="tkn_colour_tile">pebble</set>
-    <set token="tkn_colour_null_line">#85F415</set>
     <set token="tkn_colour_text">#bebebe</set>
     <set token="tkn_margin">40</set>
     <set token="tkn_margin_100">20</set>
-    <set token="tkn_compliant_line_non_width">50</set>
     <set token="tkn_colour_compliant_line">#ECECEC</set>
     <set token="tkn_colour_non_compliant_line">#FF4B4B</set>
     <set token="tkn_font_size_1">900</set>
-    <set token="tkn_font_size_2">400</set>
+
+<!-- #
+    <set token="tkn_colour_null_line">#85F415</set>
+    <set token="tkn_compliant_line_non_width">50</set>
+# --> 
   </init>
 
 
@@ -136,8 +139,15 @@
 | table ssphp.score.score, score_Line_colour
           </query>
           <done>
-            <set token="tkn_score">$result.ssphp.score.score$</set>
-            <set token="tkn_score_Line_colour">$result.score_Line_colour$</set>
+            <condition match=" 'job.resultCount' == 0">
+                <set token="tkn_score">-</set>
+                <unset token="tkn_ready_main"/>
+            </condition>
+            <condition>
+                <set token="tkn_score">$result.ssphp.score.score$</set>
+                <set token="tkn_score_Line_colour">$result.score_Line_colour$</set>
+                <set token="tkn_ready_main">true</set>
+            </condition>
           </done>
         </search>
         <option name="colorMode">block</option>
@@ -191,7 +201,7 @@
   </row>
   
   <row>
-    <panel>
+    <panel depends="$tkn_ready_main$">
       <html>
         <div class="absolute" style="background: $tkn_colour_tile$;">$tkn_score$</div>
         <div style="display: flex;">
@@ -210,7 +220,7 @@
 <!-- ########################################################################## MAIN DISPLAY TABLE ################################################################### --> 
 <!-- ################################################################################################################################################################# --> 
 
-  <row>
+  <row depends="$tkn_ready_main$">
     <panel>
       <table id="table1">
         <search base="bs_1">
