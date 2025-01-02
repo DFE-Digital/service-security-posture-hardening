@@ -153,8 +153,8 @@ mod test {
     #[tokio::test]
     async fn test_qualys_limits_should_not_wait() {
         let limits = QualysLimits {
-            rate_to_wait_seconds: 1,
-            rate_remaining: 0,
+            rate_to_wait_seconds: 0,
+            rate_remaining: 1,
             ..Default::default()
         };
 
