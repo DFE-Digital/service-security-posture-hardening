@@ -1,7 +1,7 @@
 <dashboard version="1.1" theme="dark">
 
 <label>DCAP Healthcheck Dashboard</label>
-<description>{{environment}} v3.2.4</description>
+<description>{{environment}} v3.2.5</description>
 
 
 
@@ -519,22 +519,21 @@ index="ssphp_metrics_data" earliest=-7d@d latest=now sourcetype!="data_ingester_
         <search>
           <query>
 index=ssphp_metrics_summary earliest=-3d@d latest=now
-| rename ssphp.use_case.savedsearch as i
      
 | eval date=strftime('SSPHP_RUN',"%Y-%m-%d")
-| fields SSPHP_RUN, date, i
+| fields SSPHP_RUN, date, ssphp.use_case.savedsearch
      
-| stats max(SSPHP_RUN) as SSPHP_RUN, count as count by i, date
+| stats max(SSPHP_RUN) as SSPHP_RUN, count as count by ssphp.use_case.savedsearch, date
 | eval today_date=strftime(now(),"%Y-%m-%d"),
        yesterday_date=strftime(now()-86400,"%Y-%m-%d"),
        today_count=if('date'='today_date','count',null()),
        yesterday_count=if('date'='yesterday_date','count',null())
 | where 'date'='today_date' OR 'date'='yesterday_date'
-| fields i, today_count, yesterday_count
-| stats values(*) as * by i
+| fields ssphp.use_case.savedsearch, today_count, yesterday_count
+| stats values(*) as * by ssphp.use_case.savedsearch
 | where 'today_count'&lt;('yesterday_count'*0.9) OR 'today_count'&gt;('yesterday_count'*1.1)
 
-| fields ssphp.use_case.savedsearch, today, yesterday
+| fields ssphp.use_case.savedsearch, today_count, yesterday_count
 
 | append 
     [| makeresults]
