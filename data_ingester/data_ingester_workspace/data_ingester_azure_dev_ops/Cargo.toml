@@ -1,0 +1,25 @@
+[package]
+name = "data_ingester_azure_dev_ops"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow = { version = "1", features=["backtrace"]}
+azure_core = { version = "0.21", default-features = false, features = ["enable_reqwest_rustls"]}
+azure_identity = { version = "0.21", default-features = false, features = ["enable_reqwest_rustls", "client_certificate"]}
+azure_mgmt_authorization = { version = "0.21", default-features = false, features = ["enable_reqwest_rustls", "package-2022-04-01"]}
+data_ingester_splunk = { path = "../data_ingester_splunk" }
+data_ingester_supporting = { path = "../data_ingester_supporting" }
+reqwest = {version = "0", features = ["rustls-tls", "http2"], default-features = false}
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["full"] }
+tracing = "0"
+url = "2"
+
+[dev-dependencies]
+tracing-subscriber = {version = "0", features = ["env-filter", "registry", "json", "valuable"]}
+mockito = "1.6.1"
+
+[lints]
+workspace = true
