@@ -154,6 +154,7 @@ mod test {
         let splunk = Splunk::new(
             secrets.splunk_host.as_ref().context("No value")?,
             secrets.splunk_token.as_ref().context("No value")?,
+            true,
         )?;
 
         super::threagile(Arc::new(secrets), Arc::new(splunk)).await?;

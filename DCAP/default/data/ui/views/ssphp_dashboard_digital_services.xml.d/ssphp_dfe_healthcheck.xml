@@ -1,7 +1,7 @@
 <dashboard version="1.1" theme="dark">
 
 <label>DCAP Healthcheck Dashboard</label>
-<description>_DEV v3.2.0</description>
+<description>{{environment}} v3.2.5</description>
 
 
 
@@ -42,10 +42,10 @@
      | sort 0 - scheduled_time
 
      | makemv errors
-     | eval errors=if(run_time&lt;'avg_run_time'*$tkn_sensitivity_lower_run_time$,"run time too short",null()),
-            errors=if(run_time>'avg_run_time'*$tkn_sensitivity_upper_run_time$,mvappend('errors',"run time too long"),'errors'),
-            errors=if(result_count&lt;avg_result_count*$tkn_sensitivity_lower_result_count$,mvappend('errors',"result count too low"),'errors'),
-            errors=if(result_count&gt;avg_result_count*$tkn_sensitivity_upper_result_count$,mvappend('errors',"result count too high"),'errors'),
+     | eval errors=if(run_time&lt;'avg_run_time'/$tkn_sensitivity$,"run time too short",null()),
+            errors=if(run_time>'avg_run_time'*$tkn_sensitivity$,mvappend('errors',"run time too long"),'errors'),
+            errors=if(result_count&lt;avg_result_count/$tkn_sensitivity$,mvappend('errors',"result count too low"),'errors'),
+            errors=if(result_count&gt;avg_result_count*$tkn_sensitivity$,mvappend('errors',"result count too high"),'errors'),
             errors=if(like('status',"success"),'errors',mvappend('errors',"status not success")),
             errors=if(isnull('errors'),"-",'errors')
 
@@ -450,7 +450,7 @@ index="ssphp_metrics_data" source="data_ingester_rust" stage=* earliest=-7d@d la
       <table>
         <search id="base_bdmc">
           <query>
-| loadjob savedsearch="{{splunk_user}}:{{app}}{{environment}}:ssphp_create_dashboard_dataset_service{{environment}}"
+| loadjob savedsearch="ssphp_app_account:DCAP:ssphp_create_dashboard_dataset_service"
 
 | table ssphp.service.portfolio, ssphp.service.service_line, ssphp.service.product, ssphp.assessment.source, ssphp.use_case.category, ssphp.use_case.id, ssphp.use_case.title, ssphp.assessment.display_name, ssphp.score.score, ssphp.score.compliance_status, ssphp.score.ciso_priority, ssphp.assessment.description, ssphp.score.color, ssphp.resource.id, ssphp.resource.tenant, ssphp.resource.subscription, ssphp.resource.resource_group, SSPHP_UID, SSPHP_RUN
 
@@ -519,22 +519,21 @@ index="ssphp_metrics_data" earliest=-7d@d latest=now sourcetype!="data_ingester_
         <search>
           <query>
 index=ssphp_metrics_summary earliest=-3d@d latest=now
+     
 | eval date=strftime('SSPHP_RUN',"%Y-%m-%d")
-| eventstats max(SSPHP_RUN) as max_SSPHP_RUN by date, ssphp.use_case.savedsearch
-| where SSPHP_RUN='max_SSPHP_RUN'
-
-
 | fields SSPHP_RUN, date, ssphp.use_case.savedsearch
-| eval days_since_start_of_time=SSPHP_RUN/24/60/60,
-       today=now()/24/60/60,
-       days_old=floor('today'-'days_since_start_of_time')
-| fields SSPHP_RUN, date, ssphp.use_case.savedsearch, days_since_start_of_time, today, days_old
-| stats count by ssphp.use_case.savedsearch, days_old
-| eval day_{days_old}='count'
-| stats values(day_*) as day_* by ssphp.use_case.savedsearch
-| where NOT ('day_0'&gt;('day_1'*0.9) OR 'day_0'&lt;('day_1'*1.1))
-| rename day_0 as today, day_1 as yesterday
-| fields ssphp.use_case.savedsearch, today, yesterday
+     
+| stats max(SSPHP_RUN) as SSPHP_RUN, count as count by ssphp.use_case.savedsearch, date
+| eval today_date=strftime(now(),"%Y-%m-%d"),
+       yesterday_date=strftime(now()-86400,"%Y-%m-%d"),
+       today_count=if('date'='today_date','count',null()),
+       yesterday_count=if('date'='yesterday_date','count',null())
+| where 'date'='today_date' OR 'date'='yesterday_date'
+| fields ssphp.use_case.savedsearch, today_count, yesterday_count
+| stats values(*) as * by ssphp.use_case.savedsearch
+| where 'today_count'&lt;('yesterday_count'*0.9) OR 'today_count'&gt;('yesterday_count'*1.1)
+
+| fields ssphp.use_case.savedsearch, today_count, yesterday_count
 
 | append 
     [| makeresults]
@@ -610,29 +609,27 @@ index=ssphp_metrics_summary earliest=-3d@d latest=now
       <choice value="bad">Bad Only</choice>
       <default>bad</default>
     </input>
+    
+    
+    <input type="dropdown" token="tkn_sensitivity" searchWhenChanged="true">
+      <label>Sensitivity (lower = more sensitive)</label>
+      <fieldForLabel>sensitivity</fieldForLabel>
+      <fieldForValue>sensitivity</fieldForValue>
+      <default>2</default>
+      <search>
+        <query>
+| makeresults count=10
+| streamstats count as sensitivity
+| table sensitivity
+        </query>
+      </search>
+    </input>
   </panel>
-  
+
   <panel>
-    <input type="text" token="tkn_sensitivity_lower_run_time" searchWhenChanged="true">
-      <label>Run Time Lower Sensitivity</label>
-      <default>.1</default>
-    </input>
-    
-    <input type="text" token="tkn_sensitivity_upper_run_time" searchWhenChanged="true">
-      <label>Run Time Upper Sensitivity</label>
-      <default>10</default>
-    </input>
-    
-    <input type="text" token="tkn_sensitivity_lower_result_count" searchWhenChanged="true">
-      <label>Result Count Lower Sensitivity</label>
-      <default>.1</default>
-    </input>
-    
-    <input type="text" token="tkn_sensitivity_upper_result_count" searchWhenChanged="true">
-      <label>Result Count Upper Sensitivity</label>
-      <default>10</default>
-    </input>
-    
+    <html>
+      <br/>
+    </html>
   </panel>
 </row>
 
@@ -684,13 +681,49 @@ index=ssphp_metrics_summary earliest=-3d@d latest=now
         <fields>target_date, savedsearch_name, eai:acl.app, disabled, outcome, errors, result_count, avg_result_count, cron_schedule, target_run_time, scheduled_time, start_time, completed_time, run_time, avg_run_time, status</fields>
       </table>
     </panel>
+
+
+    <panel>
+      <title>Sourcetype Ingestion Age [$tkn_sourcetype_count$]</title>
+      <table>
+        <search>
+          <query>
+index="ssphp_metrics_data" earliest=-7d@d latest=now
+
+| stats count as most_recent_count by sourcetype, SSPHP_RUN
+| eventstats avg(most_recent_count) as avg_count, max(SSPHP_RUN) as most_recent_SSPHP_RUN by sourcetype
+| where SSPHP_RUN='most_recent_SSPHP_RUN'
+| eval avg_count=floor('avg_count'),
+       most_recent_ingest_date_ingest=strftime('SSPHP_RUN',"%Y-%m-%d %H:%M:%S"),
+       hours_since_ingest=floor((now()-most_recent_SSPHP_RUN)/60/60)
+| table sourcetype, most_recent_SSPHP_RUN, most_recent_ingest_date_ingest, hours_since_ingest, most_recent_count, avg_count
+
+
+| sort 0 - hours_since_ingest
+
+| rename most_recent_SSPHP_RUN as "Last SSPHP_RUN", 
+         most_recent_ingest_date_ingest as "Last Ingestion", 
+         hours_since_ingest as "Hours since Ingestion", 
+         most_recent_count as "Recent Count",
+         avg_count as "Average Count"
+
+| eventstats count
+          </query>
+          <done>
+            <set token="tkn_sourcetype_count">$result.count$</set>
+          </done>
+        </search>
+        <option name="count">100</option>
+        <option name="dataOverlayMode">none</option>
+        <option name="drilldown">none</option>
+        <option name="percentagesRow">false</option>
+        <option name="rowNumbers">false</option>
+        <option name="totalsRow">false</option>
+        <option name="wrap">true</option>
+        <fields>sourcetype, "Last SSPHP_RUN", "Last Ingestion", "Hours since Ingestion", "Recent Count", "Average Count"</fields>
+      </table>
+    </panel>
   </row>
-
-
-
-
-
-
 
   
 </dashboard>

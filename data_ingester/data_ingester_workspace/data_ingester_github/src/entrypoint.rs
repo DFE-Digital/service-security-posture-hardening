@@ -449,6 +449,7 @@ mod live_tests {
         let splunk = Splunk::new(
             secrets.splunk_host.as_ref().context("No value")?,
             secrets.splunk_token.as_ref().context("No value")?,
+            true
         )?;
 
         github_octocrab_entrypoint(Arc::new(secrets), Arc::new(splunk))
@@ -468,6 +469,7 @@ mod live_tests {
         let splunk = Splunk::new(
             secrets.splunk_host.as_ref().context("No value")?,
             secrets.splunk_token.as_ref().context("No value")?,
+            true,
         )?;
 
         let contact_details: Vec<HecEvent> = ContactDetails::generate_contact_details(10)

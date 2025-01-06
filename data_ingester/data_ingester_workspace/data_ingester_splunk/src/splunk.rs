@@ -237,16 +237,24 @@ pub(crate) struct Message {
 }
 
 impl Splunk {
-    pub fn new(host: &str, token: &str) -> Result<Self> {
+    pub fn new(host: &str, token: &str, hec_acknowledgment: bool) -> Result<Self> {
         let url = format!("https://{}", host);
 
-        let client = Self::new_request_client(token).context("Building Reqwest Client")?;
+        let client = Self::new_request_client(token, hec_acknowledgment)
+            .context("Building Reqwest Client")?;
 
         let (send_tx, send_rx) = channel::<HecEvent>(5000);
         let (ack_tx, ack_rx) = channel(5000);
 
-        let sending_task = SendingTask::new(client.clone(), send_rx, ack_tx.clone(), url.clone())
-            .context("Building Splunk Sending Task")?;
+        let sending_task = SendingTask::new(
+            client.clone(),
+            send_rx,
+            ack_tx.clone(),
+            url.clone(),
+            hec_acknowledgment,
+        )
+        .context("Building Splunk Sending Task")?;
+
         let ack_task = AckTask::new(client.clone(), send_tx.clone(), ack_rx, url.clone(), None)
             .context("Building Splunk Ack Task")?;
 
@@ -258,22 +266,27 @@ impl Splunk {
     }
 
     /// Create a Request Client for Splunk
-    pub(crate) fn new_request_client(token: &str) -> Result<Client> {
+    pub(crate) fn new_request_client(token: &str, hec_acknowledgment: bool) -> Result<Client> {
+        let accept_invalid_certs = std::env::var_os("ACCEPT_INVALID_CERTS").is_some();
+
         let client = ClientBuilder::new()
-            .danger_accept_invalid_certs(false)
-            .default_headers(Splunk::headers(token)?)
+            .danger_accept_invalid_certs(accept_invalid_certs)
+            .default_headers(Splunk::headers(token, hec_acknowledgment)?)
             .connection_verbose(false)
             .build()?;
         Ok(client)
     }
 
-    fn headers(token: &str) -> Result<HeaderMap> {
+    fn headers(token: &str, hec_acknowledgment: bool) -> Result<HeaderMap> {
         let mut headers = HeaderMap::new();
         let mut auth = HeaderValue::from_str(&format!("Splunk {}", token))?;
         auth.set_sensitive(true);
         _ = headers.insert("Authorization", auth);
-        let channel = Uuid::new_v4().to_string();
-        _ = headers.insert("X-Splunk-Request-Channel", channel.parse()?);
+
+        if hec_acknowledgment {
+            let channel = Uuid::new_v4().to_string();
+            _ = headers.insert("X-Splunk-Request-Channel", channel.parse()?);
+        }
 
         Ok(headers)
     }
@@ -338,6 +351,23 @@ where
     };
     result
 }
+#[cfg(test)]
+pub(crate) mod test {
+    use crate::splunk::Splunk;
+    #[tokio::test]
+    async fn splunk_headers_with_hec_ack_should_set_request_channel_header() {
+        let hec_acknowledgment = true;
+        let headers = Splunk::headers("token", hec_acknowledgment).unwrap();
+        assert!(headers.contains_key("X-Splunk-Request-Channel"));
+    }
+
+    #[tokio::test]
+    async fn splunk_headers_without_hec_ack_should_not_set_request_channel_header() {
+        let hec_acknowledgment = false;
+        let headers = Splunk::headers("token", hec_acknowledgment).unwrap();
+        assert!(!headers.contains_key("X-Splunk-Request-Channel"));
+    }
+}
 
 #[cfg(feature = "live_tests")]
 #[cfg(test)]
@@ -352,6 +382,7 @@ pub(crate) mod live_tests {
         let splunk = Splunk::new(
             secrets.splunk_host.as_ref().context("No value")?,
             secrets.splunk_token.as_ref().context("No value")?,
+            true,
         )?;
         Ok(splunk)
     }

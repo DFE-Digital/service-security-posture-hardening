@@ -308,6 +308,7 @@ mod live_tests {
         let splunk = Splunk::new(
             secrets.splunk_host.as_ref().context("No value")?,
             secrets.splunk_token.as_ref().context("No value")?,
+            true,
         )?;
 
         super::entrypoint(Arc::new(secrets), Arc::new(splunk))
@@ -345,8 +346,6 @@ mod live_tests {
         let json = serde_json::to_string_pretty(&set)?;
         let mut file = File::create("service_line.json")?;
         file.write_all(json.as_bytes())?;
-
-        assert!(false);
 
         Ok(())
     }
