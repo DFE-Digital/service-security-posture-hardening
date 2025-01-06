@@ -267,7 +267,7 @@ impl Splunk {
 
     /// Create a Request Client for Splunk
     pub(crate) fn new_request_client(token: &str, hec_acknowledgment: bool) -> Result<Client> {
-        let accept_invalid_certs = !std::env::var_os("ACCEPT_INVALID_CERTS").is_none();
+        let accept_invalid_certs = std::env::var_os("ACCEPT_INVALID_CERTS").is_some();
 
         let client = ClientBuilder::new()
             .danger_accept_invalid_certs(accept_invalid_certs)
@@ -350,6 +350,23 @@ where
         }
     };
     result
+}
+#[cfg(test)]
+pub(crate) mod test {
+    use crate::splunk::Splunk;
+    #[tokio::test]
+    async fn splunk_headers_with_hec_ack_should_set_request_channel_header() {
+        let hec_acknowledgment = true;
+        let headers = Splunk::headers("token", hec_acknowledgment).unwrap();
+        assert!(headers.contains_key("X-Splunk-Request-Channel"));
+    }
+
+    #[tokio::test]
+    async fn splunk_headers_without_hec_ack_should_not_set_request_channel_header() {
+        let hec_acknowledgment = false;
+        let headers = Splunk::headers("token", hec_acknowledgment).unwrap();
+        assert!(!headers.contains_key("X-Splunk-Request-Channel"));
+    }
 }
 
 #[cfg(feature = "live_tests")]

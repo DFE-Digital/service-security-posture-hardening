@@ -483,7 +483,7 @@ mod test {
     use mockito::{Matcher::Any, Server, ServerGuard};
     use std::collections::HashMap;
     use tokio::{
-        sync::mpsc::{channel, Receiver, Sender},
+        sync::mpsc::{channel, error::TryRecvError, Receiver, Sender},
         time::{sleep, Duration, Instant},
     };
     use tracing::subscriber::DefaultGuard;
@@ -634,6 +634,39 @@ mod test {
 
         let ack_message = ack_rx.recv().await;
         assert!(ack_message.is_some());
+    }
+
+    #[tokio::test]
+    async fn test_sending_task_creates_does_not_ack_when_ack_is_disabled() {
+        let subscriber = tracing_subscriber::FmtSubscriber::new();
+        let _tracing_guard = tracing::subscriber::set_default(subscriber);
+
+        // Start Mockito server
+        let mut mock_server = Server::new_async().await;
+
+        // Setup SendingTask
+        let url = format!("http://{}", mock_server.host_with_port());
+        let (send_tx, send_rx) = channel::<HecEvent>(1000);
+        let (ack_tx, mut ack_rx) = channel(1000);
+        let hec_acknowledgment = false;
+        let client = Splunk::new_request_client("mock_token", hec_acknowledgment)
+            .expect("Splunk Client to build sucessfully");
+
+        let _sending_task =
+            SendingTask::new(client, send_rx, ack_tx.clone(), url, hec_acknowledgment)
+                .expect("Spawning SendingTask shouldn't fail");
+
+        let _mock = mock_server
+            .mock("POST", "/services/collector")
+            .with_status(200)
+            .with_body(mock_response_body())
+            .create();
+
+        send_hec_event(send_tx).await;
+
+        let ack_message = ack_rx.try_recv();
+        assert!(ack_message.is_err());
+        assert_eq!(ack_message.unwrap_err(), TryRecvError::Empty);
     }
 
     #[tokio::test]
