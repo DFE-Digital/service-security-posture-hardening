@@ -67,9 +67,10 @@ impl SendingTask {
         send_rx: Receiver<HecEvent>,
         ack_tx: Sender<HecBatch>,
         url: String,
+        hec_acknowledgment: bool,
     ) -> Result<Self> {
         let url = format!("{}/services/collector", &url);
-        let join = Self::spawn_task(splunk, send_rx, ack_tx, url)
+        let join = Self::spawn_task(splunk, send_rx, ack_tx, url, hec_acknowledgment)
             .context("Starting Splunk Sending Task")?;
 
         Ok(SendingTask { join })
@@ -173,6 +174,7 @@ impl SendingTask {
         mut send_rx: Receiver<HecEvent>,
         ack_tx: Sender<HecBatch>,
         sending_url: String,
+        hec_acknowledgment: bool,
     ) -> Result<()> {
         let mut buffer = Vec::with_capacity(100);
         loop {
@@ -194,21 +196,22 @@ impl SendingTask {
                     Self::send_batch_to_splunk(&splunk, &batch.0, sending_url.as_str())
                         .await
                         .context("sending batch to Splunk")?;
+                if hec_acknowledgment {
+                    // Build a batch to enable resending
+                    let hec_batch = HecBatch {
+                        ack_id: response_ack.ack_id,
+                        batch: batch.1,
+                        sent_time: tokio::time::Instant::now(),
+                    };
 
-                // Build a batch to enable resending
-                let hec_batch = HecBatch {
-                    ack_id: response_ack.ack_id,
-                    batch: batch.1,
-                    sent_time: tokio::time::Instant::now(),
-                };
-
-                // Send batch to Ack Task
-                match ack_tx.reserve().await {
-                    Ok(permit) => {
-                        permit.send(hec_batch);
-                    }
-                    Err(err) => {
-                        error!(operation="SplunkHec", operation="Reserve HecBatch on ack_task", error=?err)
+                    // Send batch to Ack Task
+                    match ack_tx.reserve().await {
+                        Ok(permit) => {
+                            permit.send(hec_batch);
+                        }
+                        Err(err) => {
+                            error!(operation="SplunkHec", operation="Reserve HecBatch on ack_task", error=?err)
+                        }
                     }
                 }
             }
@@ -224,8 +227,15 @@ impl SendingTask {
         send_rx: Receiver<HecEvent>,
         ack_tx: Sender<HecBatch>,
         url: String,
+        hec_acknowledgment: bool,
     ) -> Result<JoinHandle<Result<()>>> {
-        let join_handle = tokio::spawn(Self::sending_task(splunk, send_rx, ack_tx, url));
+        let join_handle = tokio::spawn(Self::sending_task(
+            splunk,
+            send_rx,
+            ack_tx,
+            url,
+            hec_acknowledgment,
+        ));
         Ok(join_handle)
     }
 }
@@ -473,7 +483,7 @@ mod test {
     use mockito::{Matcher::Any, Server, ServerGuard};
     use std::collections::HashMap;
     use tokio::{
-        sync::mpsc::{channel, Receiver, Sender},
+        sync::mpsc::{channel, error::TryRecvError, Receiver, Sender},
         time::{sleep, Duration, Instant},
     };
     use tracing::subscriber::DefaultGuard;
@@ -503,10 +513,12 @@ mod test {
         let url = format!("http://{}", mock_server.host_with_port());
         let (send_tx, send_rx) = channel::<HecEvent>(1000);
         let (ack_tx, ack_rx) = channel(1000);
-        let client =
-            Splunk::new_request_client("mock_token").expect("Splunk Client to build sucessfully");
-        let sending_task = SendingTask::new(client, send_rx, ack_tx.clone(), url)
-            .expect("Spawning SendingTask shouldn't fail");
+        let hec_acknowledgment = true;
+        let client = Splunk::new_request_client("mock_token", hec_acknowledgment)
+            .expect("Splunk Client to build sucessfully");
+        let sending_task =
+            SendingTask::new(client, send_rx, ack_tx.clone(), url, hec_acknowledgment)
+                .expect("Spawning SendingTask shouldn't fail");
 
         (sending_task, send_tx, ack_rx, mock_server, tracing_guard)
     }
@@ -625,6 +637,39 @@ mod test {
     }
 
     #[tokio::test]
+    async fn test_sending_task_creates_does_not_ack_when_ack_is_disabled() {
+        let subscriber = tracing_subscriber::FmtSubscriber::new();
+        let _tracing_guard = tracing::subscriber::set_default(subscriber);
+
+        // Start Mockito server
+        let mut mock_server = Server::new_async().await;
+
+        // Setup SendingTask
+        let url = format!("http://{}", mock_server.host_with_port());
+        let (send_tx, send_rx) = channel::<HecEvent>(1000);
+        let (ack_tx, mut ack_rx) = channel(1000);
+        let hec_acknowledgment = false;
+        let client = Splunk::new_request_client("mock_token", hec_acknowledgment)
+            .expect("Splunk Client to build sucessfully");
+
+        let _sending_task =
+            SendingTask::new(client, send_rx, ack_tx.clone(), url, hec_acknowledgment)
+                .expect("Spawning SendingTask shouldn't fail");
+
+        let _mock = mock_server
+            .mock("POST", "/services/collector")
+            .with_status(200)
+            .with_body(mock_response_body())
+            .create();
+
+        send_hec_event(send_tx).await;
+
+        let ack_message = ack_rx.try_recv();
+        assert!(ack_message.is_err());
+        assert_eq!(ack_message.unwrap_err(), TryRecvError::Empty);
+    }
+
+    #[tokio::test]
     async fn test_sending_task_ack_message_contains_ack_id() {
         let (_sending_task, send_tx, mut ack_rx, mut mock_server, _tracing_guard) =
             setup_send_task().await;
@@ -681,7 +726,8 @@ mod test {
         let url = format!("http://{}", mock_server.host_with_port());
         let (send_tx, send_rx) = channel::<HecEvent>(1000);
         let (ack_tx, ack_rx) = channel(1000);
-        let client = Splunk::new_request_client("mock_token").expect("Splunk client to build");
+        let client =
+            Splunk::new_request_client("mock_token", true).expect("Splunk client to build");
         let ack_task = AckTask::new(client, send_tx, ack_rx, url, timeout)
             .expect("Spawning SendingTask shouldn't fail");
 

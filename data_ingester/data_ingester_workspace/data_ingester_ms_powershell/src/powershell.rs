@@ -1047,6 +1047,7 @@ mod test {
         let splunk = Splunk::new(
             secrets.splunk_host.as_ref().context("No value")?,
             secrets.splunk_token.as_ref().context("No value")?,
+            true,
         )?;
         Ok((splunk, secrets))
     }

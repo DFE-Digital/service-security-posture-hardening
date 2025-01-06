@@ -1073,6 +1073,7 @@ pub(crate) mod live_tests {
         let splunk = Splunk::new(
             secrets.splunk_host.as_ref().context("No value")?,
             secrets.splunk_token.as_ref().context("No value")?,
+            true,
         )?;
         Ok((splunk, ms_graph))
     }
