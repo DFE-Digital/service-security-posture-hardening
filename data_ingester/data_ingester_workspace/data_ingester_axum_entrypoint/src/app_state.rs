@@ -307,7 +307,7 @@ impl AppState {
     /// Create a splunk Client to send data with
     fn create_splunk_client(secrets: &Secrets) -> Result<Splunk> {
         info!("Creating Splunk client");
-
+        let hec_acknowledgement = false;
         let splunk = Splunk::new(
             secrets
                 .splunk_host
@@ -317,6 +317,7 @@ impl AppState {
                 .splunk_token
                 .as_ref()
                 .context("Expect splunk_token secret")?,
+            hec_acknowledgement,
         )
         .context("Create Splunk Client")?;
 

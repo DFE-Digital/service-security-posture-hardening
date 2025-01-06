@@ -2050,6 +2050,7 @@ mod live_tests {
         let splunk = Splunk::new(
             secrets.splunk_host.as_ref().context("No value")?,
             secrets.splunk_token.as_ref().context("No value")?,
+            true,
         )?;
         aws(Arc::new(secrets), Arc::new(splunk)).await?;
         Ok(())
