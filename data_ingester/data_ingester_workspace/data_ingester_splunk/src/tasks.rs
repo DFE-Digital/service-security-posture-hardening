@@ -77,11 +77,7 @@ impl SendingTask {
     }
 
     // Send a batch to Splunk HEC
-    async fn send_batch_to_splunk(
-        splunk: &Client,
-        batch: &str,
-        url: &str,
-    ) -> Result<HecAckResponse> {
+    async fn send_batch_to_splunk(splunk: &Client, batch: &str, url: &str) -> Result<Response> {
         let mut retry_count = 0;
         let response: Response = loop {
             let response = splunk.post(url).body(batch.to_string()).send().await;
@@ -157,6 +153,16 @@ impl SendingTask {
                 };
             }
         };
+        Ok(response)
+    }
+
+    ///  Send a batch to Splunk and extract a HecAckResponse for Hec Acknowledgement
+    async fn send_batch_to_splunk_with_ack(
+        splunk: &Client,
+        batch: &str,
+        url: &str,
+    ) -> Result<HecAckResponse> {
+        let response = Self::send_batch_to_splunk(splunk, batch, url).await?;
 
         let response_ack = match response.json::<HecAckResponse>().await {
             Ok(response_ack) => response_ack,
@@ -192,11 +198,15 @@ impl SendingTask {
 
             for batch in batches.into_iter() {
                 // Send batch and receive the Ack code for the batch
-                let response_ack =
-                    Self::send_batch_to_splunk(&splunk, &batch.0, sending_url.as_str())
-                        .await
-                        .context("sending batch to Splunk")?;
                 if hec_acknowledgment {
+                    let response_ack = Self::send_batch_to_splunk_with_ack(
+                        &splunk,
+                        &batch.0,
+                        sending_url.as_str(),
+                    )
+                    .await
+                    .context("sending batch to Splunk")?;
+
                     // Build a batch to enable resending
                     let hec_batch = HecBatch {
                         ack_id: response_ack.ack_id,
@@ -213,6 +223,10 @@ impl SendingTask {
                             error!(operation="SplunkHec", operation="Reserve HecBatch on ack_task", error=?err)
                         }
                     }
+                } else {
+                    let _ = Self::send_batch_to_splunk(&splunk, &batch.0, sending_url.as_str())
+                        .await
+                        .context("sending batch to Splunk")?;
                 }
             }
 
@@ -637,7 +651,7 @@ mod test {
     }
 
     #[tokio::test]
-    async fn test_sending_task_creates_does_not_ack_when_ack_is_disabled() {
+    async fn test_sending_task_does_not_ack_when_ack_is_disabled() {
         let subscriber = tracing_subscriber::FmtSubscriber::new();
         let _tracing_guard = tracing::subscriber::set_default(subscriber);
 
