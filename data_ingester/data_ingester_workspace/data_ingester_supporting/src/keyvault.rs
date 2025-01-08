@@ -9,6 +9,8 @@ use tracing::{info, warn};
 pub struct Secrets {
     pub splunk_host: Option<String>,
     pub splunk_token: Option<String>,
+    pub ian_splunk_host: Option<String>,
+    pub ian_splunk_token: Option<String>,
     pub splunk_acs_token: Option<String>,
     pub splunk_search_token: Option<String>,
     pub splunk_search_url: Option<String>,
@@ -86,6 +88,8 @@ pub async fn get_keyvault_secrets(keyvault_name: &str) -> Result<Secrets> {
 
     let splunk_host = get_secret(&client, "splunk-host");
     let splunk_token = get_secret(&client, "splunk-token");
+    let ian_splunk_host = get_secret(&client, "ian-splunk-host");
+    let ian_splunk_token = get_secret(&client, "ian-splunk-token");
     let splunk_acs_token = get_secret(&client, "splunk-acs-token");
     let splunk_search_token = get_secret(&client, "splunk-search-token");
     let splunk_search_url = get_secret(&client, "splunk-search-url");
@@ -122,6 +126,8 @@ pub async fn get_keyvault_secrets(keyvault_name: &str) -> Result<Secrets> {
     };
 
     Ok(Secrets {
+        ian_splunk_host: ian_splunk_host.await?,
+        ian_splunk_token: ian_splunk_token.await?,
         splunk_host: splunk_host.await?,
         splunk_token: splunk_token.await?,
         splunk_acs_token: splunk_acs_token.await?,

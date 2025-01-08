@@ -65,21 +65,12 @@ impl QualysLimits {
     pub(crate) fn from_headers(headers: &HeaderMap) -> Self {
         debug!("Qualys response headers: {:?}", headers);
         let limits = Self {
-            rate_limit: QualysLimits::get_usize_from_header(headers, "X-RateLimit-Limit"),
-            rate_window_seconds: QualysLimits::get_usize_from_header(
-                headers,
-                "X-RateLimit-Window-Sec",
-            ),
-            rate_remaining: QualysLimits::get_usize_from_header(headers, "X-RateLimit-Remaining"),
-            rate_to_wait_seconds: QualysLimits::get_usize_from_header(
-                headers,
-                "X-RateLimit-ToWait-Sec",
-            ),
-            concurrency_limit: QualysLimits::get_usize_from_header(
-                headers,
-                "X-Concurrency-Limit-Limit",
-            ),
-            concurrency_running: QualysLimits::get_usize_from_header(
+            rate_limit: Self::get_usize_from_header(headers, "X-RateLimit-Limit"),
+            rate_window_seconds: Self::get_usize_from_header(headers, "X-RateLimit-Window-Sec"),
+            rate_remaining: Self::get_usize_from_header(headers, "X-RateLimit-Remaining"),
+            rate_to_wait_seconds: Self::get_usize_from_header(headers, "X-RateLimit-ToWait-Sec"),
+            concurrency_limit: Self::get_usize_from_header(headers, "X-Concurrency-Limit-Limit"),
+            concurrency_running: Self::get_usize_from_header(
                 headers,
                 "X-Concurrency-Limit-Running",
             ),
