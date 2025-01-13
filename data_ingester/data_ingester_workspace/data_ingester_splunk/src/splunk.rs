@@ -299,7 +299,7 @@ impl Splunk {
                 }
                 Err(err) => {
                     error!(operation="SplunkHec", operation="Reserve HecBatch on self.send_tx failed", error=?err);
-                    assert!(false);
+                    panic!("FAIED to reserve space for Splunk Batch on send_tx channel");
                 }
             }
         }

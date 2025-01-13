@@ -1,7 +1,8 @@
-use crate::AdoResponse;
 use serde::Deserialize;
 use serde::Serialize;
 use tracing::error;
+
+use crate::ado_response::AdoResponse;
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]

@@ -11,11 +11,12 @@ pub(crate) struct TestSetup {
     pub(crate) ado: AzureDevOpsClient,
     pub(crate) organization: String,
     pub(crate) splunks: Vec<Splunk>,
+    #[allow(unused)]
     pub(crate) tracing_guard: DefaultGuard,
     pub(crate) runtime: tokio::runtime::Runtime,
 }
 
-pub(crate) static TEST_SETUP: LazyLock<TestSetup> = LazyLock::new(|| test_setup_setup());
+pub(crate) static TEST_SETUP: LazyLock<TestSetup> = LazyLock::new(test_setup_setup);
 
 fn test_setup_setup() -> TestSetup {
     let runtime = tokio::runtime::Runtime::new().unwrap();
@@ -88,71 +89,3 @@ fn test_setup_setup() -> TestSetup {
         runtime,
     }
 }
-
-// static TEST_SETUP_ASYNC: OnceCell<TestSetup> = OnceCell::const_new();
-
-// pub(crate) async fn test_setup() -> &'static TestSetup {
-//     TEST_SETUP_ASYNC
-//         .get_or_init(|| async {
-//             let runtime = tokio::runtime::Runtime::new();
-//             let subscriber =
-//                 tracing_subscriber::FmtSubscriber::new().with(EnvFilter::from_default_env());
-//             let tracing_guard = tracing::subscriber::set_default(subscriber);
-
-//             let secrets = get_keyvault_secrets(
-//                 &std::env::var("KEY_VAULT_NAME").expect("Need KEY_VAULT_NAME enviornment variable"),
-//             )
-//             .await
-//             .unwrap();
-//             let ado = AzureDevOpsClient::new(
-//                 secrets
-//                     .azure_client_id
-//                     .as_ref()
-//                     .context("No Azure Client Id")
-//                     .unwrap(),
-//                 secrets
-//                     .azure_client_secret
-//                     .as_ref()
-//                     .context("No Azure Client Secret")
-//                     .unwrap(),
-//                 secrets
-//                     .azure_tenant_id
-//                     .as_ref()
-//                     .context("No Azure Tenant Id")
-//                     .unwrap(),
-//             )
-//             .await
-//             .unwrap();
-
-//             let splunk = Splunk::new(
-//                 secrets.splunk_host.as_ref().context("No value").unwrap(),
-//                 secrets.splunk_token.as_ref().context("No value").unwrap(),
-//                 false,
-//             )
-//             .unwrap();
-
-//             let splunk_ian = Splunk::new(
-//                 secrets
-//                     .ian_splunk_host
-//                     .as_ref()
-//                     .context("No value")
-//                     .unwrap(),
-//                 secrets
-//                     .ian_splunk_token
-//                     .as_ref()
-//                     .context("No value")
-//                     .unwrap(),
-//                 true,
-//             )
-//             .unwrap();
-
-//             let organization = "aktest0831";
-//             TestSetup {
-//                 ado,
-//                 organization: organization.to_string(),
-//                 splunks: [splunk, splunk_ian].into(),
-//                 tracing_guard,
-//             }
-//         })
-//         .await
-// }
