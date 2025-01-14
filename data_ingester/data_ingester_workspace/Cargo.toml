@@ -4,6 +4,7 @@ members = [
     "data_ingester_aws",
     "data_ingester_axum_entrypoint",
     "data_ingester_azure",
+    "data_ingester_azure_dev_ops",    
     "data_ingester_azure_rest",
     "data_ingester_github",
     "data_ingester_ms_graph",

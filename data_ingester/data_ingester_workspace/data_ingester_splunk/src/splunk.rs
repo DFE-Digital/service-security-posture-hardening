@@ -298,7 +298,8 @@ impl Splunk {
                     permit.send(event);
                 }
                 Err(err) => {
-                    error!(operation="SplunkHec", operation="Reserve HecBatch on self.send_tx failed", error=?err)
+                    error!(operation="SplunkHec", operation="Reserve HecBatch on self.send_tx failed", error=?err);
+                    panic!("FAIED to reserve space for Splunk Batch on send_tx channel");
                 }
             }
         }

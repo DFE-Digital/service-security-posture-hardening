@@ -135,6 +135,8 @@ pub struct GithubResponse {
     #[serde(skip)]
     source: String,
     ssphp_http_status: u16,
+    #[serde(skip, default)]
+    ssphp_run_identifier: Option<String>,
 }
 
 impl GithubResponse {
@@ -143,6 +145,7 @@ impl GithubResponse {
             response,
             source,
             ssphp_http_status,
+            ssphp_run_identifier: None,
         }
     }
 
@@ -226,6 +229,7 @@ impl ToHecEvents for &GithubResponse {
                 response: SingleOrVec::Single(event.clone()),
                 source: self.source.clone(),
                 ssphp_http_status: self.ssphp_http_status,
+                ssphp_run_identifier: self.ssphp_run_identifier.clone(),
             })
             .map(|gr| {
                 data_ingester_splunk::splunk::HecEvent::new_with_ssphp_run(
@@ -240,7 +244,7 @@ impl ToHecEvents for &GithubResponse {
     }
 
     fn ssphp_run_key(&self) -> &str {
-        "github"
+        self.ssphp_run_identifier.as_deref().unwrap_or("github")
     }
 }
 

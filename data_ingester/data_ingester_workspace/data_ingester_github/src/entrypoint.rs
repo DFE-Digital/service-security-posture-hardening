@@ -328,6 +328,7 @@ pub async fn github_set_custom_properties_entrypoint(
     secrets: Arc<Secrets>,
     splunk: Arc<Splunk>,
 ) -> Result<()> {
+    set_ssphp_run("github")?;
     info!("Updating GitHub custom properties");
 
     let github_app = secrets

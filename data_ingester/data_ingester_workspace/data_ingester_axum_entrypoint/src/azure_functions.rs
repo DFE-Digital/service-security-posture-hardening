@@ -49,6 +49,7 @@ pub(crate) async fn start_server(tx: Sender<()>) -> Result<()> {
         .route("/", get(get_health_check))
         .route("/aws", post(post_aws))
         .route("/azure", post(post_azure))
+        .route("/azure_dev_ops", post(post_azure_dev_ops))
         .route("/azure_resource_graph", post(post_azure_resource_graph))
         .route("/github", post(post_github))
         .route(
@@ -316,6 +317,24 @@ async fn post_financial_business_partners(
             state.financial_business_partners_lock.clone(),
             state,
             data_ingester_financial_business_partners::entrypoint,
+            headers,
+            payload,
+        )
+        .await,
+    )
+}
+
+async fn post_azure_dev_ops(
+    headers: HeaderMap,
+    State(state): State<Arc<AppState>>,
+    payload: Option<Json<AzureInvokeRequest>>,
+) -> Json<AzureInvokeResponse> {
+    Json(
+        function_runner(
+            "Azure Dev Ops",
+            state.azure_dev_ops_lock.clone(),
+            state,
+            data_ingester_azure_dev_ops::entrypoint::entrypoint,
             headers,
             payload,
         )
