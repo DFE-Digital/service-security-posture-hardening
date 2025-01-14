@@ -2,7 +2,7 @@ use crate::ado_response::{AdoMetadata, AdoRateLimiting, AdoResponse};
 use crate::data::organization::Organizations;
 use anyhow::{Context, Result};
 use serde::Deserialize;
-use tracing::{error, info, trace};
+use tracing::{error, trace};
 
 pub(crate) struct AzureDevOpsClient {
     pub(crate) client: reqwest::Client,
