@@ -1018,27 +1018,27 @@ dependencies = [
 
 [[package]]
 name = "azure_core"
-version = "0.19.0"
+version = "0.21.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "70fd680c0d0424a518229b1150922f92653ba2ac933aa000abc8bf1ca08105f7"
+checksum = "7b552ad43a45a746461ec3d3a51dfb6466b4759209414b439c165eb6a6b7729e"
 dependencies = [
  "async-trait",
- "base64 0.21.7",
+ "base64 0.22.1",
  "bytes",
  "dyn-clone",
  "futures",
  "getrandom 0.2.15",
  "http-types",
- "log",
  "once_cell",
  "paste",
  "pin-project",
  "rand 0.8.5",
- "reqwest 0.11.27",
+ "reqwest 0.12.9",
  "rustc_version",
  "serde",
  "serde_json",
  "time",
+ "tracing",
  "url",
  "uuid",
 ]
@@ -1072,20 +1072,21 @@ dependencies = [
 
 [[package]]
 name = "azure_identity"
-version = "0.19.0"
+version = "0.21.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a6d2060f5b2e1c664026ca4edd561306c473be887c1f7a81f10bf06f9b71c63f"
+checksum = "88ddd80344317c40c04b603807b63a5cefa532f1b43522e72f480a988141f744"
 dependencies = [
  "async-lock",
+ "async-process",
  "async-trait",
  "azure_core 0.19.0",
  "futures",
- "log",
  "oauth2",
  "openssl",
  "pin-project",
  "serde",
  "time",
+ "tracing",
  "url",
  "uuid",
 ]
@@ -1113,9 +1114,9 @@ dependencies = [
 
 [[package]]
 name = "azure_mgmt_authorization"
-version = "0.19.0"
+version = "0.21.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "829b04fd9c7c5e17a5ab005fb88986cc24f7d3461689bf5e5fbdacff3a170e72"
+checksum = "fbb60abdc00edf3545c0a235fbd3aa26a8dc870676361c4064114de0c4c607b8"
 dependencies = [
  "azure_core 0.19.0",
  "bytes",
@@ -1145,9 +1146,9 @@ dependencies = [
 
 [[package]]
 name = "azure_mgmt_subscription"
-version = "0.19.0"
+version = "0.21.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ae4e54b88482dc72b8bc9ef1449009b335e10e4eb9197315e68cf0d95b329d05"
+checksum = "d7fdba938ea150f0270ce9abb0a9ba48d387bd7ab33470792c70133a74fe3d76"
 dependencies = [
  "azure_core 0.19.0",
  "bytes",
@@ -1161,9 +1162,9 @@ dependencies = [
 
 [[package]]
 name = "azure_security_keyvault"
-version = "0.19.0"
+version = "0.21.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9c32a5dbb8b6f67ed8b8fdc7137a912f3b6547af7f961aedb42bb553ee394f5b"
+checksum = "bd94f507b75349a0e381c0a23bd77cc654fb509f0e6797ce4f99dd959d9e2d68"
 dependencies = [
  "async-trait",
  "azure_core 0.19.0",
