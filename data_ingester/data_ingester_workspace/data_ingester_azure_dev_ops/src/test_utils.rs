@@ -16,8 +16,10 @@ pub(crate) struct TestSetup {
     pub(crate) runtime: tokio::runtime::Runtime,
 }
 
+//#[cfg(feature = "live_tests")]
 pub(crate) static TEST_SETUP: LazyLock<TestSetup> = LazyLock::new(test_setup_setup);
 
+//#[cfg(feature = "live_tests")]
 fn test_setup_setup() -> TestSetup {
     let runtime = tokio::runtime::Runtime::new().unwrap();
 

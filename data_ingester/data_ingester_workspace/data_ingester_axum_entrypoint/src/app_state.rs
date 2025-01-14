@@ -34,6 +34,9 @@ pub(crate) struct AppState {
     /// Lock for azure_resource_graph to stop concurrent executions
     pub(crate) azure_resource_graph_lock: Arc<Mutex<()>>,
 
+    /// Lock for azure_resource_graph to stop concurrent executions
+    pub(crate) azure_dev_ops_lock: Arc<Mutex<()>>,
+
     /// Lock for Financial Business Partners
     pub(crate) financial_business_partners_lock: Arc<Mutex<()>>,
 
@@ -280,6 +283,7 @@ impl AppState {
             aws_lock: Arc::new(Mutex::new(())),
             azure_lock: Arc::new(Mutex::new(())),
             azure_resource_graph_lock: Arc::new(Mutex::new(())),
+            azure_dev_ops_lock: Arc::new(Mutex::new(())),
             financial_business_partners_lock: Arc::new(Mutex::new(())),
             github_lock: Arc::new(Mutex::new(())),
             github_custom_properties_lock: Arc::new(Mutex::new(())),

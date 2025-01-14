@@ -38,7 +38,7 @@ pub(crate) struct Organization {
     #[serde(rename = "Organization Id")]
     organization_id: String,
     #[serde(rename = "Organization Name")]
-    organization_name: String,
+    pub(crate) organization_name: String,
     #[serde(rename = "Url")]
     url: String,
     #[serde(rename = "Owner")]

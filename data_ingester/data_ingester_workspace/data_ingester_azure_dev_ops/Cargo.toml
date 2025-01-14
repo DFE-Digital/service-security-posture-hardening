@@ -25,3 +25,6 @@ mockito = "1.6.1"
 
 [lints]
 workspace = true
+
+[features]
+live_tests = []

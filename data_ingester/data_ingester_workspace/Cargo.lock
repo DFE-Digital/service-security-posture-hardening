@@ -1697,6 +1697,7 @@ dependencies = [
  "axum",
  "data_ingester_aws",
  "data_ingester_azure",
+ "data_ingester_azure_dev_ops",
  "data_ingester_azure_rest",
  "data_ingester_financial_business_partners",
  "data_ingester_github",

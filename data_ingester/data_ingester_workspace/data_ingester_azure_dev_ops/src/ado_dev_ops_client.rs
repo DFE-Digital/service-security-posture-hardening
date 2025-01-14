@@ -2,7 +2,7 @@ use crate::ado_response::{AdoMetadata, AdoRateLimiting, AdoResponse};
 use crate::data::organization::Organizations;
 use anyhow::{Context, Result};
 use serde::Deserialize;
-use tracing::{error, info};
+use tracing::{error, info, trace};
 
 pub(crate) struct AzureDevOpsClient {
     pub(crate) client: reqwest::Client,
@@ -62,7 +62,6 @@ impl AzureDevOpsClient {
         r#type: &str,
         rest_docs: &str,
     ) -> Result<AdoResponse> {
-        dbg!(url);
         let response = self
             .client
             .post(url)
@@ -72,12 +71,12 @@ impl AzureDevOpsClient {
             .await?;
 
         if !response.status().is_success() {
-            dbg!(response.status());
+            error!(name="Azure Dev Ops", operation="POST request", error="Non 2xx status code", status=?response.status(), headers=?response.headers());
             anyhow::bail!("failed request");
         }
 
         let rate_limit = AdoRateLimiting::from_headers(response.headers());
-        error!(rate_limit=?rate_limit);
+        trace!(rate_limit=?rate_limit);
 
         let ado_metadata = AdoMetadata::new(
             &self.tenant_id,
@@ -104,7 +103,6 @@ impl AzureDevOpsClient {
         r#type: &str,
         rest_docs: &str,
     ) -> Result<AdoResponse> {
-        dbg!(url);
         let response = self
             .client
             .get(url)
@@ -113,10 +111,9 @@ impl AzureDevOpsClient {
             .await?;
 
         if !response.status().is_success() {
-            dbg!(response.status());
+            error!(name="Azure Dev Ops", operation="GET request", error="Non 2xx status code", status=?response.status(), headers=?response.headers());
             anyhow::bail!("failed request");
         }
-        dbg!(&response);
 
         let rate_limit = AdoRateLimiting::from_headers(response.headers());
         error!(rate_limit=?rate_limit);
@@ -130,8 +127,12 @@ impl AzureDevOpsClient {
             rest_docs,
         );
 
+        let text = response.text().await?;
+        trace!(name="Azure Dev Ops", operation="get response", response=text);
+
         let ado_response = {
-            let mut ado_response = response.json::<AdoResponse>().await?;
+            let mut ado_response: AdoResponse = serde_json::from_str(&text)?;
+            // response.json::<AdoResponse>().await?;
             ado_response.metadata = Some(ado_metadata);
             ado_response
         };
@@ -153,12 +154,12 @@ impl AzureDevOpsClient {
             .await?;
 
         if !response.status().is_success() {
-            dbg!(response.status());
+            error!(name="Azure Dev Ops", operation="organizations_list GET request", error="Non 2xx status code", status=?response.status(), headers=?response.headers());
             anyhow::bail!("failed request");
         }
 
         let rate_limit = AdoRateLimiting::from_headers(response.headers());
-        info!(rate_limit=?rate_limit);
+        trace!(rate_limit=?rate_limit);
 
         let ado_metadata = AdoMetadata::new(
             &self.tenant_id,
@@ -181,7 +182,6 @@ impl AzureDevOpsClient {
             "https://dev.azure.com/{organization}/_apis/projects?api-version={}",
             self.api_version
         );
-        dbg!(&url);
         self.get(&url, organization, "fn projects_list", "https://learn.microsoft.com/en-us/rest/api/azure/devops/core/projects/list?view=azure-devops-rest-7.1&tabs=HTTP").await
     }
 
@@ -416,7 +416,8 @@ impl AzureDevOpsClient {
 // }
 
 #[cfg(test)]
-mod test {
+#[cfg(feature = "live_tests")]
+mod live_tests {
     use crate::test_utils::TEST_SETUP;
     use anyhow::Result;
     use data_ingester_splunk::splunk::{Splunk, ToHecEvents};
@@ -471,7 +472,7 @@ mod test {
                 .ado
                 .git_policy_configuration_get(&t.organization, "foo")
                 .await?;
-            dbg!(&policy_configuration);
+
             assert!(!policy_configuration.value.is_empty());
             assert_eq!(policy_configuration.count, policy_configuration.value.len());
             send_to_splunk(&t.splunks, policy_configuration).await?;
@@ -484,7 +485,7 @@ mod test {
         let t = &*TEST_SETUP;
         let _: Result<()> = t.runtime.block_on(async {
             let result = t.ado.git_repository_list(&t.organization, "foo").await?;
-            dbg!(&result);
+
             assert!(!result.value.is_empty());
             assert_eq!(result.count, result.value.len());
             send_to_splunk(&t.splunks, result).await?;
