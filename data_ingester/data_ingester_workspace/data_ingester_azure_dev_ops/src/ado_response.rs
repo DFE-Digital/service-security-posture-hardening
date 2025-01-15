@@ -1,4 +1,4 @@
-use anyhow::{Result, anyhow};
+use anyhow::{anyhow, Result};
 use data_ingester_splunk::splunk::ToHecEvents;
 use itertools::Itertools;
 use reqwest::header::HeaderMap;
@@ -91,6 +91,31 @@ pub(crate) struct AdoMetadata {
     rest_docs: String,
 }
 
+pub(crate) trait AdoMetadataTrait {
+    fn set_metadata(&mut self, metadata: AdoMetadata);
+    fn metadata(&self) -> Option<&AdoMetadata>;
+    fn metadata_source(&self) -> &str {
+        self.metadata()
+            .map(|metadata| metadata.source.as_str())
+            .unwrap_or("NO SOURCE FROM METADATA")
+    }
+    fn metadata_sourcetype(&self) -> &str {
+        self.metadata()
+            .map(|metadata| metadata.source.as_str())
+            .unwrap_or("NO SOURCE FROM METADATA")
+    }
+}
+
+impl AdoMetadataTrait for AdoResponse {
+    fn set_metadata(&mut self, metadata: AdoMetadata) {
+        self.metadata = Some(metadata);
+    }
+
+    fn metadata(&self) -> Option<&AdoMetadata> {
+        self.metadata.as_ref()
+    }
+}
+
 impl AdoMetadata {
     pub(crate) fn new(
         tenant: &str,
@@ -125,17 +150,11 @@ impl ToHecEvents for AdoResponse {
     type Item = Value;
 
     fn source(&self) -> &str {
-        self.metadata
-            .as_ref()
-            .map(|metadata| metadata.source.as_str())
-            .unwrap_or("NO ADOMETADATA FOR SOURCE")
+        self.metadata_source()
     }
 
     fn sourcetype(&self) -> &str {
-        self.metadata
-            .as_ref()
-            .map(|metadata| metadata.sourcetype.as_str())
-            .unwrap_or("NO ADOMETADATA FOR SOURCETYPE")
+        self.metadata_sourcetype()
     }
 
     fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
@@ -174,12 +193,11 @@ impl ToHecEvents for AdoResponse {
             })
             .partition_result();
         if !err.is_empty() {
-            return Err(anyhow!(
-                err.iter()
-                    .map(|err| format!("{:?}", err))
-                    .collect::<Vec<String>>()
-                    .join("\n")
-            ));
+            return Err(anyhow!(err
+                .iter()
+                .map(|err| format!("{:?}", err))
+                .collect::<Vec<String>>()
+                .join("\n")));
         }
         Ok(ok)
     }
@@ -238,12 +256,11 @@ impl ToHecEvents for &AdoResponse {
             })
             .partition_result();
         if !err.is_empty() {
-            return Err(anyhow!(
-                err.iter()
-                    .map(|err| format!("{:?}", err))
-                    .collect::<Vec<String>>()
-                    .join("\n")
-            ));
+            return Err(anyhow!(err
+                .iter()
+                .map(|err| format!("{:?}", err))
+                .collect::<Vec<String>>()
+                .join("\n")));
         }
         Ok(ok)
     }

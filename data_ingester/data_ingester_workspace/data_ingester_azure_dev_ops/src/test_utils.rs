@@ -4,15 +4,15 @@ use crate::ado_dev_ops_client::AzureDevOpsClient;
 use anyhow::Context;
 use data_ingester_splunk::splunk::Splunk;
 use data_ingester_supporting::keyvault::get_keyvault_secrets;
-use tracing::subscriber::DefaultGuard;
-use tracing_subscriber::{EnvFilter, layer::SubscriberExt};
+use tracing::{debug, info, subscriber::DefaultGuard, trace};
+use tracing_subscriber::{layer::SubscriberExt, EnvFilter};
 
 pub(crate) struct TestSetup {
     pub(crate) ado: AzureDevOpsClient,
     pub(crate) organization: String,
     pub(crate) splunks: Vec<Splunk>,
     #[allow(unused)]
-    pub(crate) tracing_guard: DefaultGuard,
+    // pub(crate) tracing_guard: DefaultGuard,
     pub(crate) runtime: tokio::runtime::Runtime,
 }
 
@@ -23,10 +23,10 @@ pub(crate) static TEST_SETUP: LazyLock<TestSetup> = LazyLock::new(test_setup_set
 fn test_setup_setup() -> TestSetup {
     let runtime = tokio::runtime::Runtime::new().unwrap();
 
-    let (ado, organization, splunks, tracing_guard) = runtime.block_on(async {
-        let subscriber =
-            tracing_subscriber::FmtSubscriber::new().with(EnvFilter::from_default_env());
-        let tracing_guard = tracing::subscriber::set_default(subscriber);
+    let (ado, organization, splunks) = runtime.block_on(async {
+        tracing_subscriber::FmtSubscriber::builder()
+            .with_env_filter(EnvFilter::from_env("RUST_LOG"))
+            .init();
 
         let secrets = get_keyvault_secrets(
             &std::env::var("KEY_VAULT_NAME").expect("Need KEY_VAULT_NAME enviornment variable"),
@@ -80,14 +80,14 @@ fn test_setup_setup() -> TestSetup {
             ado,
             organization.to_string(),
             vec![splunk, splunk_ian],
-            tracing_guard,
+            //tracing_guard,
         )
     });
     TestSetup {
         ado,
         organization,
         splunks,
-        tracing_guard,
+        // tracing_guard,
         runtime,
     }
 }

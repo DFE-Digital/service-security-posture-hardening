@@ -1,5 +1,5 @@
 use anyhow::{Context, Result};
-use data_ingester_splunk::splunk::{Splunk, set_ssphp_run, try_collect_send};
+use data_ingester_splunk::splunk::{set_ssphp_run, try_collect_send, Splunk};
 use data_ingester_supporting::keyvault::Secrets;
 use std::sync::Arc;
 use tracing::{error, info};
@@ -41,9 +41,44 @@ pub async fn entrypoint(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()
     for organization in organizations.organizations {
         let organization_name = &organization.organization_name;
 
+        let _users = try_collect_send(
+            &format!("Users for {organization_name}"),
+            ado.graph_users_list(organization_name),
+            &splunk,
+        )
+        .await;
+
+        let _users = try_collect_send(
+            &format!("Service Principals for {organization_name}"),
+            ado.graph_service_principals_list(organization_name),
+            &splunk,
+        )
+        .await;
+
+        let _users = try_collect_send(
+            &format!("Groups for {organization_name}"),
+            ado.graph_groups_list(organization_name),
+            &splunk,
+        )
+        .await;
+
+        let _ = try_collect_send(
+            &format!("Audit Streams for {organization_name}"),
+            ado.audit_streams(organization_name),
+            &splunk,
+        )
+        .await?;
+
+        let _ = try_collect_send(
+            &format!("Advanced Security Org Enablement {organization_name}"),
+            ado.adv_security_org_enablement(organization_name),
+            &splunk,
+        )
+        .await?;
+
         let projects = try_collect_send(
             &format!("Projects for {organization_name}"),
-            ado.projects_list(&organization_name),
+            ado.projects_list(organization_name),
             &splunk,
         )
         .await;
@@ -60,15 +95,29 @@ pub async fn entrypoint(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()
             let project_name = &project.name;
 
             let _ = try_collect_send(
+                &format!("Advanced Security Project Enablement {organization_name}/{project_name}"),
+                ado.adv_security_project_enablement(organization_name, project_name),
+                &splunk,
+            )
+            .await?;
+
+            let _ = try_collect_send(
+                &format!("Policy Configuration for {organization_name}/{project_name}"),
+                ado.policy_configuration_get(organization_name, project_name),
+                &splunk,
+            )
+            .await?;
+
+            let _ = try_collect_send(
                 &format!("Git Policy Configuration for {organization_name}/{project_name}"),
-                ado.git_policy_configuration_get(&organization_name, &project_name),
+                ado.git_policy_configuration_get(organization_name, project_name),
                 &splunk,
             )
             .await?;
 
             let _ = try_collect_send(
                 &format!("Git repository list {org_name}"),
-                ado.git_repository_list(&organization_name, &project_name),
+                ado.git_repository_list(organization_name, project_name),
                 &splunk,
             )
             .await?;

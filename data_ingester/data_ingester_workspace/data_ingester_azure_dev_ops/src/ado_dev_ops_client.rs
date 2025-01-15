@@ -1,8 +1,9 @@
-use crate::ado_response::{AdoMetadata, AdoRateLimiting, AdoResponse};
+use crate::ado_response::{AdoMetadata, AdoMetadataTrait, AdoRateLimiting, AdoResponse};
 use crate::data::organization::Organizations;
 use anyhow::{Context, Result};
+use serde::de::DeserializeOwned;
 use serde::Deserialize;
-use tracing::{error, trace};
+use tracing::{debug, error, trace};
 
 pub(crate) struct AzureDevOpsClient {
     pub(crate) client: reqwest::Client,
@@ -96,13 +97,13 @@ impl AzureDevOpsClient {
         Ok(ado_response)
     }
 
-    async fn get(
+    async fn get<T: DeserializeOwned + AdoMetadataTrait>(
         &self,
         url: &str,
         organization: &str,
         r#type: &str,
         rest_docs: &str,
-    ) -> Result<AdoResponse> {
+    ) -> Result<T> {
         let response = self
             .client
             .get(url)
@@ -110,30 +111,36 @@ impl AzureDevOpsClient {
             .send()
             .await?;
 
-        if !response.status().is_success() {
-            error!(name="Azure Dev Ops", operation="GET request", error="Non 2xx status code", status=?response.status(), headers=?response.headers());
-            anyhow::bail!("failed request");
+        let status = response.status();
+        let headers = response.headers().clone();
+        let text = response.text().await?;
+
+        if !status.is_success() {
+            error!(name="Azure Dev Ops", operation="GET request", error="Non 2xx status code", status=?status, headers=?headers, body=text);
+            anyhow::bail!("Azure Dev Org request failed with with Non 2xx status code");
         }
 
-        let rate_limit = AdoRateLimiting::from_headers(response.headers());
-        error!(rate_limit=?rate_limit);
+        let rate_limit = AdoRateLimiting::from_headers(&headers);
+        debug!(rate_limit=?rate_limit);
 
         let ado_metadata = AdoMetadata::new(
             &self.tenant_id,
             url,
             Some(organization),
-            response.status().as_u16(),
+            status.as_u16(),
             r#type,
             rest_docs,
         );
 
-        let text = response.text().await?;
-        trace!(name="Azure Dev Ops", operation="get response", response=text);
+        trace!(
+            name = "Azure Dev Ops",
+            operation = "get response",
+            response = text
+        );
 
         let ado_response = {
-            let mut ado_response: AdoResponse = serde_json::from_str(&text)?;
-            // response.json::<AdoResponse>().await?;
-            ado_response.metadata = Some(ado_metadata);
+            let mut ado_response: T = serde_json::from_str(&text)?;
+            ado_response.set_metadata(ado_metadata);
             ado_response
         };
 
@@ -185,6 +192,45 @@ impl AzureDevOpsClient {
         self.get(&url, organization, "fn projects_list", "https://learn.microsoft.com/en-us/rest/api/azure/devops/core/projects/list?view=azure-devops-rest-7.1&tabs=HTTP").await
     }
 
+    pub(crate) async fn audit_streams(&self, organization: &str) -> Result<AdoResponse> {
+        let url = format!(
+            "https://auditservice.dev.azure.com/{organization}/_apis/audit/streams?api-version={}",
+            self.api_version
+        );
+        self.get::<AdoResponse>(&url, organization, "fn audit_streams", "https://learn.microsoft.com/en-us/rest/api/azure/devops/audit/streams/query-all-streams?view=azure-devops-rest-7.1&tabs=HTTP").await
+    }
+
+    /// ADO is trash
+    /// Response when trying to list PAT tokens for an org
+    // {
+    //   "$id": "1",
+    //   "errorCode": 0,
+    //   "eventId": 3000,
+    //   "innerException": null,
+    //   "message": "Service principals are not allowed to perform this action.",
+    //   "typeKey": "InvalidAccessException",
+    //   "typeName": "Microsoft.TeamFoundation.Framework.Server.InvalidAccessException, Microsoft.TeamFoundation.Framework.Server"
+    // }
+    pub(crate) async fn pat_tokens(&self, organization: &str) -> Result<AdoResponse> {
+        let url = format!(
+            "https://vssps.dev.azure.com/{organization}/_apis/tokens/pats?api-version={}",
+            self.api_version
+        );
+        self.get::<AdoResponse>(&url, organization, "fn pat_tokens", "https://learn.microsoft.com/en-us/rest/api/azure/devops/tokens/pats/list?view=azure-devops-rest-7.1&tabs=HTTP").await
+    }
+
+    pub(crate) async fn policy_configuration_get(
+        &self,
+        organization: &str,
+        project: &str,
+    ) -> Result<AdoResponse> {
+        let url = format!(
+            "https://dev.azure.com/{organization}/{project}/_apis/policy/configurations?api-version={}",
+            self.api_version
+        );
+        self.get(&url, organization, "fn policy_configuration_get", "https://learn.microsoft.com/en-us/rest/api/azure/devops/policy/configurations/list?view=azure-devops-rest-7.1&tabs=HTTP").await
+    }
+
     pub(crate) async fn git_policy_configuration_get(
         &self,
         organization: &str,
@@ -194,7 +240,7 @@ impl AzureDevOpsClient {
             "https://dev.azure.com/{organization}/{project}/_apis/git/policy/configurations?api-version={}",
             self.api_version
         );
-        self.get(&url, organization, "fn git_policy_configuration_get", "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/repositories/list?view=azure-devops-rest-7.2&tabs=HTTP").await
+        self.get(&url, organization, "fn git_policy_configuration_get", "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/policy-configurations/get?view=azure-devops-rest-7.1").await
     }
 
     pub(crate) async fn git_repository_list(
@@ -207,6 +253,66 @@ impl AzureDevOpsClient {
             self.api_version
         );
         self.get(&url, organization, "fn git_repository_list", "https://learn.microsoft.com/en-us/rest/api/azure/devops/git/repositories/list?view=azure-devops-rest-7.1&tabs=HTTP").await
+    }
+
+    pub(crate) async fn graph_users_list(&self, organization: &str) -> Result<AdoResponse> {
+        let url = format!(
+            "https://vssps.dev.azure.com/{organization}/_apis/graph/users?api-version={}",
+            self.api_version
+        );
+        self.get(&url, organization, "fn graph_users_list",
+                 "https://learn.microsoft.com/en-us/rest/api/azure/devops/graph/users/list?view=azure-devops-rest-7.1&tabs=HTTP",
+        ).await
+    }
+
+    pub(crate) async fn graph_service_principals_list(
+        &self,
+        organization: &str,
+    ) -> Result<AdoResponse> {
+        let url = format!(
+            "https://vssps.dev.azure.com/{organization}/_apis/graph/serviceprincipals?api-version={}",
+            self.api_version
+        );
+        self.get(&url, organization, "fn graph_service_principals_list",
+                 "https://learn.microsoft.com/en-us/rest/api/azure/devops/graph/service-principals/list?view=azure-devops-rest-7.1&tabs=HTTP"
+        ).await
+    }
+
+    pub(crate) async fn graph_groups_list(&self, organization: &str) -> Result<AdoResponse> {
+        let url = format!(
+            "https://vssps.dev.azure.com/{organization}/_apis/graph/groups?api-version={}",
+            self.api_version
+        );
+        self.get(&url, organization, "fn graph_groups_list",
+                 "https://learn.microsoft.com/en-us/rest/api/azure/devops/graph/groups/list?view=azure-devops-rest-7.1&tabs=HTTP"
+        ).await
+    }
+
+    pub(crate) async fn adv_security_org_enablement(
+        &self,
+        organization: &str,
+    ) -> Result<AdoResponse> {
+        let url = format!(
+            "https://advsec.dev.azure.com/{organization}/_apis/management/enablement?api-version={}&includeAllProperties=true",
+            self.api_version
+        );
+        self.get(&url, organization, "fn adv_security_org_enablement",
+                 "https://learn.microsoft.com/en-us/rest/api/azure/devops/advancedsecurity/org-enablement/get?view=azure-devops-rest-7.2"
+        ).await
+    }
+
+    pub(crate) async fn adv_security_project_enablement(
+        &self,
+        organization: &str,
+        project: &str,
+    ) -> Result<AdoResponse> {
+        let url = format!(
+            "https://advsec.dev.azure.com/{organization}/{project}/_apis/management/enablement?api-version={}&includeAllProperties=true",
+            self.api_version
+        );
+        self.get(&url, organization, "fn adv_security_org_enablement",
+                 "https://learn.microsoft.com/en-us/rest/api/azure/devops/advancedsecurity/project-enablement/get?view=azure-devops-rest-7.2"
+        ).await
     }
 
     // pub(crate) async fn accounts_list(
@@ -465,6 +571,50 @@ mod live_tests {
     }
 
     #[test]
+    fn test_ado_audit_streams() {
+        let t = &*TEST_SETUP;
+        let result: Result<()> = t.runtime.block_on(async {
+            let audit_streams = t.ado.audit_streams(&t.organization).await?;
+            dbg!(&audit_streams);
+            // assert!(false);
+            assert!(!audit_streams.value.is_empty());
+            assert_eq!(audit_streams.count, audit_streams.value.len());
+            send_to_splunk(&t.splunks, audit_streams).await?;
+            Ok(())
+        });
+        result.unwrap();
+    }
+
+    #[test]
+    fn test_ado_pat_tokens() {
+        let t = &*TEST_SETUP;
+        let result: Result<()> = t.runtime.block_on(async {
+            let pat_tokens = t.ado.pat_tokens(&t.organization).await?;
+            assert!(!pat_tokens.value.is_empty());
+            assert_eq!(pat_tokens.count, pat_tokens.value.len());
+            send_to_splunk(&t.splunks, pat_tokens).await?;
+            Ok(())
+        });
+        result.unwrap();
+    }
+
+    #[test]
+    fn test_ado_policy_configuration_get() {
+        let t = &*TEST_SETUP;
+        let _: Result<()> = t.runtime.block_on(async {
+            let policy_configuration = t
+                .ado
+                .policy_configuration_get(&t.organization, "foo")
+                .await?;
+
+            assert!(!policy_configuration.value.is_empty());
+            assert_eq!(policy_configuration.count, policy_configuration.value.len());
+            send_to_splunk(&t.splunks, policy_configuration).await?;
+            Ok(())
+        });
+    }
+
+    #[test]
     fn test_ado_git_policy_configuration_get() {
         let t = &*TEST_SETUP;
         let _: Result<()> = t.runtime.block_on(async {
@@ -496,12 +646,61 @@ mod live_tests {
     #[test]
     fn test_ado_organizations_list() {
         let t = &*TEST_SETUP;
-        let _: Result<()> = t.runtime.block_on(async {
+        let result: Result<()> = t.runtime.block_on(async {
             let result = t.ado.organizations_list().await?;
             assert!(!result.organizations.is_empty());
             send_to_splunk(&t.splunks, &result).await?;
             Ok(())
         });
+        result.unwrap();
+    }
+
+    #[test]
+    fn test_ado_graph_users_list() {
+        let t = &*TEST_SETUP;
+        let result: Result<()> = t.runtime.block_on(async {
+            let result = t.ado.graph_users_list(&t.organization).await?;
+            assert!(!result.value.is_empty());
+            send_to_splunk(&t.splunks, &result).await?;
+            Ok(())
+        });
+        result.unwrap();
+    }
+
+    #[test]
+    fn test_ado_graph_service_principals_list() {
+        let t = &*TEST_SETUP;
+        let result: Result<()> = t.runtime.block_on(async {
+            let result = t.ado.graph_service_principals_list(&t.organization).await?;
+            assert!(!result.value.is_empty());
+            send_to_splunk(&t.splunks, &result).await?;
+            Ok(())
+        });
+        result.unwrap();
+    }
+
+    #[test]
+    fn test_ado_graph_groups_list() {
+        let t = &*TEST_SETUP;
+        let result: Result<()> = t.runtime.block_on(async {
+            let result = t.ado.graph_groups_list(&t.organization).await?;
+            assert!(!result.value.is_empty());
+            send_to_splunk(&t.splunks, &result).await?;
+            Ok(())
+        });
+        result.unwrap();
+    }
+
+    #[test]
+    fn test_ado_adv_security_org_enablement() {
+        let t = &*TEST_SETUP;
+        let result: Result<()> = t.runtime.block_on(async {
+            let result = t.ado.adv_security_org_enablement(&t.organization).await?;
+            send_to_splunk(&t.splunks, &result).await?;
+            assert!(!result.value.is_empty());
+            Ok(())
+        });
+        result.unwrap();
     }
 
     // #[tokio::test]
