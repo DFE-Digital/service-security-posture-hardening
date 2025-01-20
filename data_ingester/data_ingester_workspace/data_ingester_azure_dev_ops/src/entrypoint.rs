@@ -4,7 +4,10 @@ use data_ingester_supporting::keyvault::Secrets;
 use std::sync::Arc;
 use tracing::{error, info};
 
-use crate::{ado_dev_ops_client::AzureDevOpsClient, data::projects::Projects};
+use crate::{
+    ado_dev_ops_client::AzureDevOpsClient,
+    data::{projects::Projects, repositories::Repositories},
+};
 
 pub async fn entrypoint(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
     set_ssphp_run("github")?;
@@ -67,14 +70,14 @@ pub async fn entrypoint(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()
             ado.audit_streams(organization_name),
             &splunk,
         )
-        .await?;
+        .await;
 
         let _ = try_collect_send(
             &format!("Advanced Security Org Enablement {organization_name}"),
             ado.adv_security_org_enablement(organization_name),
             &splunk,
         )
-        .await?;
+        .await;
 
         let projects = try_collect_send(
             &format!("Projects for {organization_name}"),
@@ -99,28 +102,62 @@ pub async fn entrypoint(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()
                 ado.adv_security_project_enablement(organization_name, project_name),
                 &splunk,
             )
-            .await?;
+            .await;
 
             let _ = try_collect_send(
                 &format!("Policy Configuration for {organization_name}/{project_name}"),
                 ado.policy_configuration_get(organization_name, project_name),
                 &splunk,
             )
-            .await?;
+            .await;
 
             let _ = try_collect_send(
                 &format!("Git Policy Configuration for {organization_name}/{project_name}"),
                 ado.git_policy_configuration_get(organization_name, project_name),
                 &splunk,
             )
-            .await?;
+            .await;
 
-            let _ = try_collect_send(
-                &format!("Git repository list {org_name}"),
+            let _build_genreal_settings = try_collect_send(
+                &format!("Build General Settings for {org_name}/{project_name}"),
+                ado.build_general_settings(organization_name, project_name),
+                &splunk,
+            )
+            .await;
+
+            let repos = try_collect_send(
+                &format!("Git repository list {org_name}/{project_name}"),
                 ado.git_repository_list(organization_name, project_name),
                 &splunk,
             )
-            .await?;
+            .await;
+
+            let repos = match repos {
+                Ok(repos) => Repositories::from(repos),
+                Err(err) => {
+                    error!(name="Azure Dev Ops", operation="fn git_repository_list", organization=?organization, error=?err);
+                    continue;
+                }
+            };
+
+            for repo in repos.repositories {
+                let repo_name = &repo.name;
+                let _ = try_collect_send(
+                    &format!("Advanced Security Repo Enablement {organization_name}/{project_name}/{repo_name}"),
+                    ado.adv_security_repo_enablement(organization_name, project_name, repo_name),
+                    &splunk,
+                )
+                    .await;
+
+                let _ = try_collect_send(
+                    &format!(
+                        "Advanced Security Alerts {organization_name}/{project_name}/{repo_name}"
+                    ),
+                    ado.adv_security_alerts(organization_name, project_name, repo_name),
+                    &splunk,
+                )
+                .await;
+            }
         }
     }
     Ok(())
