@@ -6,6 +6,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use tracing::trace;
 
+use crate::data::organization;
+
 /// https://learn.microsoft.com/en-us/azure/devops/integrate/concepts/rate-limits?view=azure-devops
 #[derive(Debug, Deserialize)]
 pub(crate) struct AdoRateLimiting {
@@ -106,8 +108,8 @@ impl AdoPaging {
     }
 }
 
-#[derive(Debug, Deserialize, Serialize)]
-pub(crate) struct AdoMetadata {
+#[derive(Debug)]
+struct AdoMetadataBuilder {
     url: String,
     organization: Option<String>,
     project: Option<String>,
@@ -118,6 +120,40 @@ pub(crate) struct AdoMetadata {
     tenant: String,
     r#type: String,
     rest_docs: String,
+}
+
+impl AdoMetadataBuilder {
+    fn url(mut self, url: String) -> Self {
+        self.url = url;
+        self
+    }
+    fn organization(mut self, organization: String) -> Self {
+        self.organization = Some(organization);
+        self
+    }
+    fn project(mut self, project: String) -> Self {
+        self.project = Some(project);
+        self
+    }
+
+    fn repo(mut self, repo: String) -> Self {
+        self.repo = Some(repo);
+        self
+    }
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub(crate) struct AdoMetadata {
+    pub(crate) url: String,
+    pub(crate) organization: Option<String>,
+    pub(crate) project: Option<String>,
+    pub(crate) repo: Option<String>,
+    pub(crate) status: Vec<u16>,
+    pub(crate) source: String,
+    pub(crate) sourcetype: String,
+    pub(crate) tenant: String,
+    pub(crate) r#type: String,
+    pub(crate) rest_docs: String,
 }
 
 pub(crate) trait AdoMetadataTrait {
@@ -170,7 +206,7 @@ impl AdoMetadata {
         organization: Option<&str>,
         project: Option<&str>,
         repo: Option<&str>,
-        status: u16,
+        status: Vec<u16>,
         r#type: &str,
         rest_docs: &str,
     ) -> Self {
@@ -186,6 +222,10 @@ impl AdoMetadata {
             sourcetype: "ADO".into(),
             rest_docs: rest_docs.into(),
         }
+    }
+
+    pub(crate) fn url(&self) -> &str {
+        &self.url
     }
 }
 
