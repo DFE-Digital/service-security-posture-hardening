@@ -1,0 +1,130 @@
+<form version="1.1" theme="light">
+
+  <label>New Digital Service Use Case Exemption</label>
+  <description>{{environment}} v0.0.5</description>
+  
+  <fieldset submitButton="true" autoRun="false">
+    <input type="text" token="tkn_use_case">
+      <label>Use Case</label>
+    </input>
+
+    <input type="text" token="tkn_resource">
+      <label>Resource [regex]</label>
+      <default>.*</default>
+      <initialValue>.*</initialValue>
+    </input>
+    
+    <input type="text" token="tkn_portfolio">
+      <label>Portfolio</label>
+    </input>
+    
+    <input type="text" token="tkn_service_line">
+      <label>Service Line</label>
+    </input>
+    
+    <input type="text" token="tkn_product">
+      <label>Product</label>
+    </input>
+    
+    <input type="text" token="tkn_reason">
+      <label>Reason</label>
+    </input>
+    
+    <input type="dropdown" token="tkn_status">
+      <label>Status</label>
+      <choice value="exempt">Exempt</choice>
+      <choice value="comply">Comply</choice>
+      <default>exempt</default>
+      <initialValue>exempt</initialValue>
+    </input>
+  </fieldset>
+  
+  
+  
+  <row depends="$debug$">
+    <panel>
+      <title>Exemption List</title>
+      <table>
+        <search>
+          <query>
+| makeresults
+| eval ssphp.exemption.use_case.id=$tkn_use_case|s$,
+       ssphp.exemption.service.portfolio=$tkn_portfolio|s$,
+       ssphp.exemption.service.service_line=$tkn_service_line|s$,
+       ssphp.exemption.service.product=$tkn_product|s$,
+       ssphp.exemption.resource.id=$tkn_resource|s$,
+       ssphp.exemption.authorisation.user=$tkn_user_name|s$,
+       ssphp.exemption.authorisation.reason=$tkn_reason|s$,
+       ssphp.exemption.status=$tkn_status|s$
+       
+| table ssphp.exemption.use_case.id, ssphp.exemption.resource.id, ssphp.exemption.service.portfolio, ssphp.exemption.service.service_line, ssphp.exemption.service.product, ssphp.exemption.authorisation.user, ssphp.exemption.authorisation.reason, ssphp.exemption.status
+
+| makejson ssphp.* output=_raw
+| fields _time, _raw
+| collect output_format=hec testmode=f index="ssphp_metrics_exemptions_dev"
+          </query>
+          <done>
+            <set token="sd">1</set>
+          </done>
+        </search>
+      </table>
+    </panel>
+  </row>
+  
+  <row depends="$debug$">    
+    <panel>
+      <table>
+        <search>
+          <query>
+| rest /services/authentication/current-context splunk_server=local
+| table username
+          </query>
+          <done>
+            <set token="tkn_user_name">$result.username$</set>
+          </done>
+        </search>
+      </table>
+    </panel>
+  </row>
+  
+  <row>
+    <panel>
+      <title>Exemption List</title>
+      <table>
+        <search>
+          <query>
+index="ssphp_metrics_exemptions_dev"
+
+| eval ssphp.exemption.authorisation.time=strftime('_time',"%Y-%m-%d %H:%M:%S"),
+       depend=$sd$
+
+| table ssphp.exemption.use_case.id,
+        ssphp.exemption.resource.id,
+        ssphp.exemption.service.portfolio,
+        ssphp.exemption.service.service_line,
+        ssphp.exemption.service.product,
+        ssphp.exemption.authorisation.user,
+        ssphp.exemption.authorisation.reason,
+        ssphp.exemption.status,
+        ssphp.exemption.authorisation.time
+
+| sort 0 - ssphp.exemption.authorisation.time
+          </query>
+          <done>
+            <set token="sd">2</set>
+          </done>
+          <earliest>0</earliest>
+          <latest>now</latest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="count">20</option>
+        <option name="dataOverlayMode">none</option>
+        <option name="drilldown">none</option>
+        <option name="percentagesRow">false</option>
+        <option name="rowNumbers">false</option>
+        <option name="totalsRow">false</option>
+        <option name="wrap">true</option>
+      </table>
+    </panel>
+  </row>
+</form>
