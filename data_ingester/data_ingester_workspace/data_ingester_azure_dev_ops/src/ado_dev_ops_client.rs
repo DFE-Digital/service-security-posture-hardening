@@ -128,7 +128,11 @@ impl AzureDevOpsClient {
         );
 
         let text = response.text().await?;
-        trace!(name="Azure Dev Ops", operation="get response", response=text);
+        trace!(
+            name = "Azure Dev Ops",
+            operation = "get response",
+            response = text
+        );
 
         let ado_response = {
             let mut ado_response: AdoResponse = serde_json::from_str(&text)?;
