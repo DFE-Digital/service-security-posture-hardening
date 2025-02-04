@@ -1,5 +1,5 @@
 use anyhow::{Context, Result};
-use data_ingester_splunk::splunk::{Splunk, set_ssphp_run, try_collect_send};
+use data_ingester_splunk::splunk::{set_ssphp_run, try_collect_send, Splunk};
 use data_ingester_supporting::keyvault::Secrets;
 use std::sync::Arc;
 use tracing::{error, info};
