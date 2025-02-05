@@ -2,7 +2,10 @@ use axum::{http::HeaderMap, Json};
 use data_ingester_splunk::splunk::Splunk;
 use data_ingester_supporting::keyvault::Secrets;
 use std::{future::Future, sync::Arc};
-use tokio::sync::Mutex;
+use tokio::{
+    sync::Mutex,
+    time::{timeout, Duration},
+};
 use tracing::{error, info, instrument};
 
 use crate::{
@@ -118,25 +121,55 @@ where
     };
     stage.next();
 
-    let (result, complete) = match func(state.secrets.clone(), state.splunk.clone()).await {
-        Ok(_) => {
-            stage.next();
-            state.stats.write().await.get(invocation_index).finish();
-            (format!("{} Success", name), true)
+    // TODO set per collector timeouts
+    let result = match timeout(
+        Duration::from_secs(60 * 60 * 8),
+        func(state.secrets.clone(), state.splunk.clone()),
+    )
+    .await
+    {
+        Ok(result) => {
+            info!(name=name, stage=%stage, complete=false, "");
+            Some(result)
         }
-        Err(e) => {
+        Err(err) => {
             state
                 .stats
                 .write()
                 .await
                 .get(invocation_index)
-                .errors(format!("{:#?}", e))
+                .errors(format!("{:#?}", err))
                 .finish();
             stage.next();
-            error!(name=name, stage=%stage, complete=false, error=?e);
-            let error = format!("{} entrypoint failed with error: {:#?}", &name, &e);
-            (error, false)
+            error!(name=name, stage=%stage, complete=false, error=?err);
+            None
         }
+    };
+
+    let (result, complete) = if let Some(result) = result {
+        match result {
+            Ok(_) => {
+                stage.next();
+                state.stats.write().await.get(invocation_index).finish();
+                (format!("{} Success", name), true)
+            }
+            Err(e) => {
+                state
+                    .stats
+                    .write()
+                    .await
+                    .get(invocation_index)
+                    .errors(format!("{:#?}", e))
+                    .finish();
+                stage.next();
+                error!(name=name, stage=%stage, complete=false, error=?e);
+                let error = format!("{} entrypoint failed with error: {:#?}", &name, &e);
+                (error, false)
+            }
+        }
+    } else {
+        let error = format!("{} entrypoint failed after collector timeout", &name);
+        (error, false)
     };
 
     drop(lock);

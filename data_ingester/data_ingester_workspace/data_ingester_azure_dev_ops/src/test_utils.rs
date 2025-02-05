@@ -5,7 +5,7 @@ use anyhow::Context;
 use data_ingester_splunk::splunk::Splunk;
 use data_ingester_supporting::keyvault::get_keyvault_secrets;
 use tracing::subscriber::DefaultGuard;
-use tracing_subscriber::{EnvFilter, layer::SubscriberExt};
+use tracing_subscriber::{layer::SubscriberExt, EnvFilter};
 
 pub(crate) struct TestSetup {
     pub(crate) ado: AzureDevOpsClient,

@@ -1,5 +1,5 @@
 use crate::ado_response::AdoMetadata;
-use anyhow::{Context, Result, anyhow};
+use anyhow::{anyhow, Context, Result};
 use csv::{ReaderBuilder, Trim};
 use data_ingester_splunk::splunk::ToHecEvents;
 use itertools::Itertools;
@@ -96,12 +96,11 @@ impl ToHecEvents for &Organizations {
             })
             .partition_result();
         if !err.is_empty() {
-            return Err(anyhow!(
-                err.iter()
-                    .map(|err| format!("{:?}", err))
-                    .collect::<Vec<String>>()
-                    .join("\n")
-            ));
+            return Err(anyhow!(err
+                .iter()
+                .map(|err| format!("{:?}", err))
+                .collect::<Vec<String>>()
+                .join("\n")));
         }
         Ok(ok)
     }
