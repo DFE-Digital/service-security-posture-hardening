@@ -1,9 +1,10 @@
-use crate::ado_response::AdoMetadata;
 use anyhow::{anyhow, Context, Result};
 use csv::{ReaderBuilder, Trim};
 use data_ingester_splunk::splunk::ToHecEvents;
 use itertools::Itertools;
 use tracing::error;
+
+use crate::ado_metadata::AdoMetadata;
 
 #[derive(Debug, serde::Deserialize, serde::Serialize)]
 pub(crate) struct Organizations {
@@ -108,21 +109,20 @@ impl ToHecEvents for &Organizations {
 
 #[cfg(test)]
 mod test {
-    use super::{AdoMetadata, Organizations};
+    use crate::ado_metadata::AdoMetadataBuilder;
+
+    use super::Organizations;
 
     #[test]
     fn test_organisations_from_csv() {
         let csv = "Organization Id, Organization Name, Url, Owner, Exception Type, Error Message\r\nd7605fe0-ad26-44d1-9b5d-5850e8e9e1f5, CatsCakes, https://dev.azure.com/CatsCakes/, sam@aksecondad.onmicrosoft.com, , \r\n71645052-a9cf-4f92-8075-3b018969bf4d, aktest0831, https://dev.azure.com/aktest0831/, aktest@aksecondad.onmicrosoft.com, , \r\n";
-        let metadata = AdoMetadata::new(
-            "Tenant",
-            "url",
-            None,
-            None,
-            None,
-            200,
-            "fn test_organisations_from_csv",
-            "no docs",
-        );
+        let metadata = AdoMetadataBuilder::new()
+            .tenant("Tenant")
+            .url("url")
+            .r#type("fn test_organisations_from_csv")
+            .rest_docs("no docs")
+            .build();
+
         let orgs = Organizations::from_csv(csv, metadata);
         assert_eq!(orgs.organizations.len(), 2);
     }

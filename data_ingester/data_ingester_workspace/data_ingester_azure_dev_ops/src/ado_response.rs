@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use tracing::trace;
 
-use crate::data::organization;
+use crate::ado_metadata::{AdoMetadata, AdoMetadataTrait};
 
 /// https://learn.microsoft.com/en-us/azure/devops/integrate/concepts/rate-limits?view=azure-devops
 #[derive(Debug, Deserialize)]
@@ -101,131 +101,7 @@ impl AdoPaging {
     }
 
     pub(crate) fn next_token(&self) -> &str {
-        self.continuation_token
-            .as_ref()
-            .map(|value| value.as_str())
-            .unwrap_or("NOTOKEN")
-    }
-}
-
-#[derive(Debug)]
-struct AdoMetadataBuilder {
-    url: String,
-    organization: Option<String>,
-    project: Option<String>,
-    repo: Option<String>,
-    pub(crate) status: u16,
-    pub(crate) source: String,
-    pub(crate) sourcetype: String,
-    tenant: String,
-    r#type: String,
-    rest_docs: String,
-}
-
-impl AdoMetadataBuilder {
-    fn url(mut self, url: String) -> Self {
-        self.url = url;
-        self
-    }
-    fn organization(mut self, organization: String) -> Self {
-        self.organization = Some(organization);
-        self
-    }
-    fn project(mut self, project: String) -> Self {
-        self.project = Some(project);
-        self
-    }
-
-    fn repo(mut self, repo: String) -> Self {
-        self.repo = Some(repo);
-        self
-    }
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-pub(crate) struct AdoMetadata {
-    pub(crate) url: String,
-    pub(crate) organization: Option<String>,
-    pub(crate) project: Option<String>,
-    pub(crate) repo: Option<String>,
-    pub(crate) status: Vec<u16>,
-    pub(crate) source: String,
-    pub(crate) sourcetype: String,
-    pub(crate) tenant: String,
-    pub(crate) r#type: String,
-    pub(crate) rest_docs: String,
-}
-
-pub(crate) trait AdoMetadataTrait {
-    #[allow(unused)]
-    fn set_metadata(&mut self, metadata: AdoMetadata);
-    fn metadata(&self) -> Option<&AdoMetadata>;
-    fn metadata_source(&self) -> &str {
-        self.metadata()
-            .map(|metadata| metadata.source.as_str())
-            .unwrap_or("NO SOURCE FROM METADATA")
-    }
-    fn metadata_sourcetype(&self) -> &str {
-        self.metadata()
-            .map(|metadata| metadata.source.as_str())
-            .unwrap_or("NO SOURCE FROM METADATA")
-    }
-}
-
-impl AdoMetadataTrait for AdoResponse {
-    fn set_metadata(&mut self, metadata: AdoMetadata) {
-        self.metadata = Some(metadata);
-    }
-
-    fn metadata(&self) -> Option<&AdoMetadata> {
-        self.metadata.as_ref()
-    }
-}
-
-impl Default for AdoMetadata {
-    fn default() -> Self {
-        Self {
-            url: Default::default(),
-            organization: Default::default(),
-            project: Default::default(),
-            repo: Default::default(),
-            status: Default::default(),
-            source: Default::default(),
-            sourcetype: Default::default(),
-            tenant: Default::default(),
-            r#type: Default::default(),
-            rest_docs: Default::default(),
-        }
-    }
-}
-
-impl AdoMetadata {
-    pub(crate) fn new(
-        tenant: &str,
-        url: &str,
-        organization: Option<&str>,
-        project: Option<&str>,
-        repo: Option<&str>,
-        status: Vec<u16>,
-        r#type: &str,
-        rest_docs: &str,
-    ) -> Self {
-        Self {
-            r#type: r#type.into(),
-            tenant: tenant.into(),
-            source: format!("{}:{}", tenant, url),
-            url: url.into(),
-            organization: organization.map(|o| o.into()),
-            project: project.map(|o| o.into()),
-            repo: repo.map(|o| o.into()),
-            status,
-            sourcetype: "ADO".into(),
-            rest_docs: rest_docs.into(),
-        }
-    }
-
-    pub(crate) fn url(&self) -> &str {
-        &self.url
+        self.continuation_token.as_deref().unwrap_or("NOTOKEN")
     }
 }
 
@@ -305,6 +181,16 @@ impl ToHecEvents for AdoResponse {
                 .join("\n")));
         }
         Ok(ok)
+    }
+}
+
+impl AdoMetadataTrait for AdoResponse {
+    fn set_metadata(&mut self, metadata: AdoMetadata) {
+        self.metadata = Some(metadata);
+    }
+
+    fn metadata(&self) -> Option<&AdoMetadata> {
+        self.metadata.as_ref()
     }
 }
 

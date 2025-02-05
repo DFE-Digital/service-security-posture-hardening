@@ -66,7 +66,7 @@ mod test {
     #[cfg(feature = "live_tests")]
     use anyhow::Result;
 
-    static PROJECTS_JSON: &'static str = r#"
+    static PROJECTS_JSON: &str = r#"
 {
   "count": 1,
   "value": [
