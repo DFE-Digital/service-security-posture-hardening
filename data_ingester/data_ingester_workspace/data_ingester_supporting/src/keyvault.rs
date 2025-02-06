@@ -1,10 +1,14 @@
 use anyhow::{Context, Result};
 use azure_identity::DefaultAzureCredential;
-use azure_security_keyvault::{KeyvaultClient, SecretClient};
+use azure_security_keyvault::{
+    prelude::{KeyVaultGetSecretResponse, KeyVaultSecretBaseIdentifierRaw},
+    KeyvaultClient, SecretClient,
+};
 use base64::prelude::*;
-use std::sync::Arc;
+use futures::StreamExt;
+use std::{collections::HashMap, sync::Arc};
 use tokio::task::JoinHandle;
-use tracing::{info, warn};
+use tracing::{error, info, warn};
 
 pub struct Secrets {
     pub splunk_host: Option<String>,
@@ -32,6 +36,7 @@ pub struct Secrets {
     pub mssql_db: Option<String>,
     pub mssql_username: Option<String>,
     pub mssql_password: Option<String>,
+    pub ado_pats: Vec<AdoDevOpsPat>,
 }
 
 /// Store a Github App token
@@ -125,6 +130,23 @@ pub async fn get_keyvault_secrets(keyvault_name: &str) -> Result<Secrets> {
         None
     };
 
+    let secrets = client
+        .list_secrets()
+        .into_stream()
+        .filter_map(|result| async move {
+            match result {
+                Ok(result) => Some(result.value),
+                Err(_) => None,
+            }
+        })
+        .concat()
+        .await;
+
+    //dbg!(&secrets);
+
+    let ado_pats = azure_dev_ops_pats(&client, &secrets).await;
+    //dbg!(&ado_pats);
+
     Ok(Secrets {
         ian_splunk_host: ian_splunk_host.await?,
         ian_splunk_token: ian_splunk_token.await?,
@@ -153,5 +175,133 @@ pub async fn get_keyvault_secrets(keyvault_name: &str) -> Result<Secrets> {
         mssql_db: mssql_db.await?,
         mssql_username: mssql_username.await?,
         mssql_password: mssql_password.await?,
+        ado_pats,
     })
+}
+
+async fn azure_dev_ops_pats(
+    client: &SecretClient,
+    secrets: &[KeyVaultSecretBaseIdentifierRaw],
+) -> Vec<AdoDevOpsPat> {
+    let mut map: HashMap<String, AdoDevOpsPatBuilder> = HashMap::new();
+    for secret in secrets
+        .iter()
+        .filter(|secret| secret.id.contains("azure-dev-ops"))
+    {
+        let secret_id = match SecretIdentifier::from_str(&secret.id)
+            .with_context(|| format!("Extracting secret details from 'id':'{}'", secret.id))
+        {
+            Ok(secret_id) => secret_id,
+            Err(err) => {
+                //dbg!(err);
+                continue;
+            }
+        };
+        //dbg!(&secret_id);
+        let value = match client.get(&secret_id.id).await {
+            Ok(value) => value,
+            Err(err) => {
+                //dbg!(&err);
+                error!(name="KeyVault", operation="Get Ado secret", secret_id=secret.id, err=?err);
+                continue;
+            }
+        };
+        //dbg!(&value);
+        match secret_id.token_type.as_str() {
+            "pat" => match map.entry(secret_id.name) {
+                std::collections::hash_map::Entry::Occupied(mut occupied_entry) => {
+                    occupied_entry.get_mut().pat = Some(value);
+                }
+                std::collections::hash_map::Entry::Vacant(vacant_entry) => {
+                    let _ = vacant_entry.insert(AdoDevOpsPatBuilder {
+                        organization: None,
+                        pat: Some(value),
+                    });
+                }
+            },
+            "org" => match map.entry(secret_id.name) {
+                std::collections::hash_map::Entry::Occupied(mut occupied_entry) => {
+                    occupied_entry.get_mut().organization = Some(value);
+                }
+                std::collections::hash_map::Entry::Vacant(vacant_entry) => {
+                    let _ = vacant_entry.insert(AdoDevOpsPatBuilder {
+                        organization: Some(value),
+                        pat: None,
+                    });
+                }
+            },
+            _ => {
+                error!(name: "KeyVault", operation="Build AzureDevOps Pats", error="Unknown token type", secret_id=secret.id);
+                continue;
+            }
+        };
+        //dbg!(&map);
+    }
+    //dbg!(&map);
+    map.into_iter()
+        .filter_map(|(_name, builder)| builder.build().ok())
+        .collect()
+}
+
+#[derive(Debug)]
+struct SecretIdentifier {
+    id: String,
+    _class: String,
+    name: String,
+    token_type: String,
+}
+
+impl SecretIdentifier {
+    fn from_str(id: &str) -> Result<Self> {
+        let mut iter = id.split("--");
+        let secret_class = iter.next();
+        let secret_name = iter.next();
+        let secret_type = iter.next();
+        let id = id.rsplit("/").next();
+        match (id, secret_class, secret_name, secret_type) {
+            (Some(id), Some(class), Some(name), Some(type_)) => Ok(Self {
+                id: id.into(),
+                _class: class.into(),
+                name: name.into(),
+                token_type: type_.into(),
+            }),
+            _ => anyhow::bail!("invalid format for secret identifier"),
+        }
+    }
+}
+
+#[derive(Default, Debug)]
+struct AdoDevOpsPatBuilder {
+    organization: Option<KeyVaultGetSecretResponse>,
+    pat: Option<KeyVaultGetSecretResponse>,
+}
+
+impl AdoDevOpsPatBuilder {
+    fn build(self) -> Result<AdoDevOpsPat> {
+        if self.organization.is_none() {
+            anyhow::bail!("organization is not set")
+        }
+        if self.pat.is_none() {
+            anyhow::bail!("pat is not set")
+        }
+        Ok(AdoDevOpsPat {
+            organization: self.organization.expect("Already checked"),
+            pat: self.pat.expect("Already checked"),
+        })
+    }
+}
+
+#[derive(Debug)]
+pub struct AdoDevOpsPat {
+    organization: KeyVaultGetSecretResponse,
+    pat: KeyVaultGetSecretResponse,
+}
+
+impl AdoDevOpsPat {
+    pub fn organization(&self) -> &str {
+        self.organization.value.as_str()
+    }
+    pub fn pat(&self) -> &str {
+        self.pat.value.as_str()
+    }
 }

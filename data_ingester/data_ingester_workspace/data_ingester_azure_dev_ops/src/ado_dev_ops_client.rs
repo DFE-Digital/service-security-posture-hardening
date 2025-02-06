@@ -1,224 +1,29 @@
-use crate::ado_metadata::{AdoMetadata, AdoMetadataBuilder};
-use crate::ado_response::{
-    AddAdoResponse, AdoPaging, AdoRateLimiting, AdoResponse, AdoResponseSingle,
-};
-use crate::data::organization::Organizations;
-use anyhow::{Context, Result};
+use crate::ado_metadata::{AdoMetadata, AdoMetadataBuilder, NoRestDocs, NoType, NoUrl};
+use crate::ado_response::{AddAdoResponse, AdoResponse, AdoResponseSingle};
+use anyhow::Result;
 use serde::de::DeserializeOwned;
-use serde::Deserialize;
-use tracing::{debug, error, trace};
 
-pub(crate) struct AzureDevOpsClient {
-    pub(crate) client: reqwest::Client,
-    token: Token,
-    api_version: String,
-    pub(crate) tenant_id: String,
-}
-
-#[derive(Debug, Deserialize)]
-struct Token {
-    #[allow(unused)]
-    token_type: TokenType,
-    #[allow(unused)]
-    expires_in: usize,
-    #[allow(unused)]
-    ext_expires_in: usize,
-    access_token: String,
-}
-
-#[derive(Debug, Deserialize)]
-enum TokenType {
-    Bearer,
-}
-
-impl AzureDevOpsClient {
-    pub(crate) async fn new(client_id: &str, client_secret: &str, tenant_id: &str) -> Result<Self> {
-        let client = reqwest::Client::new();
-        let url = format!("https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/token");
-        let params = [
-            ("client_id", client_id),
-            ("client_secret", client_secret),
-            ("grant_type", "client_credentials"),
-            // Fixed ADO scope
-            ("scope", "499b84ac-1321-427f-aa17-267ca6975798/.default"),
-        ];
-        let response = client.post(url).form(&params).send().await?;
-
-        let token = response
-            .json()
-            .await
-            .context("Getting JSON from Oauth request")?;
-
-        Ok(Self {
-            client,
-            api_version: "7.2-preview.1".into(),
-            token,
-            tenant_id: tenant_id.into(),
-        })
-    }
-
-    // async fn post(
-    //     &self,
-    //     url: &str,
-    //     body: String,
-    //     organization: &str,
-    //     project: Option<&str>,
-    //     repo: Option<&str>,
-    //     r#type: &str,
-    //     rest_docs: &str,
-    // ) -> Result<AdoResponse> {
-    //     let response = self
-    //         .client
-    //         .post(url)
-    //         .body(body)
-    //         .bearer_auth(&self.token.access_token)
-    //         .send()
-    //         .await?;
-
-    //     if !response.status().is_success() {
-    //         error!(name="Azure Dev Ops", operation="POST request", error="Non 2xx status code", status=?response.status(), headers=?response.headers());
-    //         anyhow::bail!("failed request");
-    //     }
-
-    //     let rate_limit = AdoRateLimiting::from_headers(response.headers());
-    //     trace!(rate_limit=?rate_limit);
-
-    //     let ado_metadata = {
-    //         let mut metadata_builder = AdoMetadataBuilder::new()
-    //             .tenant(&self.tenant_id)
-    //             .url(url)
-    //             .organization(organization)
-    //             .r#type(r#type)
-    //             .rest_docs(rest_docs);
-
-    //         metadata_builder = if let Some(project) = project {
-    //             metadata_builder.project(project)
-    //         } else {
-    //             metadata_builder
-    //         };
-
-    //         metadata_builder = if let Some(repo) = repo {
-    //             metadata_builder.repo(repo)
-    //         } else {
-    //             metadata_builder
-    //         };
-
-    //         metadata_builder.build()
-    //     };
-
-    //     let ado_response = {
-    //         let mut ado_response = response.json::<AdoResponse>().await?;
-    //         ado_response.metadata = Some(ado_metadata);
-    //         ado_response
-    //     };
-
-    //     Ok(ado_response)
-    // }
-
+pub(crate) trait AzureDevOpsClient {
     async fn get<T: DeserializeOwned + AddAdoResponse>(
         &self,
-        mut metadata: AdoMetadata,
-    ) -> Result<AdoResponse> {
-        let mut continuation_token = AdoPaging::default();
-        let mut collection = AdoResponse::default();
+        metadata: AdoMetadata,
+    ) -> Result<AdoResponse>;
 
-        loop {
-            let next_url = if continuation_token.has_more() {
-                format!(
-                    "{}&continuationToken={}",
-                    metadata.url(),
-                    continuation_token.next_token()
-                )
-            } else {
-                metadata.url().to_string()
-            };
+    fn api_version(&self) -> &str;
 
-            let response = self
-                .client
-                .get(&next_url)
-                .bearer_auth(&self.token.access_token)
-                .send()
-                .await?;
-
-            let status = response.status();
-            let headers = response.headers().clone();
-            let text = response.text().await?;
-
-            if !status.is_success() {
-                error!(name="Azure Dev Ops", operation="GET request", error="Non 2xx status code", status=?status, headers=?headers, body=text);
-                anyhow::bail!("Azure Dev Org request failed with with Non 2xx status code");
-            }
-            metadata.status.push(status.into());
-
-            let rate_limit = AdoRateLimiting::from_headers(&headers);
-            debug!(rate_limit=?rate_limit);
-
-            continuation_token = AdoPaging::from_headers(&headers);
-
-            trace!(
-                name = "Azure Dev Ops",
-                operation = "get response",
-                url = next_url,
-                response = text
-            );
-
-            let ado_response: T = serde_json::from_str(&text)?;
-
-            collection.count += ado_response.count();
-            collection.value.extend(ado_response.values());
-
-            if continuation_token.is_empty() {
-                break;
-            }
-        }
-        collection.metadata = Some(metadata);
-
-        Ok(collection)
+    fn ado_metadata_builder(&self) -> AdoMetadataBuilder<NoUrl, NoType, NoRestDocs> {
+        AdoMetadataBuilder::new()
     }
+}
 
-    pub(crate) async fn organizations_list(&self) -> Result<Organizations> {
-        let url = format!(
-            "https://aexprodcus1.vsaex.visualstudio.com/_apis/EnterpriseCatalog/Organizations?tenantId={}",
-            self.tenant_id
-        );
-
-        let response = self
-            .client
-            .get(&url)
-            .bearer_auth(&self.token.access_token)
-            .send()
-            .await?;
-
-        if !response.status().is_success() {
-            error!(name="Azure Dev Ops", operation="organizations_list GET request", error="Non 2xx status code", status=?response.status(), headers=?response.headers());
-            anyhow::bail!("failed request");
-        }
-
-        let rate_limit = AdoRateLimiting::from_headers(response.headers());
-        trace!(rate_limit=?rate_limit);
-
-        let ado_metadata = AdoMetadataBuilder::new()
-            .tenant(&self.tenant_id)
-            .url(&url)
-            .r#type("fn organizations_list")
-            .rest_docs("no REST docs")
-            .build();
-
-        let text = response.text().await?;
-
-        let organizations = Organizations::from_csv(&text, ado_metadata);
-
-        Ok(organizations)
-    }
-
-    pub(crate) async fn projects_list(&self, organization: &str) -> Result<AdoResponse> {
+pub(crate) trait AzureDevOpsClientMethods: AzureDevOpsClient {
+    async fn projects_list(&self, organization: &str) -> Result<AdoResponse> {
         let url = format!(
             "https://dev.azure.com/{organization}/_apis/projects?api-version={}",
-            self.api_version
+            self.api_version()
         );
 
-        let ado_metadata = AdoMetadataBuilder::new()
-            .tenant(&self.tenant_id)
+        let ado_metadata = self.ado_metadata_builder()
             .url(url)
             .organization(organization)
             .r#type("fn projects_list")
@@ -228,14 +33,13 @@ impl AzureDevOpsClient {
         self.get::<AdoResponse>(ado_metadata).await
     }
 
-    pub(crate) async fn audit_streams(&self, organization: &str) -> Result<AdoResponse> {
+    async fn audit_streams(&self, organization: &str) -> Result<AdoResponse> {
         let url = format!(
             "https://auditservice.dev.azure.com/{organization}/_apis/audit/streams?api-version={}",
-            self.api_version
+            self.api_version()
         );
 
-        let ado_metadata = AdoMetadataBuilder::new()
-            .tenant(&self.tenant_id)
+        let ado_metadata = self.ado_metadata_builder()
             .url(url)
             .organization(organization)
             .r#type("fn audit_streams")
@@ -257,13 +61,12 @@ impl AzureDevOpsClient {
     //   "typeName": "Microsoft.TeamFoundation.Framework.Server.InvalidAccessException, Microsoft.TeamFoundation.Framework.Server"
     // }
     #[allow(unused)]
-    pub(crate) async fn pat_tokens(&self, organization: &str) -> Result<AdoResponse> {
+    async fn pat_tokens(&self, organization: &str) -> Result<AdoResponse> {
         let url = format!(
             "https://vssps.dev.azure.com/{organization}/_apis/tokens/pats?api-version={}",
-            self.api_version
+            self.api_version()
         );
-        let ado_metadata = AdoMetadataBuilder::new()
-            .tenant(&self.tenant_id)
+        let ado_metadata = self.ado_metadata_builder()
             .url(url)
             .organization(organization)
             .r#type("fn pat_tokens")
@@ -273,17 +76,16 @@ impl AzureDevOpsClient {
         self.get::<AdoResponse>(ado_metadata).await
     }
 
-    pub(crate) async fn policy_configuration_get(
+    async fn policy_configuration_get(
         &self,
         organization: &str,
         project: &str,
     ) -> Result<AdoResponse> {
         let url = format!(
             "https://dev.azure.com/{organization}/{project}/_apis/policy/configurations?api-version={}",
-            self.api_version
+            self.api_version()
         );
-        let ado_metadata = AdoMetadataBuilder::new()
-            .tenant(&self.tenant_id)
+        let ado_metadata = self.ado_metadata_builder()
             .url(url)
             .organization(organization)
             .project(project)
@@ -294,17 +96,16 @@ impl AzureDevOpsClient {
         self.get::<AdoResponse>(ado_metadata).await
     }
 
-    pub(crate) async fn git_policy_configuration_get(
+    async fn git_policy_configuration_get(
         &self,
         organization: &str,
         project: &str,
     ) -> Result<AdoResponse> {
         let url = format!(
             "https://dev.azure.com/{organization}/{project}/_apis/git/policy/configurations?api-version={}",
-            self.api_version
+            self.api_version()
         );
-        let ado_metadata = AdoMetadataBuilder::new()
-            .tenant(&self.tenant_id)
+        let ado_metadata = self.ado_metadata_builder()
             .url(url)
             .organization(organization)
             .project(project)
@@ -315,17 +116,12 @@ impl AzureDevOpsClient {
         self.get::<AdoResponse>(ado_metadata).await
     }
 
-    pub(crate) async fn git_repository_list(
-        &self,
-        organization: &str,
-        project: &str,
-    ) -> Result<AdoResponse> {
+    async fn git_repository_list(&self, organization: &str, project: &str) -> Result<AdoResponse> {
         let url = format!(
             "https://dev.azure.com/{organization}/{project}/_apis/git/repositories?api-version={}",
-            self.api_version
+            self.api_version()
         );
-        let ado_metadata = AdoMetadataBuilder::new()
-            .tenant(&self.tenant_id)
+        let ado_metadata = self.ado_metadata_builder()
             .url(url)
             .organization(organization)
             .project(project)
@@ -336,14 +132,13 @@ impl AzureDevOpsClient {
         self.get::<AdoResponse>(ado_metadata).await
     }
 
-    pub(crate) async fn graph_users_list(&self, organization: &str) -> Result<AdoResponse> {
+    async fn graph_users_list(&self, organization: &str) -> Result<AdoResponse> {
         let url = format!(
             "https://vssps.dev.azure.com/{organization}/_apis/graph/users?api-version={}",
-            self.api_version
+            self.api_version()
         );
 
-        let ado_metadata = AdoMetadataBuilder::new()
-            .tenant(&self.tenant_id)
+        let ado_metadata = self.ado_metadata_builder()
             .url(url)
             .organization(organization)
             .r#type("fn graph_users_list")
@@ -353,16 +148,12 @@ impl AzureDevOpsClient {
         self.get::<AdoResponse>(ado_metadata).await
     }
 
-    pub(crate) async fn graph_service_principals_list(
-        &self,
-        organization: &str,
-    ) -> Result<AdoResponse> {
+    async fn graph_service_principals_list(&self, organization: &str) -> Result<AdoResponse> {
         let url = format!(
             "https://vssps.dev.azure.com/{organization}/_apis/graph/serviceprincipals?api-version={}",
-            self.api_version
+            self.api_version()
         );
-        let ado_metadata = AdoMetadataBuilder::new()
-            .tenant(&self.tenant_id)
+        let ado_metadata = self.ado_metadata_builder()
             .url(url)
             .organization(organization)
             .r#type("fn graph_service_principals_list")
@@ -372,13 +163,12 @@ impl AzureDevOpsClient {
         self.get::<AdoResponse>(ado_metadata).await
     }
 
-    pub(crate) async fn graph_groups_list(&self, organization: &str) -> Result<AdoResponse> {
+    async fn graph_groups_list(&self, organization: &str) -> Result<AdoResponse> {
         let url = format!(
             "https://vssps.dev.azure.com/{organization}/_apis/graph/groups?api-version={}",
-            self.api_version
+            self.api_version()
         );
-        let ado_metadata = AdoMetadataBuilder::new()
-            .tenant(&self.tenant_id)
+        let ado_metadata = self.ado_metadata_builder()
             .url(url)
             .organization(organization)
             .r#type("fn graph_groups_list")
@@ -388,16 +178,12 @@ impl AzureDevOpsClient {
         self.get::<AdoResponse>(ado_metadata).await
     }
 
-    pub(crate) async fn adv_security_org_enablement(
-        &self,
-        organization: &str,
-    ) -> Result<AdoResponse> {
+    async fn adv_security_org_enablement(&self, organization: &str) -> Result<AdoResponse> {
         let url = format!(
             "https://advsec.dev.azure.com/{organization}/_apis/management/enablement?api-version={}&includeAllProperties=true",
-            self.api_version
+            self.api_version()
         );
-        let ado_metadata = AdoMetadataBuilder::new()
-            .tenant(&self.tenant_id)
+        let ado_metadata = self.ado_metadata_builder()
             .url(url)
             .organization(organization)
             .r#type("fn adv_security_org_enablement")
@@ -407,17 +193,16 @@ impl AzureDevOpsClient {
         self.get::<AdoResponseSingle>(ado_metadata).await
     }
 
-    pub(crate) async fn adv_security_project_enablement(
+    async fn adv_security_project_enablement(
         &self,
         organization: &str,
         project: &str,
     ) -> Result<AdoResponse> {
         let url = format!(
             "https://advsec.dev.azure.com/{organization}/{project}/_apis/management/enablement?api-version={}&includeAllProperties=true",
-            self.api_version
+            self.api_version()
         );
-        let ado_metadata = AdoMetadataBuilder::new()
-            .tenant(&self.tenant_id)
+        let ado_metadata = self.ado_metadata_builder()
             .url(url)
             .organization(organization)
             .project(project)
@@ -428,7 +213,7 @@ impl AzureDevOpsClient {
         self.get::<AdoResponseSingle>(ado_metadata).await
     }
 
-    pub(crate) async fn adv_security_repo_enablement(
+    async fn adv_security_repo_enablement(
         &self,
         organization: &str,
         project: &str,
@@ -436,11 +221,10 @@ impl AzureDevOpsClient {
     ) -> Result<AdoResponse> {
         let url = format!(
             "https://advsec.dev.azure.com/{organization}/{project}/_apis/management/repositories/{repository}/enablement?api-version={}&includeAllProperties=true",
-            self.api_version
+            self.api_version()
         );
 
-        let ado_metadata = AdoMetadataBuilder::new()
-            .tenant(&self.tenant_id)
+        let ado_metadata = self.ado_metadata_builder()
             .url(url)
             .organization(organization)
             .project(project)
@@ -452,7 +236,7 @@ impl AzureDevOpsClient {
         self.get::<AdoResponseSingle>(ado_metadata).await
     }
 
-    pub(crate) async fn adv_security_alerts(
+    async fn adv_security_alerts(
         &self,
         organization: &str,
         project: &str,
@@ -460,11 +244,10 @@ impl AzureDevOpsClient {
     ) -> Result<AdoResponse> {
         let url = format!(
             "https://advsec.dev.azure.com/{organization}/{project}/_apis/alert/repositories/{repository}/alerts?api-version={}",
-            self.api_version
+            self.api_version()
         );
 
-        let ado_metadata = AdoMetadataBuilder::new()
-            .tenant(&self.tenant_id)
+        let ado_metadata = self.ado_metadata_builder()
             .url(url)
             .organization(organization)
             .project(project)
@@ -476,17 +259,16 @@ impl AzureDevOpsClient {
         self.get::<AdoResponse>(ado_metadata).await
     }
 
-    pub(crate) async fn build_general_settings(
+    async fn build_general_settings(
         &self,
         organization: &str,
         project: &str,
     ) -> Result<AdoResponse> {
         let url = format!(
             "https://dev.azure.com/{organization}/{project}/_apis/build/generalsettings?api-version={}",
-            self.api_version
+            self.api_version()
         );
-        let ado_metadata = AdoMetadataBuilder::new()
-            .tenant(&self.tenant_id)
+        let ado_metadata = self.ado_metadata_builder()
             .url(url)
             .organization(organization)
             .project(project)
