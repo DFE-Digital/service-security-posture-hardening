@@ -1,4 +1,3 @@
-#![feature(async_closure)]
 #![feature(hash_extract_if)]
 pub mod splunk;
 mod tasks;

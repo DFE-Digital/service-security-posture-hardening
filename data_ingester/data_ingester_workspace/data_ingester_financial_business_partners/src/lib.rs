@@ -246,20 +246,20 @@ ORDER BY a.ID
     }
 
     pub fn generate_contact_details(amount: usize) -> Vec<Self> {
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
         let contact_details: Vec<ContactDetails> = (0..amount)
             .map(|_| Self {
-                id: Some(rng.gen()),
-                stakeholder_type: Some(format!("Stakeholder Type {}", rng.gen::<i32>() % 5)),
-                email_address: Some(format!("email{}@example.com", rng.gen::<i32>() % 100)),
-                portfolio: Some(format!("Portfolio {}", rng.gen::<i32>() % 10)),
-                service_line: Some(format!("Service Line {}", rng.gen::<i32>() % 5)),
-                product: Some(format!("Product {}", rng.gen::<i32>() % 10)),
-                cost_centre_code: Some(rng.gen()),
-                cost_centre_owner: Some(format!("Cost Centre Owner {}", rng.gen::<i32>() % 5)),
-                cost_centre_title: Some(format!("Cost Centre Title {}", rng.gen::<i32>() % 10)),
-                account_code: Some(format!("Account Code {}", rng.gen::<i32>() % 100)),
-                activity_code: Some(rng.gen()),
+                id: Some(rng.random()),
+                stakeholder_type: Some(format!("Stakeholder Type {}", rng.random::<i32>() % 5)),
+                email_address: Some(format!("email{}@example.com", rng.random::<i32>() % 100)),
+                portfolio: Some(format!("Portfolio {}", rng.random::<i32>() % 10)),
+                service_line: Some(format!("Service Line {}", rng.random::<i32>() % 5)),
+                product: Some(format!("Product {}", rng.random::<i32>() % 10)),
+                cost_centre_code: Some(rng.random()),
+                cost_centre_owner: Some(format!("Cost Centre Owner {}", rng.random::<i32>() % 5)),
+                cost_centre_title: Some(format!("Cost Centre Title {}", rng.random::<i32>() % 10)),
+                account_code: Some(format!("Account Code {}", rng.random::<i32>() % 100)),
+                activity_code: Some(rng.random()),
                 source: "fake_data".into(),
             })
             .collect();
