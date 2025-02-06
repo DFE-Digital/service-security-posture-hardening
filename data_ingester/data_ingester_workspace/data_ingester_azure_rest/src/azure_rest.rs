@@ -35,10 +35,12 @@ impl AzureRest {
 
         let credential = Arc::new(ClientSecretCredential::new(
             http_client,
+            TokenCredentialOptions::default()
+                .authority_host()
+                .context("Unable to get default Azure authority host")?,
             tenant_id.to_owned(),
             client_id.to_owned(),
             client_secret.to_owned(),
-            TokenCredentialOptions::default(),
         ));
         let mut s = Self {
             credential,

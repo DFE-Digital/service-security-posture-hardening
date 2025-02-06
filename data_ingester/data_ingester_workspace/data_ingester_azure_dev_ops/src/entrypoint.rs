@@ -43,7 +43,7 @@ pub async fn entrypoint(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()
 
         let projects = try_collect_send(
             &format!("Projects for {organization_name}"),
-            ado.projects_list(&organization_name),
+            ado.projects_list(organization_name),
             &splunk,
         )
         .await;
@@ -61,14 +61,14 @@ pub async fn entrypoint(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()
 
             let _ = try_collect_send(
                 &format!("Git Policy Configuration for {organization_name}/{project_name}"),
-                ado.git_policy_configuration_get(&organization_name, &project_name),
+                ado.git_policy_configuration_get(organization_name, project_name),
                 &splunk,
             )
             .await?;
 
             let _ = try_collect_send(
                 &format!("Git repository list {org_name}"),
-                ado.git_repository_list(&organization_name, &project_name),
+                ado.git_repository_list(organization_name, project_name),
                 &splunk,
             )
             .await?;

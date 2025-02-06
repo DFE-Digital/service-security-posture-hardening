@@ -106,10 +106,14 @@ async fn get_health_check(State(state): State<Arc<AppState>>) -> Json<AzureInvok
 }
 
 /// Collect AWS data
+#[axum::debug_handler]
 async fn post_aws(
     headers: HeaderMap,
     State(state): State<Arc<AppState>>,
-    payload: Option<Json<AzureInvokeRequest>>,
+    payload: std::result::Result<
+        Option<Json<AzureInvokeRequest>>,
+        axum::extract::rejection::JsonRejection,
+    >,
 ) -> Json<AzureInvokeResponse> {
     Json(
         function_runner(
@@ -118,17 +122,21 @@ async fn post_aws(
             state,
             data_ingester_aws::aws::aws,
             headers,
-            payload,
+            payload.unwrap_or(None),
         )
         .await,
     )
 }
 
 /// Collect Azure data
+#[axum::debug_handler]
 async fn post_azure(
     headers: HeaderMap,
     State(state): State<Arc<AppState>>,
-    payload: Option<Json<AzureInvokeRequest>>,
+    payload: std::result::Result<
+        Option<Json<AzureInvokeRequest>>,
+        axum::extract::rejection::JsonRejection,
+    >,
 ) -> Json<AzureInvokeResponse> {
     Json(
         function_runner(
@@ -137,17 +145,21 @@ async fn post_azure(
             state,
             data_ingester_azure::azure_users,
             headers,
-            payload,
+            payload.unwrap_or(None),
         )
         .await,
     )
 }
 
 /// Collect Azure Resource Graph data
+#[axum::debug_handler]
 async fn post_azure_resource_graph(
     headers: HeaderMap,
     State(state): State<Arc<AppState>>,
-    payload: Option<Json<AzureInvokeRequest>>,
+    payload: std::result::Result<
+        Option<Json<AzureInvokeRequest>>,
+        axum::extract::rejection::JsonRejection,
+    >,
 ) -> Json<AzureInvokeResponse> {
     Json(
         function_runner(
@@ -156,17 +168,21 @@ async fn post_azure_resource_graph(
             state,
             data_ingester_azure_rest::resource_graph::azure_resource_graph,
             headers,
-            payload,
+            payload.unwrap_or(None),
         )
         .await,
     )
 }
 
 /// Collect GitHub data
+#[axum::debug_handler]
 async fn post_github(
     headers: HeaderMap,
     State(state): State<Arc<AppState>>,
-    payload: Option<Json<AzureInvokeRequest>>,
+    payload: std::result::Result<
+        Option<Json<AzureInvokeRequest>>,
+        axum::extract::rejection::JsonRejection,
+    >,
 ) -> Json<AzureInvokeResponse> {
     Json(
         function_runner(
@@ -175,17 +191,21 @@ async fn post_github(
             state,
             data_ingester_github::entrypoint::github_octocrab_entrypoint,
             headers,
-            payload,
+            payload.unwrap_or(None),
         )
         .await,
     )
 }
 
 /// Set GitHub Custom Properties
+#[axum::debug_handler]
 async fn post_github_custom_properties(
     headers: HeaderMap,
     State(state): State<Arc<AppState>>,
-    payload: Option<Json<AzureInvokeRequest>>,
+    payload: std::result::Result<
+        Option<Json<AzureInvokeRequest>>,
+        axum::extract::rejection::JsonRejection,
+    >,
 ) -> Json<AzureInvokeResponse> {
     Json(
         function_runner(
@@ -194,17 +214,21 @@ async fn post_github_custom_properties(
             state,
             data_ingester_github::entrypoint::github_set_custom_properties_entrypoint,
             headers,
-            payload,
+            payload.unwrap_or(None),
         )
         .await,
     )
 }
 
 /// Collect M365 data
+#[axum::debug_handler]
 async fn post_m365(
     headers: HeaderMap,
     State(state): State<Arc<AppState>>,
-    payload: Option<Json<AzureInvokeRequest>>,
+    payload: std::result::Result<
+        Option<Json<AzureInvokeRequest>>,
+        axum::extract::rejection::JsonRejection,
+    >,
 ) -> Json<AzureInvokeResponse> {
     Json(
         function_runner(
@@ -213,7 +237,7 @@ async fn post_m365(
             state,
             data_ingester_ms_graph::ms_graph::m365,
             headers,
-            payload,
+            payload.unwrap_or(None),
         )
         .await,
     )
@@ -222,10 +246,14 @@ async fn post_m365(
 /// Collect Powershell data
 ///
 /// Installs powershell on the functions host before collection
+#[axum::debug_handler]
 async fn post_powershell(
     headers: HeaderMap,
     State(state): State<Arc<AppState>>,
-    payload: Option<Json<AzureInvokeRequest>>,
+    payload: std::result::Result<
+        Option<Json<AzureInvokeRequest>>,
+        axum::extract::rejection::JsonRejection,
+    >,
 ) -> Json<AzureInvokeResponse> {
     if state.powershell_lock.try_lock().is_ok() && !*state.powershell_installed.lock().await {
         info!("Powershell: Installing");
@@ -243,17 +271,21 @@ async fn post_powershell(
             state,
             data_ingester_ms_powershell::runner::powershell,
             headers,
-            payload,
+            payload.unwrap_or(None),
         )
         .await,
     )
 }
 
 /// Collect Splunk test data
+#[axum::debug_handler]
 async fn post_qualys_qvs(
     headers: HeaderMap,
     State(state): State<Arc<AppState>>,
-    payload: Option<Json<AzureInvokeRequest>>,
+    payload: std::result::Result<
+        Option<Json<AzureInvokeRequest>>,
+        axum::extract::rejection::JsonRejection,
+    >,
 ) -> Json<AzureInvokeResponse> {
     Json(
         function_runner(
@@ -262,17 +294,21 @@ async fn post_qualys_qvs(
             state,
             data_ingester_qualys::entrypoint::qualys_qvs,
             headers,
-            payload,
+            payload.unwrap_or(None),
         )
         .await,
     )
 }
 
 /// Run Threagile against assets from Splunk
+#[axum::debug_handler]
 async fn post_sonar_cloud(
     headers: HeaderMap,
     State(state): State<Arc<AppState>>,
-    payload: Option<Json<AzureInvokeRequest>>,
+    payload: std::result::Result<
+        Option<Json<AzureInvokeRequest>>,
+        axum::extract::rejection::JsonRejection,
+    >,
 ) -> Json<AzureInvokeResponse> {
     Json(
         function_runner(
@@ -281,17 +317,21 @@ async fn post_sonar_cloud(
             state,
             data_ingester_sonar_cloud::entrypoint,
             headers,
-            payload,
+            payload.unwrap_or(None),
         )
         .await,
     )
 }
 
 /// Run Threagile against assets from Splunk
+#[axum::debug_handler]
 async fn post_threagile(
     headers: HeaderMap,
     State(state): State<Arc<AppState>>,
-    payload: Option<Json<AzureInvokeRequest>>,
+    payload: std::result::Result<
+        Option<Json<AzureInvokeRequest>>,
+        axum::extract::rejection::JsonRejection,
+    >,
 ) -> Json<AzureInvokeResponse> {
     Json(
         function_runner(
@@ -300,16 +340,20 @@ async fn post_threagile(
             state,
             data_ingester_threagile::threagile,
             headers,
-            payload,
+            payload.unwrap_or(None),
         )
         .await,
     )
 }
 
+#[axum::debug_handler]
 async fn post_financial_business_partners(
     headers: HeaderMap,
     State(state): State<Arc<AppState>>,
-    payload: Option<Json<AzureInvokeRequest>>,
+    payload: std::result::Result<
+        Option<Json<AzureInvokeRequest>>,
+        axum::extract::rejection::JsonRejection,
+    >,
 ) -> Json<AzureInvokeResponse> {
     Json(
         function_runner(
@@ -318,16 +362,20 @@ async fn post_financial_business_partners(
             state,
             data_ingester_financial_business_partners::entrypoint,
             headers,
-            payload,
+            payload.unwrap_or(None),
         )
         .await,
     )
 }
 
+#[axum::debug_handler]
 async fn post_azure_dev_ops(
     headers: HeaderMap,
     State(state): State<Arc<AppState>>,
-    payload: Option<Json<AzureInvokeRequest>>,
+    payload: std::result::Result<
+        Option<Json<AzureInvokeRequest>>,
+        axum::extract::rejection::JsonRejection,
+    >,
 ) -> Json<AzureInvokeResponse> {
     Json(
         function_runner(
@@ -336,7 +384,7 @@ async fn post_azure_dev_ops(
             state,
             data_ingester_azure_dev_ops::entrypoint::entrypoint,
             headers,
-            payload,
+            payload.unwrap_or(None),
         )
         .await,
     )
