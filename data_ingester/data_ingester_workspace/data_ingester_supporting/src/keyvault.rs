@@ -1,5 +1,5 @@
 use anyhow::{Context, Result};
-use azure_identity::DefaultAzureCredential;
+use azure_identity::{DefaultAzureCredential, TokenCredentialOptions};
 use azure_security_keyvault::{KeyvaultClient, SecretClient};
 use base64::prelude::*;
 use std::sync::Arc;
@@ -78,7 +78,10 @@ fn get_secret(client: &SecretClient, name: &str) -> JoinHandle<Option<String>> {
 /// Get all the secrets from KeyVault
 pub async fn get_keyvault_secrets(keyvault_name: &str) -> Result<Secrets> {
     info!("Getting Default Azure Credentials");
-    let credential = Arc::new(DefaultAzureCredential::default());
+    let credential = Arc::new(
+        DefaultAzureCredential::create(TokenCredentialOptions::default())
+            .context("Unable to build default Azure Credentials")?,
+    );
 
     info!("KeyVault Secret Client created");
     let keyvault_url = format!("https://{keyvault_name}.vault.azure.net");

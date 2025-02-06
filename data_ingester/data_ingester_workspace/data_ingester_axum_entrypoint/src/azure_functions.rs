@@ -110,7 +110,10 @@ async fn get_health_check(State(state): State<Arc<AppState>>) -> Json<AzureInvok
 async fn post_aws(
     headers: HeaderMap,
     State(state): State<Arc<AppState>>,
-    payload: std::result::Result<Option<Json<AzureInvokeRequest>>, axum::extract::rejection::JsonRejection>,
+    payload: std::result::Result<
+        Option<Json<AzureInvokeRequest>>,
+        axum::extract::rejection::JsonRejection,
+    >,
 ) -> Json<AzureInvokeResponse> {
     Json(
         function_runner(
@@ -119,7 +122,7 @@ async fn post_aws(
             state,
             data_ingester_aws::aws::aws,
             headers,
-            payload.unwrap_or(None)
+            payload.unwrap_or(None),
         )
         .await,
     )
@@ -130,7 +133,10 @@ async fn post_aws(
 async fn post_azure(
     headers: HeaderMap,
     State(state): State<Arc<AppState>>,
-    payload: std::result::Result<Option<Json<AzureInvokeRequest>>, axum::extract::rejection::JsonRejection>,
+    payload: std::result::Result<
+        Option<Json<AzureInvokeRequest>>,
+        axum::extract::rejection::JsonRejection,
+    >,
 ) -> Json<AzureInvokeResponse> {
     Json(
         function_runner(
@@ -150,7 +156,10 @@ async fn post_azure(
 async fn post_azure_resource_graph(
     headers: HeaderMap,
     State(state): State<Arc<AppState>>,
-    payload: std::result::Result<Option<Json<AzureInvokeRequest>>, axum::extract::rejection::JsonRejection>,
+    payload: std::result::Result<
+        Option<Json<AzureInvokeRequest>>,
+        axum::extract::rejection::JsonRejection,
+    >,
 ) -> Json<AzureInvokeResponse> {
     Json(
         function_runner(
@@ -170,7 +179,10 @@ async fn post_azure_resource_graph(
 async fn post_github(
     headers: HeaderMap,
     State(state): State<Arc<AppState>>,
-    payload: std::result::Result<Option<Json<AzureInvokeRequest>>, axum::extract::rejection::JsonRejection>,
+    payload: std::result::Result<
+        Option<Json<AzureInvokeRequest>>,
+        axum::extract::rejection::JsonRejection,
+    >,
 ) -> Json<AzureInvokeResponse> {
     Json(
         function_runner(
@@ -190,7 +202,10 @@ async fn post_github(
 async fn post_github_custom_properties(
     headers: HeaderMap,
     State(state): State<Arc<AppState>>,
-    payload: std::result::Result<Option<Json<AzureInvokeRequest>>, axum::extract::rejection::JsonRejection>,
+    payload: std::result::Result<
+        Option<Json<AzureInvokeRequest>>,
+        axum::extract::rejection::JsonRejection,
+    >,
 ) -> Json<AzureInvokeResponse> {
     Json(
         function_runner(
@@ -210,7 +225,10 @@ async fn post_github_custom_properties(
 async fn post_m365(
     headers: HeaderMap,
     State(state): State<Arc<AppState>>,
-    payload: std::result::Result<Option<Json<AzureInvokeRequest>>, axum::extract::rejection::JsonRejection>,
+    payload: std::result::Result<
+        Option<Json<AzureInvokeRequest>>,
+        axum::extract::rejection::JsonRejection,
+    >,
 ) -> Json<AzureInvokeResponse> {
     Json(
         function_runner(
@@ -232,7 +250,10 @@ async fn post_m365(
 async fn post_powershell(
     headers: HeaderMap,
     State(state): State<Arc<AppState>>,
-    payload: std::result::Result<Option<Json<AzureInvokeRequest>>, axum::extract::rejection::JsonRejection>,
+    payload: std::result::Result<
+        Option<Json<AzureInvokeRequest>>,
+        axum::extract::rejection::JsonRejection,
+    >,
 ) -> Json<AzureInvokeResponse> {
     if state.powershell_lock.try_lock().is_ok() && !*state.powershell_installed.lock().await {
         info!("Powershell: Installing");
@@ -261,7 +282,10 @@ async fn post_powershell(
 async fn post_qualys_qvs(
     headers: HeaderMap,
     State(state): State<Arc<AppState>>,
-    payload: std::result::Result<Option<Json<AzureInvokeRequest>>, axum::extract::rejection::JsonRejection>,
+    payload: std::result::Result<
+        Option<Json<AzureInvokeRequest>>,
+        axum::extract::rejection::JsonRejection,
+    >,
 ) -> Json<AzureInvokeResponse> {
     Json(
         function_runner(
@@ -281,7 +305,10 @@ async fn post_qualys_qvs(
 async fn post_sonar_cloud(
     headers: HeaderMap,
     State(state): State<Arc<AppState>>,
-    payload: std::result::Result<Option<Json<AzureInvokeRequest>>, axum::extract::rejection::JsonRejection>,
+    payload: std::result::Result<
+        Option<Json<AzureInvokeRequest>>,
+        axum::extract::rejection::JsonRejection,
+    >,
 ) -> Json<AzureInvokeResponse> {
     Json(
         function_runner(
@@ -301,7 +328,10 @@ async fn post_sonar_cloud(
 async fn post_threagile(
     headers: HeaderMap,
     State(state): State<Arc<AppState>>,
-    payload: std::result::Result<Option<Json<AzureInvokeRequest>>, axum::extract::rejection::JsonRejection>,
+    payload: std::result::Result<
+        Option<Json<AzureInvokeRequest>>,
+        axum::extract::rejection::JsonRejection,
+    >,
 ) -> Json<AzureInvokeResponse> {
     Json(
         function_runner(
@@ -320,7 +350,10 @@ async fn post_threagile(
 async fn post_financial_business_partners(
     headers: HeaderMap,
     State(state): State<Arc<AppState>>,
-    payload: std::result::Result<Option<Json<AzureInvokeRequest>>, axum::extract::rejection::JsonRejection>,
+    payload: std::result::Result<
+        Option<Json<AzureInvokeRequest>>,
+        axum::extract::rejection::JsonRejection,
+    >,
 ) -> Json<AzureInvokeResponse> {
     Json(
         function_runner(
@@ -339,7 +372,10 @@ async fn post_financial_business_partners(
 async fn post_azure_dev_ops(
     headers: HeaderMap,
     State(state): State<Arc<AppState>>,
-    payload: std::result::Result<Option<Json<AzureInvokeRequest>>, axum::extract::rejection::JsonRejection>,
+    payload: std::result::Result<
+        Option<Json<AzureInvokeRequest>>,
+        axum::extract::rejection::JsonRejection,
+    >,
 ) -> Json<AzureInvokeResponse> {
     Json(
         function_runner(
