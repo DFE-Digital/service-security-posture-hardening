@@ -1,7 +1,7 @@
 <dashboard version="1.1" theme="dark" script="js/addtags.js, js/table_cell_color.js">
 
 <label>Security Posture Continuous Assurance : DfE Service Dashboard</label>
-<description>{{environment}} v4.2.0</description>
+<description>{{environment}} v4.3.1</description>
   
   <init>
     <set token="form.tkn_fields">C</set>
@@ -58,7 +58,7 @@
           <query>
 | loadjob savedsearch="{{splunk_user}}:{{app}}{{environment}}:ssphp_create_dashboard_dataset_service{{environment}}"
 
-| fields ssphp.service.portfolio, ssphp.service.service_line, ssphp.service.product, ssphp.assessment.source, ssphp.use_case.category, ssphp.use_case.id, ssphp.use_case.title, ssphp.assessment.display_name, ssphp.score.score, ssphp.score.compliance_status, ssphp.score.ciso_priority, ssphp.assessment.description, ssphp.score.color, ssphp.resource.id, ssphp.resource.tenant, ssphp.resource.subscription, ssphp.resource.subscription_name, ssphp.resource.resource_group, ssphp.score.remediation_priority, SSPHP_UID
+| fields ssphp.service.portfolio, ssphp.service.service_line, ssphp.service.product, ssphp.assessment.source, ssphp.use_case.category, ssphp.use_case.id, ssphp.use_case.title, ssphp.assessment.display_name, ssphp.score.score, ssphp.score.compliance_status, ssphp.score.ciso_priority, ssphp.assessment.description, ssphp.score.color, ssphp.resource.id, ssphp.resource.tenant, ssphp.resource.subscription, ssphp.resource.subscription_name, ssphp.resource.resource_group, ssphp.score.remediation_priority, ssphp.exemption.status, SSPHP_UID
           </query>
         </search>
         <option name="count">1</option>
@@ -72,7 +72,7 @@
           <query>
 | search ssphp.service.portfolio=$tkn_portfolio|s$ AND ssphp.service.service_line=$tkn_service_line|s$ AND ssphp.service.product=$tkn_product|s$
 
-| fields ssphp.service.portfolio, ssphp.service.service_line, ssphp.service.product, ssphp.assessment.source, ssphp.use_case.category, ssphp.use_case.id, ssphp.use_case.title, ssphp.assessment.display_name, ssphp.score.score, ssphp.score.compliance_status, ssphp.score.ciso_priority, ssphp.assessment.description, ssphp.score.color, ssphp.resource.id, ssphp.resource.tenant, ssphp.resource.subscription, ssphp.resource.subscription_name, ssphp.resource.resource_group, ssphp.score.remediation_priority, SSPHP_UID
+| fields ssphp.service.portfolio, ssphp.service.service_line, ssphp.service.product, ssphp.assessment.source, ssphp.use_case.category, ssphp.use_case.id, ssphp.use_case.title, ssphp.assessment.display_name, ssphp.score.score, ssphp.score.compliance_status, ssphp.score.ciso_priority, ssphp.assessment.description, ssphp.score.color, ssphp.resource.id, ssphp.resource.tenant, ssphp.resource.subscription, ssphp.resource.subscription_name, ssphp.resource.resource_group, ssphp.score.remediation_priority, ssphp.exemption.status, SSPHP_UID
           </query>
           <done>
             <set token="tkn_service_name">$result.ssphp.service.name$</set>
@@ -466,6 +466,8 @@ index=_audit user=$tkn__current_user_name|s$ action=search "makeresults" "user_d
           <query>
 | search (ssphp.use_case.category="POSTURE" OR ssphp.use_case.category="REPOS") AND ssphp.resource.id="***" 
 
+$tkn_exemptions_show$
+
 | eval is_bad=if('ssphp.score.ciso_priority'="DfE Mandated" AND mvindex(split('ssphp.score.score',"|"),0)!="100",1,0)
 | stats count, sum(is_bad) as is_bad by ssphp.resource.id
 | eval is_bad=if('is_bad'>0,1,0)
@@ -487,6 +489,8 @@ index=_audit user=$tkn__current_user_name|s$ action=search "makeresults" "user_d
         <search base="bs_1">
           <query>
 | search (ssphp.use_case.category="VULNERABILITY" OR ssphp.use_case.category="CODE_SCAN") AND ssphp.resource.id="***" 
+
+$tkn_exemptions_show$
 
 | eval is_bad=if('ssphp.score.ciso_priority'="DfE Mandated" AND mvindex(split('ssphp.score.score',"|"),0)!="100",1,0)
 | stats count, sum(is_bad) as is_bad by ssphp.resource.id
@@ -538,6 +542,8 @@ index=_audit user=$tkn__current_user_name|s$ action=search "makeresults" "user_d
           <query>
 | search ssphp.use_case.category="POSTURE" AND ssphp.resource.id="***" 
 
+$tkn_exemptions_show$
+
 | eval rg=coalesce('ssphp.resource.tenant'."/".'ssphp.resource.subscription'."/".'ssphp.resource.resource_group',"-")
 
 | stats count, sum(eval(if('ssphp.score.ciso_priority'="DfE Mandated" AND mvindex(split('ssphp.score.score',"|"),0)!="100",1,0))) as rg_bad by rg
@@ -588,6 +594,8 @@ index=_audit user=$tkn__current_user_name|s$ action=search "makeresults" "user_d
           <query>
 | search ssphp.use_case.category="REPOS" AND ssphp.resource.id="***"
 
+$tkn_exemptions_show$
+
 | stats count, sum(eval(if('ssphp.score.ciso_priority'="DfE Mandated" AND mvindex(split('ssphp.score.score',"|"),0)!="100",1,0))) as rid_bad by ssphp.resource.id
 | stats count as rid_total, sum(eval(if('rid_bad'>0,1,0))) as rid_bad
 
@@ -635,6 +643,8 @@ index=_audit user=$tkn__current_user_name|s$ action=search "makeresults" "user_d
         <search base="bs_1">
           <query>
 | search ssphp.use_case.category="CODE_SCAN" AND ssphp.resource.id="***"
+
+$tkn_exemptions_show$
 
 | eval ssphp.resource.id=if(mvcount('ssphp.resource.id')>1,mvindex('ssphp.resource.id',0),'ssphp.resource.id')
 
@@ -685,6 +695,8 @@ index=_audit user=$tkn__current_user_name|s$ action=search "makeresults" "user_d
         <search base="bs_1">
           <query>
 | search ssphp.use_case.category="VULNERABILITY" AND ssphp.resource.id="***" AND ssphp.resource.id="*/virtualmachines/*"
+
+$tkn_exemptions_show$
 
 | stats count, sum(eval(if('ssphp.score.ciso_priority'="DfE Mandated" AND mvindex(split('ssphp.score.score',"|"),0)!="100",1,0))) as rid_bad by ssphp.resource.id
 | stats count as rid_total, sum(eval(if('rid_bad'>0,1,0))) as rid_bad
@@ -895,6 +907,26 @@ index=_audit user=$tkn__current_user_name|s$ action=search "makeresults" "user_d
             <unset token="tkn_show_by_control"></unset>
             <unset token="tkn_show_by_list"></unset>
             <unset token="tkn_show_by_resource"></unset>
+          </condition>
+        </change>
+      </input>
+
+      <input type="radio" token="tkn_exemptions" searchWhenChanged="true">
+        <label>Show Exempt Controls</label>
+        <choice value="C">Comply Only</choice>
+        <choice value="E">Exempt Only</choice> 
+        <choice value="A">ALL</choice>
+        <default>C</default>
+        <initialValue>C</initialValue>
+        <change>
+          <condition value="C">
+            <set token="tkn_exemptions_show"> | search ssphp.exemption.status="comply"</set>
+          </condition>
+          <condition value="E">
+            <set token="tkn_exemptions_show"> | search ssphp.exemption.status="exempt"</set>
+          </condition>
+          <condition value="A">
+            <set token="tkn_exemptions_show"> | search ssphp.exemption.status="*"</set>
           </condition>
         </change>
       </input>
@@ -1119,6 +1151,8 @@ index=_audit user=$tkn__current_user_name|s$ action=search "makeresults" "user_d
         <title>Control Details &amp; Scores [$tkn_controls_total_list$]</title>
         <search base="bs_1">
           <query>
+$tkn_exemptions_show$
+
 $tkn_category$
 
 $tkn_code_tools$
@@ -1197,6 +1231,8 @@ $tkn_search_filter$
       <table>
         <search base="bs_1">
           <query>
+$tkn_exemptions_show$
+
 $tkn_category$
 
 $tkn_code_tools$
@@ -1258,6 +1294,8 @@ $tkn_search_filter$
       <table>
         <search base="bs_1">
           <query>
+$tkn_exemptions_show$
+
 $tkn_category$
 
 $tkn_code_tools$
