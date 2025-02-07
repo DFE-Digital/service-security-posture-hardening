@@ -16,6 +16,8 @@ hickory-proto = "0.25.0-alpha.4"
 hickory-resolver = { version = "0.25.0-alpha.4", features = ["dns-over-rustls"] }
 tracing = "0"
 
+[dev-dependencies]
+time = "*"
 [lints]
 workspace = true
 

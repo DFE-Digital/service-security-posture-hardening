@@ -1949,6 +1949,7 @@ dependencies = [
  "futures",
  "hickory-proto",
  "hickory-resolver",
+ "time",
  "tokio",
  "tracing",
 ]

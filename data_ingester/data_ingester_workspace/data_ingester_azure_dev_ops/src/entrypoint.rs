@@ -15,35 +15,26 @@ pub async fn entrypoint(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()
     set_ssphp_run("github")?;
     info!("Starting Azure DevOps ADO collection");
 
-    let client_id = secrets
-        .azure_client_id
-        .as_ref()
-        .context("No Azure Client Id")?;
+    if let (Some(client_id), Some(client_secret), Some(tenant_id)) = (
+        secrets.azure_client_id.as_ref(),
+        secrets.azure_client_secret.as_ref(),
+        secrets.azure_tenant_id.as_ref(),
+    ) {
+        let ado = AzureDevOpsClientOauth::new(client_id, client_secret, tenant_id)
+            .await
+            .context("Building AzureDevOpsClient")?;
 
-    let client_secret = secrets
-        .azure_client_secret
-        .as_ref()
-        .context("No Azure Client Secret")?;
+        let organizations = try_collect_send(
+            &format!("Azure DevOps Organizations for tenant: {}", tenant_id),
+            ado.organizations_list(),
+            &splunk,
+        )
+        .await?;
 
-    let tenant_id = secrets
-        .azure_tenant_id
-        .as_ref()
-        .context("No Azure Tenant Id")?;
-
-    let ado = AzureDevOpsClientOauth::new(client_id, client_secret, tenant_id)
-        .await
-        .context("Building AzureDevOpsClient")?;
-
-    let organizations = try_collect_send(
-        &format!("Azure DevOps Organizations for tenant: {}", tenant_id),
-        ado.organizations_list(),
-        &splunk,
-    )
-    .await?;
-
-    for organization in organizations.organizations {
-        let _collection_result =
-            collect_organization(&ado, splunk.clone(), &organization.organization_name).await;
+        for organization in organizations.organizations {
+            let _collection_result =
+                collect_organization(&ado, splunk.clone(), &organization.organization_name).await;
+        }
     }
 
     for pat in secrets.ado_pats.iter() {
