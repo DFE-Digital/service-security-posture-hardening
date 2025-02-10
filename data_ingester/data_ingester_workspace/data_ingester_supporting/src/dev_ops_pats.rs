@@ -26,7 +26,7 @@ pub(crate) async fn azure_dev_ops_pats(
                 continue;
             }
         };
-        
+
         let value = match client.get(&secret_id.id).await {
             Ok(value) => value,
             Err(err) => {
@@ -34,9 +34,8 @@ pub(crate) async fn azure_dev_ops_pats(
                 continue;
             }
         };
-        
+
         match secret_id.token_type.as_str() {
-            
             "pat" => match map.entry(secret_id.name) {
                 Entry::Occupied(mut occupied_entry) => {
                     occupied_entry.get_mut().pat = Some(value);
@@ -45,7 +44,7 @@ pub(crate) async fn azure_dev_ops_pats(
                     let _ = vacant_entry.insert(AdoDevOpsPatBuilder::from_pat(value));
                 }
             },
-            
+
             "org" => match map.entry(secret_id.name) {
                 Entry::Occupied(mut occupied_entry) => {
                     occupied_entry.get_mut().organization = Some(value);
@@ -54,7 +53,7 @@ pub(crate) async fn azure_dev_ops_pats(
                     let _ = vacant_entry.insert(AdoDevOpsPatBuilder::from_org(value));
                 }
             },
-            
+
             _ => {
                 error!(name: "KeyVault", operation="Build AzureDevOps Pats", error="Unknown token type", secret_id=secret.id);
                 continue;
@@ -62,13 +61,11 @@ pub(crate) async fn azure_dev_ops_pats(
         };
     }
     map.into_iter()
-        .filter_map(|(_name, builder)| {
-            match builder.build() {
-                Ok(built) => Some(built),
-                Err(err) => {
-                    error!(name="KeyVault", operation="Building ADO Pat", err=?err);                    
-                    None
-                }
+        .filter_map(|(_name, builder)| match builder.build() {
+            Ok(built) => Some(built),
+            Err(err) => {
+                error!(name="KeyVault", operation="Building ADO Pat", err=?err);
+                None
             }
         })
         .collect()
@@ -81,20 +78,20 @@ struct AdoDevOpsPatBuilder {
 }
 
 impl AdoDevOpsPatBuilder {
-    fn from_pat(pat: KeyVaultGetSecretResponse)  -> Self {
+    fn from_pat(pat: KeyVaultGetSecretResponse) -> Self {
         Self {
             organization: None,
             pat: Some(pat),
         }
     }
 
-    fn from_org(pat: KeyVaultGetSecretResponse)  -> Self {
+    fn from_org(pat: KeyVaultGetSecretResponse) -> Self {
         Self {
             organization: None,
             pat: Some(pat),
         }
     }
-    
+
     fn build(self) -> Result<AdoDevOpsPat> {
         if self.organization.is_none() {
             anyhow::bail!("organization is not set: {:?}", self)
@@ -131,7 +128,9 @@ impl AdoDevOpsPat {
 
 #[cfg(test)]
 mod test {
-    use azure_security_keyvault::prelude::{KeyVaultGetSecretResponse, KeyVaultGetSecretResponseAttributes};
+    use azure_security_keyvault::prelude::{
+        KeyVaultGetSecretResponse, KeyVaultGetSecretResponseAttributes,
+    };
     use time::OffsetDateTime;
 
     use super::AdoDevOpsPat;
@@ -147,7 +146,7 @@ mod test {
                     created_on: OffsetDateTime::now_utc(),
                     updated_on: OffsetDateTime::now_utc(),
                     recovery_level: "something".into(),
-                }
+                },
             },
             pat: KeyVaultGetSecretResponse {
                 value: "patpat".into(),
@@ -158,10 +157,10 @@ mod test {
                     created_on: OffsetDateTime::now_utc(),
                     updated_on: OffsetDateTime::now_utc(),
                     recovery_level: "something".into(),
-                }
+                },
             },
         }
-    }    
+    }
 
     #[test]
     fn test_adodevopspat_organization() {

@@ -1,15 +1,13 @@
+use crate::dev_ops_pats::{azure_dev_ops_pats, AdoDevOpsPat};
 use anyhow::{Context, Result};
 use azure_identity::DefaultAzureCredential;
-use azure_security_keyvault::{
-    KeyvaultClient, SecretClient,
-};
+use azure_identity::TokenCredentialOptions;
+use azure_security_keyvault::{KeyvaultClient, SecretClient};
 use base64::prelude::*;
 use futures::StreamExt;
-use std:: sync::Arc;
+use std::sync::Arc;
 use tokio::task::JoinHandle;
 use tracing::{info, warn};
-
-use crate::dev_ops_pats::{azure_dev_ops_pats, AdoDevOpsPat};
 
 pub struct Secrets {
     pub splunk_host: Option<String>,
@@ -84,7 +82,10 @@ fn get_secret(client: &SecretClient, name: &str) -> JoinHandle<Option<String>> {
 /// Get all the secrets from KeyVault
 pub async fn get_keyvault_secrets(keyvault_name: &str) -> Result<Secrets> {
     info!("Getting Default Azure Credentials");
-    let credential = Arc::new(DefaultAzureCredential::default());
+    let credential = Arc::new(
+        DefaultAzureCredential::create(TokenCredentialOptions::default())
+            .context("Unable to build default Azure Credentials")?,
+    );
 
     info!("KeyVault Secret Client created");
     let keyvault_url = format!("https://{keyvault_name}.vault.azure.net");
@@ -176,5 +177,3 @@ pub async fn get_keyvault_secrets(keyvault_name: &str) -> Result<Secrets> {
         ado_pats,
     })
 }
-
-

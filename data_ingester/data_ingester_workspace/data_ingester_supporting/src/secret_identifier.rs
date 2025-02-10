@@ -1,6 +1,5 @@
 use anyhow::Result;
 
-
 /// Extract information about a secret from the keyvault secret ID.
 /// format is "class--name--type"
 /// where:
@@ -45,6 +44,6 @@ mod test {
         assert_eq!(secret_id.id, "azure-dev-ops--foo--org");
         assert_eq!(secret_id._class, "azure-dev-ops");
         assert_eq!(secret_id.name, "foo");
-        assert_eq!(secret_id.token_type, "org");                        
+        assert_eq!(secret_id.token_type, "org");
     }
 }

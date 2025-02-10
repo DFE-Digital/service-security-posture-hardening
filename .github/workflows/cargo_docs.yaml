@@ -23,7 +23,7 @@ jobs:
       - name: toolchain
         uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: nightly-2025-01-20
+          toolchain: nightly-2025-02-05
           targets: x86_64-unknown-linux-musl
           components: rust-src, clippy
 
