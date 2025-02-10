@@ -1,6 +1,6 @@
 use std::sync::LazyLock;
 
-use crate::ado_dev_ops_client::AzureDevOpsClient;
+use crate::azure_dev_ops_client_oauth::AzureDevOpsClientOauth;
 use anyhow::Context;
 use data_ingester_splunk::splunk::Splunk;
 use data_ingester_supporting::keyvault::get_keyvault_secrets;
@@ -8,7 +8,7 @@ use tracing_subscriber::EnvFilter;
 
 #[allow(unused)]
 pub(crate) struct TestSetup {
-    pub(crate) ado: AzureDevOpsClient,
+    pub(crate) ado: AzureDevOpsClientOauth,
     pub(crate) organization: String,
     pub(crate) project: String,
     pub(crate) repo: String,
@@ -23,6 +23,8 @@ pub(crate) static TEST_SETUP: LazyLock<TestSetup> = LazyLock::new(test_setup_set
 
 #[cfg(test)]
 fn test_setup_setup() -> TestSetup {
+    use crate::azure_dev_ops_client_oauth::AzureDevOpsClientOauth;
+
     let runtime = tokio::runtime::Runtime::new().unwrap();
 
     tracing_subscriber::FmtSubscriber::builder()
@@ -35,7 +37,7 @@ fn test_setup_setup() -> TestSetup {
         )
         .await
         .unwrap();
-        let ado = AzureDevOpsClient::new(
+        let ado = AzureDevOpsClientOauth::new(
             secrets
                 .azure_client_id
                 .as_ref()
