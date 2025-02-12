@@ -20,16 +20,15 @@
     <a href="ssphp_digital_services_dashboard_help">Dashboard Information</a>
   </collection>
 
-{% if environment=="_DEV" %}
-
   <collection label="DCAP Utilities" >
+    <a href="ssphp_manage_exemptions">Manage Use Case Exemptions</a>
+{% if environment=="_DEV" %}
     <a href="ssphp_dfe_healthcheck">DCAP Healthcheck</a>
     <a href="ssphp_foundational_systems_list_controls">Foundational Systems Controls List</a>
     <a href="ssphp_dfe_use_case_inventory">Digital Services Controls List</a>
     <a href="ssphp_dashboard_usage">Dashboard Usage</a>
-  </collection>
-
 {% endif %}
+  </collection>
 
 <a href="ssphp_dashboard_report_issue" target="_blank">Report an Issue</a>
 

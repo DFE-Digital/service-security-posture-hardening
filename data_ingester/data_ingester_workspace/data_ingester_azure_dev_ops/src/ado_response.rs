@@ -1,4 +1,4 @@
-use anyhow::{Result, anyhow};
+use anyhow::{anyhow, Result};
 use data_ingester_splunk::splunk::ToHecEvents;
 use itertools::Itertools;
 use reqwest::header::HeaderMap;
@@ -174,12 +174,11 @@ impl ToHecEvents for AdoResponse {
             })
             .partition_result();
         if !err.is_empty() {
-            return Err(anyhow!(
-                err.iter()
-                    .map(|err| format!("{:?}", err))
-                    .collect::<Vec<String>>()
-                    .join("\n")
-            ));
+            return Err(anyhow!(err
+                .iter()
+                .map(|err| format!("{:?}", err))
+                .collect::<Vec<String>>()
+                .join("\n")));
         }
         Ok(ok)
     }
@@ -238,12 +237,11 @@ impl ToHecEvents for &AdoResponse {
             })
             .partition_result();
         if !err.is_empty() {
-            return Err(anyhow!(
-                err.iter()
-                    .map(|err| format!("{:?}", err))
-                    .collect::<Vec<String>>()
-                    .join("\n")
-            ));
+            return Err(anyhow!(err
+                .iter()
+                .map(|err| format!("{:?}", err))
+                .collect::<Vec<String>>()
+                .join("\n")));
         }
         Ok(ok)
     }

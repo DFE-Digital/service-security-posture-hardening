@@ -1,0 +1,229 @@
+<form version="1.1" theme="dark">
+  <label>Digital Services : Manage Use Case Exemptions</label>
+  <description>{{environment}} v0.0.7</description>
+  
+  
+  <fieldset submitButton="$tkn_show_submit$" autoRun="false">
+    <input type="text" token="tkn_use_case">
+      <label>Use Case</label>
+    </input>
+    
+    <input type="text" token="tkn_resource">
+      <label>Resource [regex]</label>
+      <default>.*</default>
+      <initialValue>.*</initialValue>
+    </input>
+    
+    <input type="text" token="tkn_portfolio">
+      <label>Portfolio</label>
+    </input>
+    
+    <input type="text" token="tkn_service_line">
+      <label>Service Line</label>
+    </input>
+    
+    <input type="text" token="tkn_product">
+      <label>Product</label>
+    </input>
+    
+    <input type="text" token="tkn_reason">
+      <label>Reason</label>
+    </input>
+    
+    <input type="dropdown" token="tkn_status">
+      <label>Status</label>
+      <choice value="exempt">Exempt</choice>
+      <choice value="comply">Comply</choice>
+      <default>exempt</default>
+      <initialValue>exempt</initialValue>
+    </input>
+  </fieldset>
+  
+  <row>
+    <panel>
+      
+    <input type="radio" token="true" searchWhenChanged="true">
+      <label>View Panel</label>
+      <choice value="M">Manage Exemptions</choice>
+      <choice value="S">Show Use Cases that were Exempted</choice>
+      <default>M</default>
+      <initialValue>M</initialValue>
+        <change>
+          <condition value="M">
+            <set token="tkn_show_M">true</set>
+            <unset token="tkn_show_S"></unset>
+          </condition>
+          <condition value="S">
+            <set token="tkn_show_S">true</set>
+            <unset token="tkn_show_M"></unset>
+          </condition>
+        </change>
+    </input>
+    
+    </panel>
+  </row>
+  
+  <row depends="$debug$">
+    <panel>
+      <title>Exemption List</title>
+      <table>
+        <search>
+          <query>
+| makeresults
+| eval ssphp.exemption.use_case.id=$tkn_use_case|s$,
+       ssphp.exemption.service.portfolio=$tkn_portfolio|s$,
+       ssphp.exemption.service.service_line=$tkn_service_line|s$,
+       ssphp.exemption.service.product=$tkn_product|s$,
+       ssphp.exemption.resource.id=$tkn_resource|s$,
+       ssphp.exemption.authorisation.user=$tkn_user_name|s$,
+       ssphp.exemption.authorisation.reason=$tkn_reason|s$,
+       ssphp.exemption.status=$tkn_status|s$
+       
+| table ssphp.exemption.use_case.id, ssphp.exemption.resource.id, ssphp.exemption.service.portfolio, ssphp.exemption.service.service_line, ssphp.exemption.service.product, ssphp.exemption.authorisation.user, ssphp.exemption.authorisation.reason, ssphp.exemption.status
+
+| makejson ssphp.* output=_raw
+| fields _time, _raw
+| collect output_format=hec testmode=f index="ssphp_metrics_exemptions{{environment}}"
+          </query>
+          <done>
+            <set token="sd">1</set>
+          </done>
+        </search>
+      </table>
+    </panel>
+  </row>
+  
+  
+  <row depends="$debug$">
+    <panel>
+      <table>
+        <search>
+          <query>
+| rest /services/authentication/current-context splunk_server=local
+| table username
+          </query>
+          <done>
+            <set token="tkn_user_name">$result.username$</set>
+          </done>
+        </search>
+      </table>
+    </panel>
+  </row>
+  
+  
+  <row depends="$tkn_show_M$">
+    <panel>
+      <title>Exemption List</title>
+      <table>
+        <search>
+          <query>
+index="ssphp_metrics_exemptions{{environment}}"
+
+| eval ssphp.exemption.authorisation.time=strftime('_time',"%Y-%m-%d %H:%M:%S"),
+       depend=$sd$
+
+| table ssphp.exemption.use_case.id,
+        ssphp.exemption.resource.id,
+        ssphp.exemption.service.portfolio,
+        ssphp.exemption.service.service_line,
+        ssphp.exemption.service.product,
+        ssphp.exemption.authorisation.user,
+        ssphp.exemption.authorisation.reason,
+        ssphp.exemption.status,
+        ssphp.exemption.authorisation.time
+
+| sort 0 - ssphp.exemption.authorisation.time
+          </query>
+          <done>
+            <set token="sd">2</set>
+          </done>
+          <earliest>0</earliest>
+          <latest>now</latest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="count">20</option>
+        <option name="dataOverlayMode">none</option>
+        <option name="drilldown">none</option>
+        <option name="percentagesRow">false</option>
+        <option name="rowNumbers">false</option>
+        <option name="totalsRow">false</option>
+        <option name="wrap">true</option>
+      </table>
+    </panel>
+  </row>
+  
+  
+  <row depends="$tkn_show_S$">
+    <panel>
+      <title>Exempted Use Cases</title>
+      <table>
+        <search>
+          <query>
+`ssphp_summary_index{{environment}}` (NOT ssphp.type="exclusion") (NOT ssphp.source.foundational_system="*") earliest=-2d@d latest=now ssphp.exemption.status="exempt"
+
+| eventstats max(SSPHP_RUN) as max_SSPHP_RUN by ssphp.use_case.id 
+| where SSPHP_RUN='max_SSPHP_RUN'
+| search ssphp.service.product!="unassigned"
+| fields - max_SSPHP_RUN
+
+| search NOT ssphp.assessment.sub_source="true"
+
+| eval ssphp.use_case.savedsearch=coalesce('ssphp.use_case.savedsearch','ssphp.use_case.savedsearch{}'),
+       ssphp.assessment.categories=mvappend('ssphp.assessment.categories','ssphp.assessment.categories{}'),
+       ssphp.assessment.tactics=mvappend('ssphp.assessment.tactics','ssphp.assessment.tactics{}'),
+       ssphp.assessment.techniques=mvappend('ssphp.assessment.techniques','ssphp.assessment.techniques{}'),
+       ssphp.assessment.threats=mvappend('ssphp.assessment.threats','ssphp.assessment.threats{}'),
+       ssphp.benchmark.control.rationale=mvappend('ssphp.benchmark.control.rationale','ssphp.benchmark.control.rationale{}')
+       
+| fields - ssphp.assessment.categories{}, ssphp.assessment.tactics{}, ssphp.assessment.techniques{}, ssphp.assessment.threats{}, ssphp.benchmark.control.rationale{}, ssphp.use_case.savedsearch{}
+| fields ssphp.*, SSPHP_RUN, SSPHP_UID 
+
+
+| eval ssphp.assessment.consequence=replace('ssphp.assessment.consequence',"\&lt;P\&gt;",""),
+       ssphp.assessment.description=if('ssphp.use_case.category'="VULNERABILITY",mvappend('ssphp.assessment.consequence','ssphp.assessment.cve'),'ssphp.assessment.description'),
+
+       ssphp.assessment.description=if('ssphp.use_case.category'="POSTURE",replace('ssphp.assessment.description',"\&lt;(\/)?a|A\&gt;",""),'ssphp.assessment.description'),
+       ssphp.assessment.description=if('ssphp.use_case.category'="POSTURE",replace('ssphp.assessment.description',"\&lt;br\&gt;",""),'ssphp.assessment.description'),
+       ssphp.assessment.description=if('ssphp.use_case.category'="POSTURE",replace('ssphp.assessment.description'," target=\"_blank\" href=",""),'ssphp.assessment.description'),
+       ssphp.resource.id=if('ssphp.use_case.category'="POSTURE",mvdedup(mvappend(lower('ssphp.resource.NativeResourceId'), lower('ssphp.resource.id'), lower('ssphp.resource.ResourceId'))),lower('ssphp.resource.id')),
+
+       ssphp.assessment.display_name=if('ssphp.use_case.category'="REPOS",'ssphp.benchmark.control.title','ssphp.assessment.display_name'),
+       ssphp.assessment.description=if('ssphp.use_case.category'="REPOS",'ssphp.benchmark.control.description','ssphp.assessment.description'),
+
+       ssphp.assessment.display_name=if('ssphp.use_case.category'="CODE_SCAN",'ssphp.assessment.title','ssphp.assessment.display_name'),
+       ssphp.resource.id=if('ssphp.use_case.category'="CODE_SCAN",mvdedup(mvappend(lower("/".'ssphp.resource.full_name'),lower('ssphp.resource.dependency.manifest_path'))),lower('ssphp.resource.id'))
+
+| eval ssphp.score.compliance_status=if('ssphp.score.score'="100","Compliant","Non-Compliant"),
+       ssphp.score.ciso_priority=case('ssphp.score.ciso_priority'=1,"DfE Mandated",
+                                      'ssphp.score.ciso_priority'=2,"Recommended",
+                                      1==1,"Desirable"),
+       ssphp.score.score='ssphp.score.score'."|".'ssphp.score.color',
+       ssphp.score.compliance_status='ssphp.score.compliance_status'."|".'ssphp.score.color'
+
+
+`ssphp_add_display_colours{{environment}}`
+
+| fillnull value="comply" ssphp.exemption.status
+
+| table ssphp.service.portfolio, ssphp.service.service_line, ssphp.service.product, ssphp.use_case.id, ssphp.use_case.title, ssphp.assessment.source, ssphp.assessment.display_name, ssphp.score.score, ssphp.score.compliance_status, ssphp.score.ciso_priority, ssphp.assessment.description, ssphp.score.color, ssphp.resource.id, ssphp.use_case.category, ssphp.resource.tenant, ssphp.resource.subscription, ssphp.resource.subscription_name, ssphp.resource.resource_group, ssphp.score.remediation_priority, ssphp.exemption.exemptions{}.*, ssphp.exemption.status, SSPHP_RUN, SSPHP_UID
+
+|sort 0 ssphp.service.portfolio, ssphp.service.service_line, ssphp.service.product, ssphp.use_case.id
+          </query>
+          <done>
+            <set token="sd">2</set>
+          </done>
+          <earliest>0</earliest>
+          <latest>now</latest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="count">20</option>
+        <option name="dataOverlayMode">none</option>
+        <option name="drilldown">none</option>
+        <option name="percentagesRow">false</option>
+        <option name="rowNumbers">false</option>
+        <option name="totalsRow">false</option>
+        <option name="wrap">true</option>
+      </table>
+    </panel>
+  </row>
+</form>
