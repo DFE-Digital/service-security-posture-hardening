@@ -1,39 +1,43 @@
 use std::sync::LazyLock;
 
-use crate::ado_dev_ops_client::AzureDevOpsClient;
+use crate::azure_dev_ops_client_oauth::AzureDevOpsClientOauth;
 use anyhow::Context;
 use data_ingester_splunk::splunk::Splunk;
 use data_ingester_supporting::keyvault::get_keyvault_secrets;
-use tracing::subscriber::DefaultGuard;
-use tracing_subscriber::{layer::SubscriberExt, EnvFilter};
+use tracing_subscriber::EnvFilter;
 
+#[allow(unused)]
 pub(crate) struct TestSetup {
-    pub(crate) ado: AzureDevOpsClient,
+    pub(crate) ado: AzureDevOpsClientOauth,
     pub(crate) organization: String,
+    pub(crate) project: String,
+    pub(crate) repo: String,
     pub(crate) splunks: Vec<Splunk>,
     #[allow(unused)]
-    pub(crate) tracing_guard: DefaultGuard,
+    // pub(crate) tracing_guard: DefaultGuard,
     pub(crate) runtime: tokio::runtime::Runtime,
 }
 
-//#[cfg(feature = "live_tests")]
+#[allow(unused)]
 pub(crate) static TEST_SETUP: LazyLock<TestSetup> = LazyLock::new(test_setup_setup);
 
-//#[cfg(feature = "live_tests")]
+#[cfg(test)]
 fn test_setup_setup() -> TestSetup {
+    use crate::azure_dev_ops_client_oauth::AzureDevOpsClientOauth;
+
     let runtime = tokio::runtime::Runtime::new().unwrap();
 
-    let (ado, organization, splunks, tracing_guard) = runtime.block_on(async {
-        let subscriber =
-            tracing_subscriber::FmtSubscriber::new().with(EnvFilter::from_default_env());
-        let tracing_guard = tracing::subscriber::set_default(subscriber);
+    tracing_subscriber::FmtSubscriber::builder()
+        .with_env_filter(EnvFilter::from_env("RUST_LOG"))
+        .init();
 
+    let (ado, splunks) = runtime.block_on(async {
         let secrets = get_keyvault_secrets(
             &std::env::var("KEY_VAULT_NAME").expect("Need KEY_VAULT_NAME enviornment variable"),
         )
         .await
         .unwrap();
-        let ado = AzureDevOpsClient::new(
+        let ado = AzureDevOpsClientOauth::new(
             secrets
                 .azure_client_id
                 .as_ref()
@@ -75,19 +79,19 @@ fn test_setup_setup() -> TestSetup {
         )
         .unwrap();
 
-        let organization = "aktest0831";
-        (
-            ado,
-            organization.to_string(),
-            vec![splunk, splunk_ian],
-            tracing_guard,
-        )
+        (ado, vec![splunk, splunk_ian])
     });
+
+    let organization = "aktest0831".to_string();
+    let project = "foo".to_string();
+    let repo = "bar".to_string();
+
     TestSetup {
         ado,
         organization,
+        project,
+        repo,
         splunks,
-        tracing_guard,
         runtime,
     }
 }

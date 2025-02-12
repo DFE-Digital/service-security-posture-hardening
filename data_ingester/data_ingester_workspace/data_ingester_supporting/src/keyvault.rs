@@ -1,7 +1,10 @@
+use crate::dev_ops_pats::{azure_dev_ops_pats, AdoDevOpsPat};
 use anyhow::{Context, Result};
-use azure_identity::{DefaultAzureCredential, TokenCredentialOptions};
+use azure_identity::DefaultAzureCredential;
+use azure_identity::TokenCredentialOptions;
 use azure_security_keyvault::{KeyvaultClient, SecretClient};
 use base64::prelude::*;
+use futures::StreamExt;
 use std::sync::Arc;
 use tokio::task::JoinHandle;
 use tracing::{info, warn};
@@ -32,6 +35,7 @@ pub struct Secrets {
     pub mssql_db: Option<String>,
     pub mssql_username: Option<String>,
     pub mssql_password: Option<String>,
+    pub ado_pats: Vec<AdoDevOpsPat>,
 }
 
 /// Store a Github App token
@@ -128,6 +132,20 @@ pub async fn get_keyvault_secrets(keyvault_name: &str) -> Result<Secrets> {
         None
     };
 
+    let secrets = client
+        .list_secrets()
+        .into_stream()
+        .filter_map(|result| async move {
+            match result {
+                Ok(result) => Some(result.value),
+                Err(_) => None,
+            }
+        })
+        .concat()
+        .await;
+
+    let ado_pats = azure_dev_ops_pats(&client, &secrets).await;
+
     Ok(Secrets {
         ian_splunk_host: ian_splunk_host.await?,
         ian_splunk_token: ian_splunk_token.await?,
@@ -156,5 +174,6 @@ pub async fn get_keyvault_secrets(keyvault_name: &str) -> Result<Secrets> {
         mssql_db: mssql_db.await?,
         mssql_username: mssql_username.await?,
         mssql_password: mssql_password.await?,
+        ado_pats,
     })
 }

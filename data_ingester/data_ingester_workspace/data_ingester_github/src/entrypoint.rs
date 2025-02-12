@@ -113,7 +113,7 @@ async fn github_collect_installation_org(
     let org_repos = github_client
         .org_repos(&org_name)
         .await
-        .context("Getting repos for {org_name}")?;
+        .context(format!("Getting repos for {org_name}"))?;
     info!(
         "Retreived {} repos for {}",
         org_repos.repos().len(),
@@ -131,7 +131,7 @@ async fn github_collect_installation_org(
     let (teams, mut teams_org) = github_client
         .org_teams_with_children(&org_name)
         .await
-        .context("Getting Teams for {org_name}")?;
+        .context(format!("Getting Teams for {org_name}"))?;
 
     let teams_events = (&teams)
         .to_hec_events()
