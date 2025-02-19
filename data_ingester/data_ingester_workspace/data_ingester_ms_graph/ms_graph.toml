@@ -141,3 +141,4 @@ beta_group_settings = { endpoint = "/beta/settings", permissions_required = [
 | mvexpand zipped
 | where zipped="EnableGroupCreation,false"""  },
 ] }
+

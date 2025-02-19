@@ -64,7 +64,6 @@ impl MsGraphData {
                         vec![]
                     }
                 };
-
                 match splunk.send_batch(hec_events).await {
                     Ok(_) => info!("Sent to Splunk"),
                     Err(e) => {
