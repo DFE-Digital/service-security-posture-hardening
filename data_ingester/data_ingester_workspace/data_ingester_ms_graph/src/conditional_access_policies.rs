@@ -22,79 +22,75 @@ pub struct ConditionalAccessPolicy {
 impl ConditionalAccessPolicy {
     pub fn affects_user(&self, user: &User) -> bool {
         let condition_users = &self.conditions.users;
-        let result = {
-            // Users
-            if condition_users.include_users.contains("All") {
-                return true;
-            }
-            if condition_users.include_users.contains(&user.id) {
-                return true;
-            }
 
-            // Groups
-            if condition_users.include_groups.contains("All") {
-                return true;
-            }
-            for group_id in user.groups().ids() {
-                if condition_users
-                    .include_groups
-                    .contains(&group_id.to_owned())
-                {
-                    return true;
-                }
-            }
+        // -- Check excludes
 
-            // Roles
-            if condition_users.include_roles.contains("All") {
-                return true;
-            }
-            for role_id in user.roles().ids() {
-                if condition_users.include_roles.contains(role_id) {
-                    return true;
-                }
-            }
-            false
-        };
-
-        // Cap dosen't apply
-        if !result {
-            return result;
+        // Users
+        if condition_users.exclude_users.contains("All") {
+            return false;
+        }
+        if condition_users.exclude_users.contains(&user.id) {
+            return false;
         }
 
-        // Check excludes
-        {
-            // Users
-            if condition_users.exclude_users.contains("All") {
-                return false;
-            }
-            if condition_users.exclude_users.contains(&user.id) {
-                return false;
-            }
-
-            // Groups
-            if condition_users.exclude_groups.contains("All") {
-                return false;
-            }
-            for group_id in user.groups().ids() {
-                if condition_users
-                    .exclude_groups
-                    .contains(&group_id.to_owned())
-                {
-                    return false;
-                }
-            }
-
-            // Roles
-            if condition_users.exclude_roles.contains("All") {
-                return false;
-            }
-            for role_id in user.roles().ids() {
-                if condition_users.exclude_roles.contains(role_id) {
-                    return false;
-                }
-            }
-            true
+        // Groups
+        if condition_users.exclude_groups.contains("All") {
+            return false;
         }
+        for group_id in user.groups().ids() {
+            if condition_users
+                .exclude_groups
+                .contains(&group_id.to_owned())
+            {
+                return false;
+            }
+        }
+
+        // Roles
+        if condition_users.exclude_roles.contains("All") {
+            return false;
+        }
+        for role_id in user.roles().ids() {
+            if condition_users.exclude_roles.contains(role_id) {
+                return false;
+            }
+        }
+
+        // -- Check includes
+
+        // Users
+        if condition_users.include_users.contains("All") {
+            return true;
+        }
+        if condition_users.include_users.contains(&user.id) {
+            return true;
+        }
+
+        // Groups
+        if condition_users.include_groups.contains("All") {
+            return true;
+        }
+        for group_id in user.groups().ids() {
+            if condition_users
+                .include_groups
+                .contains(&group_id.to_owned())
+            {
+                return true;
+            }
+        }
+
+        // Roles
+        if condition_users.include_roles.contains("All") {
+            return true;
+        }
+        for role_id in user.roles().ids() {
+            if condition_users.include_roles.contains(role_id) {
+                return true;
+            }
+        }
+
+        // CAP does not apply
+        false
     }
 
     pub fn to_user_conditional_access_policy(&self) -> UserConditionalAccessPolicy {
@@ -281,7 +277,7 @@ mod conditional_access_policy {
             .users
             .exclude_users
             .insert(user.id.to_owned());
-        assert!(cap.affects_user(&user));
+        assert!(!cap.affects_user(&user));
     }
 
     #[test]
@@ -293,7 +289,7 @@ mod conditional_access_policy {
             .include_users
             .insert(user.id.to_owned());
         _ = cap.conditions.users.exclude_users.insert("All".to_owned());
-        assert!(cap.affects_user(&user));
+        assert!(!cap.affects_user(&user));
     }
 
     #[test]
@@ -305,7 +301,7 @@ mod conditional_access_policy {
             .include_users
             .insert(user.id.to_owned());
         _ = cap.conditions.users.exclude_groups.insert("All".to_owned());
-        assert!(cap.affects_user(&user));
+        assert!(!cap.affects_user(&user));
     }
     #[test]
     fn affected_user_excluded_by_group_id() {
@@ -320,7 +316,7 @@ mod conditional_access_policy {
             .users
             .exclude_groups
             .insert("group1".to_owned());
-        assert!(cap.affects_user(&user));
+        assert!(!cap.affects_user(&user));
     }
     #[test]
     fn affected_user_excluded_by_role_all() {
@@ -331,7 +327,7 @@ mod conditional_access_policy {
             .include_users
             .insert(user.id.to_owned());
         _ = cap.conditions.users.exclude_roles.insert("All".to_owned());
-        assert!(cap.affects_user(&user));
+        assert!(!cap.affects_user(&user));
     }
     #[test]
     fn affected_user_excluded_by_role_id() {
@@ -346,6 +342,6 @@ mod conditional_access_policy {
             .users
             .exclude_roles
             .insert("role1".to_owned());
-        assert!(cap.affects_user(&user));
+        assert!(!cap.affects_user(&user));
     }
 }
