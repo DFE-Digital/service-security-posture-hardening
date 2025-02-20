@@ -36,32 +36,8 @@ use std::iter;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::mpsc::UnboundedSender;
-use url::Url;
 
-pub async fn login(client_id: &str, client_secret: &str, tenant_id: &str) -> Result<MsGraph> {
-    let client_application = ConfidentialClientApplication::builder(client_id)
-        .with_client_secret(client_secret)
-        .with_tenant(tenant_id)
-        .build();
-
-    let client_config = GraphClientConfiguration::new()
-        .client_application(client_application.clone())
-        .timeout(Duration::from_secs(30))
-        .retry(Some(10))
-        .wait_for_retry_after_headers(true);
-
-    let client = GraphClient::from(client_config.clone());
-
-    let mut beta_client = GraphClient::from(client_config.clone());
-    beta_client.use_beta();
-
-    Ok(MsGraph {
-        client,
-        beta_client,
-        client_application,
-    })
-}
-
+/// A Client for Ms Graph
 #[derive(Clone)]
 pub struct MsGraph {
     client: Graph,
@@ -78,44 +54,28 @@ pub enum MsGraphGetResponse {
 }
 
 impl MsGraph {
-    async fn get(&self, client: &Graph, url: &str) -> Result<Vec<Value>> {
-        let current_client = graph_http::api_impl::Client::builder()
-            .client_application(self.client_application.clone())
-            .retry(Some(20))
-            .wait_for_retry_after_headers(true)
+    pub async fn new(client_id: &str, client_secret: &str, tenant_id: &str) -> Result<MsGraph> {
+        let client_application = ConfidentialClientApplication::builder(client_id)
+            .with_client_secret(client_secret)
+            .with_tenant(tenant_id)
             .build();
 
-        let mut header_map = HeaderMap::new();
+        let client_config = GraphClientConfiguration::new()
+            .client_application(client_application.clone())
+            .timeout(Duration::from_secs(30))
+            .retry(Some(10))
+            .wait_for_retry_after_headers(true);
 
-        _ = header_map
-            .entry(CONTENT_TYPE)
-            .or_insert(HeaderValue::from_static("application/json"));
+        let client = GraphClient::from(client_config.clone());
 
-        let full_url = Url::parse(&format!("{}{}", client.url().as_str(), url))?;
+        let mut beta_client = GraphClient::from(client_config.clone());
+        beta_client.use_beta();
 
-        let request_components = RequestComponents::new(
-            graph_core::resource::ResourceIdentity::Custom,
-            full_url,
-            Method::GET,
-        );
-
-        let request_handler =
-            RequestHandler::new(current_client.clone(), request_components, None, None)
-                .headers(header_map);
-
-        let mut stream = request_handler.paging().stream::<MsGraphGetResponse>()?;
-
-        let mut collection = Vec::default();
-        while let Some(result) = stream.next().await {
-            let response = result?;
-            let body = response.into_body()?;
-            match body {
-                MsGraphGetResponse::Collection { value } => collection.extend(value),
-                MsGraphGetResponse::Single(value) => collection.push(value),
-            }
-        }
-
-        Ok(collection)
+        Ok(MsGraph {
+            client,
+            beta_client,
+            client_application,
+        })
     }
 
     pub async fn get_url(&self, url: &str) -> Result<Vec<Value>> {
@@ -162,7 +122,7 @@ impl MsGraph {
     /// MSGraph Permission: OrgSettings-Forms.Read.All
     /// https://graph.microsoft.com/beta/admin/forms
     pub async fn get_admin_form_settings(&self) -> Result<AdminFormSettings> {
-        let result = self.get(&self.beta_client, "/admin/forms").await?;
+        let result = self.get_url("/beta/admin/forms").await?;
         Ok(AdminFormSettings { inner: result })
     }
 
@@ -171,20 +131,20 @@ impl MsGraph {
     /// https://learn.microsoft.com/en-us/graph/api/resources/groupsetting?view=graph-rest-1.0
     /// The /beta version of this resource is named directorySetting.
     pub async fn list_group_settings(&self) -> Result<GroupSettings> {
-        let result = self.get(&self.client, "/groupSettings").await?;
+        let result = self.get_url("/groupSettings").await?;
         Ok(GroupSettings { inner: result })
     }
 
     pub async fn list_role_eligiblity_schedule_instance(
         &self,
     ) -> Result<RoleEligibilityScheduleInstance> {
-        let result = self.get(&self.client, "/roleManagement/directory/roleAssignmentScheduleInstances?$expand=activatedUsing,appScope,directoryScope,principal,roleDefinition").await?;
+        let result = self.get_url("/roleManagement/directory/roleAssignmentScheduleInstances?$expand=activatedUsing,appScope,directoryScope,principal,roleDefinition").await?;
         Ok(RoleEligibilityScheduleInstance { inner: result })
     }
 
     /// M365 V2 1.1.17
     pub async fn list_legacy_policies(&self) -> Result<LegacyPolicies> {
-        let result = self.get(&self.beta_client, "/legacy/policies").await?;
+        let result = self.get_url("/legacy/policies").await?;
         Ok(LegacyPolicies { inner: result })
     }
 
@@ -440,9 +400,7 @@ impl MsGraph {
 
     /// 1.22
     pub async fn get_device_registration_policy(&self) -> Result<DeviceRegistrationPolicy> {
-        let result = self
-            .get(&self.beta_client, "/policies/deviceRegistrationPolicy")
-            .await?;
+        let result = self.get_url("/policies/deviceRegistrationPolicy").await?;
         Ok(DeviceRegistrationPolicy { inner: result })
     }
 }
@@ -827,7 +785,7 @@ pub async fn m365(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
     info!("Starting M365 collection");
     info!("GIT_HASH: {}", env!("GIT_HASH"));
 
-    let ms_graph = login(
+    let ms_graph = MsGraph::new(
         secrets
             .azure_client_id
             .as_ref()
@@ -959,7 +917,7 @@ pub async fn m365(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
 pub(crate) mod live_tests {
     use std::env;
 
-    use super::{login, MsGraph};
+    use super::MsGraph;
     use crate::users::UsersMap;
 
     use anyhow::{Context, Result};
@@ -970,7 +928,7 @@ pub(crate) mod live_tests {
         let secrets = get_keyvault_secrets(&env::var("KEY_VAULT_NAME")?).await?;
 
         set_ssphp_run("default")?;
-        let ms_graph = login(
+        let ms_graph = MsGraph::new(
             secrets
                 .azure_client_id
                 .as_ref()
@@ -985,11 +943,13 @@ pub(crate) mod live_tests {
                 .context("Expect azure_tenant_id secret")?,
         )
         .await?;
+
         let splunk = Splunk::new(
             secrets.splunk_host.as_ref().context("No value")?,
             secrets.splunk_token.as_ref().context("No value")?,
             true,
         )?;
+
         Ok((splunk, ms_graph))
     }
 
