@@ -1,6 +1,6 @@
 use anyhow::{Context, Result};
 use data_ingester_azure_rest::azure_rest::AzureRest;
-use data_ingester_ms_graph::ms_graph::login;
+use data_ingester_ms_graph::ms_graph::MsGraph;
 use data_ingester_ms_graph::users::UsersMap;
 use data_ingester_splunk::splunk::try_collect_send;
 use data_ingester_splunk::splunk::{set_ssphp_run, Splunk, ToHecEvents};
@@ -14,7 +14,7 @@ pub async fn azure_users(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<(
     info!("Starting Azure Users collection");
     info!("GIT_HASH: {}", env!("GIT_HASH"));
 
-    let ms_graph = login(
+    let ms_graph = MsGraph::new(
         secrets
             .azure_client_id
             .as_ref()
