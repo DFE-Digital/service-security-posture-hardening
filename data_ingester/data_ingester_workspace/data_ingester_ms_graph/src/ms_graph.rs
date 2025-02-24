@@ -240,7 +240,7 @@ impl MsGraph {
             .users()
             .list_user()
             .select(&[
-                "account_enabled",
+                "accountEnabled",
                 "assignedPlans",
                 "description",
                 "displayName",
