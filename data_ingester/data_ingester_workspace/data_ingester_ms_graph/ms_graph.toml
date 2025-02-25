@@ -132,6 +132,12 @@ user_registration_details = { endpoint = "/beta/reports/authenticationMethods/us
   { filename = "CIS_Microsoft_365_Foundations_Benchmark_v2.0.0.pdf", control_id = "1.1.2" },
 ] }
 
+organization = { endpoint = "/v1.0/organization", permissions_required = [
+  "",
+], cis_controls = [
+  { filename = "CIS_Microsoft_365_Foundations_Benchmark_v2.0.0.pdf", control_id = "1.1.12" },
+] }
+
 beta_group_settings = { endpoint = "/beta/settings", permissions_required = [
   "",
 ], cis_controls = [
