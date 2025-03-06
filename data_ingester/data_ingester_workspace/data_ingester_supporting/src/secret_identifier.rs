@@ -46,4 +46,14 @@ mod test {
         assert_eq!(secret_id.name, "foo");
         assert_eq!(secret_id.token_type, "org");
     }
+
+    #[test]
+    fn test_secret_identifiers_from_str_with_hyphen() {
+        let example = "https://test.vault.azure.net/secrets/azure-dev-ops--foo-bar-baz--org"; //azure-dev-ops--foo-bar-baz--org";
+        let secret_id = SecretIdentifier::from_str(example).expect("To parse");
+        assert_eq!(secret_id.id, "azure-dev-ops--foo-bar-baz--org");
+        assert_eq!(secret_id._class, "azure-dev-ops");
+        assert_eq!(secret_id.name, "foo-bar-baz");
+        assert_eq!(secret_id.token_type, "org");
+    }
 }
