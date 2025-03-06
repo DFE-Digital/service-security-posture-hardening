@@ -164,6 +164,16 @@ async fn collect_organization<A: AzureDevOpsClientMethods>(
                 &splunk,
             )
             .await;
+
+            let _ = try_collect_send(
+                &format!(
+                    "Git Repo Policy Configuration for {organization}/{project_name}/{}",
+                    repo.id()
+                ),
+                ado.git_repo_policy_configuration_get(organization, project_name, repo.id()),
+                &splunk,
+            )
+            .await;
         }
     }
     Ok(())

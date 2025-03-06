@@ -116,6 +116,29 @@ pub(crate) trait AzureDevOpsClientMethods: AzureDevOpsClient {
         self.get::<AdoResponse>(ado_metadata).await
     }
 
+    async fn git_repo_policy_configuration_get(
+        &self,
+        organization: &str,
+        project: &str,
+        repo_id: &str,
+    ) -> Result<AdoResponse> {
+        let url = format!(
+            "https://dev.azure.com/{organization}/{project}/_apis/git/policy/configurations?api-version={}&repositoryId={}",
+            self.api_version(),
+            repo_id
+        );
+        let ado_metadata = self.ado_metadata_builder()
+            .url(url)
+            .organization(organization)
+            .project(project)
+            .repo(repo_id)
+            .r#type("fn git_repo_policy_configuration_get")
+            .rest_docs("https://learn.microsoft.com/en-us/rest/api/azure/devops/git/policy-configurations/get?view=azure-devops-rest-7.1")
+            .build();
+
+        self.get::<AdoResponse>(ado_metadata).await
+    }
+
     async fn git_repository_list(&self, organization: &str, project: &str) -> Result<AdoResponse> {
         let url = format!(
             "https://dev.azure.com/{organization}/{project}/_apis/git/repositories?api-version={}",

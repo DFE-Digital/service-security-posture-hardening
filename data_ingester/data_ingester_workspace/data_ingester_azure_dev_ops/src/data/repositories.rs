@@ -26,6 +26,12 @@ pub(crate) struct Repository {
     web_url: String,
 }
 
+impl Repository {
+    pub fn id(&self) -> &str {
+        self.id.as_str()
+    }
+}
+
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct Project {
