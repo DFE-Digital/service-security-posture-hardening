@@ -13,7 +13,7 @@ pub struct Repositories {
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct Repository {
-    default_branch: String,
+    default_branch: Option<String>,
     id: String,
     is_disabled: bool,
     is_in_maintenance: bool,
@@ -50,7 +50,7 @@ impl From<AdoResponse> for Repositories {
             match serde_json::from_value(repo) {
                 Ok(repo) => Some(repo),
                 Err(err) => {
-                    error!(name="Azure DevOps", operation="From<AdoResposne> for Repositories", error=?err);
+                    error!(name="Azure DevOps", operation="From<AdoResponse> for Repositories", error=?err);
                     None
                 }
             }
