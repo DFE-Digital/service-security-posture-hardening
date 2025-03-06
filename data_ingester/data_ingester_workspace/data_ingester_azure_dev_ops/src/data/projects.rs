@@ -58,10 +58,15 @@ impl From<AdoResponse> for Projects {
 
 #[cfg(test)]
 mod test {
-    use crate::{ado_response::AdoResponse, data::projects::Projects, test_utils::TEST_SETUP};
+    use crate::{ado_response::AdoResponse, data::projects::Projects};
+
+    #[cfg(feature = "live_tests")]
+    use crate::test_utils::TEST_SETUP;
+
+    #[cfg(feature = "live_tests")]
     use anyhow::Result;
 
-    static PROJECTS_JSON: &'static str = r#"
+    static PROJECTS_JSON: &str = r#"
 {
   "count": 1,
   "value": [

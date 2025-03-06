@@ -4,12 +4,13 @@ use crate::conditional_access_policies::ConditionalAccessPolicies;
 use crate::groups::Groups;
 use data_ingester_supporting::dns::resolve_txt_record;
 use data_ingester_supporting::keyvault::Secrets;
-use tracing::error;
+use graph_oauth::ClientSecretCredential;
+use graph_rs_sdk::GraphClient;
+use graph_rs_sdk::GraphClientConfiguration;
 use tracing::info;
 
 use crate::msgraph_data::load_m365_toml;
 use crate::roles::RoleDefinitions;
-use crate::security_score::SecurityScores;
 use crate::users::Users;
 use crate::users::UsersMap;
 use anyhow::{Context, Result};
@@ -19,12 +20,11 @@ use data_ingester_splunk::splunk::{set_ssphp_run, Splunk};
 use futures::StreamExt;
 use graph_http::api_impl::RequestComponents;
 use graph_http::api_impl::RequestHandler;
+use graph_oauth::ConfidentialClientApplication;
 use graph_rs_sdk::header::HeaderMap;
 use graph_rs_sdk::header::HeaderValue;
 use graph_rs_sdk::header::CONTENT_TYPE;
 use graph_rs_sdk::http::Method;
-use graph_rs_sdk::oauth::AccessToken;
-use graph_rs_sdk::oauth::OAuth;
 use graph_rs_sdk::Graph;
 use graph_rs_sdk::ODataQuery;
 use serde::Deserialize;
@@ -34,61 +34,15 @@ use std::env;
 use std::fmt::Debug;
 use std::iter;
 use std::sync::Arc;
+use std::time::Duration;
 use tokio::sync::mpsc::UnboundedSender;
-use url::Url;
 
-pub async fn login(client_id: &str, client_secret: &str, tenant_id: &str) -> Result<MsGraph> {
-    let mut oauth = OAuth::new();
-    _ = oauth
-        .client_id(client_id)
-        .client_secret(client_secret)
-        .add_scope("https://graph.microsoft.com/.default")
-        .tenant_id(tenant_id);
-    let mut request = oauth.build_async().client_credentials();
-    let response = request.access_token().send().await?;
-
-    if response.status().is_success() {
-        let access_token: AccessToken = response.json().await?;
-
-        oauth.access_token(access_token);
-    } else {
-        // See if Microsoft Graph returned an error in the Response body
-        match response.json::<serde_json::Value>().await {
-            Ok(response) => {
-                error!("Ms graph login response:{:?}", response)
-            }
-            Err(_) => {
-                error!("Ms graph login: no response!");
-            }
-        }
-    }
-
-    let client = Graph::new(
-        oauth
-            .get_access_token()
-            .context("no access token")?
-            .bearer_token(),
-    );
-    let mut beta_client = Graph::new(
-        oauth
-            .get_access_token()
-            .context("no access token")?
-            .bearer_token(),
-    );
-    beta_client.use_beta();
-
-    Ok(MsGraph {
-        client,
-        beta_client,
-        oauth,
-    })
-}
-
+/// A Client for Ms Graph
 #[derive(Clone)]
 pub struct MsGraph {
     client: Graph,
     beta_client: Graph,
-    oauth: OAuth,
+    client_application: ConfidentialClientApplication<ClientSecretCredential>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -100,54 +54,36 @@ pub enum MsGraphGetResponse {
 }
 
 impl MsGraph {
-    async fn get(&self, client: &Graph, url: &str) -> Result<Vec<Value>> {
-        let current_client = graph_http::api_impl::Client::new(
-            self.oauth
-                .get_access_token()
-                .context("no access token")?
-                .bearer_token(),
-        );
+    pub async fn new(client_id: &str, client_secret: &str, tenant_id: &str) -> Result<MsGraph> {
+        let client_application = ConfidentialClientApplication::builder(client_id)
+            .with_client_secret(client_secret)
+            .with_tenant(tenant_id)
+            .build();
 
-        let mut header_map = HeaderMap::new();
+        let client_config = GraphClientConfiguration::new()
+            .client_application(client_application.clone())
+            .timeout(Duration::from_secs(30))
+            .retry(Some(10))
+            .wait_for_retry_after_headers(true);
 
-        _ = header_map
-            .entry(CONTENT_TYPE)
-            .or_insert(HeaderValue::from_static("application/json"));
+        let client = GraphClient::from(client_config.clone());
 
-        let full_url = Url::parse(&format!("{}{}", client.url().as_str(), url))?;
+        let mut beta_client = GraphClient::from(client_config.clone());
+        beta_client.use_beta();
 
-        let request_components = RequestComponents::new(
-            graph_core::resource::ResourceIdentity::Custom,
-            full_url,
-            Method::GET,
-        );
-
-        let request_handler =
-            RequestHandler::new(current_client.clone(), request_components, None, None)
-                .headers(header_map);
-
-        let mut stream = request_handler.paging().stream::<MsGraphGetResponse>()?;
-
-        let mut collection = Vec::default();
-        while let Some(result) = stream.next().await {
-            let response = result?;
-            let body = response.into_body()?;
-            match body {
-                MsGraphGetResponse::Collection { value } => collection.extend(value),
-                MsGraphGetResponse::Single(value) => collection.push(value),
-            }
-        }
-
-        Ok(collection)
+        Ok(MsGraph {
+            client,
+            beta_client,
+            client_application,
+        })
     }
 
     pub async fn get_url(&self, url: &str) -> Result<Vec<Value>> {
-        let current_client = graph_http::api_impl::Client::new(
-            self.oauth
-                .get_access_token()
-                .context("no access token")?
-                .bearer_token(),
-        );
+        let current_client = graph_http::api_impl::Client::builder()
+            .client_application(self.client_application.clone())
+            .retry(Some(20))
+            .wait_for_retry_after_headers(true)
+            .build();
 
         let mut header_map = HeaderMap::new();
 
@@ -173,12 +109,12 @@ impl MsGraph {
         while let Some(result) = stream.next().await {
             let response = result?;
             let body = response.into_body()?;
+
             match body {
                 MsGraphGetResponse::Collection { value } => collection.extend(value),
                 MsGraphGetResponse::Single(value) => collection.push(value),
             }
         }
-
         Ok(collection)
     }
 
@@ -186,7 +122,7 @@ impl MsGraph {
     /// MSGraph Permission: OrgSettings-Forms.Read.All
     /// https://graph.microsoft.com/beta/admin/forms
     pub async fn get_admin_form_settings(&self) -> Result<AdminFormSettings> {
-        let result = self.get(&self.beta_client, "/admin/forms").await?;
+        let result = self.get_url("/beta/admin/forms").await?;
         Ok(AdminFormSettings { inner: result })
     }
 
@@ -195,20 +131,20 @@ impl MsGraph {
     /// https://learn.microsoft.com/en-us/graph/api/resources/groupsetting?view=graph-rest-1.0
     /// The /beta version of this resource is named directorySetting.
     pub async fn list_group_settings(&self) -> Result<GroupSettings> {
-        let result = self.get(&self.client, "/groupSettings").await?;
+        let result = self.get_url("/groupSettings").await?;
         Ok(GroupSettings { inner: result })
     }
 
     pub async fn list_role_eligiblity_schedule_instance(
         &self,
     ) -> Result<RoleEligibilityScheduleInstance> {
-        let result = self.get(&self.client, "/roleManagement/directory/roleAssignmentScheduleInstances?$expand=activatedUsing,appScope,directoryScope,principal,roleDefinition").await?;
+        let result = self.get_url("/roleManagement/directory/roleAssignmentScheduleInstances?$expand=activatedUsing,appScope,directoryScope,principal,roleDefinition").await?;
         Ok(RoleEligibilityScheduleInstance { inner: result })
     }
 
     /// M365 V2 1.1.17
     pub async fn list_legacy_policies(&self) -> Result<LegacyPolicies> {
-        let result = self.get(&self.beta_client, "/legacy/policies").await?;
+        let result = self.get_url("/legacy/policies").await?;
         Ok(LegacyPolicies { inner: result })
     }
 
@@ -261,53 +197,11 @@ impl MsGraph {
         Ok(collection)
     }
 
-    // pub async fn list_directory_roles(&self) -> DirectoryRoles {
-    //     let mut stream = self
-    //         .client
-    //         .directory_roles()
-    //         .list_directory_role()
-    //         .expand(&["members"])
-    //         .paging()
-    //         .stream::<DirectoryRoles>()
-    //         .unwrap();
-
-    //     let mut directory_roles = DirectoryRoles::new();
-    //     while let Some(result) = stream.next().await {
-    //         let response = result.unwrap();
-
-    //         let body = response.into_body();
-
-    //         directory_roles.value.extend(body.unwrap().value)
-    //     }
-    //     directory_roles
-    // }
-
-    // pub async fn list_directory_role_templates(&self) -> DirectoryRoleTemplates {
-    //     let mut stream = self
-    //         .client
-    //         .directory_role_templates()
-    //         .list_directory_role_template()
-    //         .paging()
-    //         .stream::<DirectoryRoleTemplates>()
-    //         .unwrap();
-
-    //     let mut directory_role_templates = DirectoryRoleTemplates::new();
-    //     while let Some(result) = stream.next().await {
-    //         let response = result.unwrap();
-
-    //         let body = response.into_body();
-
-    //         directory_role_templates.value.extend(body.unwrap().value)
-    //     }
-    //     directory_role_templates
-    // }
-
     pub async fn list_role_definitions(&self) -> Result<RoleDefinitions> {
         let mut stream = self
             .beta_client
-            .role_management()
-            .directory()
-            .list_role_definitions()
+            .custom(Method::GET, None)
+            .extend_path(&["roleManagement", "directory", "roleDefinitions"])
             .paging()
             .stream::<RoleDefinitions>()?;
 
@@ -346,7 +240,7 @@ impl MsGraph {
             .users()
             .list_user()
             .select(&[
-                "account_enabled",
+                "accountEnabled",
                 "assignedPlans",
                 "description",
                 "displayName",
@@ -420,18 +314,6 @@ impl MsGraph {
             .send()
             .await?;
         let body = response.json().await?;
-        Ok(body)
-    }
-
-    pub async fn get_security_secure_scores(&self) -> Result<SecurityScores> {
-        let response = self
-            .beta_client
-            .security()
-            .list_secure_scores()
-            .top("1")
-            .send()
-            .await?;
-        let body: SecurityScores = response.json().await?;
         Ok(body)
     }
 
@@ -518,9 +400,7 @@ impl MsGraph {
 
     /// 1.22
     pub async fn get_device_registration_policy(&self) -> Result<DeviceRegistrationPolicy> {
-        let result = self
-            .get(&self.beta_client, "/policies/deviceRegistrationPolicy")
-            .await?;
+        let result = self.get_url("/policies/deviceRegistrationPolicy").await?;
         Ok(DeviceRegistrationPolicy { inner: result })
     }
 }
@@ -905,7 +785,7 @@ pub async fn m365(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
     info!("Starting M365 collection");
     info!("GIT_HASH: {}", env!("GIT_HASH"));
 
-    let ms_graph = login(
+    let ms_graph = MsGraph::new(
         secrets
             .azure_client_id
             .as_ref()
@@ -989,13 +869,6 @@ pub async fn m365(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
     .await;
 
     let _ = try_collect_send(
-        "MS Graph Security Secure Scores",
-        ms_graph.get_security_secure_scores(),
-        &splunk,
-    )
-    .await;
-
-    let _ = try_collect_send(
         "MS Graph Authentication Methods Policy",
         ms_graph.get_authentication_methods_policy(),
         &splunk,
@@ -1044,7 +917,7 @@ pub async fn m365(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
 pub(crate) mod live_tests {
     use std::env;
 
-    use super::{login, MsGraph};
+    use super::MsGraph;
     use crate::users::UsersMap;
 
     use anyhow::{Context, Result};
@@ -1055,7 +928,7 @@ pub(crate) mod live_tests {
         let secrets = get_keyvault_secrets(&env::var("KEY_VAULT_NAME")?).await?;
 
         set_ssphp_run("default")?;
-        let ms_graph = login(
+        let ms_graph = MsGraph::new(
             secrets
                 .azure_client_id
                 .as_ref()
@@ -1070,11 +943,13 @@ pub(crate) mod live_tests {
                 .context("Expect azure_tenant_id secret")?,
         )
         .await?;
+
         let splunk = Splunk::new(
             secrets.splunk_host.as_ref().context("No value")?,
             secrets.splunk_token.as_ref().context("No value")?,
             true,
         )?;
+
         Ok((splunk, ms_graph))
     }
 
@@ -1178,16 +1053,6 @@ pub(crate) mod live_tests {
     }
 
     #[tokio::test]
-    async fn get_security_secure_scores() -> Result<()> {
-        let (splunk, ms_graph) = setup().await?;
-        let security_scores = ms_graph.get_security_secure_scores().await?;
-        splunk
-            .send_batch((&security_scores).to_hec_events()?)
-            .await?;
-        Ok(())
-    }
-
-    #[tokio::test]
     async fn list_group_settings() -> Result<()> {
         let (splunk, ms_graph) = setup().await?;
         let result = ms_graph.list_group_settings().await?;
@@ -1257,6 +1122,14 @@ pub(crate) mod live_tests {
     async fn list_legacy_policies() -> Result<()> {
         let (splunk, ms_graph) = setup().await?;
         let result = ms_graph.list_legacy_policies().await?;
+        splunk.send_batch((&result).to_hec_events()?).await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn list_role_definitions() -> Result<()> {
+        let (splunk, ms_graph) = setup().await?;
+        let result = ms_graph.list_role_definitions().await?;
         splunk.send_batch((&result).to_hec_events()?).await?;
         Ok(())
     }

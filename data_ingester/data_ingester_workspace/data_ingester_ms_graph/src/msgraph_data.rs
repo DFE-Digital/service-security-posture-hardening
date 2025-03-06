@@ -64,7 +64,6 @@ impl MsGraphData {
                         vec![]
                     }
                 };
-
                 match splunk.send_batch(hec_events).await {
                     Ok(_) => info!("Sent to Splunk"),
                     Err(e) => {
@@ -144,7 +143,7 @@ mod test {
 mod live_tests {
     use std::{env, sync::Arc};
 
-    use crate::{ms_graph::login, msgraph_data::load_m365_toml};
+    use crate::{ms_graph::MsGraph, msgraph_data::load_m365_toml};
     use anyhow::{Context, Result};
     use data_ingester_splunk::splunk::Splunk;
     use data_ingester_supporting::keyvault::get_keyvault_secrets;
@@ -154,7 +153,7 @@ mod live_tests {
         let sources = load_m365_toml()?;
 
         let secrets = get_keyvault_secrets(&env::var("KEY_VAULT_NAME")?).await?;
-        let ms_graph = login(
+        let ms_graph = MsGraph::new(
             secrets
                 .azure_client_id
                 .as_ref()

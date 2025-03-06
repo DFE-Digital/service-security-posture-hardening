@@ -5,5 +5,4 @@ pub mod groups;
 pub mod ms_graph;
 pub mod msgraph_data;
 pub mod roles;
-pub mod security_score;
 pub mod users;

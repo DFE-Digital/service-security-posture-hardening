@@ -354,7 +354,7 @@ impl OctocrabGit {
         let mut rulesets = self
             .repo_rulesets(repo)
             .await
-            .context("Getting Rulesets for {repo}")?;
+            .context(format!("Getting Rulesets for {repo}"))?;
 
         let mut ruleset_details = vec![];
 
