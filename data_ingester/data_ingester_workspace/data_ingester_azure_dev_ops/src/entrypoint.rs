@@ -12,7 +12,7 @@ use crate::{
 };
 
 pub async fn entrypoint(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
-    set_ssphp_run("github")?;
+    set_ssphp_run("azure_devops")?;
     info!("Starting Azure DevOps ADO collection");
 
     if let (Some(client_id), Some(client_secret), Some(tenant_id)) = (
