@@ -85,10 +85,10 @@ impl AdoDevOpsPatBuilder {
         }
     }
 
-    fn from_org(pat: KeyVaultGetSecretResponse) -> Self {
+    fn from_org(org: KeyVaultGetSecretResponse) -> Self {
         Self {
-            organization: None,
-            pat: Some(pat),
+            organization: Some(org),
+            pat: None,
         }
     }
 
@@ -133,6 +133,8 @@ mod test {
     };
     use time::OffsetDateTime;
 
+    use crate::dev_ops_pats::AdoDevOpsPatBuilder;
+
     use super::AdoDevOpsPat;
 
     fn create_adodevopspat() -> AdoDevOpsPat {
@@ -172,5 +174,70 @@ mod test {
     fn test_adodevopspat_pat() {
         let pat = create_adodevopspat();
         assert_eq!(pat.pat(), "patpat");
+    }
+
+    #[test]
+    fn test_adodevops_from_pat() {
+        let secret = KeyVaultGetSecretResponse {
+            value: "patpat".into(),
+            id: "pat_id".into(),
+            attributes: KeyVaultGetSecretResponseAttributes {
+                enabled: true,
+                expires_on: None,
+                created_on: OffsetDateTime::now_utc(),
+                updated_on: OffsetDateTime::now_utc(),
+                recovery_level: "something".into(),
+            },
+        };
+        let builder = AdoDevOpsPatBuilder::from_pat(secret);
+        assert!(builder.pat.is_some());
+    }
+
+    #[test]
+    fn test_adodevops_from_org() {
+        let secret = KeyVaultGetSecretResponse {
+            value: "orgorg".into(),
+            id: "org_id".into(),
+            attributes: KeyVaultGetSecretResponseAttributes {
+                enabled: true,
+                expires_on: None,
+                created_on: OffsetDateTime::now_utc(),
+                updated_on: OffsetDateTime::now_utc(),
+                recovery_level: "something".into(),
+            },
+        };
+        let builder = AdoDevOpsPatBuilder::from_org(secret);
+        assert!(builder.organization.is_some());
+    }
+
+    #[test]
+    fn test_adodevops_builds() {
+        let org = KeyVaultGetSecretResponse {
+            value: "orgorg".into(),
+            id: "org_id".into(),
+            attributes: KeyVaultGetSecretResponseAttributes {
+                enabled: true,
+                expires_on: None,
+                created_on: OffsetDateTime::now_utc(),
+                updated_on: OffsetDateTime::now_utc(),
+                recovery_level: "something".into(),
+            },
+        };
+        let pat = KeyVaultGetSecretResponse {
+            value: "patpat".into(),
+            id: "pat_id".into(),
+            attributes: KeyVaultGetSecretResponseAttributes {
+                enabled: true,
+                expires_on: None,
+                created_on: OffsetDateTime::now_utc(),
+                updated_on: OffsetDateTime::now_utc(),
+                recovery_level: "something".into(),
+            },
+        };
+        let mut builder = AdoDevOpsPatBuilder::from_org(org);
+        builder.pat = Some(pat);
+        let built = builder.build().expect("Builder to build");
+        assert_eq!(built.pat(), "patpat");
+        assert_eq!(built.organization(), "orgorg");
     }
 }

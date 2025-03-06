@@ -192,15 +192,19 @@ impl Acs {
             .json::<Ipify>()
             .await
             .context("Parsing Ipify JSON response")?;
-        let url = "https://ifconfig.me";
-        let ipconfig_me = reqwest::get(url)
+        let url = "https://ifconfig.me/ip";
+        let ifconfig_me = reqwest::get(url)
             .await
             .context("Sending Request to ifconfig.me")?
             .text()
             .await
             .context("Getting body from ifconfig.me")?;
-        if ipify.ip != ipconfig_me {
-            anyhow::bail!("Deteceted IPs don't match");
+        if ipify.ip != ifconfig_me {
+            let message = format!(
+                "Deteceted IPs don't match ipify:{} ipconfig.me:{}",
+                ipify.ip, ifconfig_me
+            );
+            anyhow::bail!(message);
         }
         Ok(ipify.ip)
     }
