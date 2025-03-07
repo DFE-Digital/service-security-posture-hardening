@@ -20,7 +20,7 @@ pub(crate) struct Repository {
     pub(crate) name: String,
     project: Project,
     remote_url: String,
-    size: usize,
+    size: Option<usize>,
     ssh_url: String,
     url: String,
     web_url: String,

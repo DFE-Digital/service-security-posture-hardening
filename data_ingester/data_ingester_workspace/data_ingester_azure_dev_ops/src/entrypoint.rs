@@ -101,6 +101,15 @@ async fn collect_organization<A: AzureDevOpsClientMethods>(
         }
     };
 
+    info!(
+        name = "Azure DevOps",
+        operation = "colelct_organization",
+        organization = organization,
+        projects_count = projects.projects.len()
+    );
+
+    let mut total_repos = 0;
+
     for project in projects.projects {
         let project_name = &project.name;
 
@@ -147,6 +156,16 @@ async fn collect_organization<A: AzureDevOpsClientMethods>(
             }
         };
 
+        info!(
+            name = "Azure DevOps",
+            operation = "colelct_organization",
+            organization = organization,
+            project = project_name,
+            repo_count = repos.repositories.len()
+        );
+
+        total_repos += repos.repositories.len();
+
         for repo in repos.repositories {
             let repo_name = &repo.name;
             let _ = try_collect_send(
@@ -175,6 +194,13 @@ async fn collect_organization<A: AzureDevOpsClientMethods>(
             )
             .await;
         }
+
+        info!(
+            name = "Azure DevOps",
+            operation = "colelct_organization",
+            organization = organization,
+            total_repo_count = total_repos
+        );
     }
     Ok(())
 }
