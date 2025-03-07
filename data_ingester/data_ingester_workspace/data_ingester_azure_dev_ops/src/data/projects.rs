@@ -47,7 +47,7 @@ impl From<AdoResponse> for Projects {
             match serde_json::from_value(project) {
                 Ok(project) => Some(project),
                 Err(err) => {
-                    error!(name="Azure DevOps", operation="From<AdoResposne> for Projects", error=?err);
+                    error!(name="Azure DevOps", operation="From<AdoResponse> for Projects", error=?err);
                     None
                 }
             }
