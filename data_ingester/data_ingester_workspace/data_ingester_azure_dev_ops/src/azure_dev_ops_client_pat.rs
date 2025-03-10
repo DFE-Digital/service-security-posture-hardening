@@ -76,7 +76,7 @@ impl AzureDevOpsClient for AzureDevOpsClientPat {
             let text = response.text().await?;
 
             if !status.is_success() {
-                error!(name="Azure Dev Ops", operation="GET request", error="Non 2xx status code", status=?status, headers=?headers, body=text);
+                error!(name="Azure Dev Ops", operation="GET request", error="Non 2xx status code", url=?next_url, status=?status, headers=?headers, body=text);
                 anyhow::bail!("Azure Dev Org request failed with with Non 2xx status code");
             }
             metadata.status.push(status.into());

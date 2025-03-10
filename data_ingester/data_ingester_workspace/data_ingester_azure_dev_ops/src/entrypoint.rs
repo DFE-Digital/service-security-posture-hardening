@@ -109,6 +109,7 @@ async fn collect_organization<A: AzureDevOpsClientMethods>(
     );
 
     let mut total_repos = 0;
+    let mut active_repos = 0;
 
     for project in projects.projects {
         let project_name = &project.name;
@@ -165,8 +166,9 @@ async fn collect_organization<A: AzureDevOpsClientMethods>(
         );
 
         total_repos += repos.repositories.len();
+        active_repos += repos.iter_active().count();
 
-        for repo in repos.repositories {
+        for repo in repos.iter_active() {
             let repo_name = &repo.name;
             let _ = try_collect_send(
                 &format!(
@@ -199,7 +201,8 @@ async fn collect_organization<A: AzureDevOpsClientMethods>(
             name = "Azure DevOps",
             operation = "colelct_organization",
             organization = organization,
-            total_repo_count = total_repos
+            total_repo_count = total_repos,
+            active_repo_count = active_repos,
         );
     }
     Ok(())
