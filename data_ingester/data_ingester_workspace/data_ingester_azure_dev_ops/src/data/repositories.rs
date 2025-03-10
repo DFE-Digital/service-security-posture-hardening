@@ -10,6 +10,12 @@ pub struct Repositories {
     pub repositories: Vec<Repository>,
 }
 
+impl Repositories {
+    pub fn iter_active(&self) -> impl Iterator<Item = &Repository> {
+        self.repositories.iter().filter(|repo| repo.is_active())
+    }
+}
+
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct Repository {
@@ -29,6 +35,18 @@ pub(crate) struct Repository {
 impl Repository {
     pub fn id(&self) -> &str {
         self.id.as_str()
+    }
+
+    // pub fn is_disabled(&self) -> bool {
+    //     self.is_disabled
+    // }
+
+    // pub fn is_in_maintenance(&self) -> bool {
+    //     self.is_in_maintenance
+    // }
+
+    pub fn is_active(&self) -> bool {
+        !self.is_in_maintenance && !self.is_disabled
     }
 }
 
