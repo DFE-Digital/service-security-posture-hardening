@@ -1,7 +1,7 @@
 <dashboard version="1.1" theme="dark" script="js/addtags.js, js/table_cell_color.js">
 
 <label>Security Posture Continuous Assurance : DfE Service Dashboard</label>
-<description>{{environment}} v4.3.1</description>
+<description>{{environment}} v4.3.2</description>
   
   <init>
     <set token="form.tkn_fields">C</set>
@@ -92,7 +92,18 @@
 <!-- ######################################################################################################################################### -->
 <!-- ############################################################################ INPUTS ##################################################### -->
 <!-- ######################################################################################################################################### -->
-  
+
+
+<!-- ################################################################
+
+-webkit-box-flex:unset;
+-ms-flex:unset;
+flex:unset;
+
+these lines were added by Ian & Alex 2025-03010 to work around wierd issue with panel widths stopping working on SplunkCloud in new dashboard.css version
+
+######################################################################### -->
+
   
   <row>
     <panel id="menu1">
@@ -100,6 +111,9 @@
         <style>
           #menu1{
             width:7% !important;
+            -webkit-box-flex:unset;
+            -ms-flex:unset;
+            flex:unset;
           }
         </style>
       </html>
@@ -139,6 +153,9 @@
         <style>
           #menu2{
             width:70% !important;
+            -webkit-box-flex:unset;
+            -ms-flex:unset;
+            flex:unset;
           }
         </style>
       </html>
@@ -221,6 +238,9 @@
         <style>
           #menu3{
             width:70% !important;
+            -webkit-box-flex:unset;
+            -ms-flex:unset;
+            flex:unset;
           }
         </style>
 
@@ -257,6 +277,9 @@
         <style>
           #menu4{
             width:23% !important;
+            -webkit-box-flex:unset;
+            -ms-flex:unset;
+            flex:unset;
           }
         </style>
       </html>
@@ -288,6 +311,9 @@
         <style>
           #menu5{
             width:23% !important;
+            -webkit-box-flex:unset;
+            -ms-flex:unset;
+            flex:unset;
           }
         </style>
       </html>
@@ -1481,7 +1507,7 @@ index="ssphp_asset_inventory{{environment}}"
     </panel>
 
     <panel>
-        <html>Current User : $tkn__current_user_name$&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;Current App : $tkn__current_application$&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;User Service : $tkn__current_user_service$&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;Version : 5d9adba8cb2408f9193f00c611ddf74a974241ae</html>
+        <html>Current User : $tkn__current_user_name$&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;Current App : $tkn__current_application$&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;User Service : $tkn__current_user_service$&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;Version : {{version}}</html>
     </panel>
   </row>
 
