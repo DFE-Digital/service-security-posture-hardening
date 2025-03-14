@@ -3,12 +3,12 @@ use data_ingester_splunk::splunk::{set_ssphp_run, try_collect_send, Splunk};
 use data_ingester_supporting::keyvault::Secrets;
 use std::sync::Arc;
 use tracing::{error, info};
-
+use data_ingester_splunk::splunk::ToHecEvents;
 use crate::{
     ado_dev_ops_client::AzureDevOpsClientMethods,
     azure_dev_ops_client_oauth::AzureDevOpsClientOauth,
     azure_dev_ops_client_pat::AzureDevOpsClientPat,
-    data::{projects::Projects, repositories::Repositories},
+    data::{git_policy_configuration::PolicyConfigurations, projects::Projects, repositories::{GenericCollectionToSplunk, Repositories}},
 };
 
 pub async fn entrypoint(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
@@ -51,40 +51,40 @@ async fn collect_organization<A: AzureDevOpsClientMethods>(
     splunk: Arc<Splunk>,
     organization: &str,
 ) -> Result<()> {
-    let _users = try_collect_send(
-        &format!("Users for {organization}"),
-        ado.graph_users_list(organization),
-        &splunk,
-    )
-    .await;
+    // let _users = try_collect_send(
+    //     &format!("Users for {organization}"),
+    //     ado.graph_users_list(organization),
+    //     &splunk,
+    // )
+    // .await;
 
-    let _users = try_collect_send(
-        &format!("Service Principals for {organization}"),
-        ado.graph_service_principals_list(organization),
-        &splunk,
-    )
-    .await;
+    // let _users = try_collect_send(
+    //     &format!("Service Principals for {organization}"),
+    //     ado.graph_service_principals_list(organization),
+    //     &splunk,
+    // )
+    // .await;
 
-    let _users = try_collect_send(
-        &format!("Groups for {organization}"),
-        ado.graph_groups_list(organization),
-        &splunk,
-    )
-    .await;
+    // let _users = try_collect_send(
+    //     &format!("Groups for {organization}"),
+    //     ado.graph_groups_list(organization),
+    //     &splunk,
+    // )
+    // .await;
 
-    let _ = try_collect_send(
-        &format!("Audit Streams for {organization}"),
-        ado.audit_streams(organization),
-        &splunk,
-    )
-    .await;
+    // let _ = try_collect_send(
+    //     &format!("Audit Streams for {organization}"),
+    //     ado.audit_streams(organization),
+    //     &splunk,
+    // )
+    // .await;
 
-    let _ = try_collect_send(
-        &format!("Advanced Security Org Enablement {organization}"),
-        ado.adv_security_org_enablement(organization),
-        &splunk,
-    )
-    .await;
+    // let _ = try_collect_send(
+    //     &format!("Advanced Security Org Enablement {organization}"),
+    //     ado.adv_security_org_enablement(organization),
+    //     &splunk,
+    // )
+    // .await;
 
     let projects = try_collect_send(
         &format!("Projects for {organization}"),
@@ -114,88 +114,116 @@ async fn collect_organization<A: AzureDevOpsClientMethods>(
     for project in projects.projects {
         let project_name = &project.name;
 
-        let _ = try_collect_send(
-            &format!("Advanced Security Project Enablement {organization}/{project_name}"),
-            ado.adv_security_project_enablement(organization, project_name),
-            &splunk,
-        )
-        .await;
+        // let _ = try_collect_send(
+        //     &format!("Advanced Security Project Enablement {organization}/{project_name}"),
+        //     ado.adv_security_project_enablement(organization, project_name),
+        //     &splunk,
+        // )
+        // .await;
 
-        let _ = try_collect_send(
+        let policies = try_collect_send(
             &format!("Policy Configuration for {organization}/{project_name}"),
             ado.policy_configuration_get(organization, project_name),
             &splunk,
         )
-        .await;
+            .await;
 
-        let _ = try_collect_send(
-            &format!("Git Policy Configuration for {organization}/{project_name}"),
-            ado.git_policy_configuration_get(organization, project_name),
-            &splunk,
-        )
-        .await;
-
-        let _build_genreal_settings = try_collect_send(
-            &format!("Build General Settings for {organization}/{project_name}"),
-            ado.build_general_settings(organization, project_name),
-            &splunk,
-        )
-        .await;
-
-        let repos = try_collect_send(
-            &format!("Git repository list {organization}/{project_name}"),
-            ado.git_repository_list(organization, project_name),
-            &splunk,
-        )
-        .await;
-
-        let repos = match repos {
-            Ok(repos) => Repositories::from(repos),
+        let policies = match policies {
+            Ok(policies) => PolicyConfigurations::from((policies, project.id.as_str())),
             Err(err) => {
-                error!(name="Azure Dev Ops", operation="fn git_repository_list", organization=?organization, error=?err);
+                error!(name="Azure Dev Ops", operation="fn policy_configuration_get", organization=?organization, error=?err);
                 continue;
             }
         };
+        
 
-        info!(
-            name = "Azure DevOps",
-            operation = "colelct_organization",
-            organization = organization,
-            project = project_name,
-            repo_count = repos.repositories.len()
-        );
+        // let _ = try_collect_send(
+        //     &format!("Git Policy Configuration for {organization}/{project_name}"),
+        //     ado.git_policy_configuration_get(organization, project_name),
+        //     &splunk,
+        // )
+        // .await;
 
-        total_repos += repos.repositories.len();
-        active_repos += repos.iter_active().count();
+        // let _build_genreal_settings = try_collect_send(
+        //     &format!("Build General Settings for {organization}/{project_name}"),
+        //     ado.build_general_settings(organization, project_name),
+        //     &splunk,
+        // )
+        //     .await;
 
-        for repo in repos.iter_active() {
-            let repo_name = &repo.name;
-            let _ = try_collect_send(
-                &format!(
-                    "Advanced Security Repo Enablement {organization}/{project_name}/{repo_name}"
-                ),
-                ado.adv_security_repo_enablement(organization, project_name, repo_name),
-                &splunk,
-            )
-            .await;
+        let repos_response = ado.git_repository_list(organization, project_name).await;
+        
+        let repos_response = match repos_response {
+            Ok(response) => response,
+            Err(err) => {
+                error!(name="Azure Dev Ops", operation="fn git_repository_list", organization=?organization, error=?err);
+                continue
+            }
+        };
 
-            let _ = try_collect_send(
-                &format!("Advanced Security Alerts {organization}/{project_name}/{repo_name}"),
-                ado.adv_security_alerts(organization, project_name, repo_name),
-                &splunk,
-            )
-            .await;
+        let metadata = repos_response.metadata.clone().unwrap_or_default();
+        let mut repos = Repositories::from(repos_response);           
 
-            let _ = try_collect_send(
-                &format!(
-                    "Git Repo Policy Configuration for {organization}/{project_name}/{}",
-                    repo.id()
-                ),
-                ado.git_repo_policy_configuration_get(organization, project_name, repo.id()),
-                &splunk,
-            )
-            .await;
-        }
+        let repo_policies = repos.add_policies(&organization, &policies);
+        
+        let collection = GenericCollectionToSplunk {
+            collection: repo_policies,
+            source: "git_repo_policy_join".to_string(),
+            sourcetype: metadata.sourcetype.clone(),
+            ssphp_run_key: crate::SSPHP_METADATA_KEY.to_string(),
+        };
+
+        let repo_hec_events = match collection.to_hec_events() {
+            Ok(hec_events) => hec_events,
+            Err(err) => {
+                error!(name="Azure Dev Ops", operation="fn git_repository_list", organization=?organization, error=?err);
+                vec![]
+            }
+        };
+
+        dbg!(&repo_hec_events);
+
+        let _ = splunk.send_batch(repo_hec_events).await;
+
+        // info!(
+        //     name = "Azure DevOps",
+        //     operation = "collect_organization",
+        //     organization = organization,
+        //     project = project_name,
+        //     repo_count = repos.repositories.len()
+        // );
+
+        // total_repos += repos.repositories.len();
+        // active_repos += repos.iter_active().count();
+
+        // for repo in repos.iter_active() {
+        //     let repo_name = &repo.name;
+        //     let _ = try_collect_send(
+        //         &format!(
+        //             "Advanced Security Repo Enablement {organization}/{project_name}/{repo_name}"
+        //         ),
+        //         ado.adv_security_repo_enablement(organization, project_name, repo_name),
+        //         &splunk,
+        //     )
+        //     .await;
+
+        //     let _ = try_collect_send(
+        //         &format!("Advanced Security Alerts {organization}/{project_name}/{repo_name}"),
+        //         ado.adv_security_alerts(organization, project_name, repo_name),
+        //         &splunk,
+        //     )
+        //     .await;
+
+        //     let _ = try_collect_send(
+        //         &format!(
+        //             "Git Repo Policy Configuration for {organization}/{project_name}/{}",
+        //             repo.id()
+        //         ),
+        //         ado.git_repo_policy_configuration_get(organization, project_name, repo.id()),
+        //         &splunk,
+        //     )
+        //     .await;
+        // }
 
         info!(
             name = "Azure DevOps",
@@ -207,3 +235,5 @@ async fn collect_organization<A: AzureDevOpsClientMethods>(
     }
     Ok(())
 }
+
+
