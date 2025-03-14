@@ -1,4 +1,5 @@
 #![feature(hash_extract_if)]
+mod generic_collection;
 pub mod splunk;
 mod tasks;
 mod thread;

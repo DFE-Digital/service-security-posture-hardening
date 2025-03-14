@@ -8,7 +8,7 @@ use crate::ado_response::AdoResponse;
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PolicyConfigurations {
-    pub policies: Vec<PolicyConfiguration>
+    pub policies: Vec<PolicyConfiguration>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -29,7 +29,7 @@ pub struct PolicyConfiguration {
     pub type_field: Type,
     pub url: String,
     #[serde(skip)]
-    pub project_id: Option<String>
+    pub project_id: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -89,7 +89,7 @@ pub struct Settings {
 #[serde(rename_all = "camelCase")]
 pub enum SettingsType {
     Build(SettingsBuild),
-    Unknown(Value)      
+    Unknown(Value),
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -123,7 +123,6 @@ pub struct Type {
     pub id: String,
     pub url: String,
 }
-
 
 impl From<(AdoResponse, &str)> for PolicyConfigurations {
     fn from(value: (AdoResponse, &str)) -> Self {

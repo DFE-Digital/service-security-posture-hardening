@@ -9,5 +9,4 @@ pub mod entrypoint;
 #[cfg(test)]
 mod test_utils;
 
-
-const SSPHP_METADATA_KEY: &str = "azure_devops";
+const SSPHP_RUN_KEY: &str = "azure_devops";

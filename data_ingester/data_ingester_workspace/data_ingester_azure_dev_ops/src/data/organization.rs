@@ -4,7 +4,7 @@ use data_ingester_splunk::splunk::ToHecEvents;
 use itertools::Itertools;
 use tracing::error;
 
-use crate::ado_metadata::AdoMetadata;
+use crate::{ado_metadata::AdoMetadata, SSPHP_RUN_KEY};
 
 #[derive(Debug, serde::Deserialize, serde::Serialize)]
 pub(crate) struct Organizations {
@@ -74,7 +74,7 @@ impl ToHecEvents for &Organizations {
     }
 
     fn ssphp_run_key(&self) -> &str {
-        "azure_devops"
+        SSPHP_RUN_KEY
     }
 
     fn to_hec_events(&self) -> Result<Vec<data_ingester_splunk::splunk::HecEvent>> {

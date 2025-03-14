@@ -6,7 +6,10 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use tracing::trace;
 
-use crate::ado_metadata::{AdoMetadata, AdoMetadataTrait};
+use crate::{
+    ado_metadata::{AdoMetadata, AdoMetadataTrait},
+    SSPHP_RUN_KEY,
+};
 
 /// https://learn.microsoft.com/en-us/azure/devops/integrate/concepts/rate-limits?view=azure-devops
 #[derive(Debug, Deserialize)]
@@ -143,7 +146,7 @@ impl ToHecEvents for AdoResponse {
     }
 
     fn ssphp_run_key(&self) -> &str {
-        "azure_devops"
+        SSPHP_RUN_KEY
     }
 
     fn to_hec_events(&self) -> Result<Vec<data_ingester_splunk::splunk::HecEvent>> {
@@ -216,7 +219,7 @@ impl ToHecEvents for &AdoResponse {
     }
 
     fn ssphp_run_key(&self) -> &str {
-        "azure_devops"
+        SSPHP_RUN_KEY
     }
 
     fn to_hec_events(&self) -> Result<Vec<data_ingester_splunk::splunk::HecEvent>> {
@@ -306,7 +309,7 @@ impl ToHecEvents for &AdoResponseSingle {
     }
 
     fn ssphp_run_key(&self) -> &str {
-        "azure_devops"
+        SSPHP_RUN_KEY
     }
 
     fn to_hec_events(&self) -> Result<Vec<data_ingester_splunk::splunk::HecEvent>> {

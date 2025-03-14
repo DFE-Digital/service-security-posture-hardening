@@ -118,9 +118,9 @@ pub(crate) trait AzureDevOpsClientMethods: AzureDevOpsClient {
         self.get::<AdoResponse>(ado_metadata).await
     }
 
-
     /// Retrieve a list of policy configurations by a given set of scope/filtering criteria.
     /// repositoryId set, refName unset: returns all policy configurations that apply to a particular repository
+    #[allow(unused)]
     async fn git_repo_policy_configuration_get(
         &self,
         organization: &str,
