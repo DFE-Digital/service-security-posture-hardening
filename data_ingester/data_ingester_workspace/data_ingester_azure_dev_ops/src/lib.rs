@@ -8,3 +8,5 @@ mod data;
 pub mod entrypoint;
 #[cfg(test)]
 mod test_utils;
+
+const SSPHP_RUN_KEY: &str = "azure_devops";

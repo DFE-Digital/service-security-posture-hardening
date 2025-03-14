@@ -30,6 +30,9 @@ pub(crate) struct Repository {
     ssh_url: String,
     url: String,
     web_url: String,
+
+    #[serde(default)]
+    policies: Vec<i64>,
 }
 
 impl Repository {
@@ -37,16 +40,22 @@ impl Repository {
         self.id.as_str()
     }
 
-    // pub fn is_disabled(&self) -> bool {
-    //     self.is_disabled
-    // }
+    #[allow(unused)]
+    pub fn is_disabled(&self) -> bool {
+        self.is_disabled
+    }
 
-    // pub fn is_in_maintenance(&self) -> bool {
-    //     self.is_in_maintenance
-    // }
+    #[allow(unused)]
+    pub fn is_in_maintenance(&self) -> bool {
+        self.is_in_maintenance
+    }
 
     pub fn is_active(&self) -> bool {
         !self.is_in_maintenance && !self.is_disabled
+    }
+
+    pub fn project_id(&self) -> &str {
+        self.project.id.as_str()
     }
 }
 
@@ -65,8 +74,10 @@ pub(crate) struct Project {
 impl From<AdoResponse> for Repositories {
     fn from(value: AdoResponse) -> Self {
         let repositories = value.value.into_iter().filter_map(|repo| {
-            match serde_json::from_value(repo) {
-                Ok(repo) => Some(repo),
+            match serde_json::from_value::<Repository>(repo) {
+                Ok(repo) => {
+                    Some(repo)
+                },
                 Err(err) => {
                     error!(name="Azure DevOps", operation="From<AdoResponse> for Repositories", error=?err);
                     None
@@ -78,7 +89,7 @@ impl From<AdoResponse> for Repositories {
 }
 
 #[cfg(test)]
-mod test {
+pub(crate) mod test {
     #[cfg(feature = "live_tests")]
     use crate::test_utils::TEST_SETUP;
     use crate::{ado_response::AdoResponse, data::repositories::Repositories};
@@ -115,6 +126,12 @@ mod test {
 }
 "#;
 
+    pub(crate) fn repopsitory_test_fixture() -> Repositories {
+        let ado_response: AdoResponse = serde_json::from_str(REPOSITORIES_JSON).unwrap();
+        let repositories: Repositories = Repositories::from(ado_response);
+        repositories
+    }
+
     #[test]
     fn test_ado_repositories_json_into_ado_response() {
         let ado_response: AdoResponse = serde_json::from_str(REPOSITORIES_JSON).unwrap();
@@ -131,7 +148,9 @@ mod test {
     #[cfg(feature = "live_tests")]
     #[test]
     fn live_test_repositories_from_ado_response() {
-        use crate::data::repositories::Repositories;
+        use crate::{
+            ado_dev_ops_client::AzureDevOpsClientMethods, data::repositories::Repositories,
+        };
 
         let t = &*TEST_SETUP;
         let _: Result<()> = t.runtime.block_on(async {

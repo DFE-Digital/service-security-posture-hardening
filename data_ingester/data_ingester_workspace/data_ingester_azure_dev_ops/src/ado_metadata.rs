@@ -148,7 +148,7 @@ impl AdoMetadataBuilder<SetUrl, SetType, SetRestDocs> {
     }
 }
 
-#[derive(Default, Debug, Deserialize, Serialize)]
+#[derive(Default, Debug, Deserialize, Serialize, Clone)]
 pub(crate) struct AdoMetadata {
     pub(crate) url: String,
     pub(crate) organization: Option<String>,

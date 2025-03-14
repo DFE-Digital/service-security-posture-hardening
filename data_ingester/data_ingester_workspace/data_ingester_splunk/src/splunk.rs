@@ -336,10 +336,10 @@ where
                     )?]
                 }
             };
-
+            let events_count = hec_events.len();
             match splunk.send_batch(hec_events).await {
                 Ok(()) => {
-                    info!("Sent {}", &name);
+                    info!(events_count = events_count, "Sent {}", &name);
                 }
                 Err(e) => {
                     warn!("Failed Sending to Splunk: {e}");
@@ -352,6 +352,7 @@ where
     };
     result
 }
+
 #[cfg(test)]
 pub(crate) mod test {
     use crate::splunk::Splunk;

@@ -254,6 +254,7 @@ async fn github_collect_installation_org(
             &splunk,
         )
         .await;
+
         let _repo_security_txt = try_collect_send(
             &format!("Security txt {repo_name}"),
             github_client.repo_security_txt(&repo_name),
