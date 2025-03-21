@@ -10,3 +10,4 @@ pub mod entrypoint;
 mod test_utils;
 
 const SSPHP_RUN_KEY: &str = "azure_devops";
+const SOURCETYPE: &str = "ADO";

@@ -1,10 +1,12 @@
+use std::marker::PhantomData;
+
 use anyhow::{anyhow, Result};
 use data_ingester_splunk::splunk::ToHecEvents;
 use itertools::Itertools;
 use reqwest::header::HeaderMap;
-use serde::{Deserialize, Serialize};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use serde_json::Value;
-use tracing::trace;
+use tracing::{error, trace};
 
 use crate::{
     ado_metadata::{AdoMetadata, AdoMetadataTrait},
@@ -154,7 +156,7 @@ impl ToHecEvents for AdoResponse {
             .collection()
             .map(|ado_response| {
                 let mut ado_response = ado_response.clone();
-                let ssphp_debug = if let Some(metadata) = &self.metadata {
+                let metadata = if let Some(metadata) = &self.metadata {
                     serde_json::to_value(metadata).unwrap_or_else(|_| {
                         serde_json::to_value("Error Getting AdoMetadata")
                             .expect("Value from static str should not fail")
@@ -167,7 +169,7 @@ impl ToHecEvents for AdoResponse {
                 let _ = ado_response
                     .as_object_mut()
                     .expect("ado_response should always be accessible as an Value object")
-                    .insert("SSPHP_DEBUG".into(), ssphp_debug);
+                    .insert("metadata".into(), metadata);
                 data_ingester_splunk::splunk::HecEvent::new_with_ssphp_run(
                     &ado_response,
                     self.source(),
@@ -227,7 +229,7 @@ impl ToHecEvents for &AdoResponse {
             .collection()
             .map(|ado_response| {
                 let mut ado_response = ado_response.clone();
-                let ssphp_debug = if let Some(metadata) = &self.metadata {
+                let metadata = if let Some(metadata) = &self.metadata {
                     serde_json::to_value(metadata).unwrap_or_else(|_| {
                         serde_json::to_value("Error Getting AdoMetadata")
                             .expect("Value from static str should not fail")
@@ -240,7 +242,7 @@ impl ToHecEvents for &AdoResponse {
                 let _ = ado_response
                     .as_object_mut()
                     .expect("ado_response should always be accessible as an Value object")
-                    .insert("SSPHP_DEBUG".into(), ssphp_debug);
+                    .insert("metadata".into(), metadata);
                 data_ingester_splunk::splunk::HecEvent::new_with_ssphp_run(
                     &ado_response,
                     self.source(),
@@ -314,7 +316,7 @@ impl ToHecEvents for &AdoResponseSingle {
 
     fn to_hec_events(&self) -> Result<Vec<data_ingester_splunk::splunk::HecEvent>> {
         let mut ado_response = self.value.clone();
-        let ssphp_debug = if let Some(metadata) = &self.metadata {
+        let metadata = if let Some(metadata) = &self.metadata {
             serde_json::to_value(metadata).unwrap_or_else(|_| {
                 serde_json::to_value("Error Getting AdoMetadata")
                     .expect("Value from static str should not fail")
@@ -326,7 +328,7 @@ impl ToHecEvents for &AdoResponseSingle {
         let _ = ado_response
             .as_object_mut()
             .expect("ado_response should always be accessible as an Value object")
-            .insert("SSPHP_DEBUG".into(), ssphp_debug);
+            .insert("metadata".into(), metadata);
         Ok(vec![
             data_ingester_splunk::splunk::HecEvent::new_with_ssphp_run(
                 &ado_response,
@@ -335,5 +337,38 @@ impl ToHecEvents for &AdoResponseSingle {
                 self.get_ssphp_run(),
             )?,
         ])
+    }
+}
+
+pub(crate) struct AdoLocalType<T: AdoMetadataTrait, I> {
+    inner: T,
+    _phantomdata: PhantomData<I>,
+}
+
+impl<T: AdoMetadataTrait, I> AdoLocalType<T, I> {
+    pub(crate) fn into_inner(self) -> T {
+        self.inner
+    }
+}
+
+impl<T: From<(Vec<I>, AdoMetadata)> + AdoMetadataTrait, I: DeserializeOwned> From<AdoResponse>
+    for AdoLocalType<T, I>
+{
+    fn from(value: AdoResponse) -> AdoLocalType<T, I> {
+        let collection = value.value.into_iter().filter_map(|repo| {
+            match serde_json::from_value::<I>(repo) {
+                Ok(repo) => {
+                    Some(repo)
+                },
+                Err(err) => {
+                    error!(name="Azure DevOps", operation="From<AdoResponse> for Generic<T>", error=?err);
+                    None
+                }
+            }
+        }).collect::<Vec<I>>();
+        AdoLocalType {
+            inner: T::from((collection, value.metadata.unwrap_or_default())),
+            _phantomdata: PhantomData,
+        }
     }
 }

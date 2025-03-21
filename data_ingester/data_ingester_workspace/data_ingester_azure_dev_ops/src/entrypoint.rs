@@ -1,10 +1,14 @@
 use crate::{
     ado_dev_ops_client::AzureDevOpsClientMethods,
+    ado_response::AdoLocalType,
     azure_dev_ops_client_oauth::AzureDevOpsClientOauth,
     azure_dev_ops_client_pat::AzureDevOpsClientPat,
     data::{
-        git_policy_configuration::PolicyConfigurations, projects::Projects,
-        repositories::Repositories, repository_policy_join::RepoPolicyJoins,
+        git_policy_configuration::PolicyConfigurations,
+        projects::Projects,
+        repositories::{AdoToHecEvent, Repositories},
+        repository_policy_join::RepoPolicyJoins,
+        stats::Stats,
     },
     SSPHP_RUN_KEY,
 };
@@ -115,19 +119,26 @@ async fn collect_organization<A: AzureDevOpsClientMethods>(
     let mut total_repos = 0;
     let mut active_repos = 0;
 
-    for project in projects.projects {
+    for project in &projects.projects {
         let project_id = &project.id;
 
         let _ = try_collect_send(
             &format!("Advanced Security Project Enablement {organization}/{project_id}"),
-            ado.adv_security_project_enablement(organization, project_id),
+            ado.adv_security_project_enablement(organization, project),
             &splunk,
         )
         .await;
 
         let policies = try_collect_send(
             &format!("Policy Configuration for {organization}/{project_id}"),
-            ado.policy_configuration_get(organization, project_id),
+            ado.policy_configuration_get(organization, project),
+            &splunk,
+        )
+        .await;
+
+        let _policy_types = try_collect_send(
+            &format!("Policy Configuration for {organization}/{project_id}"),
+            ado.policy_types_get(organization, project),
             &splunk,
         )
         .await;
@@ -142,25 +153,20 @@ async fn collect_organization<A: AzureDevOpsClientMethods>(
 
         let _ = try_collect_send(
             &format!("Git Policy Configuration for {organization}/{project_id}"),
-            ado.git_policy_configuration_get(organization, project_id),
+            ado.git_policy_configuration_get(organization, project),
             &splunk,
         )
         .await;
 
         let _build_genreal_settings = try_collect_send(
             &format!("Build General Settings for {organization}/{project_id}"),
-            ado.build_general_settings(organization, project_id),
+            ado.build_general_settings(organization, project),
             &splunk,
         )
         .await;
 
-        let repos = {
-            let repos = try_collect_send(
-                &format!("Build General Settings for {organization}/{project_id}"),
-                ado.git_repository_list(organization, project_id),
-                &splunk,
-            )
-            .await;
+        let mut repos = {
+            let repos = ado.git_repository_list(organization, project).await;
 
             let repos = match repos {
                 Ok(response) => response,
@@ -174,7 +180,7 @@ async fn collect_organization<A: AzureDevOpsClientMethods>(
 
         {
             let repo_policy_joins =
-                RepoPolicyJoins::from_repo_policies(organization, project_id, &repos, &policies);
+                RepoPolicyJoins::from_repo_policies(organization, project, &repos, &policies);
 
             let repo_policy_joins_hec_events = match repo_policy_joins.to_hec_events() {
                 Ok(hec_events) => hec_events,
@@ -198,21 +204,57 @@ async fn collect_organization<A: AzureDevOpsClientMethods>(
         total_repos += repos.repositories.len();
         active_repos += repos.iter_active().count();
 
-        for repo in repos.iter_active() {
+        for repo in repos.repositories.iter_mut() {
             let repo_id = &repo.id();
             let _ = try_collect_send(
                 &format!("Advanced Security Repo Enablement {organization}/{project_id}/{repo_id}"),
-                ado.adv_security_repo_enablement(organization, project_id, repo_id),
+                ado.adv_security_repo_enablement(organization, project, repo),
                 &splunk,
             )
             .await;
 
             let _ = try_collect_send(
                 &format!("Advanced Security Alerts {organization}/{project_id}/{repo_id}"),
-                ado.adv_security_alerts(organization, project_id, repo_id),
+                ado.adv_security_alerts(organization, project, repo),
                 &splunk,
             )
             .await;
+
+            let stats = {
+                let stats = try_collect_send(
+                    &format!("Repo stats list {organization}/{project_id}/{repo_id}"),
+                    ado.repo_stats_list(organization, project, repo),
+                    &splunk,
+                )
+                .await;
+
+                let stats = match stats {
+                    Ok(stats) => stats,
+                    Err(err) => {
+                        error!(name="Azure Dev Ops", operation="fn git_repository_list", organization=?organization, error=?err);
+                        continue;
+                    }
+                };
+                let stats: Stats = AdoLocalType::from(stats).into_inner();
+                stats
+            };
+
+            repo.add_most_recent_stat(stats);
+
+            let repo_hec_event = AdoToHecEvent {
+                inner: &repo,
+                metadata: &repos.metadata,
+            }
+            .to_hec_events();
+
+            match repo_hec_event {
+                Ok(event) => {
+                    let _ = splunk.send_batch(event).await;
+                }
+                Err(err) => {
+                    error!(error=?err, repo=?repo, "Failed to Convert ADO Repo to HecEvent");
+                }
+            }
         }
 
         info!(

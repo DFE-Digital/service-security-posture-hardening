@@ -18,6 +18,7 @@ tracing = "0"
 url = "2"
 itertools = "0"
 csv = "1"
+jiff = "0.2"
 
 [dev-dependencies]
 tracing-subscriber = {version = "0", features = ["env-filter", "registry", "json", "valuable"]}

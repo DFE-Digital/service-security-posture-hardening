@@ -1,5 +1,7 @@
 use serde::{Deserialize, Serialize};
 
+use crate::data::{projects::Project, repositories::Repository};
+
 #[derive(Debug, Clone, Default)]
 pub(crate) struct AdoMetadataBuilder<U, T, R>
 where
@@ -9,11 +11,10 @@ where
 {
     url: U,
     organization: Option<String>,
-    project: Option<String>,
-    repo: Option<String>,
-    //pub(crate) status: u16,
-    // source: String,
-    // sourcetype: String,
+    project_id: Option<String>,
+    project_name: Option<String>,
+    repo_id: Option<String>,
+    repo_name: Option<String>,
     tenant: Option<String>,
     r#type: T,
     rest_docs: R,
@@ -55,8 +56,10 @@ impl AdoMetadataBuilder<NoUrl, NoType, NoRestDocs> {
         AdoMetadataBuilder {
             url: NoUrl,
             organization: None,
-            project: None,
-            repo: None,
+            project_name: None,
+            project_id: None,
+            repo_id: None,
+            repo_name: None,
             tenant: None,
             r#type: NoType,
             rest_docs: NoRestDocs,
@@ -87,16 +90,18 @@ where
         }
     }
 
-    pub(crate) fn project<S: Into<String>>(self, project: S) -> Self {
+    pub(crate) fn project(self, project: &Project) -> Self {
         Self {
-            project: Some(project.into()),
+            project_name: Some(project.name.to_string()),
+            project_id: Some(project.id.to_string()),
             ..self
         }
     }
 
-    pub(crate) fn repo<S: Into<String>>(self, repo: S) -> Self {
+    pub(crate) fn repo(self, repo: &Repository) -> Self {
         Self {
-            repo: Some(repo.into()),
+            repo_id: Some(repo.id().into()),
+            repo_name: Some(repo.name.to_string()),
             ..self
         }
     }
@@ -137,10 +142,12 @@ impl AdoMetadataBuilder<SetUrl, SetType, SetRestDocs> {
             source,
             url: self.url.0,
             organization: self.organization,
-            project: self.project,
-            repo: self.repo,
+            project_id: self.project_id,
+            project_name: self.project_name,
+            repo_id: self.repo_id,
+            repo_name: self.repo_name,
             status: vec![],
-            sourcetype: "ADO".into(),
+            sourcetype: crate::SOURCETYPE.into(),
             tenant: self.tenant,
             r#type: self.r#type.0,
             rest_docs: self.rest_docs.0,
@@ -152,8 +159,10 @@ impl AdoMetadataBuilder<SetUrl, SetType, SetRestDocs> {
 pub(crate) struct AdoMetadata {
     pub(crate) url: String,
     pub(crate) organization: Option<String>,
-    pub(crate) project: Option<String>,
-    pub(crate) repo: Option<String>,
+    pub(crate) project_name: Option<String>,
+    pub(crate) project_id: Option<String>,
+    pub(crate) repo_id: Option<String>,
+    pub(crate) repo_name: Option<String>,
     pub(crate) status: Vec<u16>,
     pub(crate) source: String,
     pub(crate) sourcetype: String,
@@ -181,5 +190,15 @@ pub(crate) trait AdoMetadataTrait {
 impl AdoMetadata {
     pub(crate) fn url(&self) -> &str {
         &self.url
+    }
+}
+
+impl AdoMetadataTrait for AdoMetadata {
+    fn set_metadata(&mut self, metadata: AdoMetadata) {
+        *self = metadata
+    }
+
+    fn metadata(&self) -> Option<&AdoMetadata> {
+        Some(self)
     }
 }

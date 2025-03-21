@@ -1,6 +1,9 @@
 use std::sync::LazyLock;
 
-use crate::azure_dev_ops_client_oauth::AzureDevOpsClientOauth;
+use crate::{
+    azure_dev_ops_client_oauth::AzureDevOpsClientOauth,
+    data::{projects::Project, repositories::Repository},
+};
 use anyhow::Context;
 use data_ingester_splunk::splunk::Splunk;
 use data_ingester_supporting::keyvault::get_keyvault_secrets;
@@ -10,8 +13,8 @@ use tracing_subscriber::EnvFilter;
 pub(crate) struct TestSetup {
     pub(crate) ado: AzureDevOpsClientOauth,
     pub(crate) organization: String,
-    pub(crate) project: String,
-    pub(crate) repo: String,
+    pub(crate) project: Project,
+    pub(crate) repo: Repository,
     pub(crate) splunks: Vec<Splunk>,
     #[allow(unused)]
     // pub(crate) tracing_guard: DefaultGuard,
@@ -23,7 +26,10 @@ pub(crate) static TEST_SETUP: LazyLock<TestSetup> = LazyLock::new(test_setup_set
 
 #[cfg(test)]
 fn test_setup_setup() -> TestSetup {
-    use crate::azure_dev_ops_client_oauth::AzureDevOpsClientOauth;
+    use crate::{
+        azure_dev_ops_client_oauth::AzureDevOpsClientOauth,
+        data::{projects::Project, repositories::Repository},
+    };
 
     let runtime = tokio::runtime::Runtime::new().unwrap();
 
@@ -83,8 +89,12 @@ fn test_setup_setup() -> TestSetup {
     });
 
     let organization = "aktest0831".to_string();
-    let project = "foo".to_string();
-    let repo = "bar".to_string();
+    let project = Project {
+        name: "foo".into(),
+        id: "foo".into(),
+        ..Default::default()
+    };
+    let repo = Repository::new("bar".into(), "bar".into());
 
     TestSetup {
         ado,
