@@ -1,11 +1,12 @@
-use data_ingester_splunk::splunk::ToHecEvents;
-use serde::Deserialize;
-use serde::Serialize;
-use tracing::error;
-
 use crate::ado_metadata::AdoMetadata;
 use crate::ado_metadata::AdoMetadataTrait;
 use crate::ado_response::AdoResponse;
+use anyhow::Result;
+use data_ingester_splunk::splunk::ToHecEvents;
+use itertools::Itertools;
+use serde::Deserialize;
+use serde::Serialize;
+use tracing::error;
 
 use super::stats::Stat;
 use super::stats::Stats;
@@ -70,6 +71,37 @@ impl<'a, T: Serialize> ToHecEvents for AdoToHecEvent<'a, T> {
 
     fn ssphp_run_key(&self) -> &str {
         crate::SSPHP_RUN_KEY
+    }
+
+    fn to_hec_events(&self) -> Result<Vec<data_ingester_splunk::splunk::HecEvent>> {
+        let (ok, err): (Vec<_>, Vec<_>) = self
+            .collection()
+            .map(|ado_response| {
+                let mut event = serde_json::to_value(self.inner)?;
+                let metadata = serde_json::to_value(self.metadata).unwrap_or_else(|_| {
+                    serde_json::to_value("Error Getting AdoMetadata")
+                        .expect("Value from static str should not fail")
+                });
+                let _ = event
+                    .as_object_mut()
+                    .expect("ado_response should always be accessible as an Value object")
+                    .insert("metadata".into(), metadata);
+                data_ingester_splunk::splunk::HecEvent::new_with_ssphp_run(
+                    &event,
+                    self.source(),
+                    self.sourcetype(),
+                    self.get_ssphp_run(),
+                )
+            })
+            .partition_result();
+        if !err.is_empty() {
+            return Err(anyhow::anyhow!(err
+                .iter()
+                .map(|err| format!("{:?}", err))
+                .collect::<Vec<String>>()
+                .join("\n")));
+        }
+        Ok(ok)
     }
 }
 
