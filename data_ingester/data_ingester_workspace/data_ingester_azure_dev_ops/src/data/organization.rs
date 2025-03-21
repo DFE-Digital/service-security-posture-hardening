@@ -82,12 +82,12 @@ impl ToHecEvents for &Organizations {
             .collection()
             .map(|organization| {
                 let mut organization = serde_json::to_value(organization)?;
-                let ssphp_debug = serde_json::to_value(&self.metadata)?;
+                let metadata = serde_json::to_value(&self.metadata)?;
 
                 let _ = organization
                     .as_object_mut()
                     .context("Getting Organization as Value Object")?
-                    .insert("SSPHP_DEBUG".into(), ssphp_debug);
+                    .insert("metadata".into(), metadata);
                 data_ingester_splunk::splunk::HecEvent::new_with_ssphp_run(
                     &organization,
                     self.source(),

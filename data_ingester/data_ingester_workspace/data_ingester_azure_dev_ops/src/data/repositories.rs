@@ -1,13 +1,20 @@
+use data_ingester_splunk::splunk::ToHecEvents;
 use serde::Deserialize;
 use serde::Serialize;
 use tracing::error;
 
+use crate::ado_metadata::AdoMetadata;
+use crate::ado_metadata::AdoMetadataTrait;
 use crate::ado_response::AdoResponse;
 
-#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+use super::stats::Stat;
+use super::stats::Stats;
+
+#[derive(Default, Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Repositories {
     pub repositories: Vec<Repository>,
+    pub metadata: AdoMetadata,
 }
 
 impl Repositories {
@@ -20,7 +27,7 @@ impl Repositories {
 #[serde(rename_all = "camelCase")]
 pub(crate) struct Repository {
     default_branch: Option<String>,
-    id: String,
+    pub(crate) id: String,
     is_disabled: bool,
     is_in_maintenance: bool,
     pub(crate) name: String,
@@ -31,11 +38,50 @@ pub(crate) struct Repository {
     url: String,
     web_url: String,
 
+    // Maybe remove if not used
     #[serde(default)]
-    policies: Vec<i64>,
+    most_recent_stat: Option<Stat>,
+    // Maybe remove if not used
+    #[serde(default)]
+    most_recent_commit_date: Option<String>,
+    #[serde(default)]
+    days_since_last_commit: Option<i64>,
+}
+
+pub(crate) struct AdoToHecEvent<'a, T: Serialize> {
+    pub(crate) inner: &'a T,
+    pub(crate) metadata: &'a AdoMetadata,
+}
+
+impl<'a, T: Serialize> ToHecEvents for AdoToHecEvent<'a, T> {
+    type Item = T;
+
+    fn source(&self) -> &str {
+        self.metadata.metadata_source()
+    }
+
+    fn sourcetype(&self) -> &str {
+        self.metadata.metadata_sourcetype()
+    }
+
+    fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
+        Box::new(std::iter::once(self.inner))
+    }
+
+    fn ssphp_run_key(&self) -> &str {
+        crate::SSPHP_RUN_KEY
+    }
 }
 
 impl Repository {
+    pub fn new(name: String, id: String) -> Self {
+        Self {
+            name,
+            id,
+            ..Default::default()
+        }
+    }
+
     pub fn id(&self) -> &str {
         self.id.as_str()
     }
@@ -56,6 +102,18 @@ impl Repository {
 
     pub fn project_id(&self) -> &str {
         self.project.id.as_str()
+    }
+
+    pub fn add_most_recent_stat(&mut self, stats: Stats) {
+        self.most_recent_stat = stats.most_recent_stat().cloned();
+        if let Some(stat) = self.most_recent_stat.as_ref() {
+            self.most_recent_commit_date = Some(stat.most_recent_date().to_string());
+            let duration = jiff::Timestamp::now()
+                .duration_since(stat.most_recent_date())
+                .as_hours()
+                / 24;
+            self.days_since_last_commit = Some(duration);
+        }
     }
 }
 
@@ -84,7 +142,10 @@ impl From<AdoResponse> for Repositories {
                 }
             }
         }).collect();
-        Self { repositories }
+        Self {
+            metadata: value.metadata.unwrap_or_default(),
+            repositories,
+        }
     }
 }
 
@@ -154,7 +215,10 @@ pub(crate) mod test {
 
         let t = &*TEST_SETUP;
         let _: Result<()> = t.runtime.block_on(async {
-            let repositories = t.ado.git_repository_list(&t.organization, "foo").await?;
+            let repositories = t
+                .ado
+                .git_repository_list(&t.organization, &t.project)
+                .await?;
 
             let repositories_len = repositories.value.len();
             assert!(repositories_len > 0);

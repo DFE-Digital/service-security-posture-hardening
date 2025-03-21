@@ -58,6 +58,7 @@ impl From<AdoResponse> for Projects {
 
 #[cfg(test)]
 mod test {
+    use crate::ado_dev_ops_client::AzureDevOpsClientMethods;
     use crate::{ado_response::AdoResponse, data::projects::Projects};
 
     #[cfg(feature = "live_tests")]

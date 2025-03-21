@@ -7,6 +7,7 @@ use crate::SSPHP_RUN_KEY;
 
 use super::git_policy_configuration::PolicyConfiguration;
 use super::git_policy_configuration::PolicyConfigurations;
+use super::projects::Project;
 use super::repositories::Repositories;
 use super::repositories::Repository;
 
@@ -41,7 +42,7 @@ impl ToHecEvents for RepoPolicyJoins {
 impl RepoPolicyJoins {
     pub fn from_repo_policies(
         organization: &str,
-        project: &str,
+        project: &Project,
         repositories: &Repositories,
         policies: &PolicyConfigurations,
     ) -> Self {
@@ -72,7 +73,7 @@ impl RepoPolicyJoins {
                 joins.push(repo_policy);
             }
         }
-        let source = format!("repo_policy_joins:{}:{}", organization, project);
+        let source = format!("repo_policy_joins:{}:{}", organization, project.id);
         Self { joins, source }
     }
 
