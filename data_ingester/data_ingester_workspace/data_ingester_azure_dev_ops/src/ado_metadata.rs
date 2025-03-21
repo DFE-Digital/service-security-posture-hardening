@@ -182,7 +182,7 @@ pub(crate) trait AdoMetadataTrait {
     }
     fn metadata_sourcetype(&self) -> &str {
         self.metadata()
-            .map(|metadata| metadata.source.as_str())
+            .map(|metadata| metadata.sourcetype.as_str())
             .unwrap_or("NO SOURCE FROM METADATA")
     }
 }
