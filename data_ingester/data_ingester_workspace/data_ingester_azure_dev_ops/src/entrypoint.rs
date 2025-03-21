@@ -220,7 +220,7 @@ async fn collect_organization<A: AzureDevOpsClientMethods>(
             )
             .await;
 
-            let stats = {
+            let stats = 'stats: {
                 let stats = try_collect_send(
                     &format!("Repo stats list {organization}/{project_id}/{repo_id}"),
                     ado.repo_stats_list(organization, project, repo),
@@ -232,14 +232,16 @@ async fn collect_organization<A: AzureDevOpsClientMethods>(
                     Ok(stats) => stats,
                     Err(err) => {
                         error!(name="Azure Dev Ops", operation="fn git_repository_list", organization=?organization, error=?err);
-                        continue;
+                        break 'stats None;
                     }
                 };
                 let stats: Stats = AdoLocalType::from(stats).into_inner();
-                stats
+                Some(stats)
             };
 
-            repo.add_most_recent_stat(stats);
+            if let Some(stats) = stats {
+                repo.add_most_recent_stat(stats);
+            }
 
             let repo_hec_event = AdoToHecEvent {
                 inner: &repo,
