@@ -94,6 +94,13 @@ async fn collect_organization<A: AzureDevOpsClientMethods>(
     )
     .await;
 
+    let _ = try_collect_send(
+        &format!("Security Namespaces {organization}"),
+        ado.security_namespaces(organization),
+        &splunk,
+    )
+    .await;
+
     let projects = try_collect_send(
         &format!("Projects for {organization}"),
         ado.projects_list(organization),
