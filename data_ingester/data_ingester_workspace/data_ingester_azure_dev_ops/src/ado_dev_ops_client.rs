@@ -248,6 +248,21 @@ pub(crate) trait AzureDevOpsClientMethods: AzureDevOpsClient {
         self.get::<AdoResponseSingle>(ado_metadata).await
     }
 
+    async fn security_namespaces(&self, organization: &str) -> Result<AdoResponse> {
+        let url = format!(
+            "https://dev.azure.com/{organization}/_apis/securitynamespaces?api-version={api_version}",
+            api_version=self.api_version()
+        );
+        let ado_metadata = self.ado_metadata_builder()
+            .url(url)
+            .organization(organization)
+            .r#type("fn security_namespaces")
+            .rest_docs("https://learn.microsoft.com/en-us/rest/api/azure/devops/security/security-namespaces/query?view=azure-devops-rest-7.2&tabs=HTTP#all-security-namespaces")
+            .build();
+
+        self.get::<AdoResponseSingle>(ado_metadata).await
+    }
+
     async fn adv_security_project_enablement(
         &self,
         organization: &str,

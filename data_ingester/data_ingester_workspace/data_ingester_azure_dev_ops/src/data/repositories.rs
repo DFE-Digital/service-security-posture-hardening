@@ -76,7 +76,7 @@ impl<'a, T: Serialize> ToHecEvents for AdoToHecEvent<'a, T> {
     fn to_hec_events(&self) -> Result<Vec<data_ingester_splunk::splunk::HecEvent>> {
         let (ok, err): (Vec<_>, Vec<_>) = self
             .collection()
-            .map(|ado_response| {
+            .map(|_ado_response| {
                 let mut event = serde_json::to_value(self.inner)?;
                 let metadata = serde_json::to_value(self.metadata).unwrap_or_else(|_| {
                     serde_json::to_value("Error Getting AdoMetadata")
@@ -106,6 +106,7 @@ impl<'a, T: Serialize> ToHecEvents for AdoToHecEvent<'a, T> {
 }
 
 impl Repository {
+    #[allow(unused)]
     pub fn new(name: String, id: String) -> Self {
         Self {
             name,
