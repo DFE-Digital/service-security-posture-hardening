@@ -4,11 +4,7 @@ use crate::{
     azure_dev_ops_client_oauth::AzureDevOpsClientOauth,
     azure_dev_ops_client_pat::AzureDevOpsClientPat,
     data::{
-        git_policy_configuration::PolicyConfigurations,
-        projects::Projects,
-        repositories::{AdoToHecEvent, Repositories},
-        repository_policy_join::RepoPolicyJoins,
-        stats::Stats,
+        git_policy_configuration::PolicyConfigurations, projects::Projects, repositories::{AdoToHecEvent, Repositories}, repository_policy_join::RepoPolicyJoins, security_namespaces::{self, SecurityNamespaces}, stats::Stats
     },
     SSPHP_RUN_KEY,
 };
@@ -59,47 +55,75 @@ async fn collect_organization<A: AzureDevOpsClientMethods>(
     splunk: Arc<Splunk>,
     organization: &str,
 ) -> Result<()> {
-    let _users = try_collect_send(
-        &format!("Users for {organization}"),
-        ado.graph_users_list(organization),
-        &splunk,
-    )
-    .await;
+    // let _users = try_collect_send(
+    //     &format!("Users for {organization}"),
+    //     ado.graph_users_list(organization),
+    //     &splunk,
+    // )
+    // .await;
 
-    let _users = try_collect_send(
-        &format!("Service Principals for {organization}"),
-        ado.graph_service_principals_list(organization),
-        &splunk,
-    )
-    .await;
+    // let _users = try_collect_send(
+    //     &format!("Service Principals for {organization}"),
+    //     ado.graph_service_principals_list(organization),
+    //     &splunk,
+    // )
+    // .await;
 
-    let _users = try_collect_send(
-        &format!("Groups for {organization}"),
-        ado.graph_groups_list(organization),
-        &splunk,
-    )
-    .await;
+    // let _users = try_collect_send(
+    //     &format!("Groups for {organization}"),
+    //     ado.graph_groups_list(organization),
+    //     &splunk,
+    // )
+    // .await;
 
-    let _ = try_collect_send(
-        &format!("Audit Streams for {organization}"),
-        ado.audit_streams(organization),
-        &splunk,
-    )
-    .await;
+    // let _ = try_collect_send(
+    //     &format!("Audit Streams for {organization}"),
+    //     ado.audit_streams(organization),
+    //     &splunk,
+    // )
+    // .await;
 
-    let _ = try_collect_send(
-        &format!("Advanced Security Org Enablement {organization}"),
-        ado.adv_security_org_enablement(organization),
-        &splunk,
-    )
-    .await;
+    // let _ = try_collect_send(
+    //     &format!("Advanced Security Org Enablement {organization}"),
+    //     ado.adv_security_org_enablement(organization),
+    //     &splunk,
+    // )
+    // .await;
 
-    let _ = try_collect_send(
+    let security_namespaces = try_collect_send(
         &format!("Security Namespaces {organization}"),
         ado.security_namespaces(organization),
         &splunk,
     )
-    .await;
+        .await;
+
+    if let Ok(security_namespaces) =  security_namespaces {
+        let security_namespaces = SecurityNamespaces::from(security_namespaces);
+        for namespace in &security_namespaces.namespaces {
+            
+            let _security_access_control_lists = try_collect_send(
+                &format!("Security Namespaces {organization}"),
+                ado.security_access_control_lists(organization, namespace.namespace_id.as_str()),
+                &splunk,
+            )
+                .await;
+        }
+    } else {
+        let err = security_namespaces.unwrap_err();
+        error!(name="Azure Dev Ops", operation="security_namespaces", organization=?organization, error=?err);
+    };
+
+
+    
+    let _ = try_collect_send(
+        &format!("Identities {organization}"),
+        ado.identities(organization),
+        &splunk,
+    )
+        .await;
+
+    anyhow::bail!("finish here");
+    
 
     let projects = try_collect_send(
         &format!("Projects for {organization}"),
