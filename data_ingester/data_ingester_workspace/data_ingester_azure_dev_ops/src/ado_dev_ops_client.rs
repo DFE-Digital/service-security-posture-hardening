@@ -280,12 +280,9 @@ pub(crate) trait AzureDevOpsClientMethods: AzureDevOpsClient {
         self.get::<AdoResponse>(ado_metadata).await
     }    
 
-
-    // &filterValue=*
-    
-    async fn identities(&self, organization: &str) -> Result<AdoResponse> {
+    async fn identities(&self, organization: &str, descriptor: &str) -> Result<AdoResponse> {
         let url = format!(
-            "https://vssps.dev.azure.com/{organization}/_apis/identities?api-version={api_version}&searchFilter=General&queryMembership=expanded&filterValue=*a*",
+            "https://vssps.dev.azure.com/{organization}/_apis/identities?api-version={api_version}&descriptors={descriptor}",
             api_version=self.api_version()
         );
         let ado_metadata = self.ado_metadata_builder()

@@ -140,7 +140,7 @@ mod test {
                 Stat {
                     commit: Commit {
                         commit_id: "commit1".into(),
-                        parents: vec![],
+                        parents: Some(vec![]),
                         tree_id: "tree1".into(),
                         author: Author {
                             name: "author1".into(),
@@ -163,7 +163,7 @@ mod test {
                 Stat {
                     commit: Commit {
                         commit_id: "commit2".into(),
-                        parents: vec![],
+                        parents: Some(vec![]),
                         tree_id: "tree2".into(),
                         author: Author {
                             name: "author2".into(),

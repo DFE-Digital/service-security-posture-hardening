@@ -4,4 +4,7 @@ pub mod projects;
 pub mod repositories;
 pub mod repository_policy_join;
 pub mod stats;
+pub mod security_acl;
+pub mod graph_users;
+pub mod identities;
 pub mod security_namespaces;

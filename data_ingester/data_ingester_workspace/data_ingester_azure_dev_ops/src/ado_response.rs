@@ -227,6 +227,7 @@ impl ToHecEvents for &AdoResponse {
     fn to_hec_events(&self) -> Result<Vec<data_ingester_splunk::splunk::HecEvent>> {
         let (ok, err): (Vec<_>, Vec<_>) = self
             .collection()
+            .filter(|ado_response| !ado_response.is_null())
             .map(|ado_response| {
                 let mut ado_response = ado_response.clone();
                 let metadata = if let Some(metadata) = &self.metadata {
