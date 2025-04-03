@@ -56,8 +56,8 @@ impl AdoMetadataTrait for Stats {
         self.metadata = metadata;
     }
 
-    fn metadata(&self) -> Option<&crate::ado_metadata::AdoMetadata> {
-        Some(&self.metadata)
+    fn metadata(&self) -> &crate::ado_metadata::AdoMetadata {
+        &self.metadata
     }
 }
 
@@ -140,7 +140,7 @@ mod test {
                 Stat {
                     commit: Commit {
                         commit_id: "commit1".into(),
-                        parents: vec![],
+                        parents: Some(vec![]),
                         tree_id: "tree1".into(),
                         author: Author {
                             name: "author1".into(),
@@ -163,7 +163,7 @@ mod test {
                 Stat {
                     commit: Commit {
                         commit_id: "commit2".into(),
-                        parents: vec![],
+                        parents: Some(vec![]),
                         tree_id: "tree2".into(),
                         author: Author {
                             name: "author2".into(),

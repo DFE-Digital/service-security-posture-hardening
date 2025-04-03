@@ -260,7 +260,41 @@ pub(crate) trait AzureDevOpsClientMethods: AzureDevOpsClient {
             .rest_docs("https://learn.microsoft.com/en-us/rest/api/azure/devops/security/security-namespaces/query?view=azure-devops-rest-7.2&tabs=HTTP#all-security-namespaces")
             .build();
 
-        self.get::<AdoResponseSingle>(ado_metadata).await
+        self.get::<AdoResponse>(ado_metadata).await
+    }
+
+    async fn security_access_control_lists(
+        &self,
+        organization: &str,
+        namespace_id: &str,
+    ) -> Result<AdoResponse> {
+        let url = format!(
+            "https://dev.azure.com/{organization}/_apis/accesscontrollists/{namespace_id}?api-version={api_version}&recurse=True&includeExtendedInfo=True",
+            api_version=self.api_version()
+        );
+        let ado_metadata = self.ado_metadata_builder()
+            .url(url)
+            .organization(organization)
+            .r#type("fn security_access_control_lists")
+            .rest_docs("https://learn.microsoft.com/en-us/rest/api/azure/devops/security/access-control-lists/query?view=azure-devops-rest-7.2&tabs=HTTP#include-child-acls")
+            .build();
+
+        self.get::<AdoResponse>(ado_metadata).await
+    }
+
+    async fn identities(&self, organization: &str, descriptor: &str) -> Result<AdoResponse> {
+        let url = format!(
+            "https://vssps.dev.azure.com/{organization}/_apis/identities?api-version={api_version}&descriptors={descriptor}",
+            api_version=self.api_version()
+        );
+        let ado_metadata = self.ado_metadata_builder()
+            .url(url)
+            .organization(organization)
+            .r#type("fn identities")
+            .rest_docs("https://learn.microsoft.com/en-us/rest/api/azure/devops/ims/identities/read-identities?view=azure-devops-rest-7.2&tabs=HTTP")
+            .build();
+
+        self.get::<AdoResponse>(ado_metadata).await
     }
 
     async fn adv_security_project_enablement(

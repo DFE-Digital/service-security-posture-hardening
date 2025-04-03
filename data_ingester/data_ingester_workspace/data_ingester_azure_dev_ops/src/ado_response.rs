@@ -115,7 +115,16 @@ pub(crate) struct AdoResponse {
     pub(crate) count: usize,
     pub(crate) value: Vec<Value>,
     #[serde(skip_deserializing, default, flatten)]
-    pub(crate) metadata: Option<AdoMetadata>,
+    pub(crate) metadata: AdoMetadata,
+}
+
+impl AdoResponse {
+    pub(crate) fn from_metadata(metadata: AdoMetadata) -> Self {
+        Self {
+            metadata,
+            ..Default::default()
+        }
+    }
 }
 
 impl AddAdoResponse for AdoResponse {
@@ -156,15 +165,10 @@ impl ToHecEvents for AdoResponse {
             .collection()
             .map(|ado_response| {
                 let mut ado_response = ado_response.clone();
-                let metadata = if let Some(metadata) = &self.metadata {
-                    serde_json::to_value(metadata).unwrap_or_else(|_| {
-                        serde_json::to_value("Error Getting AdoMetadata")
-                            .expect("Value from static str should not fail")
-                    })
-                } else {
-                    serde_json::to_value("No AdoMetadata")
+                let metadata = serde_json::to_value(&self.metadata).unwrap_or_else(|_| {
+                    serde_json::to_value("Error Getting AdoMetadata")
                         .expect("Value from static str should not fail")
-                };
+                });
 
                 let _ = ado_response
                     .as_object_mut()
@@ -191,11 +195,11 @@ impl ToHecEvents for AdoResponse {
 
 impl AdoMetadataTrait for AdoResponse {
     fn set_metadata(&mut self, metadata: AdoMetadata) {
-        self.metadata = Some(metadata);
+        self.metadata = metadata;
     }
 
-    fn metadata(&self) -> Option<&AdoMetadata> {
-        self.metadata.as_ref()
+    fn metadata(&self) -> &AdoMetadata {
+        &self.metadata
     }
 }
 
@@ -203,17 +207,11 @@ impl ToHecEvents for &AdoResponse {
     type Item = Value;
 
     fn source(&self) -> &str {
-        self.metadata
-            .as_ref()
-            .map(|metadata| metadata.source.as_str())
-            .unwrap_or("NO ADOMETADATA FOR SOURCE")
+        self.metadata_source()
     }
 
     fn sourcetype(&self) -> &str {
-        self.metadata
-            .as_ref()
-            .map(|metadata| metadata.sourcetype.as_str())
-            .unwrap_or("NO ADOMETADATA FOR SOURCETYPE")
+        self.metadata_sourcetype()
     }
 
     fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
@@ -227,17 +225,13 @@ impl ToHecEvents for &AdoResponse {
     fn to_hec_events(&self) -> Result<Vec<data_ingester_splunk::splunk::HecEvent>> {
         let (ok, err): (Vec<_>, Vec<_>) = self
             .collection()
+            .filter(|ado_response| !ado_response.is_null())
             .map(|ado_response| {
                 let mut ado_response = ado_response.clone();
-                let metadata = if let Some(metadata) = &self.metadata {
-                    serde_json::to_value(metadata).unwrap_or_else(|_| {
-                        serde_json::to_value("Error Getting AdoMetadata")
-                            .expect("Value from static str should not fail")
-                    })
-                } else {
-                    serde_json::to_value("No AdoMetadata")
+                let metadata = serde_json::to_value(&self.metadata).unwrap_or_else(|_| {
+                    serde_json::to_value("Error Getting AdoMetadata")
                         .expect("Value from static str should not fail")
-                };
+                });
 
                 let _ = ado_response
                     .as_object_mut()
@@ -267,16 +261,16 @@ pub(crate) struct AdoResponseSingle {
     #[serde(flatten)]
     pub(crate) value: Value,
     #[serde(default, skip)]
-    metadata: Option<AdoMetadata>,
+    metadata: AdoMetadata,
 }
 
 impl AdoMetadataTrait for AdoResponseSingle {
     fn set_metadata(&mut self, metadata: AdoMetadata) {
-        self.metadata = Some(metadata);
+        self.metadata = metadata;
     }
 
-    fn metadata(&self) -> Option<&AdoMetadata> {
-        self.metadata.as_ref()
+    fn metadata(&self) -> &AdoMetadata {
+        &self.metadata
     }
 }
 
@@ -293,17 +287,11 @@ impl ToHecEvents for &AdoResponseSingle {
     type Item = Value;
 
     fn source(&self) -> &str {
-        self.metadata
-            .as_ref()
-            .map(|metadata| metadata.source.as_str())
-            .unwrap_or("NO ADOMETADATA FOR SOURCE")
+        self.metadata_source()
     }
 
     fn sourcetype(&self) -> &str {
-        self.metadata
-            .as_ref()
-            .map(|metadata| metadata.sourcetype.as_str())
-            .unwrap_or("NO ADOMETADATA FOR SOURCETYPE")
+        self.metadata_sourcetype()
     }
 
     fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
@@ -316,14 +304,10 @@ impl ToHecEvents for &AdoResponseSingle {
 
     fn to_hec_events(&self) -> Result<Vec<data_ingester_splunk::splunk::HecEvent>> {
         let mut ado_response = self.value.clone();
-        let metadata = if let Some(metadata) = &self.metadata {
-            serde_json::to_value(metadata).unwrap_or_else(|_| {
-                serde_json::to_value("Error Getting AdoMetadata")
-                    .expect("Value from static str should not fail")
-            })
-        } else {
-            serde_json::to_value("No AdoMetadata").expect("Value from static str should not fail")
-        };
+        let metadata = serde_json::to_value(&self.metadata).unwrap_or_else(|_| {
+            serde_json::to_value("Error Getting AdoMetadata")
+                .expect("Value from static str should not fail")
+        });
 
         let _ = ado_response
             .as_object_mut()
@@ -367,7 +351,7 @@ impl<T: From<(Vec<I>, AdoMetadata)> + AdoMetadataTrait, I: DeserializeOwned> Fro
             }
         }).collect::<Vec<I>>();
         AdoLocalType {
-            inner: T::from((collection, value.metadata.unwrap_or_default())),
+            inner: T::from((collection, value.metadata)),
             _phantomdata: PhantomData,
         }
     }

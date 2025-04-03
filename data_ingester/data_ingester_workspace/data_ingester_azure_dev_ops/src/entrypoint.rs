@@ -1,14 +1,13 @@
 use crate::{
     ado_dev_ops_client::AzureDevOpsClientMethods,
     ado_response::AdoLocalType,
+    ado_splunk::AdoToSplunk,
     azure_dev_ops_client_oauth::AzureDevOpsClientOauth,
     azure_dev_ops_client_pat::AzureDevOpsClientPat,
     data::{
-        git_policy_configuration::PolicyConfigurations,
-        projects::Projects,
-        repositories::{AdoToHecEvent, Repositories},
-        repository_policy_join::RepoPolicyJoins,
-        stats::Stats,
+        git_policy_configuration::PolicyConfigurations, identities::Identities, projects::Projects,
+        repositories::Repositories, repository_policy_join::RepoPolicyJoins, security_acl::Acl,
+        security_namespaces::SecurityNamespaces, stats::Stats,
     },
     SSPHP_RUN_KEY,
 };
@@ -16,6 +15,7 @@ use anyhow::{Context, Result};
 use data_ingester_splunk::splunk::ToHecEvents;
 use data_ingester_splunk::splunk::{set_ssphp_run, try_collect_send, Splunk};
 use data_ingester_supporting::keyvault::Secrets;
+use std::collections::HashSet;
 use std::sync::Arc;
 use tracing::{error, info};
 
@@ -40,8 +40,12 @@ pub async fn entrypoint(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()
         .await?;
 
         for organization in organizations.organizations {
-            let _collection_result =
-                collect_organization(&ado, splunk.clone(), &organization.organization_name).await;
+            let _collection_result = collect_organization(
+                &ado,
+                splunk.clone(), //"CatsCakes").await;
+                &organization.organization_name,
+            )
+            .await;
         }
     }
 
@@ -66,40 +70,101 @@ async fn collect_organization<A: AzureDevOpsClientMethods>(
     )
     .await;
 
-    let _users = try_collect_send(
+    let _service_principals = try_collect_send(
         &format!("Service Principals for {organization}"),
         ado.graph_service_principals_list(organization),
         &splunk,
     )
     .await;
 
-    let _users = try_collect_send(
+    let _groups = try_collect_send(
         &format!("Groups for {organization}"),
         ado.graph_groups_list(organization),
         &splunk,
     )
     .await;
 
-    let _ = try_collect_send(
+    let _audit_streams = try_collect_send(
         &format!("Audit Streams for {organization}"),
         ado.audit_streams(organization),
         &splunk,
     )
     .await;
 
-    let _ = try_collect_send(
+    let _adv_security = try_collect_send(
         &format!("Advanced Security Org Enablement {organization}"),
         ado.adv_security_org_enablement(organization),
         &splunk,
     )
     .await;
 
-    let _ = try_collect_send(
+    let security_namespaces = try_collect_send(
         &format!("Security Namespaces {organization}"),
         ado.security_namespaces(organization),
         &splunk,
     )
     .await;
+
+    if let Ok(security_namespaces) = security_namespaces {
+        let security_namespaces = SecurityNamespaces::from(security_namespaces);
+
+        let security_access_control_lists = {
+            let mut security_access_control_lists = vec![];
+            for namespace in &security_namespaces.namespaces {
+                let security_access_control_list = try_collect_send(
+                    &format!("Security Namespaces {organization}"),
+                    ado.security_access_control_lists(
+                        organization,
+                        namespace.namespace_id.as_str(),
+                    ),
+                    &splunk,
+                )
+                .await;
+                if let Ok(security_access_control_list) = security_access_control_list {
+                    let acl: Vec<Acl> = security_access_control_list
+                        .value
+                        .into_iter()
+                        .filter_map(|value| serde_json::from_value(value).ok())
+                        .map(|mut acl: Acl| {
+                            acl.prepare_for_splunk();
+                            acl
+                        })
+                        .collect();
+
+                    security_access_control_lists.extend(acl);
+                }
+            }
+            security_access_control_lists
+        };
+
+        let identity_descriptors = security_access_control_lists
+            .iter()
+            .flat_map(|acl| acl.aces_dictionary.keys())
+            .map(|key| key.as_str())
+            .collect::<HashSet<&str>>();
+
+        for descriptor in identity_descriptors {
+            let user_identities = try_collect_send(
+                &format!("User identities {organization} {}", descriptor),
+                ado.identities(organization, descriptor),
+                &splunk,
+            )
+            .await;
+            if let Ok(user_identities) = user_identities {
+                let metadata = user_identities.metadata.clone();
+                let mut identities: Identities = user_identities.into();
+                for id in identities.inner.iter_mut() {
+                    if id.descriptor != descriptor {
+                        id.descriptor = descriptor.to_string();
+                        let _ = AdoToSplunk::from_metadata(&metadata)
+                            .event(id)
+                            .send(&splunk)
+                            .await;
+                    }
+                }
+            }
+        }
+    }
 
     let projects = try_collect_send(
         &format!("Projects for {organization}"),
@@ -250,20 +315,10 @@ async fn collect_organization<A: AzureDevOpsClientMethods>(
                 repo.add_most_recent_stat(stats);
             }
 
-            let repo_hec_event = AdoToHecEvent {
-                inner: &repo,
-                metadata: &repos.metadata,
-            }
-            .to_hec_events();
-
-            match repo_hec_event {
-                Ok(event) => {
-                    let _ = splunk.send_batch(event).await;
-                }
-                Err(err) => {
-                    error!(error=?err, repo=?repo, "Failed to Convert ADO Repo to HecEvent");
-                }
-            }
+            AdoToSplunk::from_metadata(&repos.metadata)
+                .event(&repo)
+                .send(&splunk)
+                .await?;
         }
 
         info!(

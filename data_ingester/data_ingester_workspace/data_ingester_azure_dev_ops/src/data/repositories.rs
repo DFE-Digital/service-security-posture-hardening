@@ -1,9 +1,5 @@
 use crate::ado_metadata::AdoMetadata;
-use crate::ado_metadata::AdoMetadataTrait;
 use crate::ado_response::AdoResponse;
-use anyhow::Result;
-use data_ingester_splunk::splunk::ToHecEvents;
-use itertools::Itertools;
 use serde::Deserialize;
 use serde::Serialize;
 use tracing::error;
@@ -47,62 +43,6 @@ pub(crate) struct Repository {
     most_recent_commit_date: Option<String>,
     #[serde(default)]
     days_since_last_commit: Option<i64>,
-}
-
-pub(crate) struct AdoToHecEvent<'a, T: Serialize> {
-    pub(crate) inner: &'a T,
-    pub(crate) metadata: &'a AdoMetadata,
-}
-
-impl<'a, T: Serialize> ToHecEvents for AdoToHecEvent<'a, T> {
-    type Item = T;
-
-    fn source(&self) -> &str {
-        self.metadata.metadata_source()
-    }
-
-    fn sourcetype(&self) -> &str {
-        self.metadata.metadata_sourcetype()
-    }
-
-    fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
-        Box::new(std::iter::once(self.inner))
-    }
-
-    fn ssphp_run_key(&self) -> &str {
-        crate::SSPHP_RUN_KEY
-    }
-
-    fn to_hec_events(&self) -> Result<Vec<data_ingester_splunk::splunk::HecEvent>> {
-        let (ok, err): (Vec<_>, Vec<_>) = self
-            .collection()
-            .map(|_ado_response| {
-                let mut event = serde_json::to_value(self.inner)?;
-                let metadata = serde_json::to_value(self.metadata).unwrap_or_else(|_| {
-                    serde_json::to_value("Error Getting AdoMetadata")
-                        .expect("Value from static str should not fail")
-                });
-                let _ = event
-                    .as_object_mut()
-                    .expect("ado_response should always be accessible as an Value object")
-                    .insert("metadata".into(), metadata);
-                data_ingester_splunk::splunk::HecEvent::new_with_ssphp_run(
-                    &event,
-                    self.source(),
-                    self.sourcetype(),
-                    self.get_ssphp_run(),
-                )
-            })
-            .partition_result();
-        if !err.is_empty() {
-            return Err(anyhow::anyhow!(err
-                .iter()
-                .map(|err| format!("{:?}", err))
-                .collect::<Vec<String>>()
-                .join("\n")));
-        }
-        Ok(ok)
-    }
 }
 
 impl Repository {
@@ -176,7 +116,7 @@ impl From<AdoResponse> for Repositories {
             }
         }).collect();
         Self {
-            metadata: value.metadata.unwrap_or_default(),
+            metadata: value.metadata,
             repositories,
         }
     }
@@ -220,6 +160,7 @@ pub(crate) mod test {
 }
 "#;
 
+    #[allow(dead_code)]
     pub(crate) fn repopsitory_test_fixture() -> Repositories {
         let ado_response: AdoResponse = serde_json::from_str(REPOSITORIES_JSON).unwrap();
         let repositories: Repositories = Repositories::from(ado_response);
