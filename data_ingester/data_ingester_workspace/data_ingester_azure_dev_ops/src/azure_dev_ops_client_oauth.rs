@@ -105,20 +105,20 @@ impl AzureDevOpsClient for AzureDevOpsClientOauth {
 
     async fn get<T: DeserializeOwned + AddAdoResponse>(
         &self,
-        mut metadata: AdoMetadata,
+        metadata: AdoMetadata,
     ) -> Result<AdoResponse> {
         let mut continuation_token = AdoPaging::default();
-        let mut collection = AdoResponse::default();
+        let mut collection = AdoResponse::from_metadata(metadata);
 
         loop {
             let next_url = if continuation_token.has_more() {
                 format!(
                     "{}&continuationToken={}",
-                    metadata.url(),
+                    collection.metadata.url(),
                     continuation_token.next_token()
                 )
             } else {
-                metadata.url().to_string()
+                collection.metadata.url().to_string()
             };
 
             let response = self
@@ -136,7 +136,7 @@ impl AzureDevOpsClient for AzureDevOpsClientOauth {
                 error!(name="Azure Dev Ops", operation="GET request", error="Non 2xx status code", status=?status, headers=?headers, body=text, url=next_url);
                 anyhow::bail!("Azure Dev Org request failed with with Non 2xx status code");
             }
-            metadata.status.push(status.into());
+            collection.metadata.status.push(status.into());
 
             let rate_limit = AdoRateLimiting::from_headers(&headers);
             debug!(rate_limit=?rate_limit);
@@ -159,7 +159,6 @@ impl AzureDevOpsClient for AzureDevOpsClientOauth {
                 break;
             }
         }
-        collection.metadata = Some(metadata);
 
         Ok(collection)
     }

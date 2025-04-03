@@ -174,16 +174,12 @@ pub(crate) struct AdoMetadata {
 pub(crate) trait AdoMetadataTrait {
     #[allow(unused)]
     fn set_metadata(&mut self, metadata: AdoMetadata);
-    fn metadata(&self) -> Option<&AdoMetadata>;
+    fn metadata(&self) -> &AdoMetadata;
     fn metadata_source(&self) -> &str {
-        self.metadata()
-            .map(|metadata| metadata.source.as_str())
-            .unwrap_or("NO SOURCE FROM METADATA")
+        self.metadata().source.as_str()
     }
     fn metadata_sourcetype(&self) -> &str {
-        self.metadata()
-            .map(|metadata| metadata.sourcetype.as_str())
-            .unwrap_or("NO SOURCE FROM METADATA")
+        self.metadata().sourcetype.as_str()
     }
 }
 
@@ -198,7 +194,7 @@ impl AdoMetadataTrait for AdoMetadata {
         *self = metadata
     }
 
-    fn metadata(&self) -> Option<&AdoMetadata> {
-        Some(self)
+    fn metadata(&self) -> &AdoMetadata {
+        self
     }
 }

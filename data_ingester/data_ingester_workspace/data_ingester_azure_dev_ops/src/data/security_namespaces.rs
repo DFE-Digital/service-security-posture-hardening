@@ -16,7 +16,7 @@ pub struct SecurityNamespace {
     // pub collection: Collection,
     // pub default_team: DefaultTeam,
     pub namespace_id: String,
-    pub name: String,    
+    pub name: String,
     // pub last_update_time: String,
     // pub name: String,
     // pub revision: i64,
@@ -24,7 +24,6 @@ pub struct SecurityNamespace {
     // pub url: String,
     // pub visibility: String,
 }
-
 
 impl From<AdoResponse> for SecurityNamespaces {
     fn from(value: AdoResponse) -> Self {
@@ -40,7 +39,7 @@ impl From<AdoResponse> for SecurityNamespaces {
             }
         }).collect();
         Self {
-            namespaces:collection,
+            namespaces: collection,
         }
     }
 }

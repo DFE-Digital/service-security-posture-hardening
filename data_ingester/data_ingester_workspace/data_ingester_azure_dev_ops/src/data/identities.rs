@@ -1,13 +1,56 @@
 use serde::Deserialize;
 use serde::Serialize;
 use serde_json::Value;
+use tracing::error;
+
+use crate::ado_response::AdoResponse;
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Identities {
+    pub(crate) inner: Vec<Identity>,
+}
+
+impl Identities {
+    #[allow(dead_code)]
+    pub(crate) fn extend(&mut self, other: Identities) {
+        self.inner.extend(other.inner);
+    }
+    #[allow(dead_code)]
+    pub(crate) fn iter(&mut self) -> impl Iterator<Item = &Identity> {
+        self.inner.iter()
+    }
+    #[allow(dead_code)]
+    pub(crate) fn iter_mut(&mut self) -> impl Iterator<Item = &mut Identity> {
+        self.inner.iter_mut()
+    }
+}
+
+impl From<AdoResponse> for Identities {
+    fn from(value: AdoResponse) -> Self {
+        let identities = value
+            .value
+            .into_iter()
+            .filter(|identity_value| !identity_value.is_null())
+            .filter_map(|identity_value| {
+                if let Ok(identity) = serde_json::from_value(identity_value) {
+                    Some(identity)
+                } else {
+                    error!("Failed to build Identity from Value");
+                    None
+                }
+            })
+            .collect::<Vec<Identity>>();
+        Self { inner: identities }
+    }
+}
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Identity {
     pub descriptor: String,
     pub id: String,
-    pub is_active: bool,
+    pub is_active: Option<bool>,
     pub is_container: Option<bool>,
     pub member_ids: Option<Vec<Value>>,
     pub member_of: Option<Vec<Value>>,

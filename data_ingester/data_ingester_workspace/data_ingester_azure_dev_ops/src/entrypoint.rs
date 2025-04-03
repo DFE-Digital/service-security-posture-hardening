@@ -1,10 +1,13 @@
 use crate::{
     ado_dev_ops_client::AzureDevOpsClientMethods,
     ado_response::AdoLocalType,
+    ado_splunk::AdoToSplunk,
     azure_dev_ops_client_oauth::AzureDevOpsClientOauth,
     azure_dev_ops_client_pat::AzureDevOpsClientPat,
     data::{
-        git_policy_configuration::PolicyConfigurations, graph_users::{User,Users}, identities::{self, Identity}, projects::Projects, repositories::{AdoToHecEvent, Repositories}, repository_policy_join::RepoPolicyJoins, security_acl::{Acl, Acls}, security_namespaces::SecurityNamespaces, stats::Stats
+        git_policy_configuration::PolicyConfigurations, identities::Identities, projects::Projects,
+        repositories::Repositories, repository_policy_join::RepoPolicyJoins, security_acl::Acl,
+        security_namespaces::SecurityNamespaces, stats::Stats,
     },
     SSPHP_RUN_KEY,
 };
@@ -12,9 +15,9 @@ use anyhow::{Context, Result};
 use data_ingester_splunk::splunk::ToHecEvents;
 use data_ingester_splunk::splunk::{set_ssphp_run, try_collect_send, Splunk};
 use data_ingester_supporting::keyvault::Secrets;
+use std::collections::HashSet;
 use std::sync::Arc;
 use tracing::{error, info};
-use std::collections::HashMap;
 
 pub async fn entrypoint(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
     set_ssphp_run(SSPHP_RUN_KEY)?;
@@ -36,10 +39,13 @@ pub async fn entrypoint(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()
         )
         .await?;
 
-       for organization in organizations.organizations {
-            let _collection_result =
-                collect_organization(&ado, splunk.clone(), //"CatsCakes").await;
-                                      &organization.organization_name).await;
+        for organization in organizations.organizations {
+            let _collection_result = collect_organization(
+                &ado,
+                splunk.clone(), //"CatsCakes").await;
+                &organization.organization_name,
+            )
+            .await;
         }
     }
 
@@ -57,154 +63,108 @@ async fn collect_organization<A: AzureDevOpsClientMethods>(
     splunk: Arc<Splunk>,
     organization: &str,
 ) -> Result<()> {
-    // let users = try_collect_send(
-    //     &format!("Users for {organization}"),
-    //     ado.graph_users_list(organization),
-    //     &splunk,
-    // )
-    //     .await;
+    let _users = try_collect_send(
+        &format!("Users for {organization}"),
+        ado.graph_users_list(organization),
+        &splunk,
+    )
+    .await;
 
-    // if let Ok(users) =  users {
-    //     let users: Vec<User> = users.value.into_iter().map(|value| serde_json::from_value(value).unwrap()).collect();
-    //     for user in &users {
-    //         let _user_identities = try_collect_send(
-    //             &format!("User identities {organization} {}", user.display_name),
-    //             ado.identities(organization, &user.descriptor),
-    //             &splunk,
-    //         )
-    //             .await;
-    //     }
-    // } else {
-    //     let err = users.unwrap_err();
-    //     error!(name="Azure Dev Ops", operation="security_namespaces", organization=?organization, error=?err);
-    // };
-    
-    // anyhow::bail!("finish here");    
-    
-    
+    let _service_principals = try_collect_send(
+        &format!("Service Principals for {organization}"),
+        ado.graph_service_principals_list(organization),
+        &splunk,
+    )
+    .await;
 
+    let _groups = try_collect_send(
+        &format!("Groups for {organization}"),
+        ado.graph_groups_list(organization),
+        &splunk,
+    )
+    .await;
 
-    // let _users = try_collect_send(
-    //     &format!("Service Principals for {organization}"),
-    //     ado.graph_service_principals_list(organization),
-    //     &splunk,
-    // )
-    // .await;
+    let _audit_streams = try_collect_send(
+        &format!("Audit Streams for {organization}"),
+        ado.audit_streams(organization),
+        &splunk,
+    )
+    .await;
 
-    // let _users = try_collect_send(
-    //     &format!("Groups for {organization}"),
-    //     ado.graph_groups_list(organization),
-    //     &splunk,
-    // )
-    // .await;
-
-
-
-    // let _ = try_collect_send(
-    //     &format!("Audit Streams for {organization}"),
-    //     ado.audit_streams(organization),
-    //     &splunk,
-    // )
-    // .await;
-
-    // let _ = try_collect_send(
-    //     &format!("Advanced Security Org Enablement {organization}"),
-    //     ado.adv_security_org_enablement(organization),
-    //     &splunk,
-    // )
-    // .await;
+    let _adv_security = try_collect_send(
+        &format!("Advanced Security Org Enablement {organization}"),
+        ado.adv_security_org_enablement(organization),
+        &splunk,
+    )
+    .await;
 
     let security_namespaces = try_collect_send(
         &format!("Security Namespaces {organization}"),
         ado.security_namespaces(organization),
         &splunk,
     )
-        .await;
+    .await;
 
-    let mut identities: HashMap<String, Identity> = HashMap::new();    
-
-    if let Ok(security_namespaces) =  security_namespaces {
+    if let Ok(security_namespaces) = security_namespaces {
         let security_namespaces = SecurityNamespaces::from(security_namespaces);
-        for namespace in &security_namespaces.namespaces {
-            
-            let security_access_control_lists = try_collect_send(
-                &format!("Security Namespaces {organization}"),
-                ado.security_access_control_lists(organization, namespace.namespace_id.as_str()),
+
+        let security_access_control_lists = {
+            let mut security_access_control_lists = vec![];
+            for namespace in &security_namespaces.namespaces {
+                let security_access_control_list = try_collect_send(
+                    &format!("Security Namespaces {organization}"),
+                    ado.security_access_control_lists(
+                        organization,
+                        namespace.namespace_id.as_str(),
+                    ),
+                    &splunk,
+                )
+                .await;
+                if let Ok(security_access_control_list) = security_access_control_list {
+                    let acl: Vec<Acl> = security_access_control_list
+                        .value
+                        .into_iter()
+                        .filter_map(|value| serde_json::from_value(value).ok())
+                        .map(|mut acl: Acl| {
+                            acl.prepare_for_splunk();
+                            acl
+                        })
+                        .collect();
+
+                    security_access_control_lists.extend(acl);
+                }
+            }
+            security_access_control_lists
+        };
+
+        let identity_descriptors = security_access_control_lists
+            .iter()
+            .flat_map(|acl| acl.aces_dictionary.keys())
+            .map(|key| key.as_str())
+            .collect::<HashSet<&str>>();
+
+        for descriptor in identity_descriptors {
+            let user_identities = try_collect_send(
+                &format!("User identities {organization} {}", descriptor),
+                ado.identities(organization, descriptor),
                 &splunk,
             )
-                .await;
-            
-            if let Ok(acls) = security_access_control_lists {
-                let acls_: Vec<Acl> = acls.value.into_iter().map(|value| serde_json::from_value(value).unwrap()).collect();
-                for acl in &acls_ {
-                    for user in acl.aces_dictionary.keys() {
-                        if identities.contains_key(user) {
-                            println!("hashmap contains user: {}", &user); 
-                            continue
-                        }
-                        
-                        let user_identities = try_collect_send(
-                            &format!("User identities {organization} {}", user),
-                            ado.identities(organization, &user),
-                            &splunk,
-                        )
+            .await;
+            if let Ok(user_identities) = user_identities {
+                let metadata = user_identities.metadata.clone();
+                let mut identities: Identities = user_identities.into();
+                for id in identities.inner.iter_mut() {
+                    if id.descriptor != descriptor {
+                        id.descriptor = descriptor.to_string();
+                        let _ = AdoToSplunk::from_metadata(&metadata)
+                            .event(id)
+                            .send(&splunk)
                             .await;
-                        if let Ok(user_identities) = user_identities {
-                            let user_identities
-                                : Vec<Identity> = user_identities.value.into_iter().filter(|value| {
-                                    if value.is_null() {
-                                        error!("identity {} IS NULL!", user);
-                                        false
-                                    } else {
-                                        true
-                                    }
-                                    }).map(|value| serde_json::from_value(value).unwrap()).collect();
-                            for identity in user_identities {
-                                identities.insert(user.to_string(), identity);
-                            }
-                        }
-                        
-                        
                     }
-             
                 }
-                let mut acls = Acls {
-                    acls: acls_,
-                    metadata: acls.metadata
-                };
-                acls.prepare_for_splunk();
-                let hec_events= acls.to_hec_events().unwrap();
-                splunk.send_batch(hec_events).await;
-            } 
-
-            
+            }
         }
-    } else {
-        let err = security_namespaces.unwrap_err();
-        error!(name="Azure Dev Ops", operation="security_namespaces", organization=?organization, error=?err);
-    };
-
-
-    
-    // if let Ok(users) =  users {
-    //     let users: Vec<User> = users.value.into_iter().map(|value| serde_json::from_value(value).unwrap()).collect();
-    //     for user in &users {
-    //         let _user_identities = try_collect_send(
-    //             &format!("User identities {organization} {}", user.display_name),
-    //             ado.identities(organization, &user.descriptor),
-    //             &splunk,
-    //         )
-    //             .await;
-    //     }
-    // } else {
-    //     let err = users.unwrap_err();
-    //     error!(name="Azure Dev Ops", operation="security_namespaces", organization=?organization, error=?err);
-    // };
-    
-//    anyhow::bail!("finish here");            
-    
-
-    
+    }
 
     let projects = try_collect_send(
         &format!("Projects for {organization}"),
@@ -355,20 +315,10 @@ async fn collect_organization<A: AzureDevOpsClientMethods>(
                 repo.add_most_recent_stat(stats);
             }
 
-            let repo_hec_event = AdoToHecEvent {
-                inner: &repo,
-                metadata: &repos.metadata,
-            }
-            .to_hec_events();
-
-            match repo_hec_event {
-                Ok(event) => {
-                    let _ = splunk.send_batch(event).await;
-                }
-                Err(err) => {
-                    error!(error=?err, repo=?repo, "Failed to Convert ADO Repo to HecEvent");
-                }
-            }
+            AdoToSplunk::from_metadata(&repos.metadata)
+                .event(&repo)
+                .send(&splunk)
+                .await?;
         }
 
         info!(

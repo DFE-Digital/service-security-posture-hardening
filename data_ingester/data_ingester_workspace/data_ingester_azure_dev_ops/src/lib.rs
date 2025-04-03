@@ -2,6 +2,7 @@
 mod ado_dev_ops_client;
 mod ado_metadata;
 mod ado_response;
+mod ado_splunk;
 mod azure_dev_ops_client_oauth;
 mod azure_dev_ops_client_pat;
 mod data;

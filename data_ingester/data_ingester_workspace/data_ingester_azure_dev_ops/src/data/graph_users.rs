@@ -1,28 +1,10 @@
 use serde::Deserialize;
 use serde::Serialize;
-use serde_json::Value;
-
-use crate::ado_metadata::AdoMetadataTrait;
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Users {
-    Users: Vec<User>
+    users: Vec<User>,
 }
-
-// impl From<(Vec<User>, AdoMetadata)> for Users {
-//     fn from(value: (Vec<User>, AdoMetadata)) -> Self {
-//         Self {
-//             stats: value.0,
-//             metadata: value.1,
-//         }
-//     }
-// }
-
-// impl AdoMetadataTrait for Users {
-    
-// }
-
-
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -48,7 +30,7 @@ pub struct Links {
     pub membership_state: MembershipState,
     pub memberships: Memberships,
     #[serde(rename = "self")]
-    pub self_field: Self_field,
+    pub self_field: SelfField,
     pub storage_key: StorageKey,
 }
 
@@ -72,7 +54,7 @@ pub struct Memberships {
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct Self_field {
+pub struct SelfField {
     pub href: String,
 }
 
@@ -82,8 +64,7 @@ pub struct StorageKey {
     pub href: String,
 }
 
-
-
+#[cfg(test)]
 mod test {
     use super::User;
     static USER: &str = r#"{
@@ -119,9 +100,6 @@ mod test {
     #[test]
     fn test_acl_from_json() {
         let user: User = serde_json::from_str(USER).unwrap();
-        dbg!(&user);
-        assert_eq!(user.display_name, "sam.pritchard@education.gov.uk" );
-        println!("{}", serde_json::to_string_pretty(&user).unwrap());
-        assert!(false);
+        assert_eq!(user.display_name, "sam.pritchard@education.gov.uk");
     }
 }

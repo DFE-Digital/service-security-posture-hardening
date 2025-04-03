@@ -263,11 +263,13 @@ pub(crate) trait AzureDevOpsClientMethods: AzureDevOpsClient {
         self.get::<AdoResponse>(ado_metadata).await
     }
 
-
-
-    async fn security_access_control_lists(&self, organization: &str, namespace_id: &str) -> Result<AdoResponse> {
+    async fn security_access_control_lists(
+        &self,
+        organization: &str,
+        namespace_id: &str,
+    ) -> Result<AdoResponse> {
         let url = format!(
-            "https://dev.azure.com/{organization}/_apis/accesscontrollists/{namespace_id}?api-version={api_version}",
+            "https://dev.azure.com/{organization}/_apis/accesscontrollists/{namespace_id}?api-version={api_version}&recurse=True&includeExtendedInfo=True",
             api_version=self.api_version()
         );
         let ado_metadata = self.ado_metadata_builder()
@@ -278,7 +280,7 @@ pub(crate) trait AzureDevOpsClientMethods: AzureDevOpsClient {
             .build();
 
         self.get::<AdoResponse>(ado_metadata).await
-    }    
+    }
 
     async fn identities(&self, organization: &str, descriptor: &str) -> Result<AdoResponse> {
         let url = format!(
@@ -293,7 +295,7 @@ pub(crate) trait AzureDevOpsClientMethods: AzureDevOpsClient {
             .build();
 
         self.get::<AdoResponse>(ado_metadata).await
-    }    
+    }
 
     async fn adv_security_project_enablement(
         &self,

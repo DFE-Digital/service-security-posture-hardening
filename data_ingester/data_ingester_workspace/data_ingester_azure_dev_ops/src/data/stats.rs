@@ -56,8 +56,8 @@ impl AdoMetadataTrait for Stats {
         self.metadata = metadata;
     }
 
-    fn metadata(&self) -> Option<&crate::ado_metadata::AdoMetadata> {
-        Some(&self.metadata)
+    fn metadata(&self) -> &crate::ado_metadata::AdoMetadata {
+        &self.metadata
     }
 }
 

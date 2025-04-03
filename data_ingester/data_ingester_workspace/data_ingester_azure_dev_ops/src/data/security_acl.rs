@@ -1,40 +1,34 @@
-
 use anyhow::{anyhow, Result};
 use data_ingester_splunk::splunk::ToHecEvents;
 use itertools::Itertools;
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
-use serde_json::Value;
-use tracing::{error, trace};
+use serde::{Deserialize, Serialize};
 
-use crate::{
-    ado_metadata::{AdoMetadata, AdoMetadataTrait},
-    SSPHP_RUN_KEY,
-};
+use crate::ado_metadata::{AdoMetadata, AdoMetadataTrait};
 
 use std::collections::HashMap;
 
 pub struct Acls {
     pub(crate) acls: Vec<Acl>,
-    pub(crate) metadata: Option<AdoMetadata>,
+    pub(crate) metadata: AdoMetadata,
 }
 
 impl AdoMetadataTrait for Acls {
     fn set_metadata(&mut self, metadata: AdoMetadata) {
-        self.metadata = Some(metadata);
+        self.metadata = metadata;
     }
 
-    fn metadata(&self) -> Option<&AdoMetadata> {
-        self.metadata.as_ref()
+    fn metadata(&self) -> &AdoMetadata {
+        &self.metadata
     }
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Acl {
-    #[serde(skip_serializing, default)]    
+    #[serde(skip_serializing, default)]
     pub aces_dictionary: HashMap<String, AclEntry>,
     #[serde(skip_deserializing, default)]
-    pub aces_vec: Vec<AclEntry>,    
+    pub aces_vec: Vec<AclEntry>,
     pub inherit_permissions: bool,
     pub token: String,
 }
@@ -45,11 +39,24 @@ pub struct AclEntry {
     pub allow: i64,
     pub deny: i64,
     pub descriptor: String,
+    pub extended_info: Option<ExtendedInfo>,
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ExtendedInfo {
+    effective_allow: Option<i32>,
+    inherited_allow: Option<i32>,
+    effective_deny: Option<i32>,
+    inherited_deny: Option<i32>,
 }
 
 impl Acls {
+    #[allow(dead_code)]
     pub(crate) fn prepare_for_splunk(&mut self) {
-        self.acls.iter_mut().for_each(|acl| acl.prepare_for_splunk());
+        self.acls
+            .iter_mut()
+            .for_each(|acl| acl.prepare_for_splunk());
     }
 }
 
@@ -82,16 +89,11 @@ impl ToHecEvents for Acls {
         let (ok, err): (Vec<_>, Vec<_>) = self
             .collection()
             .map(|acl| {
-                let mut acl = serde_json::to_value(&acl).unwrap();
-                let metadata = if let Some(metadata) = &self.metadata {
-                    serde_json::to_value(metadata).unwrap_or_else(|_| {
-                        serde_json::to_value("Error Getting AdoMetadata")
-                            .expect("Value from static str should not fail")
-                    })
-                } else {
-                    serde_json::to_value("No AdoMetadata")
+                let mut acl = serde_json::to_value(acl)?;
+                let metadata = serde_json::to_value(&self.metadata).unwrap_or_else(|_| {
+                    serde_json::to_value("Error Getting AdoMetadata")
                         .expect("Value from static str should not fail")
-                };
+                });
 
                 let _ = acl
                     .as_object_mut()
@@ -107,15 +109,16 @@ impl ToHecEvents for Acls {
             .partition_result();
         if !err.is_empty() {
             return Err(anyhow!(err
-                               .iter()
-                               .map(|err| format!("{:?}", err))
-                               .collect::<Vec<String>>()
-                               .join("\n")));
+                .iter()
+                .map(|err| format!("{:?}", err))
+                .collect::<Vec<String>>()
+                .join("\n")));
         }
         Ok(ok)
-    }    
+    }
 }
 
+#[cfg(test)]
 mod test {
     use super::Acl;
     static ACL: &str = r#"{
@@ -153,9 +156,6 @@ mod test {
     #[test]
     fn test_acl_from_json() {
         let acl: Acl = serde_json::from_str(ACL).unwrap();
-        dbg!(&acl);
-        assert_eq!(acl.inherit_permissions, true );
-        println!("{}", serde_json::to_string_pretty(&acl).unwrap());
-        assert!(false);
+        assert!(acl.inherit_permissions);
     }
 }
