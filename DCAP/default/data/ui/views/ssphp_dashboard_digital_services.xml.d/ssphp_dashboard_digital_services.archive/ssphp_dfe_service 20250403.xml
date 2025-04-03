@@ -833,7 +833,7 @@ $tkn_exemptions_show$
           
           <div class="line" style="width: $tkn_margin$%; border-bottom: 5px solid $tkn_colour_tile$;"/>
         </div>
-        <div class="undervalue2" style="background:$tkn_colour_tile$;">GitHub &amp; ADO Repos Compliant with CIS Benchmarks</div>
+        <div class="undervalue2" style="background:$tkn_colour_tile$;">GitHub Repos Compliant with CIS Benchmarks</div>
         <div class="undervalue" style="background:$tkn_colour_tile$;">REPOSITORY CONFIGURATION</div>
       </html>
     </panel>

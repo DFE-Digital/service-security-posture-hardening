@@ -2,7 +2,7 @@
 
 
 <label>Security Posture Continuous Assurance : Service Control Detail Dashboard</label>
-<description>{{environment}} v6.1.13</description>
+<description>{{environment}} v6.1.19</description>
   
   <init>
     <unset token="tkn_ready_event"></unset>
@@ -374,6 +374,9 @@
                           lower('ssphp.assessment.source')="no tool",
                                 "(source=".'start_text_nob'."*".'ssphp.resource.id'."*".'end_text_nob'.")",
                                 
+                          lower('ssphp.assessment.source')="ado",
+                                "| search resource_id=".'start_text_nob'.'ssphp.resource.id'.'end_text_nob',
+                                
                           lower('ssphp.use_case.group_name')="sast",
                                 'start_text'.'ssphp.resource.id'.'div_text'.'ssphp.use_case.id'.'div_text'.'ssphp.assessment.description_url'.'div_text'.'ssphp.assessment.description_rule'.'end_text',
                                 
@@ -393,6 +396,7 @@
                          lower('ssphp.assessment.source')="secrets",1,
                          lower('ssphp.assessment.source')="workflows",3,
                          lower('ssphp.assessment.source')="no tool",1,
+                         lower('ssphp.assessment.source')="ado",3,
                          lower('ssphp.use_case.group_name')="sast",1,
                          lower('ssphp.use_case.group_name')="qualys",6,
                          lower('ssphp.use_case.group_name')="ms-defender",5,
