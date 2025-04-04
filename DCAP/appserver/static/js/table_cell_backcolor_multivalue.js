@@ -11,6 +11,13 @@ require([
             //return true;
             return _(['state',
                       'Compliance Status',
+                      'compliant_policies',
+                      'repo_daysSinceLastCommit',
+                      'actors_with_effectiveAllow_actions',
+                      'policy_settings_minimumApproverCount',
+                      'policy_settings_resetOnSourcePush',
+                      'policy_is_blocking',
+                      'advSecEnabled',
                       'status',
                       'conclusion',
                       'days_pushed_to_run',
