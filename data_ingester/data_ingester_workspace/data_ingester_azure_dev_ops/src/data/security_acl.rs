@@ -1,24 +1,19 @@
-use anyhow::{anyhow, Result};
-use data_ingester_splunk::splunk::ToHecEvents;
-use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 
-use crate::ado_metadata::{AdoMetadata, AdoMetadataTrait};
-
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 pub struct Acls {
-    pub(crate) acls: Vec<Acl>,
-    pub(crate) metadata: AdoMetadata,
+    pub(crate) inner: Vec<Acl>,
+    //    pub(crate) metadata: Vec<AdoMetadata>,
 }
 
-impl AdoMetadataTrait for Acls {
-    fn set_metadata(&mut self, metadata: AdoMetadata) {
-        self.metadata = metadata;
-    }
-
-    fn metadata(&self) -> &AdoMetadata {
-        &self.metadata
+impl Acls {
+    pub(crate) fn all_acl_descriptors(&self) -> HashSet<&str> {
+        self.inner
+            .iter()
+            .flat_map(|acl| acl.aces_dictionary.keys())
+            .map(|key| key.as_str())
+            .collect::<HashSet<&str>>()
     }
 }
 
@@ -54,7 +49,7 @@ pub struct ExtendedInfo {
 impl Acls {
     #[allow(dead_code)]
     pub(crate) fn prepare_for_splunk(&mut self) {
-        self.acls
+        self.inner
             .iter_mut()
             .for_each(|acl| acl.prepare_for_splunk());
     }
@@ -63,58 +58,6 @@ impl Acls {
 impl Acl {
     pub(crate) fn prepare_for_splunk(&mut self) {
         self.aces_vec = self.aces_dictionary.values().cloned().collect();
-    }
-}
-
-impl ToHecEvents for Acls {
-    type Item = Acl;
-
-    fn source(&self) -> &str {
-        self.metadata_source()
-    }
-
-    fn sourcetype(&self) -> &str {
-        self.metadata_sourcetype()
-    }
-
-    fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
-        Box::new(self.acls.iter())
-    }
-
-    fn ssphp_run_key(&self) -> &str {
-        crate::SSPHP_RUN_KEY
-    }
-
-    fn to_hec_events(&self) -> Result<Vec<data_ingester_splunk::splunk::HecEvent>> {
-        let (ok, err): (Vec<_>, Vec<_>) = self
-            .collection()
-            .map(|acl| {
-                let mut acl = serde_json::to_value(acl)?;
-                let metadata = serde_json::to_value(&self.metadata).unwrap_or_else(|_| {
-                    serde_json::to_value("Error Getting AdoMetadata")
-                        .expect("Value from static str should not fail")
-                });
-
-                let _ = acl
-                    .as_object_mut()
-                    .expect("ado_response should always be accessible as an Value object")
-                    .insert("metadata".into(), metadata);
-                data_ingester_splunk::splunk::HecEvent::new_with_ssphp_run(
-                    &acl,
-                    self.source(),
-                    self.sourcetype(),
-                    self.get_ssphp_run(),
-                )
-            })
-            .partition_result();
-        if !err.is_empty() {
-            return Err(anyhow!(err
-                .iter()
-                .map(|err| format!("{:?}", err))
-                .collect::<Vec<String>>()
-                .join("\n")));
-        }
-        Ok(ok)
     }
 }
 

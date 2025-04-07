@@ -25,6 +25,8 @@ pub struct SecurityNamespace {
     // pub visibility: String,
 }
 
+impl SecurityNamespace {}
+
 impl From<AdoResponse> for SecurityNamespaces {
     fn from(value: AdoResponse) -> Self {
         let collection = value.value.into_iter().filter_map(|repo| {

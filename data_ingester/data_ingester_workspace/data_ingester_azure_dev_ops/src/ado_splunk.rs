@@ -97,6 +97,13 @@ pub(crate) struct AdoToHecEvents<'metadata, 't, T: Serialize> {
     pub(crate) metadata: &'metadata AdoMetadata,
 }
 
+impl<'metadata, 't, T: Serialize> AdoToHecEvents<'metadata, 't, T> {
+    pub(crate) async fn send(self, splunk: &Splunk) -> Result<()> {
+        let events = self.to_hec_events()?;
+        splunk.send_batch(events).await
+    }
+}
+
 impl<'metadata, 't, T: Serialize> ToHecEvents for AdoToHecEvents<'metadata, 't, T> {
     type Item = T;
 
