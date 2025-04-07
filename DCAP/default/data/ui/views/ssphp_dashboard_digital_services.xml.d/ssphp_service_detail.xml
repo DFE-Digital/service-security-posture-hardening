@@ -2,7 +2,7 @@
 
 
 <label>Security Posture Continuous Assurance : Service Control Detail Dashboard</label>
-<description>{{environment}} v6.1.19</description>
+<description>{{environment}} v6.1.20</description>
   
   <init>
     <unset token="tkn_ready_event"></unset>
@@ -480,7 +480,8 @@
 
 | rex field=search "^(?&lt;search_text&gt;[\s\S]*?)``` ##################### end dashboard query ##################### ```"
 
-| eval search_text=replace('search_text',"``` ##################### replace with dashboard filter ##################### ```","$tkn_use_case_search_string$")
+| eval search_text=replace('search_text',"``` ##################### replace with dashboard filter ##################### ```","$tkn_use_case_search_string$"),
+       search_text=replace('search_text'," earliest=-\d*d@d "," earliest=-30d@d ")
 
 | eval search_text=replace('search_text',"\|\s*fields","| table"),
         search_text='search_text'."| sort 0 - ssphp.score.score | fields - temp_total_count"
