@@ -23,7 +23,6 @@ pub async fn github_octocrab_entrypoint(secrets: Arc<Secrets>, splunk: Arc<Splun
                 None
             }
         };
-
         github_app(app, &splunk, custom_property_validator)
             .await
             .context("Running Collection for GitHub App")?;
@@ -42,7 +41,12 @@ async fn github_app(
     splunk: &Arc<Splunk>,
     custom_property_validator: Option<Arc<Validator>>,
 ) -> Result<()> {
+    // Initalise default crypto provider to prevent runtime error
+    // https://github.com/rustls/rustls/issues/1938
+    let _ = rustls::crypto::aws_lc_rs::default_provider().install_default();
+
     let client = OctocrabGit::new_from_app(github_app).context("Build OctocrabGit")?;
+
     info!("Getting installations");
     let installations = client
         .client

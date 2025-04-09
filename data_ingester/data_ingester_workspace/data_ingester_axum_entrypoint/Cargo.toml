@@ -6,7 +6,7 @@ default-run = "data_ingester_axum_entrypoint"
 
 [dependencies]
 anyhow = { version = "1", features=["backtrace"]}
-axum = { features=["json", "tracing", "macros"], git = "https://github.com/tokio-rs/axum.git", rev = "axum-v0.8.2"}
+axum = {version = "0.8", features=["json", "tracing", "macros"]}
 data_ingester_aws = { path = "../data_ingester_aws" }
 data_ingester_azure = { path = "../data_ingester_azure" }
 data_ingester_azure_rest = { path = "../data_ingester_azure_rest" }
