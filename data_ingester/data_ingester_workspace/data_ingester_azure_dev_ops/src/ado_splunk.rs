@@ -2,6 +2,7 @@ use crate::ado_metadata::AdoMetadata;
 use crate::ado_metadata::AdoMetadataTrait;
 use anyhow::Result;
 use data_ingester_splunk::splunk::Splunk;
+use data_ingester_splunk::splunk::SplunkTrait;
 use data_ingester_splunk::splunk::ToHecEvents;
 use itertools::Itertools;
 use serde::Serialize;

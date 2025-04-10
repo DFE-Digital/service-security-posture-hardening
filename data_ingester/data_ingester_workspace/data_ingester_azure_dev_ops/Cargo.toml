@@ -29,3 +29,4 @@ workspace = true
 
 [features]
 live_tests = []
+update_test_fixtures = []

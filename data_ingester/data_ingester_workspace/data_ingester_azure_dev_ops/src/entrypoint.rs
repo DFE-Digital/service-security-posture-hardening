@@ -5,20 +5,15 @@ use crate::{
     azure_dev_ops_client_oauth::AzureDevOpsClientOauth,
     azure_dev_ops_client_pat::AzureDevOpsClientPat,
     data::{
-        git_policy_configuration::PolicyConfigurations,
-        identities::Identities,
-        projects::Projects,
-        repositories::Repositories,
-        repository_policy_join::RepoPolicyJoins,
-        security_acl::{Acl, Acls},
-        security_namespaces::SecurityNamespaces,
-        stats::Stats,
+        git_policy_configuration::PolicyConfigurations, identities::Identities, projects::Projects,
+        repositories::Repositories, repository_policy_join::RepoPolicyJoins, security_acl::Acls,
+        security_namespaces::SecurityNamespaces, stats::Stats,
     },
     SSPHP_RUN_KEY,
 };
 use anyhow::{Context, Result};
-use data_ingester_splunk::splunk::ToHecEvents;
 use data_ingester_splunk::splunk::{set_ssphp_run, try_collect_send, Splunk};
+use data_ingester_splunk::splunk::{SplunkTrait, ToHecEvents};
 use data_ingester_supporting::keyvault::Secrets;
 use std::sync::Arc;
 use tracing::{error, info};
@@ -295,7 +290,7 @@ async fn collect_security_acls(
     security_namespaces: SecurityNamespaces,
     organization: &str,
 ) -> Acls {
-    let mut security_access_control_lists = vec![];
+    let mut security_access_control_lists = Acls::default();
     // Get ACLS
     for namespace in &security_namespaces.namespaces {
         let security_access_control_list = try_collect_send(
@@ -308,27 +303,17 @@ async fn collect_security_acls(
         // The aces_dictionary format is arduous to work with in Splunk so we convert to an aces_vec
         if let Ok(mut security_access_control_list) = security_access_control_list {
             let metadata = std::mem::take(&mut security_access_control_list.metadata);
-            let acl: Vec<Acl> = security_access_control_list
-                .value
-                .into_iter()
-                .filter_map(|value| serde_json::from_value(value).ok())
-                .map(|mut acl: Acl| {
-                    acl.prepare_for_splunk();
-                    acl
-                })
-                .collect();
+            let acls: Acls = security_access_control_list.into();
 
             let _ = AdoToSplunk::from_metadata(&metadata)
-                .events(&acl)
+                .events(&acls.inner)
                 .send(splunk)
                 .await;
 
-            security_access_control_lists.extend(acl);
+            security_access_control_lists.extend(acls);
         }
     }
-    Acls {
-        inner: security_access_control_lists,
-    }
+    security_access_control_lists
 }
 
 /// Collect all identites from an  Iterator of &str.

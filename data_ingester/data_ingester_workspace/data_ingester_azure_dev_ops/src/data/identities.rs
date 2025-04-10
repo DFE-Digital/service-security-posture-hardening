@@ -11,21 +11,6 @@ pub struct Identities {
     pub(crate) inner: Vec<Identity>,
 }
 
-impl Identities {
-    #[allow(dead_code)]
-    pub(crate) fn extend(&mut self, other: Identities) {
-        self.inner.extend(other.inner);
-    }
-    #[allow(dead_code)]
-    pub(crate) fn iter(&mut self) -> impl Iterator<Item = &Identity> {
-        self.inner.iter()
-    }
-    #[allow(dead_code)]
-    pub(crate) fn iter_mut(&mut self) -> impl Iterator<Item = &mut Identity> {
-        self.inner.iter_mut()
-    }
-}
-
 impl From<AdoResponse> for Identities {
     fn from(value: AdoResponse) -> Self {
         let identities = value
@@ -208,4 +193,38 @@ pub struct VirtualPlugin {
     pub type_field: String,
     #[serde(rename = "$value")]
     pub value: String,
+}
+
+#[cfg(test)]
+pub(crate) mod test {
+    use crate::{
+        ado_dev_ops_client::AzureDevOpsClientMethods, ado_response::AdoResponse,
+        data::security_acl::test::acls_from_ado_response, test_utils::TEST_SETUP,
+    };
+    use anyhow::Result;
+
+    use super::Identities;
+
+    pub(crate) fn identities_ado_response() -> AdoResponse {
+        let t = &*TEST_SETUP;
+        let acls = acls_from_ado_response();
+        let descriptors = acls.all_acl_descriptors();
+        let descriptor = descriptors
+            .iter()
+            .find(|descriptor| descriptor.contains("2179408616-0-0-0-0-1"))
+            .unwrap();
+        let result: Result<AdoResponse> = t.runtime.block_on(async {
+            let result = t.ado.identities(&t.organization, descriptor).await?;
+            assert!(!result.value.is_empty());
+            Ok(result)
+        });
+        result.unwrap()
+    }
+
+    #[test]
+    fn test_identities_from_ado_response() {
+        let ado_response = identities_ado_response();
+        let identities = Identities::from(ado_response);
+        assert!(!identities.inner.is_empty());
+    }
 }

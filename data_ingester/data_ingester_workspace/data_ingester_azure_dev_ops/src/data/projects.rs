@@ -60,13 +60,10 @@ impl From<AdoResponse> for Projects {
 mod test {
     use crate::{ado_response::AdoResponse, data::projects::Projects};
 
-    #[cfg(feature = "live_tests")]
     use crate::test_utils::TEST_SETUP;
 
-    #[cfg(feature = "live_tests")]
     use crate::ado_dev_ops_client::AzureDevOpsClientMethods;
 
-    #[cfg(feature = "live_tests")]
     use anyhow::Result;
 
     static PROJECTS_JSON: &str = r#"
@@ -110,7 +107,6 @@ mod test {
         assert_eq!(projects.projects.len(), 1);
     }
 
-    #[cfg(feature = "live_tests")]
     #[test]
     fn live_test_ado_projects_from_projects() {
         let t = &*TEST_SETUP;

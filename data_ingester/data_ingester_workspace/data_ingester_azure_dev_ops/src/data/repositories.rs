@@ -124,11 +124,9 @@ impl From<AdoResponse> for Repositories {
 
 #[cfg(test)]
 pub(crate) mod test {
-    #[cfg(feature = "live_tests")]
     use crate::test_utils::TEST_SETUP;
     use crate::{ado_response::AdoResponse, data::repositories::Repositories};
 
-    #[cfg(feature = "live_tests")]
     use anyhow::Result;
 
     static REPOSITORIES_JSON: &str = r#"
@@ -180,7 +178,6 @@ pub(crate) mod test {
         assert_eq!(repositories.repositories.len(), 1);
     }
 
-    #[cfg(feature = "live_tests")]
     #[test]
     fn live_test_repositories_from_ado_response() {
         use crate::{

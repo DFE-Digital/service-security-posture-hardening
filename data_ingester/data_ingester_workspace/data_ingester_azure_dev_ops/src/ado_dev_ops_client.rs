@@ -6,7 +6,7 @@ use anyhow::Result;
 use serde::de::DeserializeOwned;
 
 pub(crate) trait AzureDevOpsClient {
-    async fn get<T: DeserializeOwned + AddAdoResponse>(
+    async fn get<T: DeserializeOwned + serde::Serialize + AddAdoResponse>(
         &self,
         metadata: AdoMetadata,
     ) -> Result<AdoResponse>;
@@ -416,45 +416,46 @@ pub(crate) trait AzureDevOpsClientMethods: AzureDevOpsClient {
 }
 
 #[cfg(test)]
-#[cfg(feature = "live_tests")]
-mod live_tests {
-    use crate::ado_dev_ops_client::AzureDevOpsClientMethods;
+mod tests {
+    use crate::data::security_acl::test::acls_from_ado_response;
     use crate::test_utils::TEST_SETUP;
+    use crate::{ado_dev_ops_client::AzureDevOpsClientMethods, ado_response::AdoResponse};
     use anyhow::Result;
-    use data_ingester_splunk::splunk::{Splunk, ToHecEvents};
+    use data_ingester_splunk::splunk::{SplunkTrait, ToHecEvents};
 
-    async fn send_to_splunk(splunks: &[Splunk], ado_response: impl ToHecEvents) -> Result<()> {
+    async fn send_to_splunk(
+        splunk: &(impl SplunkTrait + Sync),
+        ado_response: impl ToHecEvents,
+    ) -> Result<()> {
         let hec_events = (ado_response).to_hec_events()?;
 
-        for splunk in splunks {
-            splunk.send_batch(hec_events.clone()).await?;
-        }
+        splunk.send_batch(hec_events.clone()).await?;
 
         tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
         Ok(())
     }
 
-    #[test]
-    fn test_all() {
-        let t = &*TEST_SETUP;
-        let _: Result<()> = t.runtime.block_on(async {
-            let projects = t.ado.projects_list(&t.organization).await?;
-            send_to_splunk(&t.splunks, projects).await?;
+    // #[test]
+    // fn test_all() {
+    //     let t = &*TEST_SETUP;
+    //     let _: Result<()> = t.runtime.block_on(async {
+    //         let projects = t.ado.projects_list(&t.organization).await?;
+    //         send_to_splunk(&t.splunk, projects).await?;
 
-            let policy_configuration = t
-                .ado
-                .git_policy_configuration_get(&t.organization, &t.project)
-                .await?;
-            send_to_splunk(&t.splunks, policy_configuration).await?;
+    //         let policy_configuration = t
+    //             .ado
+    //             .git_policy_configuration_get(&t.organization, &t.project)
+    //             .await?;
+    //         send_to_splunk(&t.splunk, policy_configuration).await?;
 
-            let result = t
-                .ado
-                .git_repository_list(&t.organization, &t.project)
-                .await?;
-            send_to_splunk(&t.splunks, result).await?;
-            Ok(())
-        });
-    }
+    //         let result = t
+    //             .ado
+    //             .git_repository_list(&t.organization, &t.project)
+    //             .await?;
+    //         send_to_splunk(&t.splunk, result).await?;
+    //         Ok(())
+    //     });
+    // }
 
     #[test]
     fn test_ado_projects_list() {
@@ -463,7 +464,7 @@ mod live_tests {
             let projects = t.ado.projects_list(&t.organization).await?;
             assert!(!projects.value.is_empty());
             assert_eq!(projects.count, projects.value.len());
-            send_to_splunk(&t.splunks, projects).await?;
+            send_to_splunk(&t.splunk, projects).await?;
             Ok(())
         });
     }
@@ -477,7 +478,7 @@ mod live_tests {
             // assert!(false);
             assert!(!audit_streams.value.is_empty());
             assert_eq!(audit_streams.count, audit_streams.value.len());
-            send_to_splunk(&t.splunks, audit_streams).await?;
+            send_to_splunk(&t.splunk, audit_streams).await?;
             Ok(())
         });
         result.unwrap();
@@ -491,7 +492,7 @@ mod live_tests {
             let pat_tokens = t.ado.pat_tokens(&t.organization).await?;
             assert!(!pat_tokens.value.is_empty());
             assert_eq!(pat_tokens.count, pat_tokens.value.len());
-            send_to_splunk(&t.splunks, pat_tokens).await?;
+            send_to_splunk(&t.splunk, pat_tokens).await?;
             Ok(())
         });
         result.unwrap();
@@ -508,7 +509,7 @@ mod live_tests {
 
             assert!(!policy_configuration.value.is_empty());
             assert_eq!(policy_configuration.count, policy_configuration.value.len());
-            send_to_splunk(&t.splunks, policy_configuration).await?;
+            send_to_splunk(&t.splunk, policy_configuration).await?;
             Ok(())
         });
     }
@@ -524,7 +525,7 @@ mod live_tests {
 
             assert!(!policy_configuration.value.is_empty());
             assert_eq!(policy_configuration.count, policy_configuration.value.len());
-            send_to_splunk(&t.splunks, policy_configuration).await?;
+            send_to_splunk(&t.splunk, policy_configuration).await?;
             Ok(())
         });
     }
@@ -539,22 +540,22 @@ mod live_tests {
                 .await?;
             assert!(!result.value.is_empty());
             assert_eq!(result.count, result.value.len());
-            send_to_splunk(&t.splunks, result).await?;
+            send_to_splunk(&t.splunk, result).await?;
             Ok(())
         });
     }
 
-    #[test]
-    fn test_ado_organizations_list() {
-        let t = &*TEST_SETUP;
-        let result: Result<()> = t.runtime.block_on(async {
-            let result = t.ado.organizations_list().await?;
-            assert!(!result.organizations.is_empty());
-            send_to_splunk(&t.splunks, &result).await?;
-            Ok(())
-        });
-        result.unwrap();
-    }
+    // #[test]
+    // fn test_ado_organizations_list() {
+    //     let t = &*TEST_SETUP;
+    //     let result: Result<()> = t.runtime.block_on(async {
+    //         let result = t.ado.organizations_list().await?;
+    //         assert!(!result.organizations.is_empty());
+    //         send_to_splunk(&t.splunk, &result).await?;
+    //         Ok(())
+    //     });
+    //     result.unwrap();
+    // }
 
     #[test]
     fn test_ado_graph_users_list() {
@@ -562,7 +563,7 @@ mod live_tests {
         let result: Result<()> = t.runtime.block_on(async {
             let result = t.ado.graph_users_list(&t.organization).await?;
             assert!(!result.value.is_empty());
-            send_to_splunk(&t.splunks, &result).await?;
+            send_to_splunk(&t.splunk, &result).await?;
             Ok(())
         });
         result.unwrap();
@@ -574,7 +575,7 @@ mod live_tests {
         let result: Result<()> = t.runtime.block_on(async {
             let result = t.ado.graph_service_principals_list(&t.organization).await?;
             assert!(!result.value.is_empty());
-            send_to_splunk(&t.splunks, &result).await?;
+            send_to_splunk(&t.splunk, &result).await?;
             Ok(())
         });
         result.unwrap();
@@ -586,7 +587,7 @@ mod live_tests {
         let result: Result<()> = t.runtime.block_on(async {
             let result = t.ado.graph_groups_list(&t.organization).await?;
             assert!(!result.value.is_empty());
-            send_to_splunk(&t.splunks, &result).await?;
+            send_to_splunk(&t.splunk, &result).await?;
             Ok(())
         });
         result.unwrap();
@@ -597,7 +598,7 @@ mod live_tests {
         let t = &*TEST_SETUP;
         let result: Result<()> = t.runtime.block_on(async {
             let result = t.ado.adv_security_org_enablement(&t.organization).await?;
-            send_to_splunk(&t.splunks, &result).await?;
+            send_to_splunk(&t.splunk, &result).await?;
             assert!(!result.value.is_empty());
             Ok(())
         });
@@ -612,7 +613,7 @@ mod live_tests {
                 .ado
                 .adv_security_project_enablement(&t.organization, &t.project)
                 .await?;
-            send_to_splunk(&t.splunks, &result).await?;
+            send_to_splunk(&t.splunk, &result).await?;
             assert!(!result.value.is_empty());
             Ok(())
         });
@@ -627,7 +628,7 @@ mod live_tests {
                 .ado
                 .adv_security_repo_enablement(&t.organization, &t.project, &t.repo)
                 .await?;
-            send_to_splunk(&t.splunks, &result).await?;
+            send_to_splunk(&t.splunk, &result).await?;
             assert!(!result.value.is_empty());
             Ok(())
         });
@@ -643,7 +644,7 @@ mod live_tests {
                 .ado
                 .adv_security_alerts(&t.organization, &t.project, &t.repo)
                 .await?;
-            send_to_splunk(&t.splunks, &result).await?;
+            send_to_splunk(&t.splunk, &result).await?;
             assert!(!result.value.is_empty());
             Ok(())
         });
@@ -658,44 +659,59 @@ mod live_tests {
                 .ado
                 .build_general_settings(&t.organization, &t.project)
                 .await?;
-            send_to_splunk(&t.splunks, &result).await?;
+            send_to_splunk(&t.splunk, &result).await?;
             assert!(!result.value.is_empty());
             Ok(())
         });
         result.unwrap();
     }
 
-    // #[tokio::test]
-    // async fn test_ado_accounts_list() -> Result<()> {
-    //     let t = test_setup().await;
-    //     let owner_id = t
-    //         .ado
-    //         .org_details(&t.organization)
-    //         .await?
-    //         .first()
-    //         .unwrap()
-    //         .id
-    //         .to_string();
-    //     let accounts = t.ado.accounts_list(&t.organization, &owner_id).await?;
-    //     assert!(accounts.value.len() > 0);
-    //     send_to_splunk(&t.splunks, accounts).await?;
-    //     Ok(())
-    // }
+    #[test]
+    fn test_ado_security_namespaces() {
+        let t = &*TEST_SETUP;
+        let result: Result<()> = t.runtime.block_on(async {
+            let result = t.ado.security_namespaces(&t.organization).await?;
+            send_to_splunk(&t.splunk, &result).await?;
+            assert!(!result.value.is_empty());
+            Ok(())
+        });
+        result.unwrap();
+    }
 
-    // #[tokio::test]
-    // async fn test_ado_owner_id() -> Result<()> {
-    //     let t = test_setup().await;
-    //     let owner_id = t.ado.org_details(&t.organization).await?;
-    //     // send_to_splunk(&t.splunks, accounts).await?;
-    //     Ok(())
-    // }
+    #[test]
+    pub fn test_ado_access_control_lists() {
+        let t = &*TEST_SETUP;
+        let namespaces = crate::data::security_namespaces::test::security_namespace();
+        let namespace = namespaces
+            .namespaces
+            .iter()
+            .find(|namespace| namespace.name == "Git Repositories")
+            .unwrap();
+        let result: Result<AdoResponse> = t.runtime.block_on(async {
+            let result = t
+                .ado
+                .security_access_control_lists(&t.organization, &namespace.namespace_id)
+                .await?;
+            assert!(!result.value.is_empty());
+            Ok(result)
+        });
+        let _ = result.unwrap();
+    }
 
-    // #[tokio::test]
-    // async fn test_admin_overview() -> Result<()> {
-    //     let t = test_setup().await;
-    //     let owner_id = t.ado.admin_overview(&t.organization).await?;
-    //     assert!(false);
-    //     // send_to_splunk(&splunks, accounts).await?;
-    //     Ok(())
-    // }
+    #[test]
+    pub fn test_ado_identities() {
+        let t = &*TEST_SETUP;
+        let acls = acls_from_ado_response();
+        let descriptors = acls.all_acl_descriptors();
+        let descriptor = descriptors
+            .iter()
+            .find(|descriptor| descriptor.contains("2179408616-0-0-0-0-1"))
+            .unwrap();
+        let result: Result<AdoResponse> = t.runtime.block_on(async {
+            let result = t.ado.identities(&t.organization, descriptor).await?;
+            assert!(!result.value.is_empty());
+            Ok(result)
+        });
+        let _ = result.unwrap();
+    }
 }
