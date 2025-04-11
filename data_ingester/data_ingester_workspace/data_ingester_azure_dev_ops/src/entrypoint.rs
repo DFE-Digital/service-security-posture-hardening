@@ -6,16 +6,15 @@ use crate::{
     azure_dev_ops_client_pat::AzureDevOpsClientPat,
     data::{
         git_policy_configuration::PolicyConfigurations, identities::Identities, projects::Projects,
-        repositories::Repositories, repository_policy_join::RepoPolicyJoins, security_acl::Acl,
+        repositories::Repositories, repository_policy_join::RepoPolicyJoins, security_acl::Acls,
         security_namespaces::SecurityNamespaces, stats::Stats,
     },
     SSPHP_RUN_KEY,
 };
 use anyhow::{Context, Result};
-use data_ingester_splunk::splunk::ToHecEvents;
 use data_ingester_splunk::splunk::{set_ssphp_run, try_collect_send, Splunk};
+use data_ingester_splunk::splunk::{SplunkTrait, ToHecEvents};
 use data_ingester_supporting::keyvault::Secrets;
-use std::collections::HashSet;
 use std::sync::Arc;
 use tracing::{error, info};
 
@@ -105,65 +104,16 @@ async fn collect_organization<A: AzureDevOpsClientMethods>(
     )
     .await;
 
+    // Get Acls & Identities associated with all Security Namespaces
     if let Ok(security_namespaces) = security_namespaces {
         let security_namespaces = SecurityNamespaces::from(security_namespaces);
 
-        let security_access_control_lists = {
-            let mut security_access_control_lists = vec![];
-            for namespace in &security_namespaces.namespaces {
-                let security_access_control_list = try_collect_send(
-                    &format!("Security Namespaces {organization}"),
-                    ado.security_access_control_lists(
-                        organization,
-                        namespace.namespace_id.as_str(),
-                    ),
-                    &splunk,
-                )
-                .await;
-                if let Ok(security_access_control_list) = security_access_control_list {
-                    let acl: Vec<Acl> = security_access_control_list
-                        .value
-                        .into_iter()
-                        .filter_map(|value| serde_json::from_value(value).ok())
-                        .map(|mut acl: Acl| {
-                            acl.prepare_for_splunk();
-                            acl
-                        })
-                        .collect();
+        let security_access_control_lists =
+            collect_security_acls(ado, &splunk, security_namespaces, organization).await;
 
-                    security_access_control_lists.extend(acl);
-                }
-            }
-            security_access_control_lists
-        };
+        let identity_descriptors = security_access_control_lists.all_acl_descriptors();
 
-        let identity_descriptors = security_access_control_lists
-            .iter()
-            .flat_map(|acl| acl.aces_dictionary.keys())
-            .map(|key| key.as_str())
-            .collect::<HashSet<&str>>();
-
-        for descriptor in identity_descriptors {
-            let user_identities = try_collect_send(
-                &format!("User identities {organization} {}", descriptor),
-                ado.identities(organization, descriptor),
-                &splunk,
-            )
-            .await;
-            if let Ok(user_identities) = user_identities {
-                let metadata = user_identities.metadata.clone();
-                let mut identities: Identities = user_identities.into();
-                for id in identities.inner.iter_mut() {
-                    if id.descriptor != descriptor {
-                        id.descriptor = descriptor.to_string();
-                        let _ = AdoToSplunk::from_metadata(&metadata)
-                            .event(id)
-                            .send(&splunk)
-                            .await;
-                    }
-                }
-            }
-        }
+        let _ = collect_identities(ado, &splunk, identity_descriptors, organization).await;
     }
 
     let projects = try_collect_send(
@@ -330,4 +280,77 @@ async fn collect_organization<A: AzureDevOpsClientMethods>(
         );
     }
     Ok(())
+}
+
+/// Get the associated ACLs for `SecurityNamespaces`
+///
+async fn collect_security_acls(
+    ado: &impl AzureDevOpsClientMethods,
+    splunk: &Splunk,
+    security_namespaces: SecurityNamespaces,
+    organization: &str,
+) -> Acls {
+    let mut security_access_control_lists = Acls::default();
+    // Get ACLS
+    for namespace in &security_namespaces.namespaces {
+        let security_access_control_list = try_collect_send(
+            &format!("Security Namespaces {organization}"),
+            ado.security_access_control_lists(organization, namespace.namespace_id.as_str()),
+            splunk,
+        )
+        .await;
+        // Process Acls for Splunk.
+        // The aces_dictionary format is arduous to work with in Splunk so we convert to an aces_vec
+        if let Ok(mut security_access_control_list) = security_access_control_list {
+            let metadata = std::mem::take(&mut security_access_control_list.metadata);
+            let acls: Acls = security_access_control_list.into();
+
+            let _ = AdoToSplunk::from_metadata(&metadata)
+                .events(&acls.inner)
+                .send(splunk)
+                .await;
+
+            security_access_control_lists.extend(acls);
+        }
+    }
+    security_access_control_lists
+}
+
+/// Collect all identites from an  Iterator of &str.
+///
+/// There are cases where the the ADO API returns a different identity
+/// descriptor than the one actually requested. This seems to be
+/// limited to project level administraive groups and is probably due
+/// to an underlying ADO implementation detail. In these cases we send
+/// the returned / mismatched version of the identity, and then modify
+/// that idetity to contain the requested descriptor and send that
+/// too. This will allow any usecases in Splunk to match against
+/// either of the desciptors.
+async fn collect_identities(
+    ado: &impl AzureDevOpsClientMethods,
+    splunk: &Splunk,
+    identity_descriptors: impl IntoIterator<Item = &str>,
+    organization: &str,
+) {
+    for descriptor in identity_descriptors {
+        let user_identities = try_collect_send(
+            &format!("User identities {organization} {}", descriptor),
+            ado.identities(organization, descriptor),
+            splunk,
+        )
+        .await;
+        if let Ok(user_identities) = user_identities {
+            let metadata = user_identities.metadata.clone();
+            let mut identities: Identities = user_identities.into();
+            for id in identities.inner.iter_mut() {
+                if id.descriptor != descriptor {
+                    id.descriptor = descriptor.to_string();
+                    let _ = AdoToSplunk::from_metadata(&metadata)
+                        .event(id)
+                        .send(splunk)
+                        .await;
+                }
+            }
+        }
+    }
 }

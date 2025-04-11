@@ -1,5 +1,5 @@
 use anyhow::{Context, Result};
-use data_ingester_splunk::splunk::{set_ssphp_run, Splunk, ToHecEvents};
+use data_ingester_splunk::splunk::{set_ssphp_run, Splunk, ToHecEvents, SplunkTrait};
 use data_ingester_supporting::keyvault::Secrets;
 use std::collections::HashMap;
 use std::fs::{self};

@@ -1,6 +1,7 @@
 use anyhow::{Context, Result};
 use async_recursion::async_recursion;
 use azure_core::auth::TokenCredential;
+use data_ingester_splunk::splunk::SplunkTrait;
 use data_ingester_splunk::splunk::{set_ssphp_run, Splunk, ToHecEvents};
 use data_ingester_supporting::keyvault::Secrets;
 use serde::{Deserialize, Serialize};

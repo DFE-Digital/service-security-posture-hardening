@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use crate::splunk::{HecEvent, Splunk};
+use crate::splunk::{HecEvent, Splunk, SplunkTrait};
 use anyhow::Result;
 use tokio::sync::mpsc::unbounded_channel;
 use tokio::task::JoinHandle;

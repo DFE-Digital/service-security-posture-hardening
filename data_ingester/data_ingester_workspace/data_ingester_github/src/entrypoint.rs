@@ -2,7 +2,7 @@
 use crate::{custom_properties::CustomPropertySetter, OctocrabGit};
 use anyhow::{Context, Result};
 use data_ingester_financial_business_partners::{fbp_results::FbpResult, validator::Validator};
-use data_ingester_splunk::splunk::{set_ssphp_run, try_collect_send, Splunk, ToHecEvents};
+use data_ingester_splunk::splunk::{set_ssphp_run, try_collect_send, Splunk, ToHecEvents, SplunkTrait};
 use data_ingester_supporting::keyvault::{GitHubApp, Secrets};
 use std::sync::Arc;
 use tracing::{error, info};

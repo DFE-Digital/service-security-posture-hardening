@@ -491,7 +491,7 @@ where
 #[cfg(test)]
 mod test {
     use crate::{
-        splunk::{HecEvent, Splunk},
+        splunk::{HecEvent, Splunk, SplunkTrait},
         tasks::{AckTask, HecAckQueryResponse, HecAckResponse, HecBatch, SendingTask},
     };
     use mockito::{Matcher::Any, Server, ServerGuard};

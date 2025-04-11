@@ -236,8 +236,8 @@ pub(crate) struct Message {
     pub event: String,
 }
 
-impl Splunk {
-    pub fn new(host: &str, token: &str, hec_acknowledgment: bool) -> Result<Self> {
+impl SplunkTrait for  Splunk {
+    fn new(host: &str, token: &str, hec_acknowledgment: bool) -> Result<Self> where Self: Sized {
         let url = format!("https://{}", host);
 
         let client = Self::new_request_client(token, hec_acknowledgment)
@@ -264,9 +264,17 @@ impl Splunk {
             send_tx,
         })
     }
+    
+    fn send_tx(&self) -> &Sender<HecEvent>  {
+        &self.send_tx
+    }
+}
+
+pub trait SplunkTrait {
+    fn new(host: &str, token: &str, hec_acknowledgment: bool) -> Result<Self> where Self: Sized;
 
     /// Create a Request Client for Splunk
-    pub(crate) fn new_request_client(token: &str, hec_acknowledgment: bool) -> Result<Client> {
+    fn new_request_client(token: &str, hec_acknowledgment: bool) -> Result<Client> {
         let accept_invalid_certs = std::env::var_os("ACCEPT_INVALID_CERTS").is_some();
 
         let client = ClientBuilder::new()
@@ -276,6 +284,8 @@ impl Splunk {
             .build()?;
         Ok(client)
     }
+
+    fn send_tx(&self) -> &Sender<HecEvent> ;
 
     fn headers(token: &str, hec_acknowledgment: bool) -> Result<HeaderMap> {
         let mut headers = HeaderMap::new();
@@ -291,9 +301,11 @@ impl Splunk {
         Ok(headers)
     }
 
-    pub async fn send_batch(&self, events: impl IntoIterator<Item = HecEvent>) -> Result<()> {
+    fn send_batch<I: IntoIterator<Item = HecEvent> + std::marker::Send + Sync>(&self, events: I) -> impl std::future::Future<Output = Result<()>> + Send + Sync
+    where Self: Sync, <I as IntoIterator>::IntoIter: Send + Sync{
+        async {
         for event in events {
-            match self.send_tx.reserve().await {
+            match self.send_tx().reserve().await {
                 Ok(permit) => {
                     permit.send(event);
                 }
@@ -304,7 +316,7 @@ impl Splunk {
             }
         }
         Ok(())
-    }
+    }}
 }
 
 /// Run a future to completion and send the results to Splunk.
@@ -355,7 +367,7 @@ where
 
 #[cfg(test)]
 pub(crate) mod test {
-    use crate::splunk::Splunk;
+    use crate::splunk::{Splunk, SplunkTrait};
     #[tokio::test]
     async fn splunk_headers_with_hec_ack_should_set_request_channel_header() {
         let hec_acknowledgment = true;

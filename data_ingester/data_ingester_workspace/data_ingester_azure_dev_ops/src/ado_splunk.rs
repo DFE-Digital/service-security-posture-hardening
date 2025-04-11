@@ -2,6 +2,7 @@ use crate::ado_metadata::AdoMetadata;
 use crate::ado_metadata::AdoMetadataTrait;
 use anyhow::Result;
 use data_ingester_splunk::splunk::Splunk;
+use data_ingester_splunk::splunk::SplunkTrait;
 use data_ingester_splunk::splunk::ToHecEvents;
 use itertools::Itertools;
 use serde::Serialize;
@@ -95,6 +96,13 @@ impl<'metadata, 't, T: Serialize> ToHecEvents for AdoToHecEvent<'metadata, 't, T
 pub(crate) struct AdoToHecEvents<'metadata, 't, T: Serialize> {
     pub(crate) inner: &'t [T],
     pub(crate) metadata: &'metadata AdoMetadata,
+}
+
+impl<'metadata, 't, T: Serialize> AdoToHecEvents<'metadata, 't, T> {
+    pub(crate) async fn send(self, splunk: &Splunk) -> Result<()> {
+        let events = self.to_hec_events()?;
+        splunk.send_batch(events).await
+    }
 }
 
 impl<'metadata, 't, T: Serialize> ToHecEvents for AdoToHecEvents<'metadata, 't, T> {
