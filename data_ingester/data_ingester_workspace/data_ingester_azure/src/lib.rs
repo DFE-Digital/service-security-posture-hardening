@@ -3,7 +3,7 @@ use data_ingester_azure_rest::azure_rest::AzureRest;
 use data_ingester_ms_graph::ms_graph::MsGraph;
 use data_ingester_ms_graph::users::UsersMap;
 use data_ingester_splunk::splunk::try_collect_send;
-use data_ingester_splunk::splunk::{set_ssphp_run, Splunk, ToHecEvents};
+use data_ingester_splunk::splunk::{set_ssphp_run, Splunk, ToHecEvents, SplunkTrait};
 use data_ingester_supporting::keyvault::Secrets;
 use std::sync::Arc;
 use tracing::info;

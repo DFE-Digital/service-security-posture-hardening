@@ -236,7 +236,7 @@ impl ToHecEvents for SarifHecEvent {
 mod tests {
     use std::{env, fs};
 
-    use data_ingester_splunk::splunk::{set_ssphp_run, Splunk};
+    use data_ingester_splunk::splunk::{set_ssphp_run, Splunk, SplunkTrait};
     use data_ingester_supporting::keyvault::get_keyvault_secrets;
 
     use super::*;

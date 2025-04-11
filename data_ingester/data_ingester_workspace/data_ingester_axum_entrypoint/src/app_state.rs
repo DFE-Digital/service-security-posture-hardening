@@ -2,7 +2,7 @@ use anyhow::Context;
 use anyhow::Result;
 use axum::http::HeaderMap;
 use axum::Json;
-use data_ingester_splunk::splunk::Splunk;
+use data_ingester_splunk::splunk::{Splunk, SplunkTrait};
 use data_ingester_supporting::keyvault::get_keyvault_secrets;
 use data_ingester_supporting::keyvault::Secrets;
 use serde::Serialize;
