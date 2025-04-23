@@ -2,7 +2,7 @@
 
 
 <label>Security Posture Continuous Assurance : Service Control Detail Dashboard</label>
-<description>{{environment}} v6.1.20</description>
+<description>{{environment}} v6.1.24</description>
   
   <init>
     <unset token="tkn_ready_event"></unset>
@@ -244,6 +244,27 @@
 
 | stats values(*) as * by Field
 
+```================== deal with field names that are not expressly in the list ==============```
+
+| where isnotnull('display_text')
+
+```| eval a='Field'
+| eval order=if(isnull(display_text),99,'order'),
+       a=if(isnull(display_text),
+            split(
+               replace(replace(replace(replace('a',"ssphp\.",""),"assessment\.",""),"resource\.",""),"status\.","")
+                  ,"."),
+            null())
+
+| eval b=mvjoin('a'," ")
+| eval b=replace('b',"([A-Z]{1})"," \1")
+| rex field=b mode=sed "s/^/ / s/ [aA]/ A/g s/ [bB]/ B/g s/ [cC]/ C/g s/ [dD]/ D/g s/ [eE]/ E/g s/ [fF]/ F/g s/ [gG]/ G/g s/ [hH]/ H/g s/ [iI]/ I/g s/ [jJ]/ J/g s/ [kK]/ K/g s/ [lL]/ L/g s/ [mM]/ M/g s/ [nN]/ N/g s/ [oO]/ O/g s/ [pP]/ P/g s/ [qQ]/ Q/g s/ [rR]/ R/g s/ [sS]/ S/g s/ [tT]/ T/g s/ [uU]/ U/g s/ [vV]/ V/g s/ [wW]/ W/g s/ [xX]/ X/g s/ [yY]/ Y/g s/ [zZ]/ Z/g s/^.//"
+| eval b=trim(b),
+       display_text=coalesce('display_text','b')
+| fields - a,b```
+
+```===========================================================================================```
+
 | eval display_text=if(isnull('display_text'),'Field','display_text'),
            order=if(isnull('order'),99,'order')
 
@@ -392,6 +413,7 @@
                           1==1,"oops"),
        ss2=$tkn_saved_search_2|s$,
        output_panel=case('ss2'!="-",4,
+                         lower('ssphp.use_case.category')="kubernetes",7,
                          lower('ssphp.assessment.source')="dependabot",1,
                          lower('ssphp.assessment.source')="secrets",1,
                          lower('ssphp.assessment.source')="workflows",3,
@@ -406,8 +428,19 @@
 | table search_string, output_panel
           </query>
           <done>
+            <condition match="$result.output_panel$==7">
+              <set token="show_k8s_panel">true</set>
+              <unset token="show_qualys_panel"></unset>
+              <unset token="show_defender_panel"></unset>
+              <unset token="show_2event_panel"></unset>
+              <unset token="show_table_panel"></unset>
+              <unset token="show_event_panel"></unset>
+              <unset token="show_highlight_panel"></unset>
+              <set token="tkn_use_case_search_string">$result.search_string$</set>
+            </condition>
             <condition match="$result.output_panel$==6">
               <set token="show_qualys_panel">true</set>
+              <unset token="show_k8s_panel"></unset>
               <unset token="show_defender_panel"></unset>
               <unset token="show_2event_panel"></unset>
               <unset token="show_table_panel"></unset>
@@ -417,6 +450,7 @@
             </condition>
             <condition match="$result.output_panel$==5">
               <set token="show_defender_panel">true</set>
+              <unset token="show_k8s_panel"></unset>
               <unset token="show_qualys_panel"></unset>
               <unset token="show_2event_panel"></unset>
               <unset token="show_table_panel"></unset>
@@ -427,6 +461,7 @@
 
             <condition match="$result.output_panel$==4">
               <set token="show_2event_panel">true</set>
+              <unset token="show_k8s_panel"></unset>
               <unset token="show_defender_panel"></unset>
               <unset token="show_qualys_panel"></unset>
               <unset token="show_table_panel"></unset>
@@ -436,6 +471,7 @@
             </condition>
             <condition match="$result.output_panel$==3">
               <set token="show_highlight_panel">true</set>
+              <unset token="show_k8s_panel"></unset>
               <unset token="show_defender_panel"></unset>
               <unset token="show_qualys_panel"></unset>
               <unset token="show_table_panel"></unset>
@@ -445,6 +481,7 @@
             </condition>
             <condition match="$result.output_panel$==2">
               <set token="show_table_panel">true</set>
+              <unset token="show_k8s_panel"></unset>
               <unset token="show_defender_panel"></unset>
               <unset token="show_qualys_panel"></unset>
               <unset token="show_highlight_panel"></unset>
@@ -454,6 +491,7 @@
             </condition>
             <condition match="$result.output_panel$==1">
               <set token="show_event_panel">true</set>
+              <unset token="show_k8s_panel"></unset>
               <unset token="show_defender_panel"></unset>
               <unset token="show_qualys_panel"></unset>
               <unset token="show_highlight_panel"></unset>
@@ -548,6 +586,31 @@ $tkn_use_case_search_string$
       </event>
     </panel>
   </row>
+
+
+
+<!-- ######################################################## KUBERNETES AKS ROW ################################################################# --> 
+
+
+  <row depends="$show_k8s_panel$">
+    <panel>
+      <title>Underlying MS-Defender AKS Data</title>
+      <event>
+        <search>
+          <query>
+`ssphp_summary_index{{environment}}` SSPHP_UID=$tkn__uid|s$
+    [| search `ssphp_summary_index{{environment}}` SSPHP_UID=$tkn__uid|s$
+      | stats max(SSPHP_RUN) as SSPHP_RUN
+      | return SSPHP_RUN]
+          </query>
+          <done>
+            <set token="tkn_ready_event">true</set>
+          </done>
+        </search>
+      </event>
+    </panel>
+  </row>
+
 
 
 
