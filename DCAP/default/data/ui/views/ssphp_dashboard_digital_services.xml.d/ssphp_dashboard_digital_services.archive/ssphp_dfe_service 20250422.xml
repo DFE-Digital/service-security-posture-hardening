@@ -1,7 +1,7 @@
-<dashboard version="1.1" theme="dark" script="js/addtags.js, js/table_cell_color.js, custom_layout_width.js">
+<dashboard version="1.1" theme="dark" script="js/addtags.js, js/table_cell_color.js">
 
 <label>Security Posture Continuous Assurance : DfE Service Dashboard</label>
-<description>{{environment}} v4.4.7</description>
+<description>{{environment}} v4.3.3</description>
   
   <init>
     <set token="form.tkn_fields">C</set>
@@ -490,7 +490,7 @@ index=_audit user=$tkn__current_user_name|s$ action=search "makeresults" "user_d
       <table>
         <search base="bs_1">
           <query>
-| search (ssphp.use_case.category="POSTURE" OR ssphp.use_case.category="KUBERNETES" OR ssphp.use_case.category="REPOS") AND ssphp.resource.id="***" 
+| search (ssphp.use_case.category="POSTURE" OR ssphp.use_case.category="REPOS") AND ssphp.resource.id="***" 
 
 $tkn_exemptions_show$
 
@@ -505,6 +505,7 @@ $tkn_exemptions_show$
         </search>
       </table>
     </panel>
+
 
 
 <!-- ###################################################### ALERTS #################################################################### -->
@@ -533,7 +534,7 @@ $tkn_exemptions_show$
 
 
   <row depends="$tkn_ready$">
-    <panel id="config_score_setWidth_60">
+    <panel>
       <html>
         <div id="div_header" style="background:$tkn_colour_tile$;color:$tkn_colour_text$;font-weight:bold;font-size:$tkn_font_size_2$%;text-align:center;padding:$tkn_padding_2$">$tkn_config_number_total_resources$</div> 
         <div id="div_header" style="background:$tkn_colour_tile$;color:$tkn_colour_text$;font-size:80%;text-align:center">Non-Compliant Resources</div>
@@ -542,8 +543,7 @@ $tkn_exemptions_show$
       </html>
     </panel>
 
-
-    <panel id="alert_score_setWidth_40">
+    <panel>
       <html>
         <div id="div_header" style="background:$tkn_colour_tile$;color:$tkn_colour_text$;font-weight:bold;font-size:$tkn_font_size_2$%;text-align:center;padding:$tkn_padding_2$">$tkn_alerts_number_total_resources$</div> 
         <div id="div_header" style="background:$tkn_colour_tile$;color:$tkn_colour_text$;font-size:80%;text-align:center">Non-Compliant Resources</div>
@@ -603,58 +603,6 @@ $tkn_exemptions_show$
             <set token="tkn_posture_compliant_color">$result.compliant_color$</set>
             <set token="tkn_posture_compliant_line_width">$result.compliant_line_width$</set>
             <set token="tkn_posture_compliant_line_non_width">$result.compliant_line_non_width$</set>
-          </done>
-        </search>
-      </table>
-    </panel>
-  </row>
-
-
-
-<!-- ###################################################### KUBERNETES #################################################################### -->
-  <row depends="$tkn_ready$,$debug$">
-    <panel>
-      <title>kubernetes</title>
-      <table>
-        <search base="bs_1">
-          <query>
-| search ssphp.use_case.category="KUBERNETES" AND ssphp.resource.id="***" 
-
-$tkn_exemptions_show$
-
-| eval rg=coalesce('ssphp.resource.tenant'."/".'ssphp.resource.subscription'."/".'ssphp.resource.resource_group',"-")
-
-| stats count, sum(eval(if('ssphp.score.ciso_priority'="DfE Mandated" AND mvindex(split('ssphp.score.score',"|"),0)!="100",1,0))) as rg_bad by rg
-| stats count as rg_total, sum(eval(if('rg_bad'>0,1,0))) as rg_bad
-
-| eval rg_good='rg_total'-'rg_bad'
-
-| eval number_total_resources='rg_total',
-       number_passed_resources='rg_good',
-       perc_passed_resources=floor(('number_passed_resources'*100)/'number_total_resources'),
-       abs='number_passed_resources'." / ".'number_total_resources',
-       abs=if(isnull('abs'),"-",'abs')
-
-| eval compliant_line_width=round((100-(2*$tkn_margin$))*(('perc_passed_resources')/100)),
-       compliant_line_non_width=(100-(2*$tkn_margin$))-'compliant_line_width',
-       compliant_color=if(perc_passed_resources=100,$tkn_colour_compliant_line_100|s$,$tkn_colour_compliant_line|s$),
-       perc_passed_resources='perc_passed_resources'."%",
-       view=$tkn_view|s$,
-       compliant_both=if('view'="a",'abs','perc_passed_resources')
-
-| table number_total_resources, number_passed_resources, perc_passed_resources, abs, compliant_both, compliant_line_width, compliant_line_non_width, compliant_color
-            </query>
-          <done>
-            <eval token="tkn_k8s_number_total_resources">if(isnotnull($result.number_total_resources$),$result.number_total_resources$,"-")</eval>
-            <eval token="tkn_k8s_number_passed_resources">if(isnotnull($result.number_passed_resources$),$result.number_passed_resources$,"-")</eval>
-            <eval token="tkn_k8s_perc_passed_resources">if(isnotnull($result.perc_passed_resources$),$result.perc_passed_resources$,"-")</eval>
-            <eval token="tkn_k8s_abs">if(isnotnull($result.abs$),$result.abs$,"-")</eval>
-            
-            
-            <set token="tkn_k8s_compliant_both">$result.compliant_both$</set>
-            <set token="tkn_k8s_compliant_color">$result.compliant_color$</set>
-            <set token="tkn_k8s_compliant_line_width">$result.compliant_line_width$</set>
-            <set token="tkn_k8s_compliant_line_non_width">$result.compliant_line_non_width$</set>
           </done>
         </search>
       </table>
@@ -869,24 +817,7 @@ $tkn_exemptions_show$
           <div class="line" style="width: $tkn_margin$%; border-bottom: 5px solid $tkn_colour_tile$;"/>
         </div>
         <div class="undervalue2" style="background:$tkn_colour_tile$;">Compliant Resource Groups</div>
-        <div class="undervalue" style="background:$tkn_colour_tile$;">AZURE POSTURE CONFIGURATION</div>
-      </html>
-    </panel>
-    
-
-    <panel depends="$tkn_ready$">
-      <html>
-        <div class="absolute" style="background:$tkn_colour_tile$;">$tkn_k8s_compliant_both$</div>
-        <div style="display: flex;">
-          <div class="line" style="width: $tkn_margin$%; border-bottom: 5px solid $tkn_colour_tile$;"/>
-          
-          <div class="line" style="width: $tkn_k8s_compliant_line_width$%;   border-bottom: 5px solid $tkn_k8s_compliant_color$;"/>
-          <div class="line" style="width: $tkn_k8s_compliant_line_non_width$%;   border-bottom: 5px solid $tkn_colour_non_compliant_line$;"/>
-          
-          <div class="line" style="width: $tkn_margin$%; border-bottom: 5px solid $tkn_colour_tile$;"/>
-        </div>
-        <div class="undervalue2" style="background:$tkn_colour_tile$;">Compliant AKS Resource Groups</div>
-        <div class="undervalue" style="background:$tkn_colour_tile$;">KUBERNETES AKS CONFIGURATION</div>
+        <div class="undervalue" style="background:$tkn_colour_tile$;">POSTURE CONFIGURATION</div>
       </html>
     </panel>
     
@@ -1029,12 +960,11 @@ $tkn_exemptions_show$
       <input type="multiselect" token="tkn_category" searchWhenChanged="true">
         <label>Include Controls</label>
         <choice value="POSTURE">Posture</choice>
-        <choice value="KUBERNETES">Kubernetes</choice>
         <choice value="VULNERABILITY">Vulnerabilities</choice>
         <choice value="REPOS">Repos</choice>
         <choice value="CODE_SCAN">Code Scanning</choice>
-        <default>POSTURE,KUBERNETES,VULNERABILITY,REPOS,CODE_SCAN</default>
-        <initialValue>POSTURE,KUBERNETES,VULNERABILITY,REPOS,CODE_SCAN</initialValue>
+        <default>POSTURE,VULNERABILITY,REPOS,CODE_SCAN</default>
+        <initialValue>POSTURE,VULNERABILITY,REPOS,CODE_SCAN</initialValue>
         <delimiter> OR </delimiter>
         <prefix>| search (</prefix>
         <suffix>)</suffix>
