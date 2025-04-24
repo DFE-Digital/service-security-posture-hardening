@@ -1,7 +1,7 @@
-<dashboard version="1.1" theme="dark" script="js/addtags.js, js/table_cell_color.js, custom_layout_width.js">
+<dashboard version="1.1" theme="dark" script="js/addtags.js, js/table_cell_color.js">
 
 <label>Security Posture Continuous Assurance : DfE Service Dashboard</label>
-<description>{{environment}} v4.4.7</description>
+<description>{{environment}} v4.4.78</description>
   
   <init>
     <set token="form.tkn_fields">C</set>
@@ -533,7 +533,26 @@ $tkn_exemptions_show$
 
 
   <row depends="$tkn_ready$">
-    <panel id="config_score_setWidth_60">
+    <panel depends="$debug$">
+      <html>
+        <style>
+          #config_score{
+            width:60% !important;
+            -webkit-box-flex:unset;
+            -ms-flex:unset;
+            flex:unset;
+          }
+          #alert_score{
+            width:40% !important;
+            -webkit-box-flex:unset;
+            -ms-flex:unset;
+            flex:unset;
+          }
+        </style>
+      </html>
+    </panel>
+
+    <panel id="config_score">
       <html>
         <div id="div_header" style="background:$tkn_colour_tile$;color:$tkn_colour_text$;font-weight:bold;font-size:$tkn_font_size_2$%;text-align:center;padding:$tkn_padding_2$">$tkn_config_number_total_resources$</div> 
         <div id="div_header" style="background:$tkn_colour_tile$;color:$tkn_colour_text$;font-size:80%;text-align:center">Non-Compliant Resources</div>
@@ -542,8 +561,7 @@ $tkn_exemptions_show$
       </html>
     </panel>
 
-
-    <panel id="alert_score_setWidth_40">
+    <panel id="alert_score">
       <html>
         <div id="div_header" style="background:$tkn_colour_tile$;color:$tkn_colour_text$;font-weight:bold;font-size:$tkn_font_size_2$%;text-align:center;padding:$tkn_padding_2$">$tkn_alerts_number_total_resources$</div> 
         <div id="div_header" style="background:$tkn_colour_tile$;color:$tkn_colour_text$;font-size:80%;text-align:center">Non-Compliant Resources</div>
