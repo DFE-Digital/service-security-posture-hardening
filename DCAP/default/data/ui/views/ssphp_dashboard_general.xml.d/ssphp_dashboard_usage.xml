@@ -1,6 +1,6 @@
 <dashboard version="1.1" theme="dark" hideFilters="false">
   <label>Security Posture Continuous Assurance : DfE Usage Dashboard</label>
-  <description>v1.0.0</description>
+  <description>v1.0.1</description>
   
   <init></init>
   
@@ -43,6 +43,56 @@ index=_internal sourcetype="splunk_web_access" method="GET" status="200" user!=-
       </change>
     </input>
   </fieldset>
+
+
+
+
+
+<!-- ################### TOP ROW DASHBOARD USAGE ################### --> 
+
+<row>
+  <panel>
+    <single>
+      <search>
+        <query>
+index=_internal sourcetype="splunk_web_access" method="GET" status="200" user!=- earliest=0 latest=now
+| rex field=uri_path "\/app\/(?&lt;App&gt;[^\/]+)\/(?&lt;Dashboard&gt;[^\/\s]+)"
+| rex field=uri "tkn__service=(?&lt;Service&gt;[^&amp;]*)"
+
+| fillnull value="-" Service
+| search Dashboard="ssphp*"
+| rename user as User
+
+| eval view_day=strftime('_time',"%Y-%m-%d"),
+       time='_time'
+
+| table _time, time, User, App, Dashboard, Service, view_day, uri_path
+| search User!="ian.pearl@education.gov.uk" AND User!="alex.kinnane@education.gov.uk"
+| sort 0 - _time
+
+| eventstats max(_time) as end, min(_time) as start
+| eval Date1=mvrange(start,end,86400),
+       dcount=mvcount(Date1)
+| eval BusinessDays=mvcount(mvfilter(NOT match(strftime(Date1, "%A"),"(Sun|Sat).*")))
+
+| stats dc(User) as No_Users, values(BusinessDays) as BusinessDays by view_day
+| stats sum(No_Users) as Total_Users, values(BusinessDays) as BusinessDays
+| eval Average_Distinct_DCAP_Dashboard_Users_per_Day=round((Total_Users/BusinessDays),2)
+| table Average_Distinct_DCAP_Dashboard_Users_per_Day
+| rename Average_Distinct_DCAP_Dashboard_Users_per_Day as "Average NUmber of Distinct DCAP Dashboard Users Per Day Past Month"         
+        </query>
+        </search>
+        <option name="colorMode">block</option>
+        <option name="height">200</option>
+        <option name="numberPrecision">0.00</option>
+        <option name="rangeColors">["0x53a051","0xdc4e41"]</option>
+        <option name="rangeValues">[0]</option>
+        <option name="useColors">1</option>
+        <option name="underLabel">Average NUmber of Distinct DCAP Dashboard Users Per Day Past Month</option>
+    </single>
+  </panel>
+</row>
+
 
 
 <!-- ################### ROW BY USER ################### --> 
