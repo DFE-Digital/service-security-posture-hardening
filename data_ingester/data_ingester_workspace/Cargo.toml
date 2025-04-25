@@ -17,7 +17,7 @@ members = [
     "data_ingester_splunk_search",
     "data_ingester_supporting",
     "data_ingester_terraform",
-    "data_ingester_threagile",
+    "data_ingester_threagile", "use_case_runner", "egui_frontend",
     ]
 
 [workspace.lints.clippy]

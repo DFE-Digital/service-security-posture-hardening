@@ -1,0 +1,10 @@
+[package]
+name = "use_case_runner"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+serde = { version = "*", features = ["derive"]}
+
+[lints]
+workspace = true

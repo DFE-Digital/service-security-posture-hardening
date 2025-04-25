@@ -1,0 +1,18 @@
+[package]
+name = "egui_frontend"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+eframe = { version="*", features = [
+    "default",
+    "__screenshot", # __screenshot is so we can dump a screenshot using EFRAME_SCREENSHOT_TO
+] }
+env_logger = { version = "0.10", default-features = false, features = [
+    "auto-color",
+    "humantime",
+] }
+use_case_runner = { path="../use_case_runner/" }
+
+[lints]
+workspace = true
