@@ -7,7 +7,7 @@ import sys
 
 
 
-foundational_system = "GITHUB"
+foundational_system = "AKS"
 sections = []
 
 #
@@ -32,6 +32,7 @@ def Parse_IG(ig_text):
     else:
         ig_text = ig_text.replace("\n ","|")
         ig_text = re.sub(r" *\|","|",ig_text)
+
     ig_text = ig_text.replace(" v7","~~~v7")
     ig_text = ig_text.replace(" v8","~~~v8")
     ig_text = ig_text.replace("\nv7","~~~v7")
@@ -260,7 +261,7 @@ def WriteControls(controls):
     global foundational_system
     now = datetime.now()
 
-    filename=f'SSPHP Documentation\cis_benchmark_v8_doc_{foundational_system.lower()}.csv'
+    filename=f'SSPHP Documentation/cis_benchmark_v8_doc_{foundational_system.lower()}.csv'
 
     with open(filename, "w") as f:
 
@@ -315,6 +316,10 @@ def WriteControls(controls):
                 benchmark_date = "2022-12-28"
                 benchmark_file_description = "CIS GitHub Benchmark"
                 benchmark_file_date = "1.0.0"
+            elif foundational_system == "AKS":
+                benchmark_date = "2025-04-16"
+                benchmark_file_description = "CIS AKS Benchmark"
+                benchmark_file_date = "1.7.0"
             else:
                 benchmark_date = "-"
 
@@ -375,11 +380,13 @@ def main():
     print(f'Processing Foundational System CIS Benchmark for {foundational_system}')
 
     if foundational_system == "DNS":
-        filename = "SSPHP Documentation\CIS_Amazon_Web_Services_Foundations_Benchmark_v2.0.0.pdf"
+        filename = "SSPHP Documentation/CIS_Amazon_Web_Services_Foundations_Benchmark_v2.0.0.pdf"
     elif foundational_system == "GITHUB":
-        filename = "SSPHP Documentation\CIS GitHub Benchmark v1.0.0 PDF.pdf"
+        filename = "SSPHP Documentation/CIS GitHub Benchmark v1.0.0 PDF.pdf"
+    elif foundational_system == "AKS":
+        filename = "SSPHP Documentation/CIS Azure Kubernetes Service (AKS) Benchmark v1.7.0.pdf"
     else:
-        filename = f'SSPHP Documentation\CIS_Microsoft_{foundational_system.upper()[0]}{foundational_system.lower()[1:]}_Foundations_Benchmark_v2.0.0.pdf'
+        filename = f'SSPHP Documentation/CIS_Microsoft_{foundational_system.upper()[0]}{foundational_system.lower()[1:]}_Foundations_Benchmark_v2.0.0.pdf'
 
     print(f'Processing file {filename}')
     
@@ -393,22 +400,24 @@ def main():
     for page in reader.pages:
         page_no = page.page_number
 
-        match_page = re.match(r"\s*P\s*a\s*g\s*e\s*\d+\s*T\s*a\s*b\s*l\s*e\s*o\s*f\s*C\s*o\s*n\s*t\s*e\s*n\s*t\s*s\s*", page.extract_text())
+        page_text = re.sub(r"Internal Only - General\s*","",page.extract_text())
 
+        match_page = re.match(r"\s*P\s*a\s*g\s*e\s*\d+\s*T\s*a\s*b\s*l\s*e\s*o\s*f\s*C\s*o\s*n\s*t\s*e\s*n\s*t\s*s\s*", page_text)
         if match_page:
             start_toc = True
             print(f'TOC starts at {page_no}')
             start_page = page_no
 
-        match_page = re.match(r"\s*P\s*a\s*g\s*e\s+\d+\s+O\s*v\s*e\s*r\s*v\s*i\s*e\s*w", page.extract_text())
+        match_page = re.match(r"\s*P\s*a\s*g\s*e\s+\d+\s+O\s*v\s*e\s*r\s*v\s*i\s*e\s*w", page_text)
         if match_page:
             print(f'TOC ends at {page_no}')
             end_page = page_no
             break
         
         if start_toc:
-            toc_text = toc_text + page.extract_text()
-
+            toc_text = toc_text + page_text
+    
+    #print(toc_text)
 
 
     ########################### Process the TOC ###############################################################################################
@@ -417,13 +426,17 @@ def main():
         toc_text = re.sub(r"\.\.\.\s*(\d{1,3})",r" \1\n",toc_text)
 
     for line in toc_text.splitlines():
+
         #print(f'**{line}$$')
+
         if foundational_system == "DNS":
             match_line = re.match(r"1\.1\s[\s\S\.]*\s(?P<pno>\d+)\s*$", line)
+        elif foundational_system == "AKS":
+            match_line = re.match(r"\s*2\.1\.1\s[^.]*[\.\s]*\s(?P<pno>\d+)\s", line)
         else:
             match_line = re.match(r"\s*1\.1\.1\s[\s\S\.]*\s(?P<pno>\d+)\s*$", line)
+
         if match_line:
-            #print(line)
             start_page = int(match_line["pno"])
 
         match_line = re.match(r"\s*(?P<section_no>\d+)\s+(?P<section_name>[^\.]*)[\s\.]*(?P<pno>\d*)\s*$", line)
@@ -439,10 +452,11 @@ def main():
     
     print(f"Data starts at {start_page}")
     print(f"Data ends at {end_page}")
+
+
+
     for section in sections:
         print(f"Section {section['no']} is {section['name']}")
-
-    #exit()
 
 
 
@@ -451,24 +465,23 @@ def main():
 
         # Get the page number for every page and throw away pages at start and end of the document
         page_no = page.page_number
+        page_text = re.sub(r"Internal Only - General\s*","",page.extract_text())
 
         if page_no > start_page - 1 and page_no < end_page:
 
             # Is this page that starts a new control?
-            match_start_page = re.match(r"\s*P\s*a\s*g\s*e\s+\d+\s+(?P<use_case_id>\d\d?\.\d\d?\.?\d?\d?)\s(?P<title>[\s\S]*)P\s*r\s*o\s*f\s*i\s*l\s*e\s+A\s*p\s*p\s*l\s*i\s*c\s*a\s*b\s*i\s*l\s*i\s*t\s*y\s*:", page.extract_text())
+            match_start_page = re.match(r"\s*P\s*a\s*g\s*e\s+\d+\s+(?P<use_case_id>\d\d?\.\d\d?\.?\d?\d?)\s(?P<title>[\s\S]*)P\s*r\s*o\s*f\s*i\s*l\s*e\s+A\s*p\s*p\s*l\s*i\s*c\s*a\s*b\s*i\s*l\s*i\s*t\s*y\s*:", page_text)
 
             if match_start_page:
-
                 if not first_time_thru:
                     controls.append(Parse_Control(control_text))
 
                 control_text = ""
                 first_time_thru = False
 
-            control_text = control_text + page.extract_text()
+            control_text = control_text + page_text
 
     controls.append(Parse_Control(control_text))    # Add the final control
-
 
 
     ########################### Write the Output File ###############################################################################################
