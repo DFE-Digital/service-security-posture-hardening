@@ -115,8 +115,7 @@ def Parse_IG(ig_text):
 
 
 def Parse_Control(control_text):
-    #print(control_text)
-
+    
     ig_parse_out = {}
 
     # Eliminate all pdf translation funnies that put spaces in the middle of key words
@@ -138,7 +137,6 @@ def Parse_Control(control_text):
     if match_1:
         id = match_1["use_case_id"]
         title = match_1["title"]
-
         title = re.sub(r"\(L(1|2)\)\s","",title)
         title = re.sub(r"\s\((A\s*u\s*t\s*o\s*m\s*a\s*t\s*e\s*d|M\s*a\s*n\s*u\s*a\s*l)\)","",title)
         title = re.sub(r"\u2022","",title)
