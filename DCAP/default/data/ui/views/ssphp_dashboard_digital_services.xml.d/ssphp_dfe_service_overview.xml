@@ -1,7 +1,7 @@
 <dashboard version="1.1" theme="dark" script="js/table_cell_backcolor_service_overview.js">
 
 <label>Security Posture Continuous Assurance : DfE Service Overview Dashboard</label>
-<description>{{environment}} v1.0.1</description>
+<description>{{environment}} v1.0.8</description>
   
   <fieldset submitButton="false">
     <input type="dropdown" token="tkn_portfolio" searchWhenChanged="true">
@@ -13,7 +13,7 @@
       <fieldForValue>ssphp.service.portfolio</fieldForValue>
       <search>
         <query>
-| loadjob savedsearch="ssphp_app_account:DCAP_DEV:ssphp_create_dashboard_dataset_service_DEV"
+| loadjob savedsearch="ssphp_app_account:DCAP{{environment}}:ssphp_create_dashboard_dataset_service{{environment}}"
 
 | eval ssphp.service.portfolio=trim('ssphp.service.portfolio'),
        ssphp.service.service_line=trim('ssphp.service.service_line'),
@@ -48,6 +48,7 @@
   
   <row>
     <panel>
+    <title>Compliant Resources</title>
       <html depends="$alwaysHideCSS$">
         <style>
             /* Right align only the first column of the table */
@@ -128,9 +129,9 @@
       <table id="table1">
         <search>
           <query>
-| loadjob savedsearch="ssphp_app_account:DCAP_DEV:ssphp_create_dashboard_dataset_service_DEV"
+| loadjob savedsearch="ssphp_app_account:DCAP{{environment}}:ssphp_create_dashboard_dataset_service{{environment}}"
 
-| fields ssphp.service.portfolio, ssphp.service.service_line, ssphp.service.product, ssphp.assessment.source, ssphp.use_case.category, ssphp.use_case.id, ssphp.use_case.title, ssphp.assessment.display_name, ssphp.score.score, ssphp.score.compliance_status, ssphp.score.ciso_priority, ssphp.assessment.description, ssphp.score.color, ssphp.resource.id, ssphp.resource.tenant, ssphp.resource.subscription, ssphp.resource.subscription_name, ssphp.resource.resource_group, ssphp.score.remediation_priority, ssphp.exemption.status, SSPHP_UID
+| fields ssphp.service.portfolio, ssphp.service.service_line, ssphp.service.product, ssphp.service.id, ssphp.assessment.source, ssphp.use_case.category, ssphp.use_case.id, ssphp.use_case.title, ssphp.assessment.display_name, ssphp.score.score, ssphp.score.compliance_status, ssphp.score.ciso_priority, ssphp.assessment.description, ssphp.score.color, ssphp.resource.id, ssphp.resource.tenant, ssphp.resource.subscription, ssphp.resource.subscription_name, ssphp.resource.resource_group, ssphp.score.remediation_priority, ssphp.exemption.status, SSPHP_UID
 
 | search ssphp.service.portfolio=$tkn_portfolio|s$
 
@@ -139,7 +140,7 @@
        ssphp.service.service_line=trim('ssphp.service.service_line'),
        ssphp.service.product=trim('ssphp.service.product')
        
-| fields ssphp.service.portfolio, ssphp.service.service_line, ssphp.service.product, ssphp.assessment.source, ssphp.use_case.category, ssphp.use_case.id, ssphp.use_case.title, ssphp.assessment.display_name, ssphp.score.score, ssphp.score.compliance_status, ssphp.score.ciso_priority```, ssphp.assessment.description```, ssphp.score.color, ssphp.resource.id, ssphp.resource.tenant, ssphp.resource.subscription, ssphp.resource.subscription_name, ssphp.resource.resource_group, ssphp.score.remediation_priority, ssphp.exemption.status, SSPHP_UID 
+| fields ssphp.service.portfolio, ssphp.service.service_line, ssphp.service.product, ssphp.service.id, ssphp.assessment.source, ssphp.use_case.category, ssphp.use_case.id, ssphp.use_case.title, ssphp.assessment.display_name, ssphp.score.score, ssphp.score.compliance_status, ssphp.score.ciso_priority```, ssphp.assessment.description```, ssphp.score.color, ssphp.resource.id, ssphp.resource.tenant, ssphp.resource.subscription, ssphp.resource.subscription_name, ssphp.resource.resource_group, ssphp.score.remediation_priority, ssphp.exemption.status, SSPHP_UID 
 
 | search ssphp.exemption.status="comply" AND ssphp.service.portfolio!=""
 | search (ssphp.use_case.category="POSTURE" OR ssphp.use_case.category="KUBERNETES" OR ssphp.use_case.category="VULNERABILITY" OR ssphp.use_case.category="REPOS" OR ssphp.use_case.category="CODE_SCAN")
@@ -149,8 +150,8 @@
 
 ```| where 'ssphp.score.ciso_priority'="DfE Mandated"```
 ```| where match('ssphp.score.compliance_status',"^Non-Compliant.*")```
-| stats count, values(ssphp.assessment.display_name) as ssphp.assessment.display_name, values(ssphp.score.score) as ssphp.score.score, min(ssphp.score.score) as min_score by ssphp.service.portfolio, ssphp.service.service_line, ssphp.service.product, ssphp.use_case.category, ssphp.resource.id
-| stats count, sum(eval(if('min_score'="100|green",1,0))) as compliant by ssphp.service.portfolio, ssphp.service.service_line, ssphp.service.product, ssphp.use_case.category
+| stats count, values(ssphp.assessment.display_name) as ssphp.assessment.display_name, values(ssphp.score.score) as ssphp.score.score, min(ssphp.score.score) as min_score by ssphp.service.portfolio, ssphp.service.service_line, ssphp.service.product, ssphp.service.id, ssphp.use_case.category, ssphp.resource.id
+| stats count, sum(eval(if('min_score'="100|green",1,0))) as compliant by ssphp.service.portfolio, ssphp.service.service_line, ssphp.service.product, ssphp.service.id, ssphp.use_case.category
 
 | eval compliant_abs='compliant'."/".'count',
        compliant_perc=round('compliant'*100/'count'),
@@ -158,9 +159,9 @@
        {ssphp.use_case.category}_perc=compliant_perc
 | fields - count, compliant*, ssphp.use_case.category
 
-| stats values(*) as * by ssphp.service.portfolio, ssphp.service.service_line, ssphp.service.product
+| stats values(*) as * by ssphp.service.portfolio, ssphp.service.service_line, ssphp.service.product, ssphp.service.id
 
-| fields ssphp.service.portfolio, ssphp.service.service_line, ssphp.service.product, POSTURE_abs, KUBERNETES_abs, VULNERABILITY_abs, REPOS_abs, CODE_SCAN_abs, POSTURE_perc, KUBERNETES_perc, VULNERABILITY_perc, REPOS_perc, CODE_SCAN_perc
+| fields ssphp.service.portfolio, ssphp.service.service_line, ssphp.service.product, ssphp.service.id, POSTURE_abs, KUBERNETES_abs, VULNERABILITY_abs, REPOS_abs, CODE_SCAN_abs, POSTURE_perc, KUBERNETES_perc, VULNERABILITY_perc, REPOS_perc, CODE_SCAN_perc
 
 | eval POSTURE_colour=case(POSTURE_perc=100,"green",
                            POSTURE_perc>90,"red9",
@@ -223,9 +224,12 @@
 
 
 | rename POSTURE_$tkn_show$ as POSTURE, KUBERNETES_$tkn_show$ as KUBERNETES, VULNERABILITY_$tkn_show$ as VULNERABILITY, REPOS_$tkn_show$ as REPOS, CODE_SCAN_$tkn_show$ as CODE_SCAN
+
+| lookup ssphp_bdmc_fbp.csv portfolio AS ssphp.service.portfolio, service_line AS ssphp.service.service_line, product AS ssphp.service.product OUTPUT id
+
 | rename ssphp.service.portfolio as Portfolio, ssphp.service.service_line as "Service Line", ssphp.service.product as Product
 
-| table Portfolio, "Service Line", Product, POSTURE, KUBERNETES, VULNERABILITY, REPOS, CODE_SCAN
+| table Portfolio, "Service Line", Product, id, POSTURE, KUBERNETES, VULNERABILITY, REPOS, CODE_SCAN
 
 | fillnull value="-" POSTURE, KUBERNETES, VULNERABILITY, REPOS, CODE_SCAN
           </query>
@@ -237,7 +241,28 @@
         <option name="rowNumbers">false</option>
         <option name="totalsRow">false</option>
         <option name="wrap">true</option>
+        <option name="drilldown">row</option>   
+        <drilldown>
+          <link target="_blank">/app/$tkn_current_app$/ssphp_dfe_service?tkn__service=$row.id$</link>
+        </drilldown>
+        <fields>Portfolio, "Service Line", Product, POSTURE, KUBERNETES, VULNERABILITY, REPOS, CODE_SCAN</fields>
+      </table>
+    </panel>
+
+    <panel depends="$debug$">
+      <table>
+        <search>
+          <query>
+  | makeresults
+  | eval app=$env:app|s$
+  | table app
+          </query>
+          <done>
+            <set token="tkn_current_app">$result.app$</set>
+          </done>
+        </search>
       </table>
     </panel>
   </row>
+  
 </dashboard>
