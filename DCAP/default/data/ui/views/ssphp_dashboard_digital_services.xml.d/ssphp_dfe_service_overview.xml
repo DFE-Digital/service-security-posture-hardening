@@ -1,7 +1,7 @@
 <dashboard version="1.1" theme="dark" script="js/table_cell_backcolor_service_overview.js">
 
 <label>Security Posture Continuous Assurance : DfE Service Overview Dashboard</label>
-<description>{{environment}} v1.0.8</description>
+<description>{{environment}} v1.0.9</description>
   
   <fieldset submitButton="false">
     <input type="dropdown" token="tkn_portfolio" searchWhenChanged="true">
@@ -9,21 +9,14 @@
       <choice value="*">ALL</choice>
       <default>*</default>
       <initialValue>*</initialValue>
-      <fieldForLabel>ssphp.service.portfolio</fieldForLabel>
-      <fieldForValue>ssphp.service.portfolio</fieldForValue>
+      <fieldForLabel>portfolio</fieldForLabel>
+      <fieldForValue>portfolio</fieldForValue>
       <search>
         <query>
-| loadjob savedsearch="ssphp_app_account:DCAP{{environment}}:ssphp_create_dashboard_dataset_service{{environment}}"
+| inputlookup ssphp_bdmc_fbp.csv where portfolio!="Unallocated"
 
-| eval ssphp.service.portfolio=trim('ssphp.service.portfolio'),
-       ssphp.service.service_line=trim('ssphp.service.service_line'),
-       ssphp.service.product=trim('ssphp.service.product')
-       
-| search NOT (ssphp.service.portfolio="Unassigned" OR ssphp.service.portfolio="")
-
-| table ssphp.service.portfolio
-| dedup ssphp.service.portfolio
-| sort 0 ssphp.service.portfolio
+| table portfolio
+| dedup portfolio
         </query>
       </search>
     </input>
