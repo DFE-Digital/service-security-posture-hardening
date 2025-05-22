@@ -1,7 +1,7 @@
 <dashboard version="1.1" theme="dark" script="js/addtags.js, js/table_cell_color.js">
 
 <label>Security Posture Continuous Assurance : DfE Service Dashboard</label>
-<description>{{environment}} v4.5.0</description>
+<description>{{environment}} v4.4.78</description>
   
   <init>
     <set token="form.tkn_fields">C</set>
@@ -447,26 +447,6 @@ these lines were added by Ian & Alex 2025-03010 to work around wierd issue with 
     </panel>
     
 
-
-    <panel>
-      <table>
-        <search>
-          <query>
-  | makeresults
-  | eval service_code=$tkn__service|s$
-  | table service_code
-          </query>
-          <error>
-            <set token="tkn_url_service">-</set>
-          </error>
-          <done>
-            <set token="tkn_url_service">$result.service_code$</set>
-          </done>
-        </search>
-      </table>
-    </panel>
-
-
     <panel>
       <table>
         <search>
@@ -485,13 +465,6 @@ index=_audit user=$tkn__current_user_name|s$ action=search "makeresults" "user_d
 
 | table previous_dashboard_token, portfolio, service_line, product
 | head 1
-
-| append 
-    [| inputlookup ssphp_bdmc_fbp.csv where portfolio!="Unallocated" AND id=$tkn_url_service$
-     | eval previous_dashboard_token=0
-     | table previous_dashboard_token, portfolio, service_line, product]
-
-| sort 1 previous_dashboard_token
           </query>
           <done> 
             <set token="form.tkn_portfolio">$result.portfolio$</set>

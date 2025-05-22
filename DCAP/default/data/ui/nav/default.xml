@@ -14,6 +14,7 @@
   </collection>
 
   <collection label="DfE Digital Services" >
+    <a href="ssphp_dfe_service_overview">Service Overview</a>
     <a href="ssphp_dfe_service">Service Posture</a>
     <a href="ssphp_critical_vulnerabilities">Vulnerability Management</a>
     <a href="ssphp_dfe_asset_inventory">Asset Inventory</a>
@@ -33,3 +34,4 @@
 <a href="ssphp_dashboard_report_issue" target="_blank">Report an Issue</a>
 
 </nav>
+
