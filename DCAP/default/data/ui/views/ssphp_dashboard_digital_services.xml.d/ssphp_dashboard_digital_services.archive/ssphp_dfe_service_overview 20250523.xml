@@ -1,8 +1,8 @@
 <dashboard version="1.1" theme="dark" script="js/table_cell_backcolor_service_overview.js">
 
 <label>Security Posture Continuous Assurance : DfE Service Overview Dashboard</label>
-<description>{{environment}} v1.1.7</description>
-
+<description>{{environment}} v1.0.9</description>
+  
   <fieldset submitButton="false">
     <input type="dropdown" token="tkn_portfolio" searchWhenChanged="true">
       <label>Portfolio</label>
@@ -36,35 +36,97 @@
           </condition>
         </change>
       </input>
-      
-      <input type="radio" token="tkn_include" searchWhenChanged="true">
-        <label>Include</label>
-        <choice value=" 1==1">All Services</choice>
-        <choice value=" mvcount(mvfilter(match('type',&quot;data&quot;)))&gt;0">Only Services with Control Data</choice>
-        <default> mvcount(mvfilter(match('type',"data")))>0</default>
-        <initialValue> 1==1"</initialValue>
-      </input>
   </fieldset>
-
-
-<!-- ########################################################## BASE QUERY ################################################################ -->
-
-  <row depends="$debug$">
+  
+  
+  <row>
     <panel>
-      <table>
-        <search id="base01">
-          <query>
-| inputlookup ssphp_bdmc_fbp.csv where portfolio!="Unallocated"
-| rename portfolio as Portfolio, service_line as "Service Line", product as Product
-| fields Portfolio, "Service Line", Product, id
-| eval type="fbp"
+    <title>Compliant Resources</title>
+      <html depends="$alwaysHideCSS$">
+        <style>
+            /* Right align only the first column of the table */
+            #table1 .table th:nth-child(4),
+            #table1 .table td:nth-child(4),
+            #table1 .table th:nth-child(5),
+            #table1 .table td:nth-child(5),
+            #table1 .table th:nth-child(6),
+            #table1 .table td:nth-child(6),
+            #table1 .table th:nth-child(7),
+            #table1 .table td:nth-child(7),
+            #table1 .table th:nth-child(8),
+            #table1 .table td:nth-child(8)
+            {
+                text-align: center!important;
+            }
+        </style>
+      </html>
 
-| append
-    [| loadjob savedsearch="ssphp_app_account:{{app}}{{environment}}:ssphp_create_dashboard_dataset_service{{environment}}"
+      <html>
+        <style>
+           .css_for_green{ 
+           background-color: #00FF00 !important;
+           color:#000000 !important;
+           font-size: 100% !important;
+           }
+           .css_for_red1{
+           background-color: #FF0000!important;
+           color:#000000 !important;
+           font-size: 100% !important;
+           }
+           .css_for_red2{
+           background-color:rgb(246, 22, 22)!important;
+           color:#000000 !important;
+           font-size: 100% !important;
+           }
+           .css_for_red3{
+           background-color:rgb(241, 45, 45)!important;
+           color:#000000 !important;
+           font-size: 100% !important;
+           }
+           .css_for_red4{
+           background-color:rgb(240, 67, 67)!important;
+           color:#000000 !important;
+           font-size: 100% !important;
+           }
+           .css_for_red5{
+           background-color:rgb(238, 94, 94)!important;
+           color:#000000 !important;
+           font-size: 100% !important;
+           }
+           .css_for_red6{
+           background-color:rgb(237, 114, 114)!important;
+           color:#000000 !important;
+           font-size: 100% !important;
+           }
+           .css_for_red7{
+           background-color:rgb(237, 133, 133)!important;
+           color:#000000 !important;
+           font-size: 100% !important;
+           }
+           .css_for_red8{
+           background-color:rgb(235, 157, 157)!important;
+           color:#000000 !important;
+           font-size: 100% !important;
+           }
+           .css_for_red9{
+           background-color:rgb(238, 189, 189)!important;
+           color:#000000 !important;
+           font-size: 100% !important;
+           }
+           .css_for_blue{
+           background-color: $tkn_colour_blue$ !important;
+           font-size: 100% !important;
+           }
+        </style>
+      </html>
+      <table id="table1">
+        <search>
+          <query>
+| loadjob savedsearch="ssphp_app_account:DCAP{{environment}}:ssphp_create_dashboard_dataset_service{{environment}}"
 
 | fields ssphp.service.portfolio, ssphp.service.service_line, ssphp.service.product, ssphp.service.id, ssphp.assessment.source, ssphp.use_case.category, ssphp.use_case.id, ssphp.use_case.title, ssphp.assessment.display_name, ssphp.score.score, ssphp.score.compliance_status, ssphp.score.ciso_priority, ssphp.assessment.description, ssphp.score.color, ssphp.resource.id, ssphp.resource.tenant, ssphp.resource.subscription, ssphp.resource.subscription_name, ssphp.resource.resource_group, ssphp.score.remediation_priority, ssphp.exemption.status, SSPHP_UID
 
-
+| search ssphp.service.portfolio=$tkn_portfolio|s$
 
 ```| search ssphp.service.portfolio="Institute for Apprenticeships" AND ssphp.service.service_line="Institute for Apprenticeships" AND ssphp.service.product="Institute Data Service - s129"```
 | eval ssphp.service.portfolio=trim('ssphp.service.portfolio'),
@@ -153,113 +215,16 @@
        CODE_SCAN_perc='CODE_SCAN_perc'."|".'CODE_SCAN_colour', CODE_SCAN_abs='CODE_SCAN_abs'."|".'CODE_SCAN_colour'
 
 
-| rename ssphp.service.portfolio as Portfolio, ssphp.service.service_line as "Service Line", ssphp.service.product as Product
 
-| fields Portfolio, "Service Line", Product, POSTURE_perc, POSTURE_abs, KUBERNETES_perc, KUBERNETES_abs, VULNERABILITY_perc, VULNERABILITY_abs, REPOS_perc, REPOS_abs, CODE_SCAN_perc, CODE_SCAN_abs
-
-| eval type="data"]
-
-| stats values(*) as * by Portfolio, "Service Line", Product
-          </query>
-        </search>
-        <option name="count">1</option>
-      </table>
-    </panel> 
-  </row>
-
-
-<!-- ########################################################## DASHBOARD TABLE ################################################################ -->
-  <row>
-    <panel>
-    <title>Compliant Resources</title>
-      <html depends="$alwaysHideCSS$">
-        <style>
-            /* Right align only the first column of the table */
-            #table1 .table th:nth-child(4),
-            #table1 .table td:nth-child(4),
-            #table1 .table th:nth-child(5),
-            #table1 .table td:nth-child(5),
-            #table1 .table th:nth-child(6),
-            #table1 .table td:nth-child(6),
-            #table1 .table th:nth-child(7),
-            #table1 .table td:nth-child(7),
-            #table1 .table th:nth-child(8),
-            #table1 .table td:nth-child(8)
-            {
-                text-align: center!important;
-            }
-        </style>
-      </html>
-
-      <html>
-        <style>
-           .css_for_green{ 
-           background-color: #00FF00 !important;
-           color:#000000 !important;
-           font-size: 100% !important;
-           }
-           .css_for_red1{
-           background-color: #FF0000!important;
-           color:#000000 !important;
-           font-size: 100% !important;
-           }
-           .css_for_red2{
-           background-color:rgb(246, 22, 22)!important;
-           color:#000000 !important;
-           font-size: 100% !important;
-           }
-           .css_for_red3{
-           background-color:rgb(241, 45, 45)!important;
-           color:#000000 !important;
-           font-size: 100% !important;
-           }
-           .css_for_red4{
-           background-color:rgb(240, 67, 67)!important;
-           color:#000000 !important;
-           font-size: 100% !important;
-           }
-           .css_for_red5{
-           background-color:rgb(238, 94, 94)!important;
-           color:#000000 !important;
-           font-size: 100% !important;
-           }
-           .css_for_red6{
-           background-color:rgb(237, 114, 114)!important;
-           color:#000000 !important;
-           font-size: 100% !important;
-           }
-           .css_for_red7{
-           background-color:rgb(237, 133, 133)!important;
-           color:#000000 !important;
-           font-size: 100% !important;
-           }
-           .css_for_red8{
-           background-color:rgb(235, 157, 157)!important;
-           color:#000000 !important;
-           font-size: 100% !important;
-           }
-           .css_for_red9{
-           background-color:rgb(238, 189, 189)!important;
-           color:#000000 !important;
-           font-size: 100% !important;
-           }
-           .css_for_blue{
-           background-color: $tkn_colour_blue$ !important;
-           font-size: 100% !important;
-           }
-        </style>
-      </html>
-
-      <table id="table1">
-        <search base="base01">
-          <query>
-| fillnull value="-" POSTURE_$tkn_show$, KUBERNETES_$tkn_show$, VULNERABILITY_$tkn_show$, REPOS_$tkn_show$, CODE_SCAN_$tkn_show$, id
 | rename POSTURE_$tkn_show$ as POSTURE, KUBERNETES_$tkn_show$ as KUBERNETES, VULNERABILITY_$tkn_show$ as VULNERABILITY, REPOS_$tkn_show$ as REPOS, CODE_SCAN_$tkn_show$ as CODE_SCAN
 
-| search Portfolio=$tkn_portfolio|s$
-| where $tkn_include$
+| lookup ssphp_bdmc_fbp.csv portfolio AS ssphp.service.portfolio, service_line AS ssphp.service.service_line, product AS ssphp.service.product OUTPUT id
 
-| table Portfolio, "Service Line", Product, POSTURE, KUBERNETES, VULNERABILITY, REPOS, CODE_SCAN, id, type
+| rename ssphp.service.portfolio as Portfolio, ssphp.service.service_line as "Service Line", ssphp.service.product as Product
+
+| table Portfolio, "Service Line", Product, id, POSTURE, KUBERNETES, VULNERABILITY, REPOS, CODE_SCAN
+
+| fillnull value="-" POSTURE, KUBERNETES, VULNERABILITY, REPOS, CODE_SCAN
           </query>
         </search>
         <option name="count">100</option>
