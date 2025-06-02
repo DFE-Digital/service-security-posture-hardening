@@ -1,0 +1,513 @@
+{% if environment=="_DEV" %}
+<dashboard version="1.1" theme="dark" script="js/table_cell_backcolor.js">
+{% else %}
+<dashboard version="1.1" theme="dark" script="js/table_cell_backcolor.js">
+{% endif %}  
+
+
+  <label>Security Posture Continuous Assurance : DfE Portfolio Overview Dashboard</label>
+  <description>{{environment}} v0.0.14</description>
+
+  <init>
+    <set token="tkn_colour_tile">pebble</set>
+    <set token="tkn_colour_compliant_line">#ECECEC</set>
+    <set token="tkn_colour_compliant_line_100">#85F415</set>
+    <set token="tkn_colour_non_compliant_line">#FF4B4B</set>
+    <set token="tkn_colour_text">#bebebe</set>
+    <set token="tkn_margin">20</set>
+    <set token="tkn_view">abs</set>
+    <unset token="tkn_ready"></unset>
+  </init>
+
+  
+  
+<!-- ############################################################################################################################################################# -->
+<!-- ################################################################ TOKENS ROW ################################################################################# -->
+<!-- ############################################################################################################################################################# -->
+
+  <row depends="$debug$">
+    <panel>
+      <table>
+        <search>
+          <query>
+  | makeresults
+  | eval app=$env:app|s$
+  | table app
+          </query>
+          <done>
+            <set token="tkn_current_app">$result.app$</set>
+          </done>
+        </search>
+      </table>
+    </panel>
+
+
+    <panel>
+      <table>
+        <search>
+          <query>
+  | makeresults
+
+  `ssphp_metrics_eval_field_colors{{environment}}`
+
+  | table tkn_*
+          </query>
+          <done>
+            <set token="tkn_colour_splunk_grey">$result.tkn_colour_splunk_grey$</set>
+            <set token="tkn_colour_red">$result.tkn_colour_red$</set>
+            <set token="tkn_colour_orange">$result.tkn_colour_orange$</set>
+            <set token="tkn_colour_green">$result.tkn_colour_green$</set>
+            <set token="tkn_colour_blue">$result.tkn_colour_blue$</set>
+          </done>
+        </search>
+      </table>
+    </panel>
+  </row>
+  
+  
+  
+
+<!-- ################### STYLE ROW ################### -->  
+  <row depends="$debug$">
+    <panel>
+      <html>
+        <style>
+          .absolute {
+            text-align: center !important;
+          }
+          .absolute a {
+            color: $tkn_colour_text$ !important;
+            font-size: 300% !important;
+            text-align: center !important;
+            line-height: 2.5 !important;
+          }
+          .undervalue {
+            text-align: center !important;
+          }
+          .undervalue a {
+            color: $tkn_colour_text$ !important;
+            font-size: 120% !important;
+            text-align: center !important;
+            line-height: 1.5 !important;
+          }
+          .line{
+            color: $tkn_colour_tile$;
+            height: 4px;
+            margin-bottom: 10px;
+          }
+        </style>
+      </html>
+    </panel>
+  </row>
+
+  
+  
+<!-- ############################################################################################################################################################# -->
+<!-- ################################################################ DISPLAY ROWS - PORTFOLIOS ################################################################## -->
+<!-- ############################################################################################################################################################# -->
+
+  <row depends="$tkn_ready$">
+    <panel>
+      <html>
+        <div class="undervalue" style="background:$tkn_colour_tile$;">Compliant Resources</div>
+      </html>
+    </panel>
+  </row>
+
+<!-- ################### DISPLAY PANEL - Education and Skills Funding Agency - ESFA ################### -->
+  <row depends="$tkn_ready$">
+    <panel>
+      <html>
+        <div class="absolute" style="background:$tkn_colour_tile$;">
+          <a href="ssphp_dfe_service_overview.xml?form.tkn__portfolio=ESFA" target="_blank">$tkn_ESFA_score$</a>
+        </div>
+        <div style="display: flex;">
+          <div class="line" style="width: $tkn_margin$%; border-bottom: 5px solid $tkn_colour_tile$;"/>
+          <div class="line" style="width: $tkn_ESFA_compliant_line_width$%; border-bottom: 5px solid $tkn_ESFA_color$;"/>
+          <div class="line" style="width: $tkn_ESFA_compliant_line_non_width$%; border-bottom: 5px solid $tkn_colour_non_compliant_line$;"/>
+          <div class="line" style="width: $tkn_margin$%; border-bottom: 5px solid $tkn_colour_tile$;"/>
+        </div>
+        <div class="undervalue" style="background:$tkn_colour_tile$;">
+          <a href="ssphp_dfe_service_overview?form.tkn__portfolio=ESFA" target="_blank">Education and Skills Funding Agency</a>
+        </div>
+      </html>
+    </panel>
+
+
+<!-- ################### DISPLAY PANEL - Families Group - FAM ################### -->    
+    <panel>
+      <html>
+        <div class="absolute" style="background:$tkn_colour_tile$;">
+          <a href="ssphp_dfe_service_overview.xml?form.tkn__portfolio=FAM" target="_blank">$tkn_FAM_score$</a>
+        </div>
+        <div style="display: flex;">
+          <div class="line" style="width: $tkn_margin$%; border-bottom: 5px solid $tkn_colour_tile$;"/>
+          <div class="line" style="width: $tkn_FAM_compliant_line_width$%; border-bottom: 5px solid $tkn_FAM_color$;"/>
+          <div class="line" style="width: $tkn_FAM_compliant_line_non_width$%; border-bottom: 5px solid $tkn_colour_non_compliant_line$;"/>
+          <div class="line" style="width: $tkn_margin$%; border-bottom: 5px solid $tkn_colour_tile$;"/>
+        </div>
+        <div class="undervalue" style="background:$tkn_colour_tile$;">
+          <a href="ssphp_dfe_service_overview?form.tkn__portfolio=FAM" target="_blank">Families Group</a>
+        </div>
+      </html>
+    </panel>
+
+
+<!-- ################### DISPLAY PANEL - Institute for Apprenticeships - APPR ################### -->    
+    <panel>
+      <html>
+        <div class="absolute" style="background:$tkn_colour_tile$;">
+          <a href="ssphp_dfe_service_overview.xml?form.tkn__portfolio=APPR" target="_blank">$tkn_APPR_score$</a>
+        </div>
+        <div style="display: flex;">
+          <div class="line" style="width: $tkn_margin$%; border-bottom: 5px solid $tkn_colour_tile$;"/>
+          <div class="line" style="width: $tkn_APPR_compliant_line_width$%; border-bottom: 5px solid $tkn_APPR_color$;"/>
+          <div class="line" style="width: $tkn_APPR_compliant_line_non_width$%; border-bottom: 5px solid $tkn_colour_non_compliant_line$;"/>
+          <div class="line" style="width: $tkn_margin$%; border-bottom: 5px solid $tkn_colour_tile$;"/>
+        </div>
+        <div class="undervalue" style="background:$tkn_colour_tile$;">
+          <a href="ssphp_dfe_service_overview?form.tkn__portfolio=APPR" target="_blank">Institute for Apprenticeships</a>
+        </div>
+      </html>
+    </panel>
+
+
+<!-- ################### DISPLAY PANEL - Operations & Infrastructure Group - OPS ################### -->    
+    <panel>
+      <html>
+        <div class="absolute" style="background:$tkn_colour_tile$;">
+          <a href="ssphp_dfe_service_overview.xml?form.tkn__portfolio=OPS" target="_blank">$tkn_OPS_score$</a>
+        </div>
+        <div style="display: flex;">
+          <div class="line" style="width: $tkn_margin$%; border-bottom: 5px solid $tkn_colour_tile$;"/>
+          <div class="line" style="width: $tkn_OPS_compliant_line_width$%; border-bottom: 5px solid $tkn_OPS_color$;"/>
+          <div class="line" style="width: $tkn_OPS_compliant_line_non_width$%; border-bottom: 5px solid $tkn_colour_non_compliant_line$;"/>
+          <div class="line" style="width: $tkn_margin$%; border-bottom: 5px solid $tkn_colour_tile$;"/>
+        </div>
+        <div class="undervalue" style="background:$tkn_colour_tile$;">
+          <a href="ssphp_dfe_service_overview?form.tkn__portfolio=OPS" target="_blank">Operations &amp; Infrastructure Group</a>
+        </div>
+      </html>
+    </panel>
+
+
+<!-- ################### DISPLAY PANEL - Regions Group - REG ################### -->    
+    <panel>
+      <html>
+        <div class="absolute" style="background:$tkn_colour_tile$;">
+          <a href="ssphp_dfe_service_overview.xml?form.tkn__portfolio=REG" target="_blank">$tkn_REG_score$</a>
+        </div>
+        <div style="display: flex;">
+          <div class="line" style="width: $tkn_margin$%; border-bottom: 5px solid $tkn_colour_tile$;"/>
+          <div class="line" style="width: $tkn_REG_compliant_line_width$%; border-bottom: 5px solid $tkn_REG_color$;"/>
+          <div class="line" style="width: $tkn_REG_compliant_line_non_width$%; border-bottom: 5px solid $tkn_colour_non_compliant_line$;"/>
+          <div class="line" style="width: $tkn_margin$%; border-bottom: 5px solid $tkn_colour_tile$;"/>
+        </div>
+        <div class="undervalue" style="background:$tkn_colour_tile$;">
+          <a href="ssphp_dfe_service_overview?form.tkn__portfolio=REG" target="_blank">Regions Group</a>
+        </div>
+      </html>
+    </panel>
+  </row>
+  
+
+  <row depends="$tkn_ready$">
+
+
+<!-- ################### DISPLAY PANEL - Schools Group - SCH ################### -->
+    <panel>
+      <html>
+        <div class="absolute" style="background:$tkn_colour_tile$;">
+          <a href="ssphp_dfe_service_overview.xml?form.tkn__portfolio=SCH" target="_blank">$tkn_SCH_score$</a>
+        </div>
+        <div style="display: flex;">
+          <div class="line" style="width: $tkn_margin$%; border-bottom: 5px solid $tkn_colour_tile$;"/>
+          <div class="line" style="width: $tkn_SCH_compliant_line_width$%; border-bottom: 5px solid $tkn_SCH_color$;"/>
+          <div class="line" style="width: $tkn_SCH_compliant_line_non_width$%; border-bottom: 5px solid $tkn_colour_non_compliant_line$;"/>
+          <div class="line" style="width: $tkn_margin$%; border-bottom: 5px solid $tkn_colour_tile$;"/>
+        </div>
+        <div class="undervalue" style="background:$tkn_colour_tile$;">
+          <a href="ssphp_dfe_service_overview?form.tkn__portfolio=SCH" target="_blank">Schools Group</a>
+        </div>
+      </html>
+    </panel>
+
+
+<!-- ################### DISPLAY PANEL - Skills Group - SKILL ################### -->    
+    <panel>
+      <html>
+        <div class="absolute" style="background:$tkn_colour_tile$;">
+          <a href="ssphp_dfe_service_overview.xml?form.tkn__portfolio=SKILL" target="_blank">$tkn_SKILL_score$</a>
+        </div>
+        <div style="display: flex;">
+          <div class="line" style="width: $tkn_margin$%; border-bottom: 5px solid $tkn_colour_tile$;"/>
+          <div class="line" style="width: $tkn_SKILL_compliant_line_width$%; border-bottom: 5px solid $tkn_SKILL_color$;"/>
+          <div class="line" style="width: $tkn_SKILL_compliant_line_non_width$%; border-bottom: 5px solid $tkn_colour_non_compliant_line$;"/>
+          <div class="line" style="width: $tkn_margin$%; border-bottom: 5px solid $tkn_colour_tile$;"/>
+        </div>
+        <div class="undervalue" style="background:$tkn_colour_tile$;">
+          <a href="ssphp_dfe_service_overview?form.tkn__portfolio=SKILL" target="_blank">Skills Group</a>
+        </div>
+      </html>
+    </panel>
+
+
+<!-- ################### DISPLAY PANEL - Standards and Testing Agency - STD ################### -->    
+    <panel>
+      <html>
+        <div class="absolute" style="background:$tkn_colour_tile$;">
+          <a href="ssphp_dfe_service_overview.xml?form.tkn__portfolio=STD" target="_blank">$tkn_STD_score$</a>
+        </div>
+        <div style="display: flex;">
+          <div class="line" style="width: $tkn_margin$%; border-bottom: 5px solid $tkn_colour_tile$;"/>
+          <div class="line" style="width: $tkn_STD_compliant_line_width$%; border-bottom: 5px solid $tkn_STD_color$;"/>
+          <div class="line" style="width: $tkn_STD_compliant_line_non_width$%; border-bottom: 5px solid $tkn_colour_non_compliant_line$;"/>
+          <div class="line" style="width: $tkn_margin$%; border-bottom: 5px solid $tkn_colour_tile$;"/>
+        </div>
+        <div class="undervalue" style="background:$tkn_colour_tile$;">
+          <a href="ssphp_dfe_service_overview?form.tkn__portfolio=STD" target="_blank">Standards and Testing Agency</a>
+        </div>
+      </html>
+    </panel>
+
+
+<!-- ################### DISPLAY PANEL - Strategy Group - STRAT ################### -->    
+    <panel>
+      <html>
+        <div class="absolute" style="background:$tkn_colour_tile$;">
+          <a href="ssphp_dfe_service_overview.xml?form.tkn__portfolio=STRAT" target="_blank">$tkn_STRAT_score$</a>
+        </div>
+        <div style="display: flex;">
+          <div class="line" style="width: $tkn_margin$%; border-bottom: 5px solid $tkn_colour_tile$;"/>
+          <div class="line" style="width: $tkn_STRAT_compliant_line_width$%; border-bottom: 5px solid $tkn_STRAT_color$;"/>
+          <div class="line" style="width: $tkn_STRAT_compliant_line_non_width$%; border-bottom: 5px solid $tkn_colour_non_compliant_line$;"/>
+          <div class="line" style="width: $tkn_margin$%; border-bottom: 5px solid $tkn_colour_tile$;"/>
+        </div>
+        <div class="undervalue" style="background:$tkn_colour_tile$;">
+          <a href="ssphp_dfe_service_overview?form.tkn__portfolio=STRAT" target="_blank">Strategy Group</a>
+        </div>
+      </html>
+    </panel>
+
+
+<!-- ################### DISPLAY PANEL - Teaching Regulation Agency - TRA ################### -->    
+    <panel>
+      <html>
+        <div class="absolute" style="background:$tkn_colour_tile$;">
+          <a href="ssphp_dfe_service_overview.xml?form.tkn__portfolio=TRA" target="_blank">$tkn_TRA_score$</a>
+        </div>
+        <div style="display: flex;">
+          <div class="line" style="width: $tkn_margin$%; border-bottom: 5px solid $tkn_colour_tile$;"/>
+          <div class="line" style="width: $tkn_TRA_compliant_line_width$%; border-bottom: 5px solid $tkn_TRA_color$;"/>
+          <div class="line" style="width: $tkn_TRA_compliant_line_non_width$%; border-bottom: 5px solid $tkn_colour_non_compliant_line$;"/>
+          <div class="line" style="width: $tkn_margin$%; border-bottom: 5px solid $tkn_colour_tile$;"/>
+        </div>
+        <div class="undervalue" style="background:$tkn_colour_tile$;">
+          <a href="ssphp_dfe_service_overview?form.tkn__portfolio=TRA" target="_blank">Teaching Regulation Agency</a>
+        </div>
+      </html>
+    </panel>
+  </row>
+
+
+
+
+<!-- ############################################################################################################################################################# -->
+<!-- ################################################################ BASE SEARCH- PORTFOLIOS #################################################################### -->
+<!-- ############################################################################################################################################################# -->
+
+  <row depends="$debug$">
+    <panel>
+      <table>
+        <search id="base01">
+          <query>
+| loadjob savedsearch="ssphp_app_account:DCAP_DEV:ssphp_create_dashboard_dataset_service_DEV"
+
+| fields ssphp.service.portfolio, ssphp.service.service_line, ssphp.service.product, ssphp.service.id, ssphp.assessment.source, ssphp.use_case.category, ssphp.use_case.id, ssphp.use_case.title, ssphp.assessment.display_name, ssphp.score.score, ssphp.score.compliance_status, ssphp.score.ciso_priority, ssphp.assessment.description, ssphp.score.color, ssphp.resource.id, ssphp.resource.tenant, ssphp.resource.subscription, ssphp.resource.subscription_name, ssphp.resource.resource_group, ssphp.score.remediation_priority, ssphp.exemption.status, SSPHP_UID
+
+| eval ssphp.service.portfolio=trim('ssphp.service.portfolio'),
+       ssphp.service.service_line=trim('ssphp.service.service_line'),
+       ssphp.service.product=trim('ssphp.service.product')
+       
+| fields ssphp.service.portfolio, ssphp.service.service_line, ssphp.service.product, ssphp.service.id, ssphp.assessment.source, ssphp.use_case.category, ssphp.use_case.id, ssphp.use_case.title, ssphp.assessment.display_name, ssphp.score.score, ssphp.score.compliance_status, ssphp.score.ciso_priority```, ssphp.assessment.description```, ssphp.score.color, ssphp.resource.id, ssphp.resource.tenant, ssphp.resource.subscription, ssphp.resource.subscription_name, ssphp.resource.resource_group, ssphp.score.remediation_priority, ssphp.exemption.status, SSPHP_UID 
+
+| search ssphp.exemption.status="comply" AND ssphp.service.portfolio!="" AND ssphp.service.portfolio!="Unassigned"
+| search (ssphp.use_case.category="POSTURE" OR ssphp.use_case.category="KUBERNETES" OR ssphp.use_case.category="VULNERABILITY" OR ssphp.use_case.category="REPOS" OR (ssphp.use_case.category="CODE_SCAN" AND (ssphp.assessment.source="*")))
+
+| search ssphp.resource.id="***"  AND ssphp.resource.id!=""
+| where 'ssphp.score.ciso_priority'="DfE Mandated"
+
+| stats count, values(ssphp.assessment.display_name) as ssphp.assessment.display_name, values(ssphp.score.score) as ssphp.score.score, min(ssphp.score.score) as min_score by ssphp.service.portfolio, ssphp.service.service_line, ssphp.service.product, ssphp.service.id, ssphp.use_case.category, ssphp.resource.id
+| stats count, sum(eval(if('min_score'="100|green",1,0))) as compliant by ssphp.service.portfolio
+
+| lookup ssphp.portfolio_shortport.csv ssphp.service.portfolio OUTPUT short_port
+
+| eval compliant_perc=round(('compliant'*100)/count),
+       compliant_abs='compliant'." / ".'count'
+
+| eval compliant_line_width=round((100-(2*$tkn_margin$))*(('compliant_perc')/100)),
+       compliant_line_non_width=(100-(2*$tkn_margin$))-'compliant_line_width',
+       compliant_color=if(compliant_perc=100,$tkn_colour_compliant_line_100|s$,$tkn_colour_compliant_line|s$),
+       compliant_perc='compliant_perc'."%",
+       view=$tkn_view|s$,
+       compliant_both=if('view'="abs",'compliant_abs','compliant_perc')
+
+| table view, ssphp.service.portfolio, short_port, compliant_perc, compliant_abs, compliant_both, compliant_color, compliant_line_width, compliant_line_non_width
+          </query>
+        </search>
+      </table>
+    </panel>
+  </row>
+
+
+<!-- ############################################################################################################################################################# -->
+<!-- ################################################################ TABLE ROW - PORTFOLIOS ##################################################################### -->
+<!-- ############################################################################################################################################################# -->
+  <row depends="$debug$">
+    <html>
+      <style>
+         .css_for_green{ 
+         background-color: $tkn_colour_green$ !important;
+         color:#000000 !important;
+         font-size: 100% !important;
+         }
+         .css_for_orange{ 
+         background-color: $tkn_colour_orange$ !important;
+         color:#000000 !important;
+         font-size: 100% !important;
+         }
+         .css_for_red{
+         background-color: $tkn_colour_red$ !important;
+         color:#000000 !important;
+         font-size: 100% !important;
+         }
+         .css_for_blue{
+         background-color: $tkn_colour_blue$ !important;
+         color:#000000 !important;
+         font-size: 100% !important;
+         }
+      </style>
+    </html>
+  </row>
+
+  <row depends="$slt$">
+    <panel>
+      <table id="table3">
+        <search base="base01">
+          <query>
+
+| eval compliant_perc=if('compliant_perc'="100%",'compliant_perc'."|green",'compliant_perc'."|red"),
+       compliant_abs=if('compliant_perc'="100%",'compliant_abs'."|green",'compliant_abs'."|red")
+
+| table ssphp.service.portfolio, compliant_abs, compliant_perc
+          </query>
+        </search>
+      </table>
+    </panel>
+  </row>
+
+
+<!-- ############################################################################################################################################################# -->
+<!-- ################################################################ DATA ROW - PORTFOLIOS ###################################################################### -->
+<!-- ############################################################################################################################################################# -->
+
+  <row depends="$debug$">
+    <panel>
+      <table>
+        <search base="base01">
+          <query>
+
+| foreach compliant_* [| eval {short_port}_&lt;&lt;FIELD&gt;&gt;='&lt;&lt;FIELD&gt;&gt;']
+| fields - ssphp.service.portfolio, short_port, compliant_perc, compliant_abs, compliant_color, compliant_non_perc, compliant_both, compliant_line_width, compliant_line_non_width
+| stats values(*) as *
+          </query>
+          <done>
+            <set token="tkn_ESFA_color">$result.ESFA_compliant_color$</set>
+            <set token="tkn_ESFA_score">$result.ESFA_compliant_both$</set>
+            <set token="tkn_ESFA_score_abs">$result.ESFA_compliant_abs$</set>
+            <set token="tkn_ESFA_score_perc">$result.ESFA_compliant_perc$</set>
+            <set token="tkn_ESFA_score">$result.ESFA_compliant_both$</set>
+            <set token="tkn_ESFA_compliant_line_width">$result.ESFA_compliant_line_width$</set>
+            <set token="tkn_ESFA_compliant_line_non_width">$result.ESFA_compliant_line_non_width$</set>
+
+            <set token="tkn_FAM_color">$result.FAM_compliant_color$</set>
+            <set token="tkn_FAM_score">$result.FAM_compliant_both$</set>
+            <set token="tkn_FAM_score_abs">$result.FAM_compliant_abs$</set>
+            <set token="tkn_FAM_score_perc">$result.FAM_compliant_perc$</set>
+            <set token="tkn_FAM_score">$result.FAM_compliant_both$</set>
+            <set token="tkn_FAM_compliant_line_width">$result.FAM_compliant_line_width$</set>
+            <set token="tkn_FAM_compliant_line_non_width">$result.FAM_compliant_line_non_width$</set>
+
+            <set token="tkn_APPR_color">$result.APPR_compliant_color$</set>
+            <set token="tkn_APPR_score">$result.APPR_compliant_both$</set>
+            <set token="tkn_APPR_score_abs">$result.APPR_compliant_abs$</set>
+            <set token="tkn_APPR_score_perc">$result.APPR_compliant_perc$</set>
+            <set token="tkn_APPR_score">$result.APPR_compliant_both$</set>
+            <set token="tkn_APPR_compliant_line_width">$result.APPR_compliant_line_width$</set>
+            <set token="tkn_APPR_compliant_line_non_width">$result.APPR_compliant_line_non_width$</set>
+
+            <set token="tkn_OPS_color">$result.OPS_compliant_color$</set>
+            <set token="tkn_OPS_score">$result.OPS_compliant_both$</set>
+            <set token="tkn_OPS_score_abs">$result.OPS_compliant_abs$</set>
+            <set token="tkn_OPS_score_perc">$result.OPS_compliant_perc$</set>
+            <set token="tkn_OPS_score">$result.OPS_compliant_both$</set>
+            <set token="tkn_OPS_compliant_line_width">$result.OPS_compliant_line_width$</set>
+            <set token="tkn_OPS_compliant_line_non_width">$result.OPS_compliant_line_non_width$</set>
+
+            <set token="tkn_REG_color">$result.REG_compliant_color$</set>
+            <set token="tkn_REG_score">$result.REG_compliant_both$</set>
+            <set token="tkn_REG_score_abs">$result.REG_compliant_abs$</set>
+            <set token="tkn_REG_score_perc">$result.REG_compliant_perc$</set>
+            <set token="tkn_REG_score">$result.REG_compliant_both$</set>
+            <set token="tkn_REG_compliant_line_width">$result.REG_compliant_line_width$</set>
+            <set token="tkn_REG_compliant_line_non_width">$result.REG_compliant_line_non_width$</set>
+
+            <set token="tkn_SCH_color">$result.SCH_compliant_color$</set>
+            <set token="tkn_SCH_score">$result.SCH_compliant_both$</set>
+            <set token="tkn_SCH_score_abs">$result.SCH_compliant_abs$</set>
+            <set token="tkn_SCH_score_perc">$result.SCH_compliant_perc$</set>
+            <set token="tkn_SCH_score">$result.SCH_compliant_both$</set>
+            <set token="tkn_SCH_compliant_line_width">$result.SCH_compliant_line_width$</set>
+            <set token="tkn_SCH_compliant_line_non_width">$result.SCH_compliant_line_non_width$</set>
+
+            <set token="tkn_SKILL_color">$result.SKILL_compliant_color$</set>
+            <set token="tkn_SKILL_score">$result.SKILL_compliant_both$</set>
+            <set token="tkn_SKILL_score_abs">$result.SKILL_compliant_abs$</set>
+            <set token="tkn_SKILL_score_perc">$result.SKILL_compliant_perc$</set>
+            <set token="tkn_SKILL_score">$result.SKILL_compliant_both$</set>
+            <set token="tkn_SKILL_compliant_line_width">$result.SKILL_compliant_line_width$</set>
+            <set token="tkn_SKILL_compliant_line_non_width">$result.SKILL_compliant_line_non_width$</set>
+
+            <set token="tkn_STD_color">$result.STD_compliant_color$</set>
+            <set token="tkn_STD_score">$result.STD_compliant_both$</set>
+            <set token="tkn_STD_score_abs">$result.STD_compliant_abs$</set>
+            <set token="tkn_STD_score_perc">$result.STD_compliant_perc$</set>
+            <set token="tkn_STD_score">$result.STD_compliant_both$</set>
+            <set token="tkn_STD_compliant_line_width">$result.STD_compliant_line_width$</set>
+            <set token="tkn_STD_compliant_line_non_width">$result.STD_compliant_line_non_width$</set>
+
+            <set token="tkn_STRAT_color">$result.STRAT_compliant_color$</set>
+            <set token="tkn_STRAT_score">$result.STRAT_compliant_both$</set>
+            <set token="tkn_STRAT_score_abs">$result.STRAT_compliant_abs$</set>
+            <set token="tkn_STRAT_score_perc">$result.STRAT_compliant_perc$</set>
+            <set token="tkn_STRAT_score">$result.STRAT_compliant_both$</set>
+            <set token="tkn_STRAT_compliant_line_width">$result.STRAT_compliant_line_width$</set>
+            <set token="tkn_STRAT_compliant_line_non_width">$result.STRAT_compliant_line_non_width$</set>
+
+            <set token="tkn_TRA_color">$result.TRA_compliant_color$</set>
+            <set token="tkn_TRA_score">$result.TRA_compliant_both$</set>
+            <set token="tkn_TRA_score_abs">$result.TRA_compliant_abs$</set>
+            <set token="tkn_TRA_score_perc">$result.TRA_compliant_perc$</set>
+            <set token="tkn_TRA_score">$result.TRA_compliant_both$</set>
+            <set token="tkn_TRA_compliant_line_width">$result.TRA_compliant_line_width$</set>
+            <set token="tkn_TRA_compliant_line_non_width">$result.TRA_compliant_line_non_width$</set>
+
+            <set token="tkn_ready">true</set>
+          </done>
+        </search>
+      </table>
+    </panel>
+  </row>
+
+
+</dashboard>

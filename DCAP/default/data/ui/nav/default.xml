@@ -14,22 +14,23 @@
   </collection>
 
   <collection label="DfE Digital Services" >
+    <a href="ssphp_dfe_service_portfolio_overview">Portfolio Overview</a>
     <a href="ssphp_dfe_service_overview">Service Overview</a>
-    <a href="ssphp_dfe_service">Service Posture</a>
-    <a href="ssphp_critical_vulnerabilities">Vulnerability Management</a>
-    <a href="ssphp_dfe_asset_inventory">Asset Inventory</a>
+    <a href="ssphp_dfe_service_posture">Service Posture</a>
     <a href="ssphp_digital_services_dashboard_help">Dashboard Information</a>
   </collection>
 
+{% if environment=="_DEV" %}
   <collection label="DCAP Utilities" >
     <a href="ssphp_manage_exemptions">Manage Use Case Exemptions</a>
-{% if environment=="_DEV" %}
+    <a href="ssphp_critical_vulnerabilities">Vulnerability Management</a>
+    <a href="ssphp_dfe_asset_inventory">Asset Inventory</a>
     <a href="ssphp_dfe_healthcheck">DCAP Healthcheck</a>
     <a href="ssphp_foundational_systems_list_controls">Foundational Systems Controls List</a>
     <a href="ssphp_dfe_use_case_inventory">Digital Services Controls List</a>
     <a href="ssphp_dashboard_usage">Dashboard Usage</a>
-{% endif %}
   </collection>
+{% endif %}
 
 <a href="ssphp_dashboard_report_issue" target="_blank">Report an Issue</a>
 
