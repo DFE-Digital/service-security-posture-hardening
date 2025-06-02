@@ -1,0 +1,840 @@
+<dashboard theme="dark" version="1.1" hideFilters="true" stylesheet="ssphp{{environment}}.css" script="js/addtags.js, js/table_cell_backcolor_multivalue.js">
+
+
+<label>Security Posture Continuous Assurance : Service Control Detail Dashboard</label>
+<description>{{environment}} v6.1.24</description>
+  
+  <init>
+    <unset token="tkn_ready_event"></unset>
+    <unset token="tkn_ready_panel"></unset>
+
+    <unset token="tkn_ready_highlight"></unset>
+
+    <set token="tkn_colour_tile">pebble</set>
+    <set token="tkn_colour_text">#bebebe</set>
+    <set token="tkn_margin">40</set>
+    <set token="tkn_margin_100">20</set>
+    <set token="tkn_colour_compliant_line">#ECECEC</set>
+    <set token="tkn_colour_non_compliant_line">#FF4B4B</set>
+    <set token="tkn_font_size_1">900</set>
+
+<!-- #
+    <set token="tkn_colour_null_line">#85F415</set>
+    <set token="tkn_compliant_line_non_width">50</set>
+# --> 
+  </init>
+
+
+
+<!-- ################################################################################################################################################################# --> 
+<!-- ########################################################################## BASE SEARCH ########################################################################## --> 
+<!-- ################################################################################################################################################################# --> 
+
+  <search id="bs_1">
+    <query>
+`ssphp_summary_index{{environment}}` SSPHP_UID=$tkn__uid|s$
+    [| search `ssphp_summary_index{{environment}}` SSPHP_UID=$tkn__uid|s$
+      | stats max(SSPHP_RUN) as SSPHP_RUN
+      | return SSPHP_RUN]
+    
+| fields ssphp.assessment.*, ssphp.benchmark.*, ssphp.use_case.*, ssphp.service.*, ssphp.resource.*, ssphp.score.*, _raw
+    </query>
+      <done>
+        <set token="tkn_source">$result.ssphp.assessment.source$</set>
+      </done>
+  </search>
+  
+
+  <row depends="$debug$">
+    <panel>
+      <table>
+        <search>
+          <query>
+  | makeresults
+
+  `ssphp_metrics_eval_field_colors{{environment}}`
+
+  | table tkn_*
+          </query>
+          <done>
+            <set token="tkn_colour_splunk_grey">$result.tkn_colour_splunk_grey$</set>
+            <set token="tkn_colour_red">$result.tkn_colour_red$</set>
+            <set token="tkn_colour_orange">$result.tkn_colour_orange$</set>
+            <set token="tkn_colour_green">$result.tkn_colour_green$</set>
+            <set token="tkn_colour_blue">$result.tkn_colour_blue$</set>
+          </done>
+        </search>
+      </table>
+    </panel>
+
+    <panel>
+      <html>
+      <style>
+        .green{
+          color:green !important;
+        }
+        .blue{
+          color:cyan !important;
+        }
+        .red{
+          color:red !important;
+        }
+        .orange{
+          color:orange !important;
+        }
+        .yellow{
+          color:yellow !important;
+        }
+        .lightgrey{
+          color:gray !important;
+        }
+        .lightblue{
+          color:#ADD8E6 !important;
+        }
+      </style>
+    </html>
+    </panel>
+    
+    <panel>
+      <html>
+        <style>
+          #table1 th:nth-child(1) {
+            width: $tkn_col_width$ !important;
+          }
+          #table1 th:nth-child(2) {
+            width: $tkn_col_width$ !important;
+          }
+          #table1 th:nth-child(3) {
+            width: $tkn_col_width$ !important;
+          }
+          #table1 th:nth-child(4) {
+            width: $tkn_col_width$ !important;
+          }
+          #table1 th:nth-child(5) {
+            width: $tkn_col_width$ !important;
+          }
+          #table1 th:nth-child(6) {
+            width: $tkn_col_width$ !important;
+          }
+        </style>
+      </html>
+    </panel>
+  </row>
+  
+
+
+
+<!-- ################################################################################################################################################################# --> 
+<!-- ########################################################################## MAIN SCORE PANEL ##################################################################### --> 
+<!-- ################################################################################################################################################################# --> 
+
+  <row depends="$debug$">
+    <panel>
+      <single>
+        <search base="bs_1">
+          <query>
+
+| eval score_Line_colour=if('ssphp.score.score'=100, $tkn_colour_compliant_line|s$, $tkn_colour_non_compliant_line|s$)
+
+| table ssphp.score.score, score_Line_colour
+          </query>
+          <done>
+            <condition match=" 'job.resultCount' == 0">
+                <set token="tkn_score">-</set>
+                <unset token="tkn_ready_main"/>
+            </condition>
+            <condition>
+                <set token="tkn_score">$result.ssphp.score.score$</set>
+                <set token="tkn_score_Line_colour">$result.score_Line_colour$</set>
+                <set token="tkn_ready_main">true</set>
+            </condition>
+          </done>
+        </search>
+        <option name="colorMode">block</option>
+        <option name="rangeColors">["0xd41f1f","0x118832"]</option>
+        <option name="rangeValues">[99]</option>
+        <option name="showSparkline">0</option>
+        <option name="showTrendIndicator">0</option>
+        <option name="useColors">1</option>
+      </single>
+    </panel>
+  </row>
+
+
+  
+
+<!-- ################### STYLE ROW ################### -->  
+  <row depends="$debug$">
+    <panel>
+      <html>
+        <style>
+          .absolute {
+            text-align: center !important;
+            color: $tkn_colour_text$ !important;
+            font-size: $tkn_font_size_1$% !important;
+            font-weight: bold;
+            text-align: center !important;
+            line-height: 1.5 !important;
+          }
+          .undervalue {
+            text-align: center !important;
+            color: $tkn_colour_text$ !important;
+            font-size: 100% !important;
+            text-align: center !important;
+            line-height: 1.5 !important;
+          }
+          .undervalue2 {
+            text-align: center !important;
+            color: $tkn_colour_text$ !important;
+            font-size: 80% !important;
+            text-align: center !important;
+            line-height: 1.5 !important;
+          }
+          .line{
+            color: $tkn_colour_tile$;
+            height: 4px;
+            margin-bottom: 20px;
+          }
+        </style>
+      </html>
+    </panel>
+  </row>
+  
+  <row>
+    <panel depends="$tkn_ready_main$">
+      <html>
+        <div class="absolute" style="background: $tkn_colour_tile$;">$tkn_score$</div>
+        <div style="display: flex;">
+          <div class="line" style="width: $tkn_margin$%; border-bottom: 5px solid $tkn_colour_tile$;"/>
+          <div class="line" style="width: $tkn_margin_100$%; border-bottom: 5px solid $tkn_score_Line_colour$;"/>
+          <div class="line" style="width: $tkn_margin$%; border-bottom: 5px solid $tkn_colour_tile$;"/>
+        </div>
+      </html>
+    </panel>
+   </row> 
+
+
+
+
+<!-- ################################################################################################################################################################# --> 
+<!-- ########################################################################## MAIN DISPLAY TABLE ################################################################### --> 
+<!-- ################################################################################################################################################################# --> 
+
+  <row depends="$tkn_ready_main$">
+    <panel>
+      <table id="table1">
+        <search base="bs_1">
+          <query>
+| fields - _raw, ssphp.score.score, ssphp.score.color, ssphp.use_case.version.last_changed*, ssphp.assessment.diagnosis, ssphp.assessment.solution
+
+| eval ssphp.score.ciso_priority=case('ssphp.score.ciso_priority'="1","DfE Mandated",
+                                      'ssphp.score.ciso_priority'="2","Recommended",
+                                      'ssphp.score.ciso_priority'="3","Desirable")
+
+| foreach * [| eval field=if('&lt;&lt;FIELD&gt;&gt;'!="",mvappend('field',"&lt;&lt;FIELD&gt;&gt;"." :: ".'&lt;&lt;FIELD&gt;&gt;'),'field')]
+
+| fields field
+
+| mvexpand field
+| eval Field=mvindex(split('field'," :: "),0),
+       Value=mvindex(split('field'," :: "),1)
+| table Field, Value
+
+`ssphp_service_detail_field_naming{{environment}}`
+
+| stats values(*) as * by Field
+
+```================== deal with field names that are not expressly in the list ==============```
+
+| where isnotnull('display_text')
+
+```| eval a='Field'
+| eval order=if(isnull(display_text),99,'order'),
+       a=if(isnull(display_text),
+            split(
+               replace(replace(replace(replace('a',"ssphp\.",""),"assessment\.",""),"resource\.",""),"status\.","")
+                  ,"."),
+            null())
+
+| eval b=mvjoin('a'," ")
+| eval b=replace('b',"([A-Z]{1})"," \1")
+| rex field=b mode=sed "s/^/ / s/ [aA]/ A/g s/ [bB]/ B/g s/ [cC]/ C/g s/ [dD]/ D/g s/ [eE]/ E/g s/ [fF]/ F/g s/ [gG]/ G/g s/ [hH]/ H/g s/ [iI]/ I/g s/ [jJ]/ J/g s/ [kK]/ K/g s/ [lL]/ L/g s/ [mM]/ M/g s/ [nN]/ N/g s/ [oO]/ O/g s/ [pP]/ P/g s/ [qQ]/ Q/g s/ [rR]/ R/g s/ [sS]/ S/g s/ [tT]/ T/g s/ [uU]/ U/g s/ [vV]/ V/g s/ [wW]/ W/g s/ [xX]/ X/g s/ [yY]/ Y/g s/ [zZ]/ Z/g s/^.//"
+| eval b=trim(b),
+       display_text=coalesce('display_text','b')
+| fields - a,b```
+
+```===========================================================================================```
+
+| eval display_text=if(isnull('display_text'),'Field','display_text'),
+           order=if(isnull('order'),99,'order')
+
+| eval h_start="~!span class=\"green\"~!",
+       d_start="~!span class=\"lightblue\"~!",
+       end="~!/span~!", 
+       br="~!br~!"
+| eval Out_Text='h_start'.'display_text'.'br'.end.'d_start'.'Value'.'end'.'br'
+```| eval Out_Text="~!span class=\"green\"~!".'display_text'."~!br~!~!/span~!".Value."~!br~!~!br~!"```
+
+| eval Source=mvindex(split('Field',"."),1)
+| fields - Field, start, end, br
+
+| sort Source, order
+
+| where Value!="-"
+
+| stats list(Out_Text) as Out_Text by Source
+| eval {Source}='Out_Text'
+| fields - Source, val
+| stats list(*) as *
+| fields - Out_Text
+
+| rename assessment as Assessment, benchmark as Benchmark, use_case as "Use Case", service as Service, resource as Resource, score as Score
+
+| makemv col_names
+| foreach * [| eval "&lt;&lt;FIELD&gt;&gt;"=mvjoin('&lt;&lt;FIELD&gt;&gt;',"
+"),
+                    col_names=mvappend('col_names',"&lt;&lt;FIELD&gt;&gt;")]
+
+          </query>
+          <done>
+            <set token="tkn_col_names">$result.col_names$</set>
+          </done>
+        </search>
+        <fields>$tkn_col_fields$</fields>
+      </table>
+    </panel>
+  </row>
+  
+  
+  <row depends="$debug$">
+    <panel>
+      <table>
+        <search>
+          <query>
+| makeresults
+| eval col_names=$tkn_col_names|s$,
+       no_cols=mvcount(split(col_names,",")),
+       col_fields="\"".mvjoin(split(col_names,","),"\",\"")."\"",
+       col_width=100/no_cols,
+       col_width='col_width'."%"
+| table no_cols, col_names, col_fields, col_width
+          </query>
+          <done>
+            <set token="tkn_col_fields">$result.col_fields$</set>
+            <set token="tkn_col_width">$result.col_width$</set>
+          </done>
+        </search>
+      </table>
+    </panel>
+  </row>
+  
+  
+  <row depends="$debug$">
+    <panel>
+      <table>
+        <search base="bs_1">
+          <query>
+
+```| eval ssphp.use_case.savedsearch_x=split('ssphp.use_case.savedsearch{}',"
+"),
+       ssphp.use_case.savedsearch=coalesce('ssphp.use_case.savedsearch', 'ssphp.use_case.savedsearch_x')```
+
+| eval ssphp.use_case.savedsearch=coalesce('ssphp.use_case.savedsearch', 'ssphp.use_case.savedsearch{}')
+       
+| eval ssphp.use_case.savedsearch_1=mvindex('ssphp.use_case.savedsearch',0),
+       ssphp.use_case.savedsearch_2=mvindex('ssphp.use_case.savedsearch',1)
+
+| fillnull value="-" ssphp.use_case.savedsearch_1, ssphp.use_case.savedsearch_2
+| table ssphp.use_case.savedsearch, ssphp.use_case.savedsearch_1, ssphp.use_case.savedsearch_2
+          </query>
+          <done>
+            <set token="tkn_saved_search_1">$result.ssphp.use_case.savedsearch_1$</set>
+            <set token="tkn_saved_search_2">$result.ssphp.use_case.savedsearch_2$</set>
+          </done>
+        </search>
+      </table>
+    </panel>
+  </row>  
+
+
+
+
+
+<!-- ################################################################################################################################################################# --> 
+<!-- ########################################################################## UNDERLYING DATA ROWS ################################################################# --> 
+<!-- ################################################################################################################################################################# --> 
+
+
+
+<!-- ######################################################## DECIDE WHICH TYPE OF PANEL TO POPULATE / SHOW ################################################################# --> 
+
+  <row depends="$debug$">
+    <panel>
+      <table>
+        <search base="bs_1">
+          <query>
+| eval resource_id=if(isnull(spath(_raw,"ssphp.resource.id")) OR spath(_raw,"ssphp.resource.id")="" OR spath(_raw,"ssphp.resource.id")="-","*",spath(_raw,"ssphp.resource.id")),
+       manifest=if(isnull(spath(_raw,"ssphp.resource.dependency.manifest_path")) OR spath(_raw,"ssphp.resource.dependency.manifest_path")="" OR spath(_raw,"ssphp.resource.dependency.manifest_path")="-","*",spath(_raw,"ssphp.resource.dependency.manifest_path")),
+       cve_id=if(isnull(spath(_raw,"ssphp.assessment.cve_id")) OR spath(_raw,"ssphp.assessment.cve_id")="" OR spath(_raw,"ssphp.assessment.cve_id")="-","*",spath(_raw,"ssphp.assessment.cve_id")),
+       use_case=if(isnull(spath(_raw,"ssphp.use_case.id")) OR spath(_raw,"ssphp.use_case.id")="" OR spath(_raw,"ssphp.use_case.id")="-","*",spath(_raw,"ssphp.use_case.id"))
+
+| eval start_text="(\\\"",
+       end_text="\\\")",
+       start_text_nob="\\\"",
+       end_text_nob="\\\"",
+       div_text="\\\" AND \\\"",
+       search_string=case(lower('ssphp.assessment.source')="dependabot",
+                                'start_text'.'cve_id'.'div_text'.'manifest'.'div_text'.'ssphp.resource.full_name'.'div_text'.'use_case'.'end_text',
+                                
+                          lower('ssphp.assessment.source')="secrets",
+                                "(source=".'start_text_nob'.'ssphp.assessment.url'.'end_text_nob'." OR ".'start_text_nob'.'ssphp.assessment.url'.'end_text_nob'.")",
+                                
+                          lower('ssphp.assessment.source')="workflows",
+                                "| search repo_name=".'start_text_nob'.'ssphp.resource.id'.'end_text_nob',
+                                
+                          lower('ssphp.assessment.source')="no tool",
+                                "(source=".'start_text_nob'."*".'ssphp.resource.id'."*".'end_text_nob'.")",
+                                
+                          lower('ssphp.assessment.source')="ado",
+                                "| search resource_id=".'start_text_nob'.'ssphp.resource.id'.'end_text_nob',
+                                
+                          lower('ssphp.use_case.group_name')="sast",
+                                'start_text'.'ssphp.resource.id'.'div_text'.'ssphp.use_case.id'.'div_text'.'ssphp.assessment.description_url'.'div_text'.'ssphp.assessment.description_rule'.'end_text',
+                                
+                          lower('ssphp.use_case.group_name')="qualys",
+                                "| search QID=\"".'ssphp.use_case.id'."\" AND HOSTNAME=\"".'ssphp.resource.hostname'."\"",
+                                ```"| search QID=".'start_text_nob'.'ssphp.use_case.id'.'end_text_nob'." AND "."HOSTNAME=".'start_text_nob'.'ssphp.resource.name'.'end_text_nob',```
+                                
+                          lower('ssphp.use_case.group_name')="ms-defender",
+                                "| search id=\"".'ssphp.assessment.id'."\"",
+                                
+                          lower('ssphp.use_case.group_name')="repos",
+                                "| search ssphp.service.cost_centre.code=".'start_text_nob'.'ssphp.service.cost_centre.code'.'end_text_nob'." AND "."repo_name=".'start_text_nob'.'ssphp.resource.name'.'end_text_nob',
+                          1==1,"oops"),
+       ss2=$tkn_saved_search_2|s$,
+       output_panel=case('ss2'!="-",4,
+                         lower('ssphp.use_case.category')="kubernetes",7,
+                         lower('ssphp.assessment.source')="dependabot",1,
+                         lower('ssphp.assessment.source')="secrets",1,
+                         lower('ssphp.assessment.source')="workflows",3,
+                         lower('ssphp.assessment.source')="no tool",1,
+                         lower('ssphp.assessment.source')="ado",3,
+                         lower('ssphp.use_case.group_name')="sast",1,
+                         lower('ssphp.use_case.group_name')="qualys",6,
+                         lower('ssphp.use_case.group_name')="ms-defender",5,
+                         lower('ssphp.use_case.group_name')="repos",3,
+                         1==1,"oops")
+            
+| table search_string, output_panel
+          </query>
+          <done>
+            <condition match="$result.output_panel$==7">
+              <set token="show_k8s_panel">true</set>
+              <unset token="show_qualys_panel"></unset>
+              <unset token="show_defender_panel"></unset>
+              <unset token="show_2event_panel"></unset>
+              <unset token="show_table_panel"></unset>
+              <unset token="show_event_panel"></unset>
+              <unset token="show_highlight_panel"></unset>
+              <set token="tkn_use_case_search_string">$result.search_string$</set>
+            </condition>
+            <condition match="$result.output_panel$==6">
+              <set token="show_qualys_panel">true</set>
+              <unset token="show_k8s_panel"></unset>
+              <unset token="show_defender_panel"></unset>
+              <unset token="show_2event_panel"></unset>
+              <unset token="show_table_panel"></unset>
+              <unset token="show_event_panel"></unset>
+              <unset token="show_highlight_panel"></unset>
+              <set token="tkn_use_case_search_string">$result.search_string$</set>
+            </condition>
+            <condition match="$result.output_panel$==5">
+              <set token="show_defender_panel">true</set>
+              <unset token="show_k8s_panel"></unset>
+              <unset token="show_qualys_panel"></unset>
+              <unset token="show_2event_panel"></unset>
+              <unset token="show_table_panel"></unset>
+              <unset token="show_event_panel"></unset>
+              <unset token="show_highlight_panel"></unset>
+              <set token="tkn_use_case_search_string">$result.search_string$</set>
+            </condition>
+
+            <condition match="$result.output_panel$==4">
+              <set token="show_2event_panel">true</set>
+              <unset token="show_k8s_panel"></unset>
+              <unset token="show_defender_panel"></unset>
+              <unset token="show_qualys_panel"></unset>
+              <unset token="show_table_panel"></unset>
+              <unset token="show_event_panel"></unset>
+              <unset token="show_highlight_panel"></unset>
+              <set token="tkn_use_case_search_string">$result.search_string$</set>
+            </condition>
+            <condition match="$result.output_panel$==3">
+              <set token="show_highlight_panel">true</set>
+              <unset token="show_k8s_panel"></unset>
+              <unset token="show_defender_panel"></unset>
+              <unset token="show_qualys_panel"></unset>
+              <unset token="show_table_panel"></unset>
+              <unset token="show_event_panel"></unset>
+              <unset token="show_2event_panel"></unset>
+              <set token="tkn_use_case_search_string">$result.search_string$</set>
+            </condition>
+            <condition match="$result.output_panel$==2">
+              <set token="show_table_panel">true</set>
+              <unset token="show_k8s_panel"></unset>
+              <unset token="show_defender_panel"></unset>
+              <unset token="show_qualys_panel"></unset>
+              <unset token="show_highlight_panel"></unset>
+              <unset token="show_event_panel"></unset>
+              <unset token="show_2event_panel"></unset>
+              <set token="tkn_use_case_search_string">$result.search_string$</set>
+            </condition>
+            <condition match="$result.output_panel$==1">
+              <set token="show_event_panel">true</set>
+              <unset token="show_k8s_panel"></unset>
+              <unset token="show_defender_panel"></unset>
+              <unset token="show_qualys_panel"></unset>
+              <unset token="show_highlight_panel"></unset>
+              <unset token="show_table_panel"></unset>
+              <unset token="show_2event_panel"></unset>
+              <set token="tkn_use_case_search_string">$result.search_string$</set>
+            </condition>
+          </done>
+        </search>
+      </table>
+    </panel>
+
+
+
+<!-- ######################################################## GET THE UNDERLYING SAVED SEARCHES TO USE ################################################################# --> 
+
+    <panel>
+      <table>
+        <search>
+          <query>
+| rest /servicesNS/-/-/saved/searches splunk_server=local
+
+| search eai:acl.app="DCAP{{environment}}" AND title=$tkn_saved_search_1|s$
+
+| rex field=search "^(?&lt;search_text&gt;[\s\S]*?)``` ##################### end dashboard query ##################### ```"
+
+| eval search_text=replace('search_text',"``` ##################### replace with dashboard filter ##################### ```","$tkn_use_case_search_string$"),
+       search_text=replace('search_text'," earliest=-\d*d@d "," earliest=-30d@d ")
+
+| eval search_text=replace('search_text',"\|\s*fields","| table"),
+        search_text='search_text'."| sort 0 - ssphp.score.score | fields - temp_total_count"
+    
+| table title, search, search_text
+          </query>
+          <done>
+            <set token="tkn_use_case_search_text_1">$result.search_text$</set>
+          </done>
+        </search>
+      </table>
+    </panel>
+
+    <panel>
+      <table>
+        <search>
+          <query>
+| rest /servicesNS/-/-/saved/searches splunk_server=local
+
+| search eai:acl.app="DCAP{{environment}}" AND title=$tkn_saved_search_2|s$
+
+| rex field=search "^(?&lt;search_text&gt;[\s\S]*?)``` ##################### end dashboard query ##################### ```"
+
+| eval search_text=replace('search_text',"``` ##################### replace with dashboard filter ##################### ```","$tkn_use_case_search_string$")
+
+| eval search_text=replace('search_text',"\|\s*fields","| table"),
+        search_text='search_text'."| sort 0 - ssphp.score.score | fields - temp_total_count"
+    
+| table title, search, search_text
+          </query>
+          <done>
+            <set token="tkn_use_case_search_text_2">$result.search_text$</set>
+          </done>
+        </search>
+      </table>
+    </panel>
+  </row>
+
+
+
+<!-- ########################################################################## UNDERLYING DATA PANELS ########################################################################## --> 
+
+
+<!-- ######################################################## DEFENDER ROW ################################################################# --> 
+
+
+  <row depends="$show_defender_panel$">
+    <panel>
+      <title>Underlying MS-Defender Data</title>
+      <event>
+        <search>
+          <query>
+`ssphp_metrics_data_index{{environment}}` sourcetype="azure_resource_graph" type="microsoft.security/assessments" earliest=-2d@d latest=now
+    [| search `ssphp_metrics_data_index{{environment}}` sourcetype="azure_resource_graph" type="microsoft.security/assessments" earliest=-2d@d latest=now
+     | stats max(SSPHP_RUN) as SSPHP_RUN
+     | return SSPHP_RUN]
+
+$tkn_use_case_search_string$
+          </query>
+          <done>
+            <set token="tkn_ready_event">true</set>
+          </done>
+        </search>
+      </event>
+    </panel>
+  </row>
+
+
+
+<!-- ######################################################## KUBERNETES AKS ROW ################################################################# --> 
+
+
+  <row depends="$show_k8s_panel$">
+    <panel>
+      <title>Underlying MS-Defender AKS Data</title>
+      <event>
+        <search>
+          <query>
+`ssphp_summary_index{{environment}}` SSPHP_UID=$tkn__uid|s$
+    [| search `ssphp_summary_index{{environment}}` SSPHP_UID=$tkn__uid|s$
+      | stats max(SSPHP_RUN) as SSPHP_RUN
+      | return SSPHP_RUN]
+          </query>
+          <done>
+            <set token="tkn_ready_event">true</set>
+          </done>
+        </search>
+      </event>
+    </panel>
+  </row>
+
+
+
+
+<!-- ######################################################## QUALYS ROW ################################################################# --> 
+
+
+  <row depends="$show_qualys_panel$">
+    
+    <panel>
+      <title>Underlying Qualys Data</title>
+      <table>
+        <search>
+          <query>
+| loadjob savedsearch="{{splunk_user}}:{{app}}{{environment}}:ssphp_vulnerabilities_create_data{{environment}}"
+
+$tkn_use_case_search_string$
+
+| lookup qualys_kb_lookup QID OUTPUT TITLE, DIAGNOSIS, SOLUTION, CONSEQUENCE, CVE
+          </query>
+          <done>
+            <set token="tkn_ready_panel">true</set>
+          </done>
+        </search>
+      </table>
+    </panel>    
+  </row>
+    
+
+
+
+
+<!-- ######################################################## EVENT ROW ################################################################# --> 
+
+
+  <row depends="$show_event_panel$">
+    <panel>
+      <title>Underlying Data</title>
+      <event>
+        <search>
+          <query>
+$tkn_use_case_search_text_1$
+          </query>
+          <done>
+            <set token="tkn_ready_event">true</set>
+          </done>
+        </search>
+      </event>
+    </panel>
+  </row>
+
+
+<!-- ######################################################## EVENT 2 ROW ################################################################# --> 
+
+  <row depends="$show_2event_panel$">
+    <panel>
+      <title>Underlying Data</title>
+      <table>
+        <search>
+          <query>
+$tkn_use_case_search_text_1$
+          </query>
+          <done>
+            <set token="tkn_ready_event">true</set>
+          </done>
+        </search>
+      </table>
+    </panel>
+  </row>
+  <row depends="$show_2event_panel$">
+
+    <panel>
+      <table>
+        <search>
+          <query>
+$tkn_use_case_search_text_2$
+          </query>
+          <done>
+            <set token="tkn_ready_event">true</set>
+          </done>
+        </search>
+      </table>
+    </panel>
+  </row>
+
+
+
+<!-- ######################################################## TABLE ROW ################################################################# --> 
+
+  <row depends="$show_table_panel$">
+    <panel>
+      <title>Underlying Data</title>
+      <table>
+        <search>
+          <query>
+$tkn_use_case_search_text_1$
+          </query>
+          <done>
+            <set token="tkn_ready_panel">true</set>
+          </done>
+        </search>
+      </table>
+    </panel>
+  </row>
+
+
+
+<!-- ######################################################## HIGHLIGHT ROW ################################################################# --> 
+
+  <row depends="$debug$">
+    <html>
+      <style>
+         .css_for_green{ 
+         background-color: $tkn_colour_green$ !important;
+         color:#000000 !important;
+         font-size: 100% !important;
+         }
+         .css_for_orange{ 
+         background-color: $tkn_colour_orange$ !important;
+         color:#000000 !important;
+         font-size: 100% !important;
+         }
+         .css_for_red{
+         background-color: $tkn_colour_red$ !important;
+         color:#000000 !important;
+         font-size: 100% !important;
+         }
+         .css_for_blue{
+         background-color: $tkn_colour_blue$ !important;
+         color:#000000 !important;
+         font-size: 100% !important;
+         }
+      </style>
+    </html>
+  </row>
+
+  <row depends="$show_highlight_panel$">
+    <panel>
+      <title>Underlying Data</title>
+      <table id="table3">
+        <search>
+          <query>
+$tkn_use_case_search_text_1$
+
+| fields - ssphp.service.*
+
+| rename *{} as *¬¬
+| rename *{}* as *__*
+| rename * as z_*
+| rename z_ssphp* as ssphp*
+| foreach z_* 
+       [| eval fld_val='&lt;&lt;FIELD&gt;&gt;',
+               fld_val=mvjoin('fld_val',"~~"),
+               fld_val=case(isnull('fld_val'),"-",
+                            trim('fld_val')="","-",
+                            len('fld_val')&lt;2 AND !match('fld_val',"[a-zA-Z0-9]+") AND !match('fld_val',"^\*$"),"-",
+                            1==1,'fld_val'),
+               fld_name=replace(replace(replace("&lt;&lt;FIELD&gt;&gt;","¬¬","{}"),"__","{}"),"z_",""),
+               "&lt;&lt;FIELD&gt;&gt;"=if('ssphp.score.non_compliant_fields'='fld_name', 'fld_val'."¬red", 'fld_val')]
+
+| foreach * 
+  [| eval "&lt;&lt;FIELD&gt;&gt;"=if("&lt;&lt;FIELD&gt;&gt;" == "ssphp.score.non_compliant_fields", 'ssphp.score.non_compliant_fields', split('&lt;&lt;FIELD&gt;&gt;',"~~"))]
+               
+| rename z_* as *
+| rename *¬¬ as *{}
+| rename *__* as *{}*
+
+| eval sort_field=if('state'="*** FOR INFORMATION ONLY ***",1,2)
+| sort 0 sort_field, ssphp.score.score
+
+| fields - ssphp.score.score, ssphp.score.numerator, ssphp.score.denominator, fld_name, fld_val, ssphp.score.non_compliant_fields, sort_field
+          </query>
+          <done>
+            <set token="tkn_ready_highlight">true</set>
+          </done>
+          <earliest>0</earliest>
+          <latest>now</latest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="count">100</option>
+        <option name="dataOverlayMode">none</option>
+        <option name="drilldown">none</option>
+        <option name="percentagesRow">false</option>
+        <option name="rowNumbers">false</option>
+        <option name="totalsRow">false</option>
+        <option name="wrap">true</option>
+      </table>
+    </panel>
+  </row>
+
+
+
+<!-- #################################################################################################################################### --> 
+<!-- ###################################################### FOOTER ROW ################################################################## -->
+<!-- #################################################################################################################################### --> 
+
+  <row depends="$tkn_show_footer$">
+      <panel depends="$debug$">
+          <table>
+              <search>
+                  <query>
+  | rest /services/authentication/current-context splunk_server=local 
+  | table username, roles
+  | eval roles=case(username="ian.pearl@education.gov.uk",mvappend('roles',"dfe_ssphp_service_user_s194"),
+                      username="alex.kinnane@education.gov.uk",mvappend('roles',"dfe_ssphp_service_user_s194"),
+                      username="sam.pritchard@education.gov.uk",mvappend('roles',"dfe_ssphp_service_user_s194"),
+                      1==1,'roles')
+  | eval roles=mvfilter(match('roles',"dfe_ssphp_service_user_s\d{3}"))
+  | where isnotnull('roles')
+  | rex field=roles "dfe_ssphp_service_user_(?&lt;service&gt;s\d{3})$"
+  | eval app=$env:app|s$
+  | table username, service, app
+                  </query>
+                  <done>
+                      <set token="tkn__current_user_name">$result.username$</set>
+                      <set token="tkn__current_user_service">$result.service$</set>
+                      <set token="tkn__current_application">$result.app$</set>
+                  </done>
+              </search>
+          </table>
+      </panel>
+
+      <panel>
+          <html>Current User : $tkn__current_user_name$&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;Current App : $tkn__current_application$&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;User Service : $tkn__current_user_service$&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;Version : 5d9adba8cb2408f9193f00c611ddf74a974241ae</html>
+      </panel>
+  </row>
+
+</dashboard>
