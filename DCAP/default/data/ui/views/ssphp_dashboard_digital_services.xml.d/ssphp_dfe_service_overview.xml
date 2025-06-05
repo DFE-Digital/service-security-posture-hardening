@@ -1,14 +1,17 @@
 <dashboard version="1.1" theme="dark" script="js/table_cell_backcolor_service_overview.js">
 
 <label>Security Posture Continuous Assurance : DfE Service Overview Dashboard</label>
-<description>{{environment}} v1.1.7</description>
+<description>{{environment}} v0.0.19</description>
+
+  <init>
+    <set token="tkn_show">abs</set>
+  </init>
+
 
   <fieldset submitButton="false">
     <input type="dropdown" token="tkn_portfolio" searchWhenChanged="true">
       <label>Portfolio</label>
-      <choice value="*">ALL</choice>
-      <default>*</default>
-      <initialValue>*</initialValue>
+      <selectFirstChoice>true</selectFirstChoice>
       <fieldForLabel>portfolio</fieldForLabel>
       <fieldForValue>portfolio</fieldForValue>
       <search>
@@ -21,6 +24,7 @@
       </search>
     </input>
 
+<!-- #
       <input type="radio" token="tkn_view" searchWhenChanged="true">
         <label>View</label>
         <choice value="a">Absolute</choice>
@@ -44,7 +48,31 @@
         <default> mvcount(mvfilter(match('type',"data")))>0</default>
         <initialValue> 1==1"</initialValue>
       </input>
+## -->
+
   </fieldset>
+
+
+<!-- ########################################################## TOKENS ################################################################ -->
+
+  <row depends="$debug$">
+    <panel>
+      <table>
+        <search>
+          <query>
+| makeresults
+| eval short_port=$tkn__portfolio|s$
+| lookup ssphp.portfolio_shortport.csv short_port OUTPUT ssphp.service.portfolio as portfolio
+| table portfolio, short_port
+          </query>
+          <done>
+            <set token="form.tkn_portfolio">$result.portfolio$</set>
+          </done>
+        </search>
+        <option name="count">1</option>
+      </table>
+    </panel> 
+  </row>
 
 
 <!-- ########################################################## BASE QUERY ################################################################ -->
@@ -257,7 +285,7 @@
 | rename POSTURE_$tkn_show$ as POSTURE, KUBERNETES_$tkn_show$ as KUBERNETES, VULNERABILITY_$tkn_show$ as VULNERABILITY, REPOS_$tkn_show$ as REPOS, CODE_SCAN_$tkn_show$ as CODE_SCAN
 
 | search Portfolio=$tkn_portfolio|s$
-| where $tkn_include$
+| where mvcount(mvfilter(match('type',"data")))&gt;0
 
 | table Portfolio, "Service Line", Product, POSTURE, KUBERNETES, VULNERABILITY, REPOS, CODE_SCAN, id, type
           </query>
@@ -271,7 +299,7 @@
         <option name="wrap">true</option>
         <option name="drilldown">row</option>   
         <drilldown>
-          <link target="_blank">/app/$tkn_current_app$/ssphp_dfe_service?tkn__service=$row.id$</link>
+          <link target="_blank">/app/$tkn_current_app$/ssphp_dfe_service_posture?tkn__service=$row.id$</link>
         </drilldown>
         <fields>Portfolio, "Service Line", Product, POSTURE, KUBERNETES, VULNERABILITY, REPOS, CODE_SCAN</fields>
       </table>

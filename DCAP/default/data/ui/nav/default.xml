@@ -22,6 +22,7 @@
 
 {% if environment=="_DEV" %}
   <collection label="DCAP Utilities" >
+    <a href="ssphp_dfe_service_portfolio_overview?slt=true">Portfolio Overview - SLT</a>
     <a href="ssphp_manage_exemptions">Manage Use Case Exemptions</a>
     <a href="ssphp_critical_vulnerabilities">Vulnerability Management</a>
     <a href="ssphp_dfe_asset_inventory">Asset Inventory</a>

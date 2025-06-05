@@ -6,7 +6,7 @@
 
 
   <label>Security Posture Continuous Assurance : DfE Portfolio Overview Dashboard</label>
-  <description>{{environment}} v0.0.14</description>
+  <description>{{environment}} v0.0.28</description>
 
   <init>
     <set token="tkn_colour_tile">pebble</set>
@@ -119,7 +119,7 @@
     <panel>
       <html>
         <div class="absolute" style="background:$tkn_colour_tile$;">
-          <a href="ssphp_dfe_service_overview.xml?form.tkn__portfolio=ESFA" target="_blank">$tkn_ESFA_score$</a>
+          <a href="ssphp_dfe_service_overview?tkn__portfolio=ESFA" target="_blank">$tkn_ESFA_score$</a>
         </div>
         <div style="display: flex;">
           <div class="line" style="width: $tkn_margin$%; border-bottom: 5px solid $tkn_colour_tile$;"/>
@@ -128,7 +128,7 @@
           <div class="line" style="width: $tkn_margin$%; border-bottom: 5px solid $tkn_colour_tile$;"/>
         </div>
         <div class="undervalue" style="background:$tkn_colour_tile$;">
-          <a href="ssphp_dfe_service_overview?form.tkn__portfolio=ESFA" target="_blank">Education and Skills Funding Agency</a>
+          <a href="ssphp_dfe_service_overview?tkn__portfolio=ESFA" target="_blank">Education and Skills Funding Agency</a>
         </div>
       </html>
     </panel>
@@ -138,7 +138,7 @@
     <panel>
       <html>
         <div class="absolute" style="background:$tkn_colour_tile$;">
-          <a href="ssphp_dfe_service_overview.xml?form.tkn__portfolio=FAM" target="_blank">$tkn_FAM_score$</a>
+          <a href="ssphp_dfe_service_overview?tkn__portfolio=FAM" target="_blank">$tkn_FAM_score$</a>
         </div>
         <div style="display: flex;">
           <div class="line" style="width: $tkn_margin$%; border-bottom: 5px solid $tkn_colour_tile$;"/>
@@ -147,7 +147,7 @@
           <div class="line" style="width: $tkn_margin$%; border-bottom: 5px solid $tkn_colour_tile$;"/>
         </div>
         <div class="undervalue" style="background:$tkn_colour_tile$;">
-          <a href="ssphp_dfe_service_overview?form.tkn__portfolio=FAM" target="_blank">Families Group</a>
+          <a href="ssphp_dfe_service_overview?tkn__portfolio=FAM" target="_blank">Families Group</a>
         </div>
       </html>
     </panel>
@@ -157,7 +157,7 @@
     <panel>
       <html>
         <div class="absolute" style="background:$tkn_colour_tile$;">
-          <a href="ssphp_dfe_service_overview.xml?form.tkn__portfolio=APPR" target="_blank">$tkn_APPR_score$</a>
+          <a href="ssphp_dfe_service_overview?tkn__portfolio=APPR" target="_blank">$tkn_APPR_score$</a>
         </div>
         <div style="display: flex;">
           <div class="line" style="width: $tkn_margin$%; border-bottom: 5px solid $tkn_colour_tile$;"/>
@@ -166,7 +166,7 @@
           <div class="line" style="width: $tkn_margin$%; border-bottom: 5px solid $tkn_colour_tile$;"/>
         </div>
         <div class="undervalue" style="background:$tkn_colour_tile$;">
-          <a href="ssphp_dfe_service_overview?form.tkn__portfolio=APPR" target="_blank">Institute for Apprenticeships</a>
+          <a href="ssphp_dfe_service_overview?tkn__portfolio=APPR" target="_blank">Institute for Apprenticeships</a>
         </div>
       </html>
     </panel>
@@ -176,7 +176,7 @@
     <panel>
       <html>
         <div class="absolute" style="background:$tkn_colour_tile$;">
-          <a href="ssphp_dfe_service_overview.xml?form.tkn__portfolio=OPS" target="_blank">$tkn_OPS_score$</a>
+          <a href="ssphp_dfe_service_overview?tkn__portfolio=OPS" target="_blank">$tkn_OPS_score$</a>
         </div>
         <div style="display: flex;">
           <div class="line" style="width: $tkn_margin$%; border-bottom: 5px solid $tkn_colour_tile$;"/>
@@ -185,7 +185,7 @@
           <div class="line" style="width: $tkn_margin$%; border-bottom: 5px solid $tkn_colour_tile$;"/>
         </div>
         <div class="undervalue" style="background:$tkn_colour_tile$;">
-          <a href="ssphp_dfe_service_overview?form.tkn__portfolio=OPS" target="_blank">Operations &amp; Infrastructure Group</a>
+          <a href="ssphp_dfe_service_overview?tkn__portfolio=OPS" target="_blank">Operations &amp; Infrastructure Group</a>
         </div>
       </html>
     </panel>
@@ -195,7 +195,7 @@
     <panel>
       <html>
         <div class="absolute" style="background:$tkn_colour_tile$;">
-          <a href="ssphp_dfe_service_overview.xml?form.tkn__portfolio=REG" target="_blank">$tkn_REG_score$</a>
+          <a href="ssphp_dfe_service_overview?tkn__portfolio=REG" target="_blank">$tkn_REG_score$</a>
         </div>
         <div style="display: flex;">
           <div class="line" style="width: $tkn_margin$%; border-bottom: 5px solid $tkn_colour_tile$;"/>
@@ -204,7 +204,7 @@
           <div class="line" style="width: $tkn_margin$%; border-bottom: 5px solid $tkn_colour_tile$;"/>
         </div>
         <div class="undervalue" style="background:$tkn_colour_tile$;">
-          <a href="ssphp_dfe_service_overview?form.tkn__portfolio=REG" target="_blank">Regions Group</a>
+          <a href="ssphp_dfe_service_overview?tkn__portfolio=REG" target="_blank">Regions Group</a>
         </div>
       </html>
     </panel>
@@ -218,7 +218,7 @@
     <panel>
       <html>
         <div class="absolute" style="background:$tkn_colour_tile$;">
-          <a href="ssphp_dfe_service_overview.xml?form.tkn__portfolio=SCH" target="_blank">$tkn_SCH_score$</a>
+          <a href="ssphp_dfe_service_overview?tkn__portfolio=SCH" target="_blank">$tkn_SCH_score$</a>
         </div>
         <div style="display: flex;">
           <div class="line" style="width: $tkn_margin$%; border-bottom: 5px solid $tkn_colour_tile$;"/>
@@ -227,7 +227,7 @@
           <div class="line" style="width: $tkn_margin$%; border-bottom: 5px solid $tkn_colour_tile$;"/>
         </div>
         <div class="undervalue" style="background:$tkn_colour_tile$;">
-          <a href="ssphp_dfe_service_overview?form.tkn__portfolio=SCH" target="_blank">Schools Group</a>
+          <a href="ssphp_dfe_service_overview?tkn__portfolio=SCH" target="_blank">Schools Group</a>
         </div>
       </html>
     </panel>
@@ -237,7 +237,7 @@
     <panel>
       <html>
         <div class="absolute" style="background:$tkn_colour_tile$;">
-          <a href="ssphp_dfe_service_overview.xml?form.tkn__portfolio=SKILL" target="_blank">$tkn_SKILL_score$</a>
+          <a href="ssphp_dfe_service_overview?tkn__portfolio=SKILL" target="_blank">$tkn_SKILL_score$</a>
         </div>
         <div style="display: flex;">
           <div class="line" style="width: $tkn_margin$%; border-bottom: 5px solid $tkn_colour_tile$;"/>
@@ -246,7 +246,7 @@
           <div class="line" style="width: $tkn_margin$%; border-bottom: 5px solid $tkn_colour_tile$;"/>
         </div>
         <div class="undervalue" style="background:$tkn_colour_tile$;">
-          <a href="ssphp_dfe_service_overview?form.tkn__portfolio=SKILL" target="_blank">Skills Group</a>
+          <a href="ssphp_dfe_service_overview?tkn__portfolio=SKILL" target="_blank">Skills Group</a>
         </div>
       </html>
     </panel>
@@ -256,7 +256,7 @@
     <panel>
       <html>
         <div class="absolute" style="background:$tkn_colour_tile$;">
-          <a href="ssphp_dfe_service_overview.xml?form.tkn__portfolio=STD" target="_blank">$tkn_STD_score$</a>
+          <a href="ssphp_dfe_service_overview?tkn__portfolio=STD" target="_blank">$tkn_STD_score$</a>
         </div>
         <div style="display: flex;">
           <div class="line" style="width: $tkn_margin$%; border-bottom: 5px solid $tkn_colour_tile$;"/>
@@ -265,7 +265,7 @@
           <div class="line" style="width: $tkn_margin$%; border-bottom: 5px solid $tkn_colour_tile$;"/>
         </div>
         <div class="undervalue" style="background:$tkn_colour_tile$;">
-          <a href="ssphp_dfe_service_overview?form.tkn__portfolio=STD" target="_blank">Standards and Testing Agency</a>
+          <a href="ssphp_dfe_service_overview?tkn__portfolio=STD" target="_blank">Standards and Testing Agency</a>
         </div>
       </html>
     </panel>
@@ -275,7 +275,7 @@
     <panel>
       <html>
         <div class="absolute" style="background:$tkn_colour_tile$;">
-          <a href="ssphp_dfe_service_overview.xml?form.tkn__portfolio=STRAT" target="_blank">$tkn_STRAT_score$</a>
+          <a href="ssphp_dfe_service_overview?tkn__portfolio=STRAT" target="_blank">$tkn_STRAT_score$</a>
         </div>
         <div style="display: flex;">
           <div class="line" style="width: $tkn_margin$%; border-bottom: 5px solid $tkn_colour_tile$;"/>
@@ -284,7 +284,7 @@
           <div class="line" style="width: $tkn_margin$%; border-bottom: 5px solid $tkn_colour_tile$;"/>
         </div>
         <div class="undervalue" style="background:$tkn_colour_tile$;">
-          <a href="ssphp_dfe_service_overview?form.tkn__portfolio=STRAT" target="_blank">Strategy Group</a>
+          <a href="ssphp_dfe_service_overview?tkn__portfolio=STRAT" target="_blank">Strategy Group</a>
         </div>
       </html>
     </panel>
@@ -294,7 +294,7 @@
     <panel>
       <html>
         <div class="absolute" style="background:$tkn_colour_tile$;">
-          <a href="ssphp_dfe_service_overview.xml?form.tkn__portfolio=TRA" target="_blank">$tkn_TRA_score$</a>
+          <a href="ssphp_dfe_service_overview?tkn__portfolio=TRA" target="_blank">$tkn_TRA_score$</a>
         </div>
         <div style="display: flex;">
           <div class="line" style="width: $tkn_margin$%; border-bottom: 5px solid $tkn_colour_tile$;"/>
@@ -303,7 +303,7 @@
           <div class="line" style="width: $tkn_margin$%; border-bottom: 5px solid $tkn_colour_tile$;"/>
         </div>
         <div class="undervalue" style="background:$tkn_colour_tile$;">
-          <a href="ssphp_dfe_service_overview?form.tkn__portfolio=TRA" target="_blank">Teaching Regulation Agency</a>
+          <a href="ssphp_dfe_service_overview?tkn__portfolio=TRA" target="_blank">Teaching Regulation Agency</a>
         </div>
       </html>
     </panel>
@@ -399,9 +399,11 @@
 | eval compliant_perc=if('compliant_perc'="100%",'compliant_perc'."|green",'compliant_perc'."|red"),
        compliant_abs=if('compliant_perc'="100%",'compliant_abs'."|green",'compliant_abs'."|red")
 
-| table ssphp.service.portfolio, compliant_abs, compliant_perc
+| table ssphp.service.portfolio, compliant_perc, compliant_abs
+| rename ssphp.service.portfolio as Portfolio, compliant_perc as "Percentage Compliant", compliant_abs as "Compliant Resources"
           </query>
         </search>
+        <option name="drilldown">none</option>
       </table>
     </panel>
   </row>
@@ -420,7 +422,16 @@
 | foreach compliant_* [| eval {short_port}_&lt;&lt;FIELD&gt;&gt;='&lt;&lt;FIELD&gt;&gt;']
 | fields - ssphp.service.portfolio, short_port, compliant_perc, compliant_abs, compliant_color, compliant_non_perc, compliant_both, compliant_line_width, compliant_line_non_width
 | stats values(*) as *
-          </query>
+          </query>      
+          <progress>
+            <condition match="'job.resultCount' > 0">
+              <set token="tkn_ready">true</set>
+            </condition>
+            <condition>
+              <unset token="tkn_ready"/>
+            </condition>
+          </progress>
+
           <done>
             <set token="tkn_ESFA_color">$result.ESFA_compliant_color$</set>
             <set token="tkn_ESFA_score">$result.ESFA_compliant_both$</set>
@@ -501,8 +512,6 @@
             <set token="tkn_TRA_score">$result.TRA_compliant_both$</set>
             <set token="tkn_TRA_compliant_line_width">$result.TRA_compliant_line_width$</set>
             <set token="tkn_TRA_compliant_line_non_width">$result.TRA_compliant_line_non_width$</set>
-
-            <set token="tkn_ready">true</set>
           </done>
         </search>
       </table>

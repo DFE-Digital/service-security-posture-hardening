@@ -227,6 +227,8 @@ require([
                       'AdditionalStorageProvidersAvailable',
                       'compliant_perc',
                       'compliant_abs',
+                      'Percentage Compliant',
+                      'Compliant Resources',
                       'title']).contains(cell.field);
         },
         render: function ($td, cell) {
