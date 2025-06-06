@@ -6,7 +6,7 @@
 
 
 <label>Security Posture Continuous Assurance : DfE Service Dashboard</label>
-<description>{{environment}} v0.0.14</description>
+<description>{{environment}} v0.0.15</description>
   
   <init>
     <set token="tkn_font_size_2">400</set>
@@ -17,9 +17,9 @@
     <set token="tkn_colour_compliant_line_100">#85F415</set>
     <set token="tkn_colour_non_compliant_line">#FF4B4B</set>
     <set token="tkn_colour_text">#bebebe</set>
+    <set token="tkn_margin">20</set>
     
     <set token="tkn_view">a</set>
-    <set token="tkn_margin">20</set>
   
     <set token="tkn_show_chk_1">true</set>  
     <set token="tkn_show_chk_2">true</set>  
@@ -406,7 +406,9 @@
 
 | fields ssphp.service.portfolio, ssphp.service.service_line, ssphp.service.product, ssphp.service.id, ssphp.assessment.source, ssphp.use_case.category, ssphp.use_case.id, ssphp.use_case.title, ssphp.assessment.display_name, ssphp.score.score, ssphp.score.compliance_status, ssphp.score.ciso_priority, ssphp.assessment.description, ssphp.score.color, ssphp.resource.id, ssphp.resource.tenant, ssphp.resource.subscription, ssphp.resource.subscription_name, ssphp.resource.resource_group, ssphp.score.remediation_priority, ssphp.exemption.status, SSPHP_UID
 
-`ssphp_service_rollup_dataset{{environment}}($tkn_portfolio|s$,$tkn_service_line|s$,$tkn_product|s$)`
+| search ssphp.service.portfolio=$tkn_portfolio|s$ AND ssphp.service.service_line=$tkn_service_line|s$ AND ssphp.service.product=$tkn_product|s$
+
+`ssphp_service_rollup_dataset{{environment}}`
 
 | eval compliant_line_width=round((100-(2*20))*(('perc_passed_resources')/100)),
        compliant_line_non_width=(100-(2*20))-'compliant_line_width',

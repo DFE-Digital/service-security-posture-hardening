@@ -6,16 +6,21 @@
 
 
   <label>Security Posture Continuous Assurance : DfE Portfolio Overview Dashboard</label>
-  <description>{{environment}} v0.0.28</description>
+  <description>{{environment}} v0.0.22</description>
 
   <init>
+
+    <set token="tkn_font_size_2">400</set>
+    <set token="tkn_padding_2">30</set>
+    <set token="tkn_margin">20</set>
+
     <set token="tkn_colour_tile">pebble</set>
     <set token="tkn_colour_compliant_line">#ECECEC</set>
     <set token="tkn_colour_compliant_line_100">#85F415</set>
     <set token="tkn_colour_non_compliant_line">#FF4B4B</set>
     <set token="tkn_colour_text">#bebebe</set>
-    <set token="tkn_margin">20</set>
     <set token="tkn_view">abs</set>
+
     <unset token="tkn_ready"></unset>
   </init>
 
@@ -68,6 +73,7 @@
   
 
 <!-- ################### STYLE ROW ################### -->  
+<!-- ##
   <row depends="$debug$">
     <panel>
       <html>
@@ -99,7 +105,44 @@
       </html>
     </panel>
   </row>
+## --> 
 
+<!-- ################### STYLE ROW ################### -->  
+  <row depends="$alwaysHideCSS$">
+  
+    <panel>
+      <html>
+        <style>
+          .absolute {
+            text-align: center !important;
+          }
+          .absolute a {
+            text-align: center !important;
+            color: $tkn_colour_text$ !important;
+            font-size: $tkn_font_size_2$% !important;
+            font-weight: bold;
+            text-align: center !important;
+            line-height: 1.5 !important;
+          }
+          .undervalue {
+            text-align: center !important;
+          }
+          .undervalue a {
+            text-align: center !important;
+            color: $tkn_colour_text$ !important;
+            font-size: 100% !important;
+            text-align: center !important;
+            line-height: 1.5 !important;
+          }
+          .line{
+            color: $tkn_colour_tile$;
+            height: 4px;
+            margin-bottom: 20px;
+          }
+        </style>
+      </html>
+    </panel>
+  </row>
   
   
 <!-- ############################################################################################################################################################# -->
@@ -132,7 +175,6 @@
         </div>
       </html>
     </panel>
-
 
 <!-- ################### DISPLAY PANEL - Families Group - FAM ################### -->    
     <panel>
