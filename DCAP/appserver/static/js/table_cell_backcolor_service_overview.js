@@ -9,7 +9,12 @@ require([
     var CustomRangeRenderer = TableView.BaseCellRenderer.extend({
         canRender: function (cell) {
             //return true;
-            return _(['POSTURE',
+            return _(['Azure Posture Configuration',
+                      'Kubernetes AKS Configuration',
+                      'Repository Configuration',
+                      'Code Scanning Alerts',
+                      'VM Vulnerability Alerts',
+                      'POSTURE',
                       'KUBERNETES',
                       'VULNERABILITY',
                       'REPOS',

@@ -6,7 +6,7 @@
 
 
 <label>Security Posture Continuous Assurance : DfE Service Dashboard</label>
-<description>{{environment}} v0.0.0</description>
+<description>{{environment}} v0.0.14</description>
   
   <init>
     <set token="tkn_font_size_2">400</set>
@@ -29,71 +29,11 @@
     
     <unset> token="tkn_null_chk_label></unset>
     
-    <unset token="tkn_ready"></unset>
+    <unset token="tkn_main_ready"></unset>    
+    <unset token="tkn_rollup_ready"></unset>
   </init>
 
     
-
-
-<!-- ######################################################################################################################################### -->
-<!-- ########################################################## BASE SEARCHES ################################################################ -->
-<!-- ######################################################################################################################################### -->
-
-  <row depends="$debug$">
-    <panel>
-      <title>base_menu</title>
-      <table>
-        <search id="base_menu">
-          <query>
-| inputlookup ssphp_bdmc_fbp.csv where portfolio!="Unallocated"
-
-| append [| makeresults
-          | eval portfolio="Unassigned",
-                 service_line="Unassigned",
-                 product="Unassigned",
-                 cost_centre_title="Unassigned"]
-          </query>
-        </search>
-        <option name="count">1</option>
-      </table>
-    </panel>
-    
-
-    <panel>
-      <title>bs_0</title>
-      <table>
-        <search id="bs_0">
-          <query>
-| loadjob savedsearch="ssphp_app_account:{{app}}{{environment}}:ssphp_create_dashboard_dataset_service{{environment}}"
-
-| fields ssphp.service.portfolio, ssphp.service.service_line, ssphp.service.product, ssphp.assessment.source, ssphp.use_case.category, ssphp.use_case.id, ssphp.use_case.title, ssphp.assessment.display_name, ssphp.score.score, ssphp.score.compliance_status, ssphp.score.ciso_priority, ssphp.assessment.description, ssphp.score.color, ssphp.resource.id, ssphp.resource.tenant, ssphp.resource.subscription, ssphp.resource.subscription_name, ssphp.resource.resource_group, ssphp.score.remediation_priority, ssphp.exemption.status, SSPHP_UID
-          </query>
-        </search>
-        <option name="count">1</option>
-      </table>
-    </panel>
-
-
-    <panel>
-      <title>bs_1</title>
-      <table>
-        <search base="bs_0" id="bs_1">
-          <query>
-| search ssphp.service.portfolio=$tkn_portfolio|s$ AND ssphp.service.service_line=$tkn_service_line|s$ AND ssphp.service.product=$tkn_product|s$
-
-| fields ssphp.service.portfolio, ssphp.service.service_line, ssphp.service.product, ssphp.assessment.source, ssphp.use_case.category, ssphp.use_case.id, ssphp.use_case.title, ssphp.assessment.display_name, ssphp.score.score, ssphp.score.compliance_status, ssphp.score.ciso_priority, ssphp.assessment.description, ssphp.score.color, ssphp.resource.id, ssphp.resource.tenant, ssphp.resource.subscription, ssphp.resource.subscription_name, ssphp.resource.resource_group, ssphp.score.remediation_priority, ssphp.exemption.status, SSPHP_UID
-          </query>
-          <done>
-            <set token="tkn_service_name">$result.ssphp.service.name$</set>
-            <set token="tkn_current_service">$result.ssphp.service.name$</set>
-          </done>
-        </search>
-        <option name="count">1</option>
-      </table>
-    </panel>
-  </row>
-
-
 
 
 <!-- ###################################################################################################################################### -->
@@ -308,17 +248,6 @@
        col_out="| search (ssphp.use_case.category=\"".col_out."\")"
        
 | table col_out
-
-```| append 
-     [| makeresults
-      | eval chk_posture=$tkn_category_posture|s$,
-             chk_kubernetes=$tkn_category_kubernetes|s$,
-             chk_repos=$tkn_category_repos|s$,
-             chk_code_scan=$tkn_category_codescan|s$,
-             chk_vulnerability=$tkn_category_vulnerability|s$
-      | fields - _time]
-      
-| stats values(*) as *```
           </query>
           <done>
             <set token="tkn_category">$result.col_out$</set>
@@ -341,9 +270,16 @@
       
     <panel id="svc_3">
       <table>
-        <search base="base_menu">
+        <search>
           <query>
-            
+| inputlookup ssphp_bdmc_fbp.csv where portfolio!="Unallocated"
+
+| append [| makeresults
+          | eval portfolio="Unassigned",
+                 service_line="Unassigned",
+                 product="Unassigned",
+                 cost_centre_title="Unassigned"]
+
 | where portfolio=$tkn_portfolio|s$ AND service_line=$tkn_service_line|s$ AND product=$tkn_product|s$
 
 | lookup ssphp_cost_centre_owner_emals.csv cost_centre_owner OUTPUT email as cost_centre_owner_email
@@ -396,7 +332,7 @@
   </row>
 
 
-<!-- #  <row rejects="$tkn_ready$">
+<!-- #  <row rejects="$tkn_main_ready$">
     <panel>
       <html>
         <div id="div_header" style="background:darkgrey;color:white;font-weight:bold;font-size:$tkn_font_size_2$%;text-align:center;padding:$tkn_padding_2$">Requesting Data - Please Wait</div> 
@@ -459,26 +395,18 @@
   </row>
   
   
-<!-- ###################################################### POSTURE #################################################################### -->
+<!-- ###################################################### BASE #################################################################### -->
   <row>
-    
     <panel depends="$debug$">
-      <title>posture</title>
+      <title>roll up base</title>
       <table>
-        <search base="bs_1">
+        <search id="base_roll_up">
           <query>
-| search ssphp.use_case.category="POSTURE" AND ssphp.resource.id="***" AND ssphp.exemption.status="comply"
+| loadjob savedsearch="ssphp_app_account:DCAP{{environment}}:ssphp_create_dashboard_dataset_service{{environment}}"
 
-| stats count, sum(eval(if('ssphp.score.ciso_priority'="DfE Mandated" AND mvindex(split('ssphp.score.score',"|"),0)!="100",1,0))) as resource_bad by ssphp.resource.id
-| stats count as resources_total, sum(eval(if('resource_bad'>0,1,0))) as resources_bad
+| fields ssphp.service.portfolio, ssphp.service.service_line, ssphp.service.product, ssphp.service.id, ssphp.assessment.source, ssphp.use_case.category, ssphp.use_case.id, ssphp.use_case.title, ssphp.assessment.display_name, ssphp.score.score, ssphp.score.compliance_status, ssphp.score.ciso_priority, ssphp.assessment.description, ssphp.score.color, ssphp.resource.id, ssphp.resource.tenant, ssphp.resource.subscription, ssphp.resource.subscription_name, ssphp.resource.resource_group, ssphp.score.remediation_priority, ssphp.exemption.status, SSPHP_UID
 
-| eval resources_good='resources_total'-'resources_bad'
-
-| eval number_total_resources='resources_total',
-       number_passed_resources='resources_good',
-       perc_passed_resources=floor(('number_passed_resources'*100)/'number_total_resources'),
-       abs='number_passed_resources'." / ".'number_total_resources',
-       abs=if(isnull('abs'),"-",'abs')
+`ssphp_service_rollup_dataset{{environment}}($tkn_portfolio|s$,$tkn_service_line|s$,$tkn_product|s$)`
 
 | eval compliant_line_width=round((100-(2*20))*(('perc_passed_resources')/100)),
        compliant_line_non_width=(100-(2*20))-'compliant_line_width',
@@ -487,7 +415,28 @@
        view="a",
        compliant_both=if('view'="a",'abs','perc_passed_resources')
 
+| table number_total_resources, number_passed_resources, perc_passed_resources, abs, compliant_both, compliant_line_width, compliant_line_non_width, compliant_color, ssphp.use_case.category
+            </query>
+            <done>
+              <set token="tkn_rollup_ready">true</set>
+            </done>
+        </search>
+      </table>
+    </panel>
+
+  
+<!-- ###################################################### POSTURE #################################################################### -->
+    <panel depends="$debug$">
+      <title>posture</title>
+      <table>
+        <search base="base_roll_up">
+          <query>
+
+| search ssphp.use_case.category="POSTURE"
+
 | table number_total_resources, number_passed_resources, perc_passed_resources, abs, compliant_both, compliant_line_width, compliant_line_non_width, compliant_color
+
+| append [| makeresults | eval compliant_both="-"] | sort 1 - compliant_both
             </query>
           <done>
             <eval token="tkn_posture_number_total_resources">if(isnotnull($result.number_total_resources$),$result.number_total_resources$,"-")</eval>
@@ -507,7 +456,7 @@
       </table>
     </panel>
 
-    <panel depends="$tkn_ready$,$tkn_show_posture$">
+    <panel depends="$tkn_rollup_ready$,$tkn_show_posture$">
       <html>
         <div class="absolute" style="background:$tkn_colour_tile$;">$tkn_posture_compliant_both$</div>
         <div style="display: flex;">
@@ -530,31 +479,14 @@
     <panel depends="$debug$">
       <title>kubernetes</title>
       <table>
-        <search base="bs_1">
+        <search base="base_roll_up">
           <query>
-| search ssphp.use_case.category="KUBERNETES" AND ssphp.resource.id="***" AND ssphp.exemption.status="comply"
 
-| eval rg=coalesce('ssphp.resource.tenant'."/".'ssphp.resource.subscription'."/".'ssphp.resource.resource_group',"-")
-
-| stats count, sum(eval(if('ssphp.score.ciso_priority'="DfE Mandated" AND mvindex(split('ssphp.score.score',"|"),0)!="100",1,0))) as rg_bad by rg
-| stats count as rg_total, sum(eval(if('rg_bad'>0,1,0))) as rg_bad
-
-| eval rg_good='rg_total'-'rg_bad'
-
-| eval number_total_resources='rg_total',
-       number_passed_resources='rg_good',
-       perc_passed_resources=floor(('number_passed_resources'*100)/'number_total_resources'),
-       abs='number_passed_resources'." / ".'number_total_resources',
-       abs=if(isnull('abs'),"-",'abs')
-
-| eval compliant_line_width=round((100-(2*$tkn_margin$))*(('perc_passed_resources')/100)),
-       compliant_line_non_width=(100-(2*$tkn_margin$))-'compliant_line_width',
-       compliant_color=if(perc_passed_resources=100,$tkn_colour_compliant_line_100|s$,$tkn_colour_compliant_line|s$),
-       perc_passed_resources='perc_passed_resources'."%",
-       view=$tkn_view|s$,
-       compliant_both=if('view'="a",'abs','perc_passed_resources')
+| search ssphp.use_case.category="KUBERNETES"
 
 | table number_total_resources, number_passed_resources, perc_passed_resources, abs, compliant_both, compliant_line_width, compliant_line_non_width, compliant_color
+
+| append [| makeresults | eval compliant_both="-"] | sort 1 - compliant_both
           </query>
           <done>
             <eval token="tkn_k8s_number_total_resources">if(isnotnull($result.number_total_resources$),$result.number_total_resources$,"-")</eval>
@@ -574,7 +506,7 @@
       </table>
     </panel>
 
-    <panel depends="$tkn_ready$,$tkn_show_kubernetes$">
+    <panel depends="$tkn_rollup_ready$,$tkn_show_kubernetes$">
       <html>
         <div class="absolute" style="background:$tkn_colour_tile$;">$tkn_k8s_compliant_both$</div>
         <div style="display: flex;">
@@ -598,29 +530,14 @@
     <panel depends="$debug$">
       <title>repos</title>
       <table>
-        <search base="bs_1">
+        <search base="base_roll_up">
           <query>
-| search ssphp.use_case.category="REPOS" AND ssphp.resource.id="***" AND ssphp.exemption.status="comply"
 
-| stats count, sum(eval(if('ssphp.score.ciso_priority'="DfE Mandated" AND mvindex(split('ssphp.score.score',"|"),0)!="100",1,0))) as rid_bad by ssphp.resource.id
-| stats count as rid_total, sum(eval(if('rid_bad'>0,1,0))) as rid_bad
-
-| eval rid_good='rid_total'-'rid_bad'
-
-| eval number_total_resources='rid_total',
-       number_passed_resources='rid_good',
-       perc_passed_resources=floor(('number_passed_resources'*100)/'number_total_resources'),
-       abs='number_passed_resources'." / ".'number_total_resources',
-       abs=if(isnull('abs'),"-",'abs')
-
-| eval compliant_line_width=round((100-(2*$tkn_margin$))*(('perc_passed_resources')/100)),
-       compliant_line_non_width=(100-(2*$tkn_margin$))-'compliant_line_width',
-       compliant_color=if(perc_passed_resources=100,$tkn_colour_compliant_line_100|s$,$tkn_colour_compliant_line|s$),
-       perc_passed_resources='perc_passed_resources'."%",
-       view=$tkn_view|s$,
-       compliant_both=if('view'="a",'abs','perc_passed_resources')
+| search ssphp.use_case.category="REPOS"
 
 | table number_total_resources, number_passed_resources, perc_passed_resources, abs, compliant_both, compliant_line_width, compliant_line_non_width, compliant_color
+
+| append [| makeresults | eval compliant_both="-"] | sort 1 - compliant_both
             </query>
           <done>
             <eval token="tkn_repos_number_total_resources">if(isnotnull($result.number_total_resources$),$result.number_total_resources$,"-")</eval>
@@ -640,7 +557,7 @@
       </table>
     </panel>
 
-    <panel depends="$tkn_ready$,$tkn_show_repos$">
+    <panel depends="$tkn_rollup_ready$,$tkn_show_repos$">
       <html>
         <div class="absolute" style="background:$tkn_colour_tile$;">$tkn_repos_compliant_both$</div>
         <div style="display: flex;">
@@ -664,31 +581,14 @@
     <panel depends="$debug$">
       <title>code scan</title>
       <table>
-        <search base="bs_1">
+        <search base="base_roll_up">
           <query>
-| search ssphp.use_case.category="CODE_SCAN" AND ssphp.resource.id="***" AND ssphp.exemption.status="comply"
 
-| eval ssphp.resource.id=if(mvcount('ssphp.resource.id')>1,mvindex('ssphp.resource.id',0),'ssphp.resource.id')
-
-| stats count, sum(eval(if('ssphp.score.ciso_priority'="DfE Mandated" AND mvindex(split('ssphp.score.score',"|"),0)!="100",1,0))) as rid_bad by ssphp.resource.id
-| stats count as rid_total, sum(eval(if('rid_bad'>0,1,0))) as rid_bad
-
-| eval rid_good='rid_total'-'rid_bad'
-
-| eval number_total_resources='rid_total',
-       number_passed_resources='rid_good',
-       perc_passed_resources=floor(('number_passed_resources'*100)/'number_total_resources'),
-       abs='number_passed_resources'." / ".'number_total_resources',
-       abs=if(isnull('abs'),"-",'abs')
-
-| eval compliant_line_width=round((100-(2*$tkn_margin$))*(('perc_passed_resources')/100)),
-       compliant_line_non_width=(100-(2*$tkn_margin$))-'compliant_line_width',
-       compliant_color=if(perc_passed_resources=100,$tkn_colour_compliant_line_100|s$,$tkn_colour_compliant_line|s$),
-       perc_passed_resources='perc_passed_resources'."%",
-       view=$tkn_view|s$,
-       compliant_both=if('view'="a",'abs','perc_passed_resources')
+| search ssphp.use_case.category="CODE_SCAN"
 
 | table number_total_resources, number_passed_resources, perc_passed_resources, abs, compliant_both, compliant_line_width, compliant_line_non_width, compliant_color
+
+| append [| makeresults | eval compliant_both="-"] | sort 1 - compliant_both
             </query>
           <done>
             <eval token="tkn_codescan_number_total_resources">if(isnotnull($result.number_total_resources$),$result.number_total_resources$,"-")</eval>
@@ -708,7 +608,7 @@
       </table>
     </panel>
 
-    <panel depends="$tkn_ready$,$tkn_show_codescan$">
+    <panel depends="$tkn_rollup_ready$,$tkn_show_codescan$">
       <html>
         <div class="absolute" style="background:$tkn_colour_tile$;">$tkn_codescan_compliant_both$</div>
         <div style="display: flex;">
@@ -732,29 +632,14 @@
     <panel depends="$debug$">
       <title>vulnerability</title>
       <table>
-        <search base="bs_1">
+        <search base="base_roll_up">
           <query>
-| search ssphp.use_case.category="VULNERABILITY" AND ssphp.resource.id="***" AND ssphp.resource.id="*/virtualmachines/*" AND ssphp.exemption.status="comply"
 
-| stats count, sum(eval(if('ssphp.score.ciso_priority'="DfE Mandated" AND mvindex(split('ssphp.score.score',"|"),0)!="100",1,0))) as rid_bad by ssphp.resource.id
-| stats count as rid_total, sum(eval(if('rid_bad'>0,1,0))) as rid_bad
-
-| eval rid_good='rid_total'-'rid_bad'
-
-| eval number_total_resources='rid_total',
-       number_passed_resources='rid_good',
-       perc_passed_resources=floor(('number_passed_resources'*100)/'number_total_resources'),
-       abs='number_passed_resources'." / ".'number_total_resources',
-       abs=if(isnull('abs'),"-",'abs')
-
-| eval compliant_line_width=round((100-(2*$tkn_margin$))*(('perc_passed_resources')/100)),
-       compliant_line_non_width=(100-(2*$tkn_margin$))-'compliant_line_width',
-       compliant_color=if(perc_passed_resources=100,$tkn_colour_compliant_line_100|s$,$tkn_colour_compliant_line|s$),
-       perc_passed_resources='perc_passed_resources'."%",
-       view=$tkn_view|s$,
-       compliant_both=if('view'="a",'abs','perc_passed_resources')
+| search ssphp.use_case.category="VULNERABILITY"
 
 | table number_total_resources, number_passed_resources, perc_passed_resources, abs, compliant_both, compliant_line_width, compliant_line_non_width, compliant_color
+
+| append [| makeresults | eval compliant_both="-"] | sort 1 - compliant_both
             </query>
           <done>
             <eval token="tkn_vulnerability_number_total_resources">if(isnotnull($result.number_total_resources$),$result.number_total_resources$,"-")</eval>
@@ -774,7 +659,7 @@
       </table>
     </panel>
 
-    <panel depends="$tkn_ready$,$tkn_show_vuln$">
+    <panel depends="$tkn_rollup_ready$,$tkn_show_vuln$">
       <html>
         <div class="absolute" style="background:$tkn_colour_tile$;">$tkn_vulnerability_compliant_both$</div>
         <div style="display: flex;">
@@ -798,7 +683,7 @@
 <!-- ############################################# MAIN DATA TABLE ###################################################################### --> 
 <!-- #################################################################################################################################### --> 
 
-  <row depends="$tkn_ready$,$debug$">
+  <row depends="$tkn_main_ready$,$debug$">
     <panel depends="$alwaysHideCSS$">
       <html>
         <style>
@@ -907,8 +792,13 @@
     <panel>
       <table id="table1">
         <title>Control Details &amp; Scores [$tkn_controls_total_list$]</title>
-        <search base="bs_1">
+        <search>
           <query>
+| loadjob savedsearch="ssphp_app_account:DCAP{{environment}}:ssphp_create_dashboard_dataset_service{{environment}}"
+
+| fields ssphp.service.portfolio, ssphp.service.service_line, ssphp.service.product, ssphp.service.id, ssphp.assessment.source, ssphp.use_case.category, ssphp.use_case.id, ssphp.use_case.title, ssphp.assessment.display_name, ssphp.score.score, ssphp.score.compliance_status, ssphp.score.ciso_priority, ssphp.assessment.description, ssphp.score.color, ssphp.resource.id, ssphp.resource.tenant, ssphp.resource.subscription, ssphp.resource.subscription_name, ssphp.resource.resource_group, ssphp.score.remediation_priority, ssphp.exemption.status, SSPHP_UID
+
+| search ssphp.service.portfolio=$tkn_portfolio|s$ AND ssphp.service.service_line=$tkn_service_line|s$ AND ssphp.service.product=$tkn_product|s$
 $tkn_category$
 
 | search ssphp.resource.id!="" AND ssphp.exemption.status="comply" AND ssphp.score.ciso_priority="DfE Mandated" AND ssphp.score.compliance_status="Non-Compliant*"
@@ -949,7 +839,7 @@ $tkn_category$
           </query>
           <done>
             <eval token="tkn_controls_total_list">if(isnotnull($result.number_controls_total_string$),$result.number_controls_total_string$,"0")</eval>
-            <eval token="tkn_ready">if(isnotnull($result.number_controls_total$) AND $result.number_controls_total$!="" AND $result.number_controls_total$&gt;0,"true",null())</eval>
+            <eval token="tkn_main_ready">if(isnotnull($result.number_controls_total$) AND $result.number_controls_total$!="" AND $result.number_controls_total$&gt;0,"true",null())</eval>
           </done>
         </search>
         <option name="count">100</option>
@@ -961,7 +851,7 @@ $tkn_category$
         <option name="drilldown">row</option>
         <fields>"Use Case","Control Title","Score","Compliance Status","Control Type","Description","Resource Details","Remediation Priority"</fields>
         <drilldown>
-          <link target="_blank">/app/$tkn__current_application$/ssphp_service_detail?tkn__uid=$row.SSPHP_UID$</link>
+          <link target="_blank">/app/$tkn__current_application$/ssphp_dfe_service_detail?tkn__uid=$row.SSPHP_UID$</link>
         </drilldown>
       </table>
     </panel>

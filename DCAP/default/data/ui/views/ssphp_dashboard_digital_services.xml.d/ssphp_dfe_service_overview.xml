@@ -287,7 +287,15 @@
 | search Portfolio=$tkn_portfolio|s$
 | where mvcount(mvfilter(match('type',"data")))&gt;0
 
-| table Portfolio, "Service Line", Product, POSTURE, KUBERNETES, VULNERABILITY, REPOS, CODE_SCAN, id, type
+| rename POSTURE as "Azure Posture Configuration", 
+         KUBERNETES as "Kubernetes AKS Configuration", 
+         VULNERABILITY as "VM Vulnerability Alerts", 
+         REPOS as "Repository Configuration", 
+         CODE_SCAN as "Code Scanning Alerts"
+
+| table Portfolio, "Service Line", Product, 
+        "Azure Posture Configuration", "Kubernetes AKS Configuration", "Repository Configuration", "Code Scanning Alerts", "VM Vulnerability Alerts"
+        id, type
           </query>
         </search>
         <option name="count">100</option>
@@ -301,7 +309,7 @@
         <drilldown>
           <link target="_blank">/app/$tkn_current_app$/ssphp_dfe_service_posture?tkn__service=$row.id$</link>
         </drilldown>
-        <fields>Portfolio, "Service Line", Product, POSTURE, KUBERNETES, VULNERABILITY, REPOS, CODE_SCAN</fields>
+        <fields>Portfolio, "Service Line", Product, "Azure Posture Configuration", "Kubernetes AKS Configuration", "Repository Configuration", "Code Scanning Alerts", "VM Vulnerability Alerts"</fields>
       </table>
     </panel>
 
