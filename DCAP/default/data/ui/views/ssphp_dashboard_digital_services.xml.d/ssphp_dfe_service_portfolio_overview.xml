@@ -5,8 +5,8 @@
 {% endif %}  
 
 
-  <label>Security Posture Continuous Assurance : DfE Portfolio Overview Dashboard</label>
-  <description>{{environment}} v0.0.22</description>
+  <label>DfE Security Posture Continuous Assurance : Portfolio Overview Dashboard</label>
+  <description>{{environment}} v0.0.25</description>
 
   <init>
 
@@ -363,9 +363,7 @@
       <table>
         <search id="base01">
           <query>
-| loadjob savedsearch="ssphp_app_account:DCAP_DEV:ssphp_create_dashboard_dataset_service_DEV"
-
-| fields ssphp.service.portfolio, ssphp.service.service_line, ssphp.service.product, ssphp.service.id, ssphp.assessment.source, ssphp.use_case.category, ssphp.use_case.id, ssphp.use_case.title, ssphp.assessment.display_name, ssphp.score.score, ssphp.score.compliance_status, ssphp.score.ciso_priority, ssphp.assessment.description, ssphp.score.color, ssphp.resource.id, ssphp.resource.tenant, ssphp.resource.subscription, ssphp.resource.subscription_name, ssphp.resource.resource_group, ssphp.score.remediation_priority, ssphp.exemption.status, SSPHP_UID
+| loadjob savedsearch="ssphp_app_account:{{app}}{{environment}}:ssphp_create_dashboard_dataset_service{{environment}}"
 
 | eval ssphp.service.portfolio=trim('ssphp.service.portfolio'),
        ssphp.service.service_line=trim('ssphp.service.service_line'),
@@ -373,19 +371,23 @@
        
 | fields ssphp.service.portfolio, ssphp.service.service_line, ssphp.service.product, ssphp.service.id, ssphp.assessment.source, ssphp.use_case.category, ssphp.use_case.id, ssphp.use_case.title, ssphp.assessment.display_name, ssphp.score.score, ssphp.score.compliance_status, ssphp.score.ciso_priority```, ssphp.assessment.description```, ssphp.score.color, ssphp.resource.id, ssphp.resource.tenant, ssphp.resource.subscription, ssphp.resource.subscription_name, ssphp.resource.resource_group, ssphp.score.remediation_priority, ssphp.exemption.status, SSPHP_UID 
 
-| search ssphp.exemption.status="comply" AND ssphp.service.portfolio!="" AND ssphp.service.portfolio!="Unassigned"
-| search (ssphp.use_case.category="POSTURE" OR ssphp.use_case.category="KUBERNETES" OR ssphp.use_case.category="VULNERABILITY" OR ssphp.use_case.category="REPOS" OR (ssphp.use_case.category="CODE_SCAN" AND (ssphp.assessment.source="*")))
-
+| search ssphp.exemption.status="comply" AND ssphp.service.portfolio!=""
+| search (ssphp.use_case.category="POSTURE" OR 
+         ssphp.use_case.category="KUBERNETES" OR
+         ssphp.use_case.category="REPOS" OR 
+         (ssphp.use_case.category="CODE_SCAN" AND ssphp.assessment.source="*") OR
+         (ssphp.use_case.category="VULNERABILITY" AND ssphp.resource.id="*/virtualmachines/*"))
 | search ssphp.resource.id="***"  AND ssphp.resource.id!=""
 | where 'ssphp.score.ciso_priority'="DfE Mandated"
 
-| stats count, values(ssphp.assessment.display_name) as ssphp.assessment.display_name, values(ssphp.score.score) as ssphp.score.score, min(ssphp.score.score) as min_score by ssphp.service.portfolio, ssphp.service.service_line, ssphp.service.product, ssphp.service.id, ssphp.use_case.category, ssphp.resource.id
-| stats count, sum(eval(if('min_score'="100|green",1,0))) as compliant by ssphp.service.portfolio
+| stats count as total_controls, sum(eval(if(match('ssphp.score.compliance_status',"^Non-Compliant.*"),1,0))) as non_compliant_mandated_controls by ssphp.service.portfolio, ssphp.resource.id
+| stats count as resources_total, sum(eval(if('non_compliant_mandated_controls'&gt;0,1,0))) as resources_bad by ssphp.service.portfolio
 
 | lookup ssphp.portfolio_shortport.csv ssphp.service.portfolio OUTPUT short_port
 
-| eval compliant_perc=round(('compliant'*100)/count),
-       compliant_abs='compliant'." / ".'count'
+| eval resources_good='resources_total'-'resources_bad',
+       compliant_perc=round(('resources_good'*100)/'resources_total'),
+       compliant_abs='resources_good'." / ".'resources_total'
 
 | eval compliant_line_width=round((100-(2*$tkn_margin$))*(('compliant_perc')/100)),
        compliant_line_non_width=(100-(2*$tkn_margin$))-'compliant_line_width',
