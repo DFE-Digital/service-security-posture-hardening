@@ -6,7 +6,7 @@
 
 
   <label>DfE Security Posture Continuous Assurance : Portfolio Overview Dashboard</label>
-  <description>{{environment}} v0.0.25</description>
+  <description>{{environment}} v0.0.33</description>
 
   <init>
 
@@ -19,7 +19,7 @@
     <set token="tkn_colour_compliant_line_100">#85F415</set>
     <set token="tkn_colour_non_compliant_line">#FF4B4B</set>
     <set token="tkn_colour_text">#bebebe</set>
-    <set token="tkn_view">abs</set>
+    <set token="tkn_view">perc</set>
 
     <unset token="tkn_ready"></unset>
   </init>
@@ -70,42 +70,6 @@
   </row>
   
   
-  
-
-<!-- ################### STYLE ROW ################### -->  
-<!-- ##
-  <row depends="$debug$">
-    <panel>
-      <html>
-        <style>
-          .absolute {
-            text-align: center !important;
-          }
-          .absolute a {
-            color: $tkn_colour_text$ !important;
-            font-size: 300% !important;
-            text-align: center !important;
-            line-height: 2.5 !important;
-          }
-          .undervalue {
-            text-align: center !important;
-          }
-          .undervalue a {
-            color: $tkn_colour_text$ !important;
-            font-size: 120% !important;
-            text-align: center !important;
-            line-height: 1.5 !important;
-          }
-          .line{
-            color: $tkn_colour_tile$;
-            height: 4px;
-            margin-bottom: 10px;
-          }
-        </style>
-      </html>
-    </panel>
-  </row>
-## --> 
 
 <!-- ################### STYLE ROW ################### -->  
   <row depends="$alwaysHideCSS$">
@@ -404,30 +368,43 @@
   </row>
 
 
+<row><html><div><br></br></div></html></row>
+
+
 <!-- ############################################################################################################################################################# -->
 <!-- ################################################################ TABLE ROW - PORTFOLIOS ##################################################################### -->
 <!-- ############################################################################################################################################################# -->
   <row depends="$debug$">
     <html>
       <style>
+         #p_slt{
+         width:40% !important;
+         -webkit-box-flex:unset;
+         -ms-flex:unset;
+         flex:unset;
+         }
          .css_for_green{ 
          background-color: $tkn_colour_green$ !important;
          color:#000000 !important;
+         text-align: center !important;
          font-size: 100% !important;
          }
          .css_for_orange{ 
          background-color: $tkn_colour_orange$ !important;
          color:#000000 !important;
+         text-align: center !important;
          font-size: 100% !important;
          }
          .css_for_red{
          background-color: $tkn_colour_red$ !important;
          color:#000000 !important;
+         text-align: center !important;
          font-size: 100% !important;
          }
          .css_for_blue{
          background-color: $tkn_colour_blue$ !important;
          color:#000000 !important;
+         text-align: center !important;
          font-size: 100% !important;
          }
       </style>
@@ -435,7 +412,7 @@
   </row>
 
   <row depends="$slt$">
-    <panel>
+    <panel id="p_slt">
       <table id="table3">
         <search base="base01">
           <query>
@@ -445,6 +422,7 @@
 
 | table ssphp.service.portfolio, compliant_perc, compliant_abs
 | rename ssphp.service.portfolio as Portfolio, compliant_perc as "Percentage Compliant", compliant_abs as "Compliant Resources"
+| search Portfolio!="Unassigned"
           </query>
         </search>
         <option name="drilldown">none</option>
