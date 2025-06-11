@@ -1,0 +1,108 @@
+<dashboard version="1.1" theme="light" hideFilters="true">
+  <label>SAMPLE RBAC DASHBOARD</label>
+
+    <row depends="$tkn_show_dashboard$">
+        <panel>
+          <title>REST</title>
+            <table id="routing_table">
+                <search>
+                    <query>
+| rest splunk_server=local /services/authentication/current-context
+| rename roles as user_roles
+
+| fields username, user_roles
+| mvexpand user_roles
+
+| append [| makeresults | eval user_roles="dfe_ssphp_service_user_s000" | fields - _time]
+| append [| makeresults | eval user_roles="dfe_ssphp_service_user_s691" | fields - _time]
+
+| fields user_roles
+| rex field=user_roles "^dfe_ssphp_service_user_s(?&lt;user_service_id&gt;\d*)$"
+| table user_roles, user_service_id
+| where isnotnull(user_service_id)
+| sort 1 - user_service_id
+| table user_service_id
+                    </query>
+                    <done>
+                      <set token="tkn_user_service_id">$result.user_service_id$</set>
+                    </done>
+                </search>
+            </table>
+        </panel>
+    </row>
+    
+    
+    <row depends="$tkn_show_dashboard$">
+      <panel>
+        <title>URL</title>
+        <table>
+          <search>
+            <query>
+| makeresults
+| eval url_user_service_id=$tkn__service|s$
+| fields - _time
+            </query>
+              <error>
+                <set token="tkn_url_service">000</set>
+              </error>
+              <done>
+                <set token="tkn_url_service">$result.url_user_service_id$</set>
+              </done>
+          </search>
+        </table>
+      </panel>
+    </row>
+    
+    
+    <row depends="$tkn_show_dashboard$">
+      <panel>
+        <title>CALC RESULT</title>
+        <table>
+          <search>
+            <query>
+| makeresults
+
+| eval user_service_id=$tkn_user_service_id|s$,
+       url_user_service_id=$tkn_url_service|s$,
+       service_id=case('url_user_service_id'="000" AND 'user_service_id'="000","000",
+                       'url_user_service_id'!="000",'url_user_service_id',
+                       1==1,'user_service_id')
+                       
+| table service_id, user_service_id, url_user_service_id
+            </query>
+            <done>
+              <eval token="tkn_service">$result.service_id$</eval>
+              <eval token="tkn_show_dashboard">if($result.service_id$="000",null(),"true")</eval>
+            </done>
+          </search>
+        </table>
+      </panel>
+    </row>
+    
+    
+    <row depends="$tkn_show_dashboard$">
+      <panel>
+        <title>RESULT</title>
+        <table>
+          <search>
+            <query>
+| makeresults
+
+| eval service=$tkn_service$
+| table service
+            </query>
+          </search>
+        </table>
+      </panel>
+    </row>
+
+    
+    
+    <row rejects="$tkn_show_dashboard$">
+      <html>
+        <div style="text-align: center; font-size:500%; font-weight:bold; color:grey;"><br></br><br></br><br></br><br></br>NO USER SERVICE PROVIDED<br></br><br></br><br></br><br></br></div>
+        <div style="text-align: center; font-size:200%; font-weight:bold; color:grey;">Please ensure that you either have a Splunk Role set up for your User / Service, or click on your Service in the Service Overiew Dashboard list<br></br><br></br><br></br><br></br></div>
+      </html>
+    </row>
+
+</dashboard>
