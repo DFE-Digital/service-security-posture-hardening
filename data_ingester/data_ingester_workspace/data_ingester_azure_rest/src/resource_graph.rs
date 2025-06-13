@@ -56,9 +56,20 @@ async fn resource_graph_all(az_client: AzureRest, splunk: &Splunk) -> Result<()>
                 request_body.options.top = Some(10);
             }
 
-            let mut response = make_request(&az_client, endpoint, &request_body, &mut rate_limit)
-                .await
-                .context("Failed making Resource Graph API request")?;
+            let mut response = match make_request(
+                &az_client,
+                endpoint,
+                &request_body,
+                &mut rate_limit,
+            )
+            .await
+            {
+                Ok(response) => response,
+                Err(err) => {
+                    error!(err=?err, table=table, "Failed making request for Azure resource graph table: {}", table);
+                    continue;
+                }
+            };
 
             let events = (&response.data)
                 .to_hec_events()
@@ -144,6 +155,11 @@ async fn make_request(
                             continue;
                         }
 
+                        QueryErrorErrorDetailsCode::DisallowedLogicalTableName => {
+                            error!("Disallowed Logical Table: {:?}", &request_body);
+                            anyhow::bail!("Disallowed Logical Table: {:?}", &request_body);
+                        }
+
                         // Unknown Errors and responses
                         QueryErrorErrorDetailsCode::Other(other) => {
                             error!("{:?}", &other);
@@ -168,7 +184,7 @@ async fn make_request(
 }
 
 use crate::azure_rest::AzureRest;
-pub(crate) static RESOURCE_GRAPH_TABLES: [&str; 28] = [
+pub(crate) static RESOURCE_GRAPH_TABLES: [&str; 27] = [
     "advisorresources",
     "alertsmanagementresources",
     "appserviceresources",
@@ -185,7 +201,8 @@ pub(crate) static RESOURCE_GRAPH_TABLES: [&str; 28] = [
     "maintenanceresources",
     "managedservicesresources",
     "networkresources",
-    "orbitalresources",
+    // Orbital services have been retired https://azure.microsoft.com/en-gb/updates?id=azure-orbital-ground-station-retirement
+    // "orbitalresources",
     "patchassessmentresources",
     "patchinstallationresources",
     "policyresources",
@@ -290,6 +307,7 @@ struct QueryErrorErrorDetails {
 enum QueryErrorErrorDetailsCode {
     RateLimiting,
     ResponsePayloadTooLarge,
+    DisallowedLogicalTableName,
     Other(Value),
 }
 
