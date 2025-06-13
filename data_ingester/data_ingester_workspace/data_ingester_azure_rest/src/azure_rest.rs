@@ -270,17 +270,18 @@ impl AzureRest {
 
         const MAX_RETRIES: u8 = 5;
         const SLEEP_TIME: Duration = Duration::from_secs(3);
-        let mut retries = MAX_RETRIES;
+        let mut retries = 0;
 
         let mut errors: Vec<anyhow::Error> = vec![];
 
         loop {
-            if retries == 0 {
+            if retries == MAX_RETRIES {
                 anyhow::bail!("Failed to make request!\nerrors:{:?}", errors)
-            } else if retries < MAX_RETRIES {
+            } else if retries > 0 {
                 sleep(SLEEP_TIME).await;
+                retries += 1;
             } else {
-                retries -= 1;
+                retries += 1;
             }
 
             let token_response = self
