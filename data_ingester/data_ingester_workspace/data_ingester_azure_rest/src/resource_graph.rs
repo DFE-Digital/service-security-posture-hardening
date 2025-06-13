@@ -143,7 +143,7 @@ async fn make_request(
                         QueryErrorErrorDetailsCode::ResponsePayloadTooLarge => {
                             error!("ResponsePayloadTooLarge error!");
                             let mut new_request_body = request_body.clone();
-                            new_request_body.options.top = Some(10);
+                            new_request_body.options.top = Some(1);
                             break make_request(az_client, endpoint, &new_request_body, rate_limit)
                                 .await
                                 .context("ResonsePayloadTooLarge recovery")?;
