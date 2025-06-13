@@ -1,7 +1,7 @@
 <dashboard version="1.1" theme="dark" script="js/table_cell_backcolor_service_overview.js">
 
 <label>DfE Security Posture Continuous Assurance : Service Overview Dashboard</label>
-<description>{{environment}} v0.0.44</description>
+<description>{{environment}} v0.0.54</description>
 
   <init>
     <unset token="tkn_main_ready"></unset>
@@ -459,55 +459,132 @@
            background-color: #00FF00 !important;
            color:#000000 !important;
            font-size: 100% !important;
+           font-weight: bold;
+           }
+           .css_for_green1{ 
+           background-color:rgb(72, 245, 72) !important;
+           color:#000000 !important;
+           font-size: 100% !important;
+           font-weight: bold;
+           }
+           .css_for_green2{ 
+           background-color:rgb(108, 248, 108) !important;
+           color:#000000 !important;
+           font-size: 100% !important;
+           font-weight: bold;
+           }
+           .css_for_green3{ 
+           background-color:rgb(134, 244, 134) !important;
+           color:#000000 !important;
+           font-size: 100% !important;
+           font-weight: bold;
+           }
+           .css_for_green4{ 
+           background-color:rgb(159, 243, 159) !important;
+           color:#000000 !important;
+           font-size: 100% !important;
+           font-weight: bold;
+           }
+           .css_for_green5{ 
+           background-color:rgb(179, 239, 179) !important;
+           color:#000000 !important;
+           font-size: 100% !important;
+           font-weight: bold;
+           }
+           .css_for_green6{ 
+           background-color:rgb(201, 239, 201) !important;
+           color:#000000 !important;
+           font-size: 100% !important;
+           font-weight: bold;
+           }
+           .css_for_orange{ 
+           background-color:rgb(255, 139, 18) !important;
+           color:#000000 !important;
+           font-size: 100% !important;
+           font-weight: bold;
+           }
+           .css_for_orange1{ 
+           background-color:rgb(250, 145, 63) !important;
+           color:#000000 !important;
+           font-size: 100% !important;
+           font-weight: bold;
+           }
+           .css_for_orange2{ 
+           background-color:rgb(255, 153, 77) !important;
+           color:#000000 !important;
+           font-size: 100% !important;
+           font-weight: bold;
+           }
+           .css_for_orange3{ 
+           background-color:rgb(255, 173, 90) !important;
+           color:#000000 !important;
+           font-size: 100% !important;
+           font-weight: bold;
+           }
+           .css_for_orange4{ 
+           background-color:rgb(255, 184, 114) !important;
+           color:#000000 !important;
+           font-size: 100% !important;
+           font-weight: bold;
+           }
+           .css_for_orange5{ 
+           background-color:rgb(243, 173, 132) !important;
+           color:#000000 !important;
+           font-size: 100% !important;
+           font-weight: bold;
+           }
+           .css_for_orange6{ 
+           background-color:rgb(247, 197, 167) !important;
+           color:#000000 !important;
+           font-size: 100% !important;
+           font-weight: bold;
+           }
+           .css_for_red{
+           background-color: #FF0000!important;
+           color:#000000 !important;
+           font-size: 100% !important;
+           font-weight: bold;
            }
            .css_for_red1{
            background-color: #FF0000!important;
            color:#000000 !important;
            font-size: 100% !important;
+           font-weight: bold;
            }
            .css_for_red2{
            background-color:rgb(246, 22, 22)!important;
            color:#000000 !important;
            font-size: 100% !important;
+           font-weight: bold;
            }
            .css_for_red3{
            background-color:rgb(241, 45, 45)!important;
            color:#000000 !important;
            font-size: 100% !important;
+           font-weight: bold;
            }
            .css_for_red4{
            background-color:rgb(240, 67, 67)!important;
            color:#000000 !important;
            font-size: 100% !important;
+           font-weight: bold;
            }
            .css_for_red5{
            background-color:rgb(238, 94, 94)!important;
            color:#000000 !important;
            font-size: 100% !important;
+           font-weight: bold;
            }
            .css_for_red6{
            background-color:rgb(237, 114, 114)!important;
            color:#000000 !important;
            font-size: 100% !important;
-           }
-           .css_for_red7{
-           background-color:rgb(237, 133, 133)!important;
-           color:#000000 !important;
-           font-size: 100% !important;
-           }
-           .css_for_red8{
-           background-color:rgb(235, 157, 157)!important;
-           color:#000000 !important;
-           font-size: 100% !important;
-           }
-           .css_for_red9{
-           background-color:rgb(238, 189, 189)!important;
-           color:#000000 !important;
-           font-size: 100% !important;
+           font-weight: bold;
            }
            .css_for_blue{
            background-color: $tkn_colour_blue$ !important;
            font-size: 100% !important;
+           font-weight: bold;
            }
         </style>
       </html>
@@ -564,62 +641,151 @@
 
 ```| fillnull value="-" POSTURE, KUBERNETES, REPOS, CODE_SCAN, VULNERABILITY```
 
+```
 | eval POSTURE_colour=case(isnull(POSTURE_perc),"blue",
                            POSTURE_perc=100,"green",
-                           POSTURE_perc>90,"red9",
-                           POSTURE_perc>80,"red8",
-                           POSTURE_perc>70,"red7",
-                           POSTURE_perc>60,"red6",
-                           POSTURE_perc>50,"red5",
-                           POSTURE_perc>40,"red4",
-                           POSTURE_perc>30,"red3",
-                           POSTURE_perc>20,"red2",
-                           1==1,"red1"),
+                           POSTURE_perc>95,"green1",
+                           POSTURE_perc>90,"green2",
+                           POSTURE_perc>85,"green3",
+                           POSTURE_perc>80,"green4",
+                           POSTURE_perc>70,"orange5",
+                           POSTURE_perc>60,"orange4",
+                           POSTURE_perc>50,"orange3",
+                           POSTURE_perc>40,"orange2",
+                           POSTURE_perc>30,"orange1",
+                           POSTURE_perc>20,"orange",
+                           POSTURE_perc>10,"red1",
+                           1==1,"red"),
        KUBERNETES_colour=case(isnull(KUBERNETES_perc),"blue",
                            KUBERNETES_perc=100,"green",
-                           KUBERNETES_perc>90,"red9",
-                           KUBERNETES_perc>80,"red8",
-                           KUBERNETES_perc>70,"red7",
-                           KUBERNETES_perc>60,"red6",
-                           KUBERNETES_perc>50,"red5",
-                           KUBERNETES_perc>40,"red4",
-                           KUBERNETES_perc>30,"red3",
-                           KUBERNETES_perc>20,"red2",
-                           1==1,"red1"),
+                           KUBERNETES_perc>95,"green1",
+                           KUBERNETES_perc>90,"green2",
+                           KUBERNETES_perc>85,"green3",
+                           KUBERNETES_perc>80,"green4",
+                           KUBERNETES_perc>70,"orange5",
+                           KUBERNETES_perc>60,"orange4",
+                           KUBERNETES_perc>50,"orange3",
+                           KUBERNETES_perc>40,"orange2",
+                           KUBERNETES_perc>30,"orange1",
+                           KUBERNETES_perc>20,"orange",
+                           KUBERNETES_perc>10,"red1",
+                           1==1,"red"),
        REPOS_colour=case(isnull(REPOS_perc),"blue",
                            REPOS_perc=100,"green",
-                           REPOS_perc>90,"red9",
-                           REPOS_perc>80,"red8",
-                           REPOS_perc>70,"red7",
-                           REPOS_perc>60,"red6",
-                           REPOS_perc>50,"red5",
-                           REPOS_perc>40,"red4",
-                           REPOS_perc>30,"red3",
-                           REPOS_perc>20,"red2",
-                           1==1,"red1"),
+                           REPOS_perc>95,"green1",
+                           REPOS_perc>90,"green2",
+                           REPOS_perc>85,"green3",
+                           REPOS_perc>80,"green4",
+                           REPOS_perc>70,"orange5",
+                           REPOS_perc>60,"orange4",
+                           REPOS_perc>50,"orange3",
+                           REPOS_perc>40,"orange2",
+                           REPOS_perc>30,"orange1",
+                           REPOS_perc>20,"orange",
+                           REPOS_perc>10,"red1",
+                           1==1,"red"),
        CODE_SCAN_colour=case(isnull(CODE_SCAN_perc),"blue",
                            CODE_SCAN_perc=100,"green",
-                           CODE_SCAN_perc>90,"red9",
-                           CODE_SCAN_perc>80,"red8",
-                           CODE_SCAN_perc>70,"red7",
-                           CODE_SCAN_perc>60,"red6",
-                           CODE_SCAN_perc>50,"red5",
-                           CODE_SCAN_perc>40,"red4",
-                           CODE_SCAN_perc>30,"red3",
-                           CODE_SCAN_perc>20,"red2",
-                           1==1,"red1"),
+                           CODE_SCAN_perc>95,"green1",
+                           CODE_SCAN_perc>90,"green2",
+                           CODE_SCAN_perc>85,"green3",
+                           CODE_SCAN_perc>80,"green4",
+                           CODE_SCAN_perc>70,"orange5",
+                           CODE_SCAN_perc>60,"orange4",
+                           CODE_SCAN_perc>50,"orange3",
+                           CODE_SCAN_perc>40,"orange2",
+                           CODE_SCAN_perc>30,"orange1",
+                           CODE_SCAN_perc>20,"orange",
+                           CODE_SCAN_perc>10,"red1",
+                           1==1,"red"),
        VULNERABILITY_colour=case(isnull(VULNERABILITY_perc),"blue",
                            VULNERABILITY_perc=100,"green",
-                           VULNERABILITY_perc>90,"red9",
-                           VULNERABILITY_perc>80,"red8",
-                           VULNERABILITY_perc>70,"red7",
-                           VULNERABILITY_perc>60,"red6",
-                           VULNERABILITY_perc>50,"red5",
-                           VULNERABILITY_perc>40,"red4",
-                           VULNERABILITY_perc>30,"red3",
-                           VULNERABILITY_perc>20,"red2",
-                           1==1,"red1")
-                           
+                           VULNERABILITY_perc>95,"green1",
+                           VULNERABILITY_perc>90,"green2",
+                           VULNERABILITY_perc>85,"green3",
+                           VULNERABILITY_perc>80,"green4",
+                           VULNERABILITY_perc>70,"orange5",
+                           VULNERABILITY_perc>60,"orange4",
+                           VULNERABILITY_perc>50,"orange3",
+                           VULNERABILITY_perc>40,"orange2",
+                           VULNERABILITY_perc>30,"orange1",
+                           VULNERABILITY_perc>20,"orange",
+                           VULNERABILITY_perc>10,"red1",
+                           1==1,"red")
+```
+
+| eval POSTURE_colour=case(isnull(POSTURE_perc),"blue",
+                           POSTURE_perc=100,"green",
+                           POSTURE_perc>95,"green",
+                           POSTURE_perc>90,"green",
+                           POSTURE_perc>85,"green",
+                           POSTURE_perc>80,"green",
+                           POSTURE_perc>70,"orange3",
+                           POSTURE_perc>60,"orange3",
+                           POSTURE_perc>50,"orange3",
+                           POSTURE_perc>40,"orange3",
+                           POSTURE_perc>30,"orange3",
+                           POSTURE_perc>20,"orange3",
+                           POSTURE_perc>10,"red",
+                           1==1,"red"),
+       KUBERNETES_colour=case(isnull(KUBERNETES_perc),"blue",
+                           KUBERNETES_perc=100,"green",
+                           KUBERNETES_perc>95,"green",
+                           KUBERNETES_perc>90,"green",
+                           KUBERNETES_perc>85,"green",
+                           KUBERNETES_perc>80,"green",
+                           KUBERNETES_perc>70,"orange3",
+                           KUBERNETES_perc>60,"orange3",
+                           KUBERNETES_perc>50,"orange3",
+                           KUBERNETES_perc>40,"orange3",
+                           KUBERNETES_perc>30,"orange3",
+                           KUBERNETES_perc>20,"orange3",
+                           KUBERNETES_perc>10,"red",
+                           1==1,"red"),
+       REPOS_colour=case(isnull(REPOS_perc),"blue",
+                           REPOS_perc=100,"green",
+                           REPOS_perc>95,"green",
+                           REPOS_perc>90,"green",
+                           REPOS_perc>85,"green",
+                           REPOS_perc>80,"green",
+                           REPOS_perc>70,"orange3",
+                           REPOS_perc>60,"orange3",
+                           REPOS_perc>50,"orange3",
+                           REPOS_perc>40,"orange3",
+                           REPOS_perc>30,"orange3",
+                           REPOS_perc>20,"orange3",
+                           REPOS_perc>10,"red",
+                           1==1,"red"),
+       CODE_SCAN_colour=case(isnull(CODE_SCAN_perc),"blue",
+                           CODE_SCAN_perc=100,"green",
+                           CODE_SCAN_perc>95,"green",
+                           CODE_SCAN_perc>90,"green",
+                           CODE_SCAN_perc>85,"green",
+                           CODE_SCAN_perc>80,"green",
+                           CODE_SCAN_perc>70,"orange3",
+                           CODE_SCAN_perc>60,"orange3",
+                           CODE_SCAN_perc>50,"orange3",
+                           CODE_SCAN_perc>40,"orange3",
+                           CODE_SCAN_perc>30,"orange3",
+                           CODE_SCAN_perc>20,"orange3",
+                           CODE_SCAN_perc>10,"red",
+                           1==1,"red"),
+       VULNERABILITY_colour=case(isnull(VULNERABILITY_perc),"blue",
+                           VULNERABILITY_perc=100,"green",
+                           VULNERABILITY_perc>95,"green",
+                           VULNERABILITY_perc>90,"green",
+                           VULNERABILITY_perc>85,"green",
+                           VULNERABILITY_perc>80,"green",
+                           VULNERABILITY_perc>70,"orange3",
+                           VULNERABILITY_perc>60,"orange3",
+                           VULNERABILITY_perc>50,"orange3",
+                           VULNERABILITY_perc>40,"orange3",
+                           VULNERABILITY_perc>30,"orange3",
+                           VULNERABILITY_perc>20,"orange3",
+                           VULNERABILITY_perc>10,"red",
+                           1==1,"red")
+
+
 | eval POSTURE='POSTURE'."|".'POSTURE_colour',
        KUBERNETES='KUBERNETES'."|".'KUBERNETES_colour',
        REPOS='REPOS'."|".'REPOS_colour',
