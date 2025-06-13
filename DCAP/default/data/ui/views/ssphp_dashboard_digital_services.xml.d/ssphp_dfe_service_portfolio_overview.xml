@@ -1,12 +1,12 @@
 {% if environment=="_DEV" %}
-<dashboard version="1.1" theme="dark" script="js/table_cell_backcolor.js">
+<dashboard version="1.1" theme="dark" script="js/table_cell_backcolor_service_overview.js">
 {% else %}
-<dashboard version="1.1" theme="dark" script="js/table_cell_backcolor.js">
+<dashboard version="1.1" theme="dark" script="js/table_cell_backcolor_service_overview.js">
 {% endif %}  
 
 
   <label>DfE Security Posture Continuous Assurance : Portfolio Overview Dashboard</label>
-  <description>{{environment}} v0.0.33</description>
+  <description>{{environment}} v0.0.40</description>
 
   <init>
 
@@ -356,7 +356,7 @@
 | eval compliant_line_width=round((100-(2*$tkn_margin$))*(('compliant_perc')/100)),
        compliant_line_non_width=(100-(2*$tkn_margin$))-'compliant_line_width',
        compliant_color=if(compliant_perc=100,$tkn_colour_compliant_line_100|s$,$tkn_colour_compliant_line|s$),
-       compliant_perc='compliant_perc'."%",
+       ```compliant_perc='compliant_perc'."%",```
        view=$tkn_view|s$,
        compliant_both=if('view'="abs",'compliant_abs','compliant_perc')
 
@@ -383,44 +383,200 @@
          -ms-flex:unset;
          flex:unset;
          }
-         .css_for_green{ 
-         background-color: $tkn_colour_green$ !important;
-         color:#000000 !important;
-         text-align: center !important;
-         font-size: 100% !important;
-         }
-         .css_for_orange{ 
-         background-color: $tkn_colour_orange$ !important;
-         color:#000000 !important;
-         text-align: center !important;
-         font-size: 100% !important;
-         }
-         .css_for_red{
-         background-color: $tkn_colour_red$ !important;
-         color:#000000 !important;
-         text-align: center !important;
-         font-size: 100% !important;
-         }
-         .css_for_blue{
-         background-color: $tkn_colour_blue$ !important;
-         color:#000000 !important;
-         text-align: center !important;
-         font-size: 100% !important;
-         }
+          .css_for_green{ 
+          background-color: #00FF00 !important;
+          color:#000000 !important;
+          font-size: 100% !important;
+          font-weight: bold !important;
+          text-align: center !important;
+          }
+          .css_for_green1{ 
+          background-color:rgb(72, 245, 72) !important;
+          color:#000000 !important;
+          font-size: 100% !important;
+          font-weight: bold !important;
+          text-align: center !important;
+          }
+          .css_for_green2{ 
+          background-color:rgb(108, 248, 108) !important;
+          color:#000000 !important;
+          font-size: 100% !important;
+          font-weight: bold !important;
+          text-align: center !important;
+          }
+          .css_for_green3{ 
+          background-color:rgb(134, 244, 134) !important;
+          color:#000000 !important;
+          font-size: 100% !important;
+          font-weight: bold !important;
+          text-align: center !important;
+          }
+          .css_for_green4{ 
+          background-color:rgb(159, 243, 159) !important;
+          color:#000000 !important;
+          font-size: 100% !important;
+          font-weight: bold !important;
+          text-align: center !important;
+          }
+          .css_for_green5{ 
+          background-color:rgb(179, 239, 179) !important;
+          color:#000000 !important;
+          font-size: 100% !important;
+          font-weight: bold !important;
+          text-align: center !important;
+          }
+          .css_for_green6{ 
+          background-color:rgb(201, 239, 201) !important;
+          color:#000000 !important;
+          font-size: 100% !important;
+          font-weight: bold !important;
+          text-align: center !important;
+          }
+          .css_for_orange{ 
+          background-color:rgb(255, 139, 18) !important;
+          color:#000000 !important;
+          font-size: 100% !important;
+          font-weight: bold !important;
+          text-align: center !important;
+          }
+          .css_for_orange1{ 
+          background-color:rgb(250, 145, 63) !important;
+          color:#000000 !important;
+          font-size: 100% !important;
+          font-weight: bold !important;
+          text-align: center !important;
+          }
+          .css_for_orange2{ 
+          background-color:rgb(255, 153, 77) !important;
+          color:#000000 !important;
+          font-size: 100% !important;
+          font-weight: bold !important;
+          text-align: center !important;
+          }
+          .css_for_orange3{ 
+          background-color:rgb(255, 173, 90) !important;
+          color:#000000 !important;
+          font-size: 100% !important;
+          font-weight: bold !important;
+          text-align: center !important;
+          }
+          .css_for_orange4{ 
+          background-color:rgb(255, 184, 114) !important;
+          color:#000000 !important;
+          font-size: 100% !important;
+          font-weight: bold !important;
+          text-align: center !important;
+          }
+          .css_for_orange5{ 
+          background-color:rgb(243, 173, 132) !important;
+          color:#000000 !important;
+          font-size: 100% !important;
+          font-weight: bold !important;
+          text-align: center !important;
+          }
+          .css_for_orange6{ 
+          background-color:rgb(247, 197, 167) !important;
+          color:#000000 !important;
+          font-size: 100% !important;
+          font-weight: bold !important;
+          text-align: center !important;
+          }
+          .css_for_red{
+          background-color: #FF0000!important;
+          color:#000000 !important;
+          font-size: 100% !important;
+          font-weight: bold !important;
+          text-align: center !important;
+          }
+          .css_for_red1{
+          background-color: #FF0000!important;
+          color:#000000 !important;
+          font-size: 100% !important;
+          font-weight: bold !important;
+          text-align: center !important;
+          }
+          .css_for_red2{
+          background-color:rgb(246, 22, 22)!important;
+          color:#000000 !important;
+          font-size: 100% !important;
+          font-weight: bold !important;
+          text-align: center !important;
+          }
+          .css_for_red3{
+          background-color:rgb(241, 45, 45)!important;
+          color:#000000 !important;
+          font-size: 100% !important;
+          font-weight: bold !important;
+          text-align: center !important;
+          }
+          .css_for_red4{
+          background-color:rgb(240, 67, 67)!important;
+          color:#000000 !important;
+          font-size: 100% !important;
+          font-weight: bold !important;
+          text-align: center !important;
+          }
+          .css_for_red5{
+          background-color:rgb(238, 94, 94)!important;
+          color:#000000 !important;
+          font-size: 100% !important;
+          font-weight: bold !important;
+          text-align: center !important;
+          }
+          .css_for_red6{
+          background-color:rgb(237, 114, 114)!important;
+          color:#000000 !important;
+          font-size: 100% !important;
+          font-weight: bold !important;
+          text-align: center !important;
+          }
+          .css_for_blue{
+          background-color: $tkn_colour_blue$ !important;
+          font-size: 100% !important;
+          font-weight: bold !important;
+          text-align: center !important;
+          }
       </style>
     </html>
   </row>
 
   <row depends="$slt$">
     <panel id="p_slt">
-      <table id="table3">
+      <table id="table1">
         <search base="base01">
           <query>
 
-| eval compliant_perc=if('compliant_perc'="100%",'compliant_perc'."|green",'compliant_perc'."|red"),
-       compliant_abs=if('compliant_perc'="100%",'compliant_abs'."|green",'compliant_abs'."|red")
+| eval compliant_abs=case(isnull(compliant_perc),'compliant_abs'."|blue",
+                           compliant_perc=100,'compliant_abs'."|green",
+                           compliant_perc>95,'compliant_abs'."|green",
+                           compliant_perc>90,'compliant_abs'."|green",
+                           compliant_perc>85,'compliant_abs'."|green",
+                           compliant_perc>80,'compliant_abs'."|green",
+                           compliant_perc>70,'compliant_abs'."|orange3",
+                           compliant_perc>60,'compliant_abs'."|orange3",
+                           compliant_perc>50,'compliant_abs'."|orange3",
+                           compliant_perc>40,'compliant_abs'."|orange3",
+                           compliant_perc>30,'compliant_abs'."|orange3",
+                           compliant_perc>20,'compliant_abs'."|orange3",
+                           compliant_perc>10,'compliant_abs'."|red",
+                           1==1,'compliant_abs'."|red"),
+        compliant_perc=case(isnull(compliant_perc),'compliant_perc'."%|blue",
+                           compliant_perc=100,'compliant_perc'."%|green",
+                           compliant_perc>95,'compliant_perc'."%|green",
+                           compliant_perc>90,'compliant_perc'."%|green",
+                           compliant_perc>85,'compliant_perc'."%|green",
+                           compliant_perc>80,'compliant_perc'."%|green",
+                           compliant_perc>70,'compliant_perc'."%|orange3",
+                           compliant_perc>60,'compliant_perc'."%|orange3",
+                           compliant_perc>50,'compliant_perc'."%|orange3",
+                           compliant_perc>40,'compliant_perc'."%|orange3",
+                           compliant_perc>30,'compliant_perc'."%|orange3",
+                           compliant_perc>20,'compliant_perc'."%|orange3",
+                           compliant_perc>10,'compliant_perc'."%|red",
+                           1==1,'compliant_perc'."%|red")
 
 | table ssphp.service.portfolio, compliant_perc, compliant_abs
+
 | rename ssphp.service.portfolio as Portfolio, compliant_perc as "Percentage Compliant", compliant_abs as "Compliant Resources"
 | search Portfolio!="Unassigned"
           </query>
