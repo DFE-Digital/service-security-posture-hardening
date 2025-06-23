@@ -1,7 +1,7 @@
 <dashboard version="1.1" theme="dark" script="js/table_cell_backcolor_service_overview.js">
 
 <label>DfE Security Posture Continuous Assurance : Service Overview Dashboard</label>
-<description>{{environment}} v0.0.54</description>
+<description>{{environment}} v0.0.55</description>
 
   <init>
     <unset token="tkn_main_ready"></unset>
@@ -581,11 +581,54 @@
            font-size: 100% !important;
            font-weight: bold;
            }
-           .css_for_blue{
-           background-color: $tkn_colour_blue$ !important;
-           font-size: 100% !important;
-           font-weight: bold;
-           }
+          .css_for_blue{
+          background-color: #2171b5 !important;
+          font-size: 100% !important;
+          font-weight: bold !important;
+          text-align: center !important;
+          }
+          .css_for_blue1{
+          background-color: #4292c6 !important;
+          font-size: 100% !important;
+          font-weight: bold !important;
+          text-align: center !important;
+          }
+          .css_for_blue2{
+          background-color: #6baed6 !important;
+          font-size: 100% !important;
+          font-weight: bold !important;
+          text-align: center !important;
+          }
+          .css_for_blue3{
+          background-color: #9ecae1 !important;
+          font-size: 100% !important;
+          font-weight: bold !important;
+          text-align: center !important;
+          }
+          .css_for_blue4{
+          background-color: #c6dbef !important;
+          font-size: 100% !important;
+          font-weight: bold !important;
+          text-align: center !important;
+          }
+          .css_for_blue5{
+          background-color: #deebf7 !important;
+          font-size: 100% !important;
+          font-weight: bold !important;
+          text-align: center !important;
+          }
+          .css_for_blue6{
+          background-color: #f7fbff !important;
+          font-size: 100% !important;
+          font-weight: bold !important;
+          text-align: center !important;
+          }
+          .css_for_null{
+          background-color: #6f7275 !important;
+          font-size: 100% !important;
+          font-weight: bold !important;
+          text-align: center !important;
+          }
         </style>
       </html>
 
@@ -713,7 +756,7 @@
                            VULNERABILITY_perc>10,"red1",
                            1==1,"red")
 ```
-
+```
 | eval POSTURE_colour=case(isnull(POSTURE_perc),"blue",
                            POSTURE_perc=100,"green",
                            POSTURE_perc>95,"green",
@@ -784,6 +827,38 @@
                            VULNERABILITY_perc>20,"orange3",
                            VULNERABILITY_perc>10,"red",
                            1==1,"red")
+```
+
+| eval POSTURE_colour=case(isnull(POSTURE_perc),"null",
+                           POSTURE_perc=100,"blue",
+                           POSTURE_perc>80,"blue1",
+                           POSTURE_perc>60,"blue2",
+                           POSTURE_perc>30,"blue3",
+                           1==1,"blue4"),
+       KUBERNETES_colour=case(isnull(KUBERNETES_perc),"null",
+                           KUBERNETES_perc=100,"blue",
+                           KUBERNETES_perc>80,"blue1",
+                           KUBERNETES_perc>60,"blue2",
+                           KUBERNETES_perc>30,"blue3",
+                           1==1,"blue4"),
+       REPOS_colour=case(isnull(REPOS_perc),"null",
+                           REPOS_perc=100,"blue",
+                           REPOS_perc>80,"blue1",
+                           REPOS_perc>60,"blue2",
+                           REPOS_perc>30,"blue3",
+                           1==1,"blue4"),
+       CODE_SCAN_colour=case(isnull(CODE_SCAN_perc),"null",
+                           CODE_SCAN_perc=100,"blue",
+                           CODE_SCAN_perc>80,"blue1",
+                           CODE_SCAN_perc>60,"blue2",
+                           CODE_SCAN_perc>30,"blue3",
+                           1==1,"blue4"),
+       VULNERABILITY_colour=case(isnull(VULNERABILITY_perc),"null",
+                           VULNERABILITY_perc=100,"blue",
+                           VULNERABILITY_perc>80,"blue1",
+                           VULNERABILITY_perc>60,"blue2",
+                           VULNERABILITY_perc>30,"blue3",
+                           1==1,"blue4")
 
 
 | eval POSTURE='POSTURE'."|".'POSTURE_colour',

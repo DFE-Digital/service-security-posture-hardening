@@ -531,7 +531,49 @@
           text-align: center !important;
           }
           .css_for_blue{
-          background-color: $tkn_colour_blue$ !important;
+          background-color: #2171b5 !important;
+          font-size: 100% !important;
+          font-weight: bold !important;
+          text-align: center !important;
+          }
+          .css_for_blue1{
+          background-color: #4292c6 !important;
+          font-size: 100% !important;
+          font-weight: bold !important;
+          text-align: center !important;
+          }
+          .css_for_blue2{
+          background-color: #6baed6 !important;
+          font-size: 100% !important;
+          font-weight: bold !important;
+          text-align: center !important;
+          }
+          .css_for_blue3{
+          background-color: #9ecae1 !important;
+          font-size: 100% !important;
+          font-weight: bold !important;
+          text-align: center !important;
+          }
+          .css_for_blue4{
+          background-color: #c6dbef !important;
+          font-size: 100% !important;
+          font-weight: bold !important;
+          text-align: center !important;
+          }
+          .css_for_blue5{
+          background-color: #deebf7 !important;
+          font-size: 100% !important;
+          font-weight: bold !important;
+          text-align: center !important;
+          }
+          .css_for_blue6{
+          background-color: #f7fbff !important;
+          font-size: 100% !important;
+          font-weight: bold !important;
+          text-align: center !important;
+          }
+          .css_for_null{
+          background-color: #6f7275 !important;
           font-size: 100% !important;
           font-weight: bold !important;
           text-align: center !important;

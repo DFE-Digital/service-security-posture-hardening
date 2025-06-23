@@ -99,8 +99,32 @@ require([
             else if (val == "red6") {
                 $td.addClass("range-cell").addClass("css_for_red6")
             } 
-            else {
+            else if (val == "blue") {
                 $td.addClass("range-cell").addClass("css_for_blue")
+            } 
+            else if (val == "blue1") {
+                $td.addClass("range-cell").addClass("css_for_blue1")
+            } 
+            else if (val == "blue2") {
+                $td.addClass("range-cell").addClass("css_for_blue2")
+            } 
+            else if (val == "blue3") {
+                $td.addClass("range-cell").addClass("css_for_blue3")
+            } 
+            else if (val == "blue4") {
+                $td.addClass("range-cell").addClass("css_for_blue4")
+            } 
+            else if (val == "blue5") {
+                $td.addClass("range-cell").addClass("css_for_blue5")
+            } 
+            else if (val == "blue6") {
+                $td.addClass("range-cell").addClass("css_for_blue6")
+            } 
+            else if (val == "null") {
+                $td.addClass("range-cell").addClass("css_for_null")
+            } 
+            else {
+                $td.addClass("range-cell").addClass("css_for_null")
             }
             $td.text(label).addClass("string");
         }
