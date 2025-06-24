@@ -9,7 +9,14 @@ require([
     var CustomRangeRenderer = TableView.BaseCellRenderer.extend({
         canRender: function (cell) {
             //return true;
-            return _(['POSTURE',
+            return _(['Percentage Compliant',
+                      'Compliant Resources',
+                      'Azure Posture Configuration',
+                      'Kubernetes AKS Configuration',
+                      'Repository Configuration',
+                      'Code Scanning Alerts',
+                      'VM Vulnerability Alerts',
+                      'POSTURE',
                       'KUBERNETES',
                       'VULNERABILITY',
                       'REPOS',
@@ -32,6 +39,48 @@ require([
             if (val == "green") {
                 $td.addClass("range-cell").addClass("css_for_green")
             }
+            else if (val == "green1") {
+                $td.addClass("range-cell").addClass("css_for_green1")
+            } 
+            else if (val == "green2") {
+                $td.addClass("range-cell").addClass("css_for_green2")
+            } 
+            else if (val == "green3") {
+                $td.addClass("range-cell").addClass("css_for_green3")
+            } 
+            else if (val == "green4") {
+                $td.addClass("range-cell").addClass("css_for_green4")
+            } 
+            else if (val == "green5") {
+                $td.addClass("range-cell").addClass("css_for_green5")
+            } 
+            else if (val == "green6") {
+                $td.addClass("range-cell").addClass("css_for_green6")
+            } 
+            else if (val == "orange") {
+                $td.addClass("range-cell").addClass("css_for_orange")
+            } 
+            else if (val == "orange1") {
+                $td.addClass("range-cell").addClass("css_for_orange1")
+            } 
+            else if (val == "orange2") {
+                $td.addClass("range-cell").addClass("css_for_orange2")
+            } 
+            else if (val == "orange3") {
+                $td.addClass("range-cell").addClass("css_for_orange3")
+            } 
+            else if (val == "orange4") {
+                $td.addClass("range-cell").addClass("css_for_orange4")
+            } 
+            else if (val == "orange5") {
+                $td.addClass("range-cell").addClass("css_for_orange5")
+            } 
+            else if (val == "orange6") {
+                $td.addClass("range-cell").addClass("css_for_orange6")
+            } 
+            else if (val == "red") {
+                $td.addClass("range-cell").addClass("css_for_red")
+            } 
             else if (val == "red1") {
                 $td.addClass("range-cell").addClass("css_for_red1")
             } 
@@ -50,17 +99,32 @@ require([
             else if (val == "red6") {
                 $td.addClass("range-cell").addClass("css_for_red6")
             } 
-            else if (val == "red7") {
-                $td.addClass("range-cell").addClass("css_for_red7")
+            else if (val == "blue") {
+                $td.addClass("range-cell").addClass("css_for_blue")
             } 
-            else if (val == "red8") {
-                $td.addClass("range-cell").addClass("css_for_red8")
+            else if (val == "blue1") {
+                $td.addClass("range-cell").addClass("css_for_blue1")
             } 
-            else if (val == "red9") {
-                $td.addClass("range-cell").addClass("css_for_red9")
+            else if (val == "blue2") {
+                $td.addClass("range-cell").addClass("css_for_blue2")
+            } 
+            else if (val == "blue3") {
+                $td.addClass("range-cell").addClass("css_for_blue3")
+            } 
+            else if (val == "blue4") {
+                $td.addClass("range-cell").addClass("css_for_blue4")
+            } 
+            else if (val == "blue5") {
+                $td.addClass("range-cell").addClass("css_for_blue5")
+            } 
+            else if (val == "blue6") {
+                $td.addClass("range-cell").addClass("css_for_blue6")
+            } 
+            else if (val == "null") {
+                $td.addClass("range-cell").addClass("css_for_null")
             } 
             else {
-                $td.addClass("range-cell").addClass("css_for_blue")
+                $td.addClass("range-cell").addClass("css_for_null")
             }
             $td.text(label).addClass("string");
         }
