@@ -6,7 +6,7 @@
 
 
 <label>DfE Security Posture Continuous Assurance : Service Posture Dashboard</label>
-<description>{{environment}} v0.0.16</description>
+<description>{{environment}} v1.0.0</description>
   
   <init>
     <set token="tkn_font_size_2">400</set>
