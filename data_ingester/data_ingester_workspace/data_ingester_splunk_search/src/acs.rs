@@ -4,8 +4,9 @@ use reqwest::{
     Client,
 };
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use tokio::time::Duration;
-use tracing::{debug, info};
+use tracing::{debug, error, info};
 
 /// A simple client for Splunk ACS
 /// https://docs.splunk.com/Documentation/SplunkCloud/9.1.2312/Config/ACSIntro
@@ -20,6 +21,13 @@ pub struct Acs {
 #[derive(Debug, Serialize, Deserialize, Default)]
 pub struct IpAllowList {
     subnets: Vec<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum IpAllowListResponse {
+    Valid(IpAllowList),
+    Invalid(Value),
 }
 
 impl IpAllowList {
@@ -80,14 +88,42 @@ impl Acs {
             .build()
             .context("Build request for ACS list IP Allow list")?;
         debug!("Acs request: {:?}", &request);
-        let ip_allow_list = self
+
+        let response = self
             .client
             .execute(request)
             .await
-            .context("Sending request for ACS list IP allow list")?
+            .context("Sending request for ACS list IP allow list")?;
+
+        let status = response.status();
+
+        if !status.is_success() {
+            let headers = format!("{:?}", &response);
+            let body = response
+                .text()
+                .await
+                .context("Failed to get failed response body")?;
+            anyhow::bail!(
+                "Failed to request IpAllowList list\n\n{:?}\n{:?}\n{:?}",
+                self.acs_error_codes(status.into()),
+                headers,
+                body
+            );
+        }
+
+        let ip_allow_list: IpAllowListResponse = response
             .json()
             .await
             .context("Parsing ACS List IP response as IpAllowList")?;
+
+        let ip_allow_list = match ip_allow_list {
+            IpAllowListResponse::Valid(ip_allow_list) => ip_allow_list,
+            IpAllowListResponse::Invalid(invalid) => {
+                error!(invalid_response=?invalid, "Error while Decoding ACS response");
+                anyhow::bail!("Error while Decoding ACS response: {}", invalid);
+            }
+        };
+
         Ok(ip_allow_list)
     }
 
@@ -270,6 +306,23 @@ impl Acs {
             .await
             .context("Waiting for ip allow list to update")?;
         Ok(())
+    }
+
+    fn acs_error_codes(&self, error: u16) -> &str {
+        match error {
+            200 => "Request completed successfully.",
+            201 => "Create request completed successfully.",
+            202 => "Request accepted for processing, but processing has not completed.",
+            400 => "Request error. See response body for details.",
+            401 => "Authentication failure, invalid access credentials.",
+            402 => "In-use Splunk software license disables this feature.",
+            403 => "Insufficient permission.",
+            404 => "Requested endpoint does not exist.",
+            409 => "Object already exists.",
+            500 => "Unspecified internal server error. See response body for details.",
+            503 => "Service Temporarily Unavailable, Please Try again.",
+            _ => "Unknown HTTP status code",
+        }
     }
 }
 
