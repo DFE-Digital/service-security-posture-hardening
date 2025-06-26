@@ -236,8 +236,11 @@ pub(crate) struct Message {
     pub event: String,
 }
 
-impl SplunkTrait for  Splunk {
-    fn new(host: &str, token: &str, hec_acknowledgment: bool) -> Result<Self> where Self: Sized {
+impl SplunkTrait for Splunk {
+    fn new(host: &str, token: &str, hec_acknowledgment: bool) -> Result<Self>
+    where
+        Self: Sized,
+    {
         let url = format!("https://{}", host);
 
         let client = Self::new_request_client(token, hec_acknowledgment)
@@ -264,14 +267,16 @@ impl SplunkTrait for  Splunk {
             send_tx,
         })
     }
-    
-    fn send_tx(&self) -> &Sender<HecEvent>  {
+
+    fn send_tx(&self) -> &Sender<HecEvent> {
         &self.send_tx
     }
 }
 
 pub trait SplunkTrait {
-    fn new(host: &str, token: &str, hec_acknowledgment: bool) -> Result<Self> where Self: Sized;
+    fn new(host: &str, token: &str, hec_acknowledgment: bool) -> Result<Self>
+    where
+        Self: Sized;
 
     /// Create a Request Client for Splunk
     fn new_request_client(token: &str, hec_acknowledgment: bool) -> Result<Client> {
@@ -285,7 +290,7 @@ pub trait SplunkTrait {
         Ok(client)
     }
 
-    fn send_tx(&self) -> &Sender<HecEvent> ;
+    fn send_tx(&self) -> &Sender<HecEvent>;
 
     fn headers(token: &str, hec_acknowledgment: bool) -> Result<HeaderMap> {
         let mut headers = HeaderMap::new();
@@ -301,22 +306,29 @@ pub trait SplunkTrait {
         Ok(headers)
     }
 
-    fn send_batch<I: IntoIterator<Item = HecEvent> + std::marker::Send + Sync>(&self, events: I) -> impl std::future::Future<Output = Result<()>> + Send + Sync
-    where Self: Sync, <I as IntoIterator>::IntoIter: Send + Sync{
+    fn send_batch<I: IntoIterator<Item = HecEvent> + std::marker::Send + Sync>(
+        &self,
+        events: I,
+    ) -> impl std::future::Future<Output = Result<()>> + Send + Sync
+    where
+        Self: Sync,
+        <I as IntoIterator>::IntoIter: Send + Sync,
+    {
         async {
-        for event in events {
-            match self.send_tx().reserve().await {
-                Ok(permit) => {
-                    permit.send(event);
-                }
-                Err(err) => {
-                    error!(operation="SplunkHec", operation="Reserve HecBatch on self.send_tx failed", error=?err);
-                    panic!("FAIED to reserve space for Splunk Batch on send_tx channel");
+            for event in events {
+                match self.send_tx().reserve().await {
+                    Ok(permit) => {
+                        permit.send(event);
+                    }
+                    Err(err) => {
+                        error!(operation="SplunkHec", operation="Reserve HecBatch on self.send_tx failed", error=?err);
+                        panic!("FAIED to reserve space for Splunk Batch on send_tx channel");
+                    }
                 }
             }
+            Ok(())
         }
-        Ok(())
-    }}
+    }
 }
 
 /// Run a future to completion and send the results to Splunk.
