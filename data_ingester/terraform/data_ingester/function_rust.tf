@@ -22,7 +22,7 @@ resource "azurerm_linux_function_app" "SSPHP_rust" {
   storage_account_access_key = azurerm_storage_account.tfstate.primary_access_key
   service_plan_id            = azurerm_service_plan.SSPHP_rust.id
   enabled                    = true
-  builtin_logging_enabled    = true
+  builtin_logging_enabled    = false
 
   identity {
     type = "SystemAssigned"
