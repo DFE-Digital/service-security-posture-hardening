@@ -1,4 +1,4 @@
-<dashboard theme="dark" version="1.1" hideFilters="true" stylesheet="ssphp{{environment}}.css" script="js/addtags.js, js/table_cell_backcolor_multivalue.js">
+<dashboard theme="light" version="1.1" hideFilters="true" stylesheet="ssphp{{environment}}.css" script="js/addtags.js, js/table_cell_backcolor_multivalue.js">
 
 
 <label>DfE Security Posture Continuous Assurance : Service Control Detail Dashboard</label>

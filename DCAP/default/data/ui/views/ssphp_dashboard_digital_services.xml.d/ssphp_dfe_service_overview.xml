@@ -1,4 +1,4 @@
-<dashboard version="1.1" theme="dark" script="js/table_cell_backcolor_service_overview.js">
+<dashboard version="1.1" theme="light" script="js/table_cell_backcolor_service_overview.js">
 
 <label>DfE Security Posture Continuous Assurance : Service Overview Dashboard</label>
 <description>{{environment}} v1.0.0</description>
