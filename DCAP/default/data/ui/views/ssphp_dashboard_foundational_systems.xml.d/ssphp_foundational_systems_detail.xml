@@ -1,8 +1,8 @@
-<dashboard theme="dark" version="1.1" hideFilters="true" stylesheet="ssphp{{environment}}.css" script="js/addtags.js, js/table_cell_backcolor_multivalue.js">
+<dashboard theme="light" version="1.1" hideFilters="true" stylesheet="ssphp{{environment}}.css" script="js/addtags.js, js/table_cell_backcolor_multivalue.js">
 
 
   <label>Security Posture Continuous Assurance : Control Detail Dashboard</label>
-  <description>{{environment}} v3.3.0</description>
+  <description>{{environment}} v3.3.2</description>
   
   <init>
     <unset token="tkn_show_dashboard"></unset>
@@ -24,9 +24,13 @@
 
     <set token="tkn_colour_tile">pebble</set>
     <set token="tkn_colour_null_line">#85F415</set>
-    <set token="tkn_colour_text">#bebebe</set>
+<!-- #<set token="tkn_colour_text">#bebebe</set># -->
+    <set token="tkn_colour_text">#000000</set>
     <set token="tkn_margin">25</set>
     <set token="tkn_compliant_line_non_width">50</set>
+  
+    <set token="key_colour">#000000</set>
+    <set token="value_colour">#000000</set>
   </init>
 
   <fieldset submitButton="false">
@@ -197,10 +201,10 @@
       <html>
         <span class="header_r0" style="color:	$tkn_colour_text$">$tkn_fs$ $tkn_notfs$</span>
         <br></br>
-        <span class="header_r1" style="color:	darkcyan">CIS Title</span>
+        <span class="header_r1" style="color:	$key_colour$;">CIS TITLE</span>
         <span class="header_r2">$tkn_control_title$</span>
         <br></br>
-        <span class="header_r1" style="color:	darkcyan">CIS Profile Applicability</span>
+        <span class="header_r1" style="color:	$key_colour$;">CIS PROFILE APPLICABILITY</span>
         <span class="header_r2">$tkn_cis_profile$</span>
         <br></br>
       </html>
@@ -212,16 +216,16 @@
         <br></br>
         <span class="header_r1" style="color:	$tkn_colour_text$">DfE Benchmark</span>
         <br></br>
-        <span class="header_r1" style="color:	darkcyan">Title</span>
+        <span class="header_r1" style="color:	$key_colour$;">TITLE</span>
         <span class="header_r2">$tkn_control_title$</span>
         <br></br>
-        <span class="header_r1" style="color:	darkcyan">Description</span>
+        <span class="header_r1" style="color:	$key_colour$;">DESCRIPTION</span>
         <span class="header_r2">$tkn_control_description$</span>
         <br></br>
-        <span class="header_r1" style="color:	darkcyan">Rationale</span>
+        <span class="header_r1" style="color:	$key_colour$;">RATIONALE</span>
         <span class="header_r2">$tkn_control_rationale$</span>
         <br></br>
-        <span class="header_r1" style="color:	darkcyan">Impact</span>
+        <span class="header_r1" style="color:	$key_colour$;">IMPACT</span>
         <span class="header_r2">$tkn_control_impact$</span>
         <br></br>
       </html>
@@ -256,7 +260,7 @@
 
     <panel>
       <html>
-        <span class="header_r1" style="color:	darkcyan">Score</span>
+        <span class="header_r1" style="color:	$key_colour$;">SCORE</span>
         <br></br>
         <div class="absolute" style="background: $tkn_colour_tile$;">$tkn_score$</div>
         <div style="display: flex;">
@@ -269,16 +273,16 @@
 
     <panel>
       <html>
-        <span class="header_r1" style="color:	darkcyan">Tests in this Control</span>
+        <span class="header_r1" style="color:	$key_colour$;">TESTS IN THIS CONTROL</span>
         <span class="header_r2">$tkn_denominator$</span>
         <br></br>
-        <span class="header_r1" style="color:	darkcyan">Tests Failed in this Control</span>
+        <span class="header_r1" style="color:	$key_colour$;">TESTS FAILED IN THIS CONTROL</span>
         <span class="header_r2">$tkn_numerator$</span>
         <br></br>
-        <span class="header_r1" style="color:	darkcyan">Control Type</span>
+        <span class="header_r1" style="color:	$key_colour$;">CONTROL TYPE</span>
         <span class="header_r2">$tkn_ciso_priority$</span>
         <br></br>
-        <span class="header_r1" style="color:	darkcyan">Compliance Status</span>
+        <span class="header_r1" style="color:	$key_colour$;">COMPLIANCE STATUS</span>
         <span class="header_r2" style="color:$tkn_score_color$">$tkn_compliance_status$</span>   
         <br></br>
       </html>
@@ -286,19 +290,19 @@
 
     <panel>
       <html>
-        <span class="header_r1" style="color:	darkcyan">Thresholds</span>
+        <span class="header_r1" style="color:	$key_colour$;">THRESHOLDS</span>
         <span class="header_r2">Red : $tkn_red$</span>
         <span class="header_r2">Orange : $tkn_orange$</span>
         <span class="header_r2">Green : $tkn_green$</span>
         <br></br>
-        <span class="header_r1" style="color:	darkcyan">Score Weighting</span>
+        <span class="header_r1" style="color:	$key_colour$;">SCORE WEIGHTING</span>
         <span class="header_r2">Expectancy : $tkn_risk_expectancy$</span>
         <span class="header_r2">Impact : $tkn_risk_impact$</span>
         <br></br>
-        <span class="header_r1" style="color:	darkcyan">Last Evaluated</span>
+        <span class="header_r1" style="color:	$key_colour$;">LAST EVALUATED</span>
         <span class="header_r2">$tkn_last_run$</span>
         <br></br>
-        <span class="header_r1" style="color:	darkcyan">Status Last Evaluated</span>
+        <span class="header_r1" style="color:	$key_colour$;">STATUS LAST EVALUATED</span>
         <span class="header_r2">$tkn_last_run_status$</span>
       </html>
     </panel>
@@ -343,15 +347,15 @@
             width:50% !important;
           }
         </style>
-        <span class="header_r1" style="color:	$tkn_colour_text$">CIS Foundations Benchmark</span>
+        <span class="header_r1" style="color:	$tkn_colour_text$; font-weight: bold;">CIS FOUNDATIONS BENCHMARK</span>
         <br></br>
-        <span class="header_r1" style="color:	darkcyan">CIS Description</span>
+        <span class="header_r1" style="color:	$key_colour$;">CIS DESCRIPTION</span>
         <span class="header_r2">$tkn_control_description$</span>
         <br></br>
-        <span class="header_r1" style="color:	darkcyan">CIS Rationale</span>
+        <span class="header_r1" style="color:	$key_colour$;">CIS RATIONALE</span>
         <span class="header_r2">$tkn_control_rationale$</span>
         <br></br>
-        <span class="header_r1" style="color:	darkcyan">CIS Impact</span>
+        <span class="header_r1" style="color:	$key_colour$;">CIS IMPACT</span>
         <span class="header_r2">$tkn_control_impact$</span>
         <br></br>
         <a href="$tkn_doc_link$" target="blank">$tkn_doc_name$</a>
@@ -366,16 +370,16 @@
             width:25% !important;
           }
         </style>
-        <span class="header_r1" style="color:	darkcyan">IG1 Controls</span>
+        <span class="header_r1" style="color:	$key_colour$;">IG1 CONTROLS</span>
         <span class="header_r2">$tkn_cis_ig1$</span>
         <br></br>
-        <span class="header_r1" style="color:	darkcyan">IG2 Controls</span>
+        <span class="header_r1" style="color:	$key_colour$;">IG2 CONTROLS</span>
         <span class="header_r2">$tkn_cis_ig2$</span>
         <br></br>
-        <span class="header_r1" style="color:	darkcyan">IG3 Controls</span>
+        <span class="header_r1" style="color:	$key_colour$;">IG3 CONTROLS</span>
         <span class="header_r2">$tkn_cis_ig3$</span>
         <br></br>
-        <span class="header_r1" style="color:	darkcyan">CIS M365 Benchmark Version 3 Control</span>
+        <span class="header_r1" style="color:	$key_colour$;">CIS M365 BENCHMARK VERSION 3 CONTROL</span>
         <span class="header_r2">$tkn_cis_v3_control$</span>
       </html>
     </panel>
@@ -388,18 +392,18 @@
             width:25% !important;
           }
         </style>
-        <span class="header_r1" style="color:	$tkn_colour_text$">CIS Navigator Critical Security Controls</span>
+        <span class="header_r1" style="color:	$tkn_colour_text$; font-weight: bold;">CIS NAVIGATOR CRITICAL SECURITY CONTROLS</span>
         <br></br>
-        <span class="header_r1" style="color:	darkcyan">Safeguard</span>
+        <span class="header_r1" style="color:	$key_colour$;">SAFEGUARD</span>
         <span class="header_r2">$tkn_cis_controls$</span>
         <br></br>
-        <span class="header_r1" style="color:	darkcyan">Asset Type</span>
+        <span class="header_r1" style="color:	$key_colour$;">ASSET TYPE</span>
         <span class="header_r2">$tkn_asset_type$</span>
         <br></br>
-        <span class="header_r1" style="color:	darkcyan">Title</span>
+        <span class="header_r1" style="color:	$key_colour$;">TITLE</span>
         <span class="header_r2">$tkn_title$</span>
         <br></br>
-        <span class="header_r1" style="color:	darkcyan">Description</span>
+        <span class="header_r1" style="color:	$key_colour$;">DESCRIPTION</span>
         <span class="header_r2">$tkn_description$</span>
       </html>
     </panel>
@@ -413,8 +417,8 @@
   <row depends="$tkn_show_dashboard$">
     <panel>
       <html>
-        <!-- ## <span class="header_r1" style="color:	darkcyan">Scoring Narrative</span>## -->
-        <span class="header_r1" style="color:	darkcyan">Compliance</span>
+        <!-- ## <span class="header_r1" style="color:	$key_colour$">Scoring Narrative</span>## -->
+        <span class="header_r1" style="color:	$key_colour$; font-weight: bold;">COMPLIANCE</span>
         <span class="header_r2" style="white-space:pre-line">$tkn_scoring_narrative$</span>
         <br></br>
       </html>

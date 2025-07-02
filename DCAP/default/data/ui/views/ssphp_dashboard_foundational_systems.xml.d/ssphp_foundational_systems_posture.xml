@@ -1,19 +1,17 @@
-{% if environment=="_DEV" %}
-<dashboard version="1.1" theme="dark" hideFilters="true">
-{% else %}
-<dashboard version="1.1" theme="dark" hideFilters="true">
-{% endif %}  
+<dashboard version="1.1" theme="light" hideFilters="true">
 
 
   <label>Foundational Systems : Security Posture Compliance Status Dashboard</label>
-  <description>{{environment}} v6.0.7</description>
+  <description>{{environment}} v6.0.9</description>
 
   <init>
     <set token="tkn_colour_tile">pebble</set>
-    <set token="tkn_colour_compliant_line">#ECECEC</set>
+<!-- #<set token="tkn_colour_compliant_line">#ECECEC</set># -->
+    <set token="tkn_colour_compliant_line">#bebebe</set>
     <set token="tkn_colour_compliant_line_100">#85F415</set>
     <set token="tkn_colour_non_compliant_line">#FF4B4B</set>
-    <set token="tkn_colour_text">#bebebe</set>
+<!-- #<set token="tkn_colour_text">#bebebe</set># -->
+    <set token="tkn_colour_text">#000000</set>
     <set token="tkn_margin">20</set>
     <unset token="tkn_ready"></unset>
   </init>
@@ -176,7 +174,7 @@
           <div class="line" style="width: $tkn_margin$%; border-bottom: 5px solid $tkn_colour_tile$;"/>
         </div>
         <div class="undervalue" style="background:$tkn_colour_tile$;">
-          <a href="ssphp_foundational_systems_service?form.tkn__service=dns" target="_blank">DNS</a>
+          <a href="ssphp_foundational_systems_service?form.tkn__service=dns" target="_blank">Route53 AWS</a>
         </div>
       </html>
     </panel>
