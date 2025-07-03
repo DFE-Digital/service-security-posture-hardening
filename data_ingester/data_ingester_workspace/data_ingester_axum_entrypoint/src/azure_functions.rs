@@ -85,12 +85,12 @@ pub(crate) async fn start_server(tx: Sender<()>) -> Result<()> {
 }
 
 /// Health check
-async fn get_health_check(State(state): State<Arc<AppState>>) -> Json<AzureInvokeResponse> {
+async fn get_health_check(headers: HeaderMap, State(state): State<Arc<AppState>>) -> Json<AzureInvokeResponse> {
     info!("Health check");
     let stats = state.stats.read().await;
     let app_state_health_check = AppStateHealthCheck::from((&state, &(*stats)));
 
-    info!(health_state = app_state_health_check.as_value());
+    info!(health_state = app_state_health_check.as_value(), headers=?headers);
 
     let app_state_health_check_json = serde_json::to_string(&app_state_health_check)
         .unwrap_or_else(|_| "ERROR converting AppState to Json".to_string());
@@ -100,6 +100,7 @@ async fn get_health_check(State(state): State<Arc<AppState>>) -> Json<AzureInvok
             "Health Check".to_string(),
             format!("GIT_HASH: {}", env!("GIT_HASH")),
             app_state_health_check_json,
+            format!("Headers: {:?}", headers)
         ],
         return_value: None,
     })
