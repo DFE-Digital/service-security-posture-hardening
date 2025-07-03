@@ -1,7 +1,7 @@
 <dashboard version="1.1" theme="dark">
 
 <label>DCAP Healthcheck Dashboard</label>
-<description>{{environment}} v3.2.5</description>
+<description>{{environment}} v3.3.0</description>
 
 
 
@@ -70,8 +70,85 @@
     <latest>now</latest>
     <sampleRatio>1</sampleRatio>
   </search>
-  
-  
+
+
+
+<!-- *************************************************************************************************************** -->
+<!-- *************************** ROW FOR INGESTION SUCCESS FOR EVERY SOURCE / SOURCETYPE *************************** -->
+<!-- *************************************************************************************************************** -->
+
+  <row>
+    <panel>
+      <title>AWS Data Ingestion</title>
+      <single>
+        <search>
+          <query>
+| inputlookup ssphp_data_dependencies_by_use_case.csv
+| rename Source as source
+
+| join type=outer source 
+    [| search index="ssphp_metrics_data" sourcetype="ssphp:aws:json" earliest=@d latest=now
+| eval date=strftime('SSPHP_RUN',"%Y-%m-%d"),
+       date_time=strftime('SSPHP_RUN',"%Y-%m-%d %H:%M:%S"),
+       index_time=strftime('_indextime',"%Y-%m-%d %H:%M:%S"),
+       event_time=strftime('_time',"%Y-%m-%d %H:%M:%S"),
+       latency_to_splunk='_indextime'-'SSPHP_RUN',
+       latency_to_index='_indextime'-'_time'
+| table source, SSPHP_RUN, date, date_time, event_time, index_time, latency_to_splunk, latency_to_index
+| stats count, dc(SSPHP_RUN) as run_count, values(SSPHP_RUN) as SSPHP_RUN, max(*) as * by source
+| rename * as today_*, today_source as source]
+
+| join type=outer source
+    [| search index="ssphp_metrics_data" sourcetype="ssphp:aws:json" earliest=-60d latest=@d
+     | eval date=strftime('SSPHP_RUN',"%Y-%m-%d"),
+            date_time=strftime('SSPHP_RUN',"%Y-%m-%d %H:%M:%S"),
+            index_time=strftime('_indextime',"%Y-%m-%d %H:%M:%S"),
+            event_time=strftime('_time',"%Y-%m-%d %H:%M:%S"),
+            latency_to_splunk='_indextime'-'SSPHP_RUN',
+            latency_to_index='_indextime'-'_time'
+     | fields source, SSPHP_RUN, date, date_time, event_time, index_time, latency_to_splunk, latency_to_index
+     | stats count, dc(SSPHP_RUN) as run_count, values(SSPHP_RUN) as SSPHP_RUN, max(*) as * by source, date
+     | stats max(count) as hist_max_count, min(count) as hist_min_count, avg(count) as hist_avg_count by source
+     | eval hist_avg_count=round('hist_avg_count',2)
+     | table source, hist_max_count, hist_min_count, hist_avg_count]
+     
+| fields SavedSearch, source, Index, Sourcetype, today_*, hist_*
+| stats values(*) as * by source
+| table Index, Sourcetype, source, SavedSearch, today_*, hist_*
+| eval good=if(isnull(today_SSPHP_RUN),1,0),
+       good=if(mvcount(today_SSPHP_RUN)=1,'good','good'+2),
+       good=if(isnotnull(today_count) AND 'today_count'&gt;0,'good','good'+4),
+       good=if(isnotnull(today_count) AND 'today_count'&gt;('hist_avg_count'*.75) AND 'today_count'&lt;('hist_avg_count'*1.25),'good','good'+8),
+       good=if(isnotnull(today_count) AND 'today_count'&gt;('hist_max_count'*2),'good'+16,'good'),
+       good=if(isnotnull(today_count) AND 'today_count'&lt;('hist_min_count'/2),'good'+32,'good')
+
+| where good>0
+| stats count
+          </query>
+        </search>
+
+    <option name="drilldown">none</option>
+    <option name="colorBy">value</option>
+    <option name="colorMode">block</option>
+    <option name="drilldown">none</option>
+    <option name="numberPrecision">0</option>
+    <option name="rangeColors">["0x65a637","0x6db7c6","0xf7bc38","0xf58f39","0xd93f3c"]</option>
+    <option name="rangeValues">[0,30,70,100]</option>
+    <option name="showSparkline">1</option>
+    <option name="showTrendIndicator">1</option>
+    <option name="trellis.enabled">0</option>
+    <option name="trellis.scales.shared">1</option>
+    <option name="trellis.size">medium</option>
+    <option name="trendColorInterpretation">standard</option>
+    <option name="trendDisplayMode">absolute</option>
+    <option name="unitPosition">after</option>
+    <option name="useColors">0</option>
+    <option name="useThousandSeparators">1</option>
+      </single>
+    </panel>
+  </row>
+
+
 
 
 
@@ -724,6 +801,7 @@ index="ssphp_metrics_data" earliest=-7d@d latest=now
       </table>
     </panel>
   </row>
+
 
   
 </dashboard>
