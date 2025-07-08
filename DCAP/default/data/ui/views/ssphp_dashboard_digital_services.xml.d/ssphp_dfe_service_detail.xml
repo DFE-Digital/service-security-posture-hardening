@@ -1,8 +1,8 @@
-<dashboard theme="dark" version="1.1" hideFilters="true" stylesheet="ssphp{{environment}}.css" script="js/addtags.js, js/table_cell_backcolor_multivalue.js">
+<dashboard theme="light" version="1.1" hideFilters="true" stylesheet="ssphp{{environment}}.css" script="js/addtags.js, js/table_cell_backcolor_multivalue.js">
 
 
 <label>DfE Security Posture Continuous Assurance : Service Control Detail Dashboard</label>
-<description>{{environment}} v6.1.24</description>
+<description>{{environment}} v1.0.4</description>
   
   <init>
     <unset token="tkn_ready_event"></unset>
@@ -11,10 +11,12 @@
     <unset token="tkn_ready_highlight"></unset>
 
     <set token="tkn_colour_tile">pebble</set>
-    <set token="tkn_colour_text">#bebebe</set>
+<!-- #<set token="tkn_colour_text">#bebebe</set># -->
+    <set token="tkn_colour_text">#000000</set>
     <set token="tkn_margin">40</set>
     <set token="tkn_margin_100">20</set>
-    <set token="tkn_colour_compliant_line">#ECECEC</set>
+<!-- #<set token="tkn_colour_compliant_line">#ECECEC</set># -->
+    <set token="tkn_colour_compliant_line">#bebebe</set>
     <set token="tkn_colour_non_compliant_line">#FF4B4B</set>
     <set token="tkn_font_size_1">900</set>
 
@@ -90,6 +92,13 @@
         }
         .lightblue{
           color:#ADD8E6 !important;
+        }
+        .key_colour{
+          color:#000000 !important;
+          font-weight: bold !important;
+        }
+        .value_colour{
+          color:#000000 !important;
         }
       </style>
     </html>
@@ -172,7 +181,7 @@
             text-align: center !important;
             color: $tkn_colour_text$ !important;
             font-size: $tkn_font_size_1$% !important;
-            font-weight: bold;
+            font-weight: bold !important;
             text-align: center !important;
             line-height: 1.5 !important;
           }
@@ -191,9 +200,9 @@
             line-height: 1.5 !important;
           }
           .line{
-            color: $tkn_colour_tile$;
-            height: 4px;
-            margin-bottom: 20px;
+            color: $tkn_colour_tile$ !important;
+            height: 4px !important;
+            margin-bottom: 20px !important;
           }
         </style>
       </html>
@@ -205,9 +214,9 @@
       <html>
         <div class="absolute" style="background: $tkn_colour_tile$;">$tkn_score$</div>
         <div style="display: flex;">
-          <div class="line" style="width: $tkn_margin$%; border-bottom: 5px solid $tkn_colour_tile$;"/>
-          <div class="line" style="width: $tkn_margin_100$%; border-bottom: 5px solid $tkn_score_Line_colour$;"/>
-          <div class="line" style="width: $tkn_margin$%; border-bottom: 5px solid $tkn_colour_tile$;"/>
+          <div class="line" style="width: $tkn_margin$%; border-bottom: 5px solid $tkn_colour_tile$; background: unset;"/>
+          <div class="line" style="width: $tkn_margin_100$%; border-bottom: 5px solid $tkn_score_Line_colour$; background: unset;"/>
+          <div class="line" style="width: $tkn_margin$%; border-bottom: 5px solid $tkn_colour_tile$; background: unset;"/>
         </div>
       </html>
     </panel>
@@ -268,12 +277,12 @@
 | eval display_text=if(isnull('display_text'),'Field','display_text'),
            order=if(isnull('order'),99,'order')
 
-| eval h_start="~!span class=\"green\"~!",
-       d_start="~!span class=\"lightblue\"~!",
+| eval h_start="~!span class=\"key_colour\"~!",
+       d_start="~!span class=\"value_colour\"~!",
        end="~!/span~!", 
        br="~!br~!"
-| eval Out_Text='h_start'.'display_text'.'br'.end.'d_start'.'Value'.'end'.'br'
-```| eval Out_Text="~!span class=\"green\"~!".'display_text'."~!br~!~!/span~!".Value."~!br~!~!br~!"```
+| eval Out_Text='h_start'.upper('display_text').'br'.end.'d_start'.'Value'.'end'.'br'
+```| eval Out_Text="~!span class=\"key_colour\"~!".'display_text'."~!br~!~!/span~!".Value."~!br~!~!br~!"```
 
 | eval Source=mvindex(split('Field',"."),1)
 | fields - Field, start, end, br

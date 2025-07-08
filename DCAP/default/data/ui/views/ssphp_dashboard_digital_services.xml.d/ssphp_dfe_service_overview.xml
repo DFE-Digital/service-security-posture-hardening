@@ -1,7 +1,7 @@
-<dashboard version="1.1" theme="dark" script="js/table_cell_backcolor_service_overview.js">
+<dashboard version="1.1" theme="light" script="js/table_cell_backcolor_service_overview.js">
 
 <label>DfE Security Posture Continuous Assurance : Service Overview Dashboard</label>
-<description>{{environment}} v1.0.0</description>
+<description>{{environment}} v1.0.5</description>
 
   <init>
     <unset token="tkn_main_ready"></unset>
@@ -12,10 +12,12 @@
     <set token="tkn_margin">20</set>
 
     <set token="tkn_colour_tile">pebble</set>
-    <set token="tkn_colour_compliant_line">#ECECEC</set>
+<!-- #<set token="tkn_colour_compliant_line">#ECECEC</set># -->
+    <set token="tkn_colour_compliant_line">#bebebe</set>
     <set token="tkn_colour_compliant_line_100">#85F415</set>
     <set token="tkn_colour_non_compliant_line">#FF4B4B</set>
-    <set token="tkn_colour_text">#bebebe</set>
+<!-- #<set token="tkn_colour_text">#bebebe</set># -->
+    <set token="tkn_colour_text">#000000</set>
   </init>
 
 
@@ -151,7 +153,7 @@
 
 | eval compliant_line_width=round((100-(2*20))*(('perc_passed_resources')/100)),
        compliant_line_non_width=(100-(2*20))-'compliant_line_width',
-       compliant_color=if(perc_passed_resources=100,"#85F415","#ECECEC"),
+       compliant_color=if(perc_passed_resources=100,"$tkn_colour_compliant_line_100$","$tkn_colour_compliant_line$"),
        perc_passed_resources='perc_passed_resources'."%",
        view="a",
        compliant_both=if('view'="a",'abs','perc_passed_resources')
@@ -456,7 +458,7 @@
       <html>
         <style>
            .css_for_green{ 
-           background-color: #00FF00 !important;
+           background-color: #53A051 !important;
            color:#000000 !important;
            font-size: 100% !important;
            font-weight: bold;
@@ -540,7 +542,7 @@
            font-weight: bold;
            }
            .css_for_red{
-           background-color: #FF0000!important;
+           background-color: #a70000!important;
            color:#000000 !important;
            font-size: 100% !important;
            font-weight: bold;
@@ -631,7 +633,7 @@
           color: black !important;
           }
           .css_for_null{
-          background-color: #6f7275 !important;
+          background-color: #f1f1f1 !important;
           font-size: 100% !important;
           font-weight: bold !important;
           text-align: center !important;
@@ -672,7 +674,7 @@
 
 | eval compliant_line_width=round((100-(2*20))*(('perc_passed_resources')/100)),
        compliant_line_non_width=(100-(2*20))-'compliant_line_width',
-       compliant_color=if(perc_passed_resources=100,"#85F415","#ECECEC"),
+       compliant_color=if(perc_passed_resources=100,"$tkn_colour_compliant_line_100$","$tkn_colour_compliant_line$"),
        perc_passed_resources='perc_passed_resources',
        view="a",
        compliant_both=if('view'="a",'abs','perc_passed_resources')
@@ -835,7 +837,7 @@
                            VULNERABILITY_perc>10,"red",
                            1==1,"red")
 ```
-
+```
 | eval POSTURE_colour=case(isnull(POSTURE_perc),"null",
                            POSTURE_perc=100,"blue4",
                            POSTURE_perc>80,"blue3",
@@ -866,6 +868,29 @@
                            VULNERABILITY_perc>60,"blue2",
                            VULNERABILITY_perc>30,"blue1",
                            1==1,"blue")
+```
+
+| eval POSTURE_colour=case(isnull(POSTURE_perc),"null",
+                           POSTURE_perc=100,"green",
+                           POSTURE_perc>30,"null",
+                           1==1,"red"),
+       KUBERNETES_colour=case(isnull(KUBERNETES_perc),"null",
+                           KUBERNETES_perc=100,"green",
+                           KUBERNETES_perc>30,"null",
+                           1==1,"red"),
+       REPOS_colour=case(isnull(REPOS_perc),"null",
+                           REPOS_perc=100,"green",
+                           REPOS_perc>30,"null",
+                           1==1,"red"),
+       CODE_SCAN_colour=case(isnull(CODE_SCAN_perc),"null",
+                           CODE_SCAN_perc=100,"green",
+                           CODE_SCAN_perc>30,"null",
+                           1==1,"red"),
+       VULNERABILITY_colour=case(isnull(VULNERABILITY_perc),"null",
+                           VULNERABILITY_perc=100,"green",
+                           VULNERABILITY_perc>30,"null",
+                           1==1,"red")
+
 
 
 | eval POSTURE='POSTURE'."|".'POSTURE_colour',

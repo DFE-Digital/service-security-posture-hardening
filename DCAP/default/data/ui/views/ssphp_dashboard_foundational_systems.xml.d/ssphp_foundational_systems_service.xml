@@ -1,11 +1,7 @@
-{% if environment=="_DEV" %}
-  <dashboard version="1.1" theme="dark" hideFilters="true" script="js/table_cell_color.js">
-{% else %}
-  <dashboard version="1.1" theme="dark" hideFilters="true" script="js/table_cell_color.js">
-{% endif %}  
+<dashboard version="1.1" theme="light" hideFilters="true" script="js/table_cell_color.js">
 
   <label>Security Posture Continuous Assurance : Service Dashboard</label>
-  <description>{{environment}} v2.1.27</description>
+  <description>{{environment}} v2.1.30</description>
 
 
   <init>
@@ -13,10 +9,12 @@
     <set token="tkn_controls_compliant_abs"></set>
 
     <set token="tkn_colour_tile">pebble</set>
-    <set token="tkn_colour_compliant_line">#ECECEC</set>
+<!-- #<set token="tkn_colour_compliant_line">#ECECEC</set># -->
+    <set token="tkn_colour_compliant_line">#bebebe</set>
     <set token="tkn_colour_compliant_line_100">#85F415</set>
     <set token="tkn_colour_non_compliant_line">#FF4B4B</set>
-    <set token="tkn_colour_text">#bebebe</set>
+<!-- #<set token="tkn_colour_text">#bebebe</set># -->
+    <set token="tkn_colour_text">#000000</set>
     <set token="tkn_margin">25</set>
     <unset token="tkn_ready"></unset>
   </init>
@@ -27,7 +25,7 @@
       <label>Service</label>
       <choice value=".*">ALL</choice>
       <choice value="azure">Azure</choice>
-      <choice value="dns">DNS</choice>
+      <choice value="dns">Route53 AWS</choice>
       <choice value="aad">Entra AAD</choice>
       <choice value="m365">M365</choice>
       <choice value="github">GitHub</choice>
@@ -81,7 +79,9 @@
           <query>
   | makeresults
   | eval s=$tkn__service|s$,
-         service_name=if('s'=".*","ALL",upper('s'))
+         service_name=case('s'=".*","ALL",
+                           's'="dns","Route53 AWS",
+                           1==1,upper('s'))
   | table service_name
           </query>
           <done>

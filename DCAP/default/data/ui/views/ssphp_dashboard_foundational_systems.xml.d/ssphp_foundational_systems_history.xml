@@ -1,7 +1,7 @@
-<dashboard theme="dark" version="1.1" hideFilters="true">
+<dashboard theme="light" version="1.1" hideFilters="true">
 
 <label>DCAP Control Progress</label>
-<description>{{environment}} 1.1.4</description>
+<description>{{environment}} 1.1.8</description>
   
   <search id="bs_1">
     <query>
@@ -123,7 +123,8 @@ ssphp.source.foundational_system="*"
        delta=coalesce(floor(('curr_val'-'avg')*100/'avg'/10),0),
        Trend=case('delta'&gt;0,substr('plus',0,'delta'),
                   'delta'&lt;0,substr('minus',0,'delta'),
-                  1==1,null())
+                  1==1,null()),
+       ssphp.source.foundational_system=if('ssphp.source.foundational_system'="DNS","ROUTE53 AWS",'ssphp.source.foundational_system')
 
 | table ssphp.source.foundational_system, Trend, score_*
 | rename score_* as *, ssphp.source.foundational_system as "Foundational System"
@@ -132,9 +133,13 @@ ssphp.source.foundational_system="*"
         <option name="count">100</option>
         <option name="dataOverlayMode">none</option>
         <option name="drilldown">none</option>
-        <format type="color">
+        <!-- <format type="color">
           <colorPalette type="list">[#a70000,#ff0000,#ff5252,#ff7b7b,#ffbaba,#53A051]</colorPalette>
           <scale type="threshold">20,40,60,80,100</scale>
+        </format> -->
+        <format type="color">
+          <colorPalette type="list">[#a70000,#f1f1f1,#53A051]</colorPalette>
+          <scale type="threshold">30,100</scale>
         </format>
 <!-- 
         <format type="color" field="Trend">
@@ -212,15 +217,20 @@ ssphp.source.foundational_system="*"
        Control=replace('Control',"`",""),
        Control=replace('Control',"Guest invite restrictions is set to ","Guest invite restrictions is set"),
        Control=replace('Control',"sendi ng","sending"),
-       Control=upper(substr('Control',0,1)).substr('Control',2,999)
+       Control=upper(substr('Control',0,1)).substr('Control',2,999),
+       "Use Case"=if('Use Case'="DNS","ROUTE53 AWS",'Use Case')
           </query>
         </search>
         <option name="count">100</option>
         <option name="dataOverlayMode">none</option>
         <option name="drilldown">none</option>
-        <format type="color">
+        <!-- <format type="color">
           <colorPalette type="list">[#a70000,#ff0000,#ff5252,#ff7b7b,#ffbaba,#53A051]</colorPalette>
           <scale type="threshold">20,40,60,80,100</scale>
+        </format> -->
+        <format type="color">
+          <colorPalette type="list">[#a70000,#f1f1f1,#53A051]</colorPalette>
+          <scale type="threshold">30,100</scale>
         </format>
       </table>
     </panel>
