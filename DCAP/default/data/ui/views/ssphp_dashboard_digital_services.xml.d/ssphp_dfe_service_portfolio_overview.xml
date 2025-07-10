@@ -1,12 +1,7 @@
-{% if environment=="_DEV" %}
 <dashboard version="1.1" theme="light" script="js/table_cell_backcolor_service_overview.js">
-{% else %}
-<dashboard version="1.1" theme="dark" script="js/table_cell_backcolor_service_overview.js">
-{% endif %}  
-
 
   <label>DfE Security Posture Continuous Assurance : Portfolio Overview Dashboard</label>
-  <description>{{environment}} v1.0.1</description>
+  <description>{{environment}} v1.0.3</description>
 
   <init>
 
@@ -123,8 +118,9 @@
     </panel>
   </row>
 
-<!-- ################### DISPLAY PANEL - Education and Skills Funding Agency - ESFA ################### -->
+
   <row depends="$tkn_ready$">
+<!-- ################### DISPLAY PANEL - Education and Skills Funding Agency - ESFA ##################
     <panel>
       <html>
         <div class="absolute" style="background:$tkn_colour_tile$;">
@@ -141,6 +137,7 @@
         </div>
       </html>
     </panel>
+# -->
 
 <!-- ################### DISPLAY PANEL - Families Group - FAM ################### -->    
     <panel>
@@ -216,10 +213,6 @@
         </div>
       </html>
     </panel>
-  </row>
-  
-
-  <row depends="$tkn_ready$">
 
 
 <!-- ################### DISPLAY PANEL - Schools Group - SCH ################### -->
@@ -239,6 +232,10 @@
         </div>
       </html>
     </panel>
+  </row>
+  
+
+  <row depends="$tkn_ready$">
 
 
 <!-- ################### DISPLAY PANEL - Skills Group - SKILL ################### -->    
@@ -655,6 +652,7 @@
           </progress>
 
           <done>
+<!-- #
             <set token="tkn_ESFA_color">$result.ESFA_compliant_color$</set>
             <set token="tkn_ESFA_score">$result.ESFA_compliant_both$</set>
             <set token="tkn_ESFA_score_abs">$result.ESFA_compliant_abs$</set>
@@ -662,7 +660,7 @@
             <set token="tkn_ESFA_score">$result.ESFA_compliant_both$</set>
             <set token="tkn_ESFA_compliant_line_width">$result.ESFA_compliant_line_width$</set>
             <set token="tkn_ESFA_compliant_line_non_width">$result.ESFA_compliant_line_non_width$</set>
-
+# -->
             <set token="tkn_FAM_color">$result.FAM_compliant_color$</set>
             <set token="tkn_FAM_score">$result.FAM_compliant_both$</set>
             <set token="tkn_FAM_score_abs">$result.FAM_compliant_abs$</set>
