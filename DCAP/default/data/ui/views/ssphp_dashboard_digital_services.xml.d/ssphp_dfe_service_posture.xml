@@ -2,7 +2,7 @@
 
 
 <label>DfE Security Posture Continuous Assurance : Service Posture Dashboard</label>
-<description>{{environment}} v1.0.2</description>
+<description>{{environment}} v1.0.5</description>
   
   <init>
     <set token="tkn_font_size_2">400</set>
@@ -122,13 +122,13 @@
             flex:unset;
           }
           #svc_2{
-            width:65% !important;
+            width:60% !important;
             -webkit-box-flex:unset;
             -ms-flex:unset;
             flex:unset;
           }
           #svc_3{
-            width:20% !important;
+            width:25% !important;
             -webkit-box-flex:unset;
             -ms-flex:unset;
             flex:unset;
@@ -300,8 +300,10 @@
 
 | stats values(total_AZURE_resources) as total_azure_resources,
         values(total_GITHUB_resources) as total_github_resources,
+        values(id) as service_id,
         values(cost_centre_title) as cost_centre_title,
-        values(cost_centre_owner) as cost_centre_owner, 
+        values(cost_centre_owner) as cost_centre_owner,
+        values(cost_centre_code) as cost_centre_code, 
         values(cost_centre_owner_email) as cost_centre_owner_email, 
         values(financial_business_partner_email) as financial_business_partner_email, 
         values(hosting_provider_email) as hosting_provider_email, 
@@ -309,6 +311,8 @@
         values(product_owner_email) as product_owner_email
 
 | eval service_details="Cost Cente : ".'cost_centre_title',
+       service_details=if(isnotnull('service_id') AND service_id!="null", mvappend('service_details',"Service ID : ".'service_id'), 'service_details'),',
+       service_details=if(isnotnull('cost_centre_code') AND cost_centre_code!="null", mvappend('service_details',"Cost Centre Code : ".'cost_centre_code'), 'service_details'),
        service_details=if(isnotnull('cost_centre_owner') AND cost_centre_owner!="null", mvappend('service_details',"Cost Centre Owner : ".'cost_centre_owner'), 'service_details'),
        service_details=if(isnotnull('cost_centre_owner_email') AND cost_centre_owner!="null", mvappend('service_details',"Cost Centre Owner EMail : ".'cost_centre_owner_email'), 'service_details'),
        service_details=if(isnotnull('financial_business_partner_email') AND financial_business_partner_email!="null", mvappend('service_details',"Financial Business Partner EMail : ".'financial_business_partner_email'), 'service_details'),
