@@ -16,13 +16,19 @@
 
 | join type=outer user_roles
     [| makeresults format=csv data="user_roles, service, priority
-                                    dfe_ssphp_service_user_m365, m365, 01
-                                    dfe_ssphp_service_user_aad, aad, 02
-                                    dfe_ssphp_service_user_aws, dns, 03
-                                    dfe_ssphp_service_user_azure, azure, 04"]
+                                    dfe_ssphp_service_user_m365, m365, 02
+                                    dfe_ssphp_service_user_aad, aad, 03
+                                    dfe_ssphp_service_user_aws, dns, 04
+                                    dfe_ssphp_service_user_azure, azure, 05"]
 | eval service=coalesce('service',"-"),
-       priority=if('service'="-",99,'priority'),
-       link_target=case('user_roles'="dfe_ssphp_service_power","/en-GB/app/{{app}}{{environment}}/ssphp_dfe_service",
+       priority=if('service'="-",99,'priority')
+       
+| rex field=user_roles "^dfe_ssphp_service_user_(?&lt;service_no&gt;\d*)$"
+
+| eval priority=if(isnotnull(service_no),01,'priority')
+
+| eval link_target=case(isnotnull(service_no),"/en-GB/app/{{app}}{{environment}}/ssphp_dfe_service_posture?tkn__service=".'service_no',
+                        'user_roles'="dfe_ssphp_service_power","/en-GB/app/{{app}}{{environment}}/ssphp_dfe_service",
                         'service'="-","/en-GB/app/{{app}}{{environment}}/ssphp_foundational_systems_posture",
                         1==1,"/en-GB/app/{{app}}{{environment}}/ssphp_foundational_systems_service?form.tkn__service=".'service')
 
