@@ -1,5 +1,5 @@
 []
-access = read : [ dfe_ssphp_service_power, dfe_ssphp_service_user_s184, power, admin, sc_admin, dfe_ssphp_service_user_metrics, ssphp_get_qualys_cves, dfe_ssphp_service_user_aad, dfe_ssphp_service_user_aws, dfe_ssphp_service_user_azure, dfe_ssphp_service_user_m365, dfe_ssphp_service_user_smt ], write : [ admin, sc_admin ]
+access = read : [ dfe_ssphp_service_power, dfe_ssphp_service_user_771, dfe_ssphp_service_user_s184, power, admin, sc_admin, dfe_ssphp_service_user_metrics, ssphp_get_qualys_cves, dfe_ssphp_service_user_aad, dfe_ssphp_service_user_aws, dfe_ssphp_service_user_azure, dfe_ssphp_service_user_m365, dfe_ssphp_service_user_smt ], write : [ admin, sc_admin ]
 
 [lookups]
 export = system
