@@ -10,14 +10,14 @@
     margin: 0px auto 0px auto;
     font-size: 1.1em;
     font-family: Arial, Helvetica, sans-serif;
-    color: #AAAAAA; 
+    color: #000000; 
 }
 .header_r2{
     height: auto; 
     margin: 0px auto 0px auto;
     font-size: 1em;
     font-family: Arial, Helvetica, sans-serif;
-    color: #FFFFFF; 
+    color: #000000; 
     display: block;
 }
 .dashboard-cell.dashboard-layout-panel.last-visible div:empty {
