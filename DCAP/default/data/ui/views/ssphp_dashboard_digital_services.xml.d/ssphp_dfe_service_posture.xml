@@ -2,7 +2,7 @@
 
 
 <label>DfE Security Posture Continuous Assurance : Service Posture Dashboard</label>
-<description>{{environment}} v1.0.5</description>
+<description>{{environment}} v1.0.6</description>
   
   <init>
     <set token="tkn_font_size_2">400</set>
@@ -901,14 +901,11 @@ $tkn_category$
             <search>
                 <query>
 | rest /services/authentication/current-context splunk_server=local 
-| table username, roles
-| eval roles=case(username="ian.pearl@education.gov.uk",mvappend('roles',"dfe_ssphp_service_user_s194"),
-                    username="alex.kinnane@education.gov.uk",mvappend('roles',"dfe_ssphp_service_user_s194"),
-                    username="sam.pritchard@education.gov.uk",mvappend('roles',"dfe_ssphp_service_user_s194"),
-                    1==1,'roles')
-| eval roles=mvfilter(match('roles',"dfe_ssphp_service_user_s\d{3}"))
-| where isnotnull('roles')
-| rex field=roles "dfe_ssphp_service_user_(?&lt;service&gt;s\d{3})$"
+| fields username, roles
+
+| rex field=roles "dfe_ssphp_service_user_s?(?&lt;service&gt;\d{3})$"
+| fillnull value="-" service
+
 | eval app=$env:app|s$
 | table username, service, app
                 </query>
