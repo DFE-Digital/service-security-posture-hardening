@@ -7,19 +7,20 @@ use tracing::info;
 
 use data_ingester_splunk::splunk::ToHecEvents;
 use data_ingester_supporting::keyvault::Secrets;
+use std::io::Cursor;
+
+async fn fetch_url(url: &str, file_name: &str) -> Result<()> {
+    let response = reqwest::get(url).await?;
+    let mut file = std::fs::File::create(file_name)?;
+    let mut content = Cursor::new(response.bytes().await?);
+    std::io::copy(&mut content, &mut file)?;
+    Ok(())
+}
 
 pub async fn install_powershell() -> Result<()> {
     info!("Downloading Powershell .deb");
-    let _output = Command::new("curl")
-        .args(
-            [
-                "-L",
-                "https://github.com/PowerShell/PowerShell/releases/download/v7.4.5/powershell_7.4.5-1.deb_amd64.deb",
-                "-o",
-                "/tmp/powershell_7.3.7-1.deb_amd64.deb",
-            ]
-        )
-        .output()?;
+
+    fetch_url("https://github.com/PowerShell/PowerShell/releases/download/v7.4.5/powershell_7.4.5-1.deb_amd64.deb", "/tmp/powershell_7.3.7-1.deb_amd64.deb").await?;
 
     info!("Installing Powershelll .deb");
     let _output = Command::new("dpkg")
