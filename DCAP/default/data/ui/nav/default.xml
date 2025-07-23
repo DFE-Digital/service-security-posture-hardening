@@ -10,14 +10,12 @@
       <a href="ssphp_foundational_systems_service?form.tkn__service=github">GitHub</a>
     </collection>
     <a href="ssphp_foundational_systems_history">Control Progress</a>
-    <a href="ssphp_foundational_systems_dashboard_help">Dashboard Information</a>
   </collection>
 
   <collection label="DfE Digital Services" >
     <a href="ssphp_dfe_service_portfolio_overview">Portfolio Overview</a>
     <a href="ssphp_dfe_service_overview">Service Overview</a>
     <a href="ssphp_dfe_service_posture">Service Posture</a>
-    <a href="ssphp_digital_services_dashboard_help">Dashboard Information</a>
   </collection>
 
 {% if environment=="_DEV" %}
@@ -29,10 +27,11 @@
     <a href="ssphp_dfe_healthcheck">DCAP Healthcheck</a>
     <a href="ssphp_foundational_systems_list_controls">Foundational Systems Controls List</a>
     <a href="ssphp_dfe_use_case_inventory">Digital Services Controls List</a>
-    <a href="ssphp_dashboard_usage">Dashboard Usage</a>
   </collection>
 {% endif %}
 
+
+<a href="https://educationgovuk.sharepoint.com/%3Ab%3A/r/sites/lvewp00297/CISDivision/Continuous%20Assurance/CIOS%20Documents/DCAP%20Documentation.pdf" target="_blank">Dashboard Usage</a>
 <a href="ssphp_dashboard_report_issue" target="_blank">Report an Issue</a>
 
 </nav>
