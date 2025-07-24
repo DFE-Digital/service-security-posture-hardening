@@ -1924,6 +1924,7 @@ dependencies = [
  "anyhow",
  "data_ingester_splunk",
  "data_ingester_supporting",
+ "reqwest",
  "serde",
  "serde_json",
  "tokio",
