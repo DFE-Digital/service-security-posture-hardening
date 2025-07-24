@@ -81,12 +81,12 @@ pub async fn powershell(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()
     .await;
 
     // Azure 365 V2.0 5.3
-    let _ = try_collect_send(
-        "Exchange Get Mailboxes",
-        run_powershell_get_mailbox(&secrets),
-        &splunk,
-    )
-    .await;
+    // let _ = try_collect_send(
+    //     "Exchange Get Mailboxes",
+    //     run_powershell_get_mailbox(&secrets),
+    //     &splunk,
+    // )
+    // .await;
 
     let _ = try_collect_send(
         "Exchange Get VIP Users",

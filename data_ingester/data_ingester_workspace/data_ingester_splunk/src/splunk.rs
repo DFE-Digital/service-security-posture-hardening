@@ -343,7 +343,8 @@ pub async fn try_collect_send<T>(
 where
     for<'a> &'a T: ToHecEvents + Debug,
 {
-    info!("Getting {}", &name);
+    info!(name = &name, "Getting {}", &name);
+    tokio::task::yield_now().await;
     let result = future.await;
     match &result {
         Ok(ref result) => {
@@ -398,6 +399,7 @@ pub(crate) mod test {
 #[cfg(feature = "live_tests")]
 #[cfg(test)]
 pub(crate) mod live_tests {
+    use crate::splunk::SplunkTrait;
     use crate::splunk::{HecEvent, Splunk};
     use anyhow::{Context, Result};
     use data_ingester_supporting::keyvault::get_keyvault_secrets;
