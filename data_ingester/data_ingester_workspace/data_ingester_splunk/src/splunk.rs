@@ -18,6 +18,7 @@ use uuid::Uuid;
 
 use crate::tasks::AckTask;
 use crate::tasks::SendingTask;
+use valuable::Valuable;
 
 // Legacy, just used for tests and logs
 static SSPHP_RUN: RwLock<u64> = RwLock::new(0_u64);
@@ -369,44 +370,65 @@ where
     };
 
     // Calculate stats for HecEvents
-    let events_count = hec_events.len();
-    let source_sourcetypes_count = hec_events
+    let total_count = hec_events.len();
+    let sourcetype_stats = hec_events
         .iter()
-        .map(|hec_event| {
-            (
-                hec_event.source.to_string(),
-                hec_event.sourcetype.to_string(),
-            )
-        })
-        .fold(HashMap::new(), |mut acc, source_sourcetype| {
-            let _ = acc
-                .entry(source_sourcetype)
-                .and_modify(|entry| *entry += 1)
-                .or_insert(1);
-            acc
-        });
+        .map(|hec_event| (hec_event.source.as_ref(), hec_event.sourcetype.as_ref()))
+        .fold(
+            HashMap::new(),
+            |mut acc: HashMap<(&str, &str), TryCollectSendSourceStat>, source_sourcetype| {
+                let _ = acc
+                    .entry(source_sourcetype)
+                    .and_modify(|entry| entry.count += 1)
+                    .or_insert(TryCollectSendSourceStat {
+                        source: source_sourcetype.0.into(),
+                        sourcetype: source_sourcetype.1.into(),
+                        count: 1,
+                    });
+                acc
+            },
+        )
+        .into_values()
+        .collect::<Vec<TryCollectSendSourceStat>>();
+    let stats = TryCollectSendStats {
+        total_count,
+        sourcetype_stats,
+    };
 
     // Send HecEvnts to Splunk
     match splunk.send_batch(hec_events).await {
         Ok(()) => {
             info!(
-                name=name,
-                  events_count = events_count,
-                  source_sourcetypes_count=?source_sourcetypes_count,
-                  "Sent HecEvents to Splunk");
+                name = name,
+                stats = &stats.as_value(),
+                "Sent HecEvents to Splunk"
+            );
         }
         Err(err) => {
             error!(
                 name=name,
                 err=?err,
-                events_count = events_count,
-                source_sourcetypes_count=?source_sourcetypes_count,
+                stats = &stats.as_value(),
                 "Failed Sending HecEvents to Splunk");
         }
     };
 
     // Return original future result for optional further processing
     future_result
+}
+
+#[derive(Debug, Valuable)]
+struct TryCollectSendStats {
+    total_count: usize,
+    sourcetype_stats: Vec<TryCollectSendSourceStat>,
+}
+
+/// Collect stats
+#[derive(Debug, Valuable)]
+struct TryCollectSendSourceStat {
+    source: String,
+    sourcetype: String,
+    count: usize,
 }
 
 #[cfg(test)]
