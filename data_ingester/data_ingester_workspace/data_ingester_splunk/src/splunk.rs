@@ -13,7 +13,7 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 use tokio::sync::mpsc::{channel, Sender};
-use tracing::{error, info, warn};
+use tracing::{error, info};
 use uuid::Uuid;
 
 use crate::tasks::AckTask;
@@ -343,39 +343,70 @@ pub async fn try_collect_send<T>(
 where
     for<'a> &'a T: ToHecEvents + Debug,
 {
+    // Log before running future
     info!(name = &name, "Getting {}", &name);
     tokio::task::yield_now().await;
-    let result = future.await;
-    match &result {
-        Ok(ref result) => {
-            let hec_events = match result.to_hec_events() {
-                Ok(hec_events) => hec_events,
-                Err(e) => {
-                    warn!("Failed converting to HecEvents: {e}");
-                    vec![HecEvent::new(
-                        &Message {
-                            event: format!("Failed converting to HecEvents: {e:?}"),
-                        },
-                        "data_ingester_rust",
-                        "data_ingester_rust_logs",
-                    )?]
-                }
-            };
-            let events_count = hec_events.len();
-            match splunk.send_batch(hec_events).await {
-                Ok(()) => {
-                    info!(events_count = events_count, "Sent {}", &name);
-                }
-                Err(e) => {
-                    warn!("Failed Sending to Splunk: {e}");
-                }
-            };
-        }
+
+    // Run future
+    let future_result = future.await;
+
+    // Did future complete?
+    let result_t = match &future_result {
+        Ok(ref result_t) => result_t,
         Err(err) => {
-            warn!("Failed to get {name}: {err:?}")
+            error!(name=name, err=?err, "Failed to run future");
+            return future_result;
         }
     };
-    result
+
+    // Convert future's T into Vec<HecEvents>
+    let hec_events = match result_t.to_hec_events() {
+        Ok(hec_events) => hec_events,
+        Err(err) => {
+            error!(name=name, err=?err, "Failed converting to HecEvents");
+            return future_result;
+        }
+    };
+
+    // Calculate stats for HecEvents
+    let events_count = hec_events.len();
+    let source_sourcetypes_count = hec_events
+        .iter()
+        .map(|hec_event| {
+            (
+                hec_event.source.to_string(),
+                hec_event.sourcetype.to_string(),
+            )
+        })
+        .fold(HashMap::new(), |mut acc, source_sourcetype| {
+            let _ = acc
+                .entry(source_sourcetype)
+                .and_modify(|entry| *entry += 1)
+                .or_insert(1);
+            acc
+        });
+
+    // Send HecEvnts to Splunk
+    match splunk.send_batch(hec_events).await {
+        Ok(()) => {
+            info!(
+                name=name,
+                  events_count = events_count,
+                  source_sourcetypes_count=?source_sourcetypes_count,
+                  "Sent HecEvents to Splunk");
+        }
+        Err(err) => {
+            error!(
+                name=name,
+                err=?err,
+                events_count = events_count,
+                source_sourcetypes_count=?source_sourcetypes_count,
+                "Failed Sending HecEvents to Splunk");
+        }
+    };
+
+    // Return original future result for optional further processing
+    future_result
 }
 
 #[cfg(test)]
