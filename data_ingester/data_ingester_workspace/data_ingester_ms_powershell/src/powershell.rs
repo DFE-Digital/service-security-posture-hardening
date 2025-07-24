@@ -2,7 +2,7 @@ use anyhow::{Context, Result};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use serde_json::Value;
 use std::iter;
-use std::process::Command;
+use tokio::process::Command;
 use tracing::info;
 
 use data_ingester_splunk::splunk::ToHecEvents;
@@ -25,7 +25,8 @@ pub async fn install_powershell() -> Result<()> {
     info!("Installing Powershelll .deb");
     let _output = Command::new("dpkg")
         .args(["-i", "/tmp/powershell_7.3.7-1.deb_amd64.deb"])
-        .output()?;
+        .output()
+        .await?;
 
     info!("Installing Powershelll ExchangeOnlineManagement");
     let _output = Command::new("pwsh")
@@ -35,7 +36,8 @@ pub async fn install_powershell() -> Result<()> {
 Install-Module -Confirm:$False -Force -Name ExchangeOnlineManagement;
 "#,
         ])
-        .output()?;
+        .output()
+        .await?;
 
     info!("Installing Powershelll MicrosoftTeams");
     let _output = Command::new("pwsh")
@@ -45,7 +47,8 @@ Install-Module -Confirm:$False -Force -Name ExchangeOnlineManagement;
 Install-Module -Confirm:$False -Force -Name MicrosoftTeams;
 "#,
         ])
-        .output()?;
+        .output()
+        .await?;
 
     Ok(())
 }
@@ -869,7 +872,7 @@ Connect-ExchangeOnline -Certificate $pfx -AppID "{}" -Organization "{}";"#,
                      secrets.azure_client_id.as_ref().context("Expect azure_client_id secret")?,
                      secrets.azure_client_organization.as_ref().context("Expect azure_client_organization secret")?,
             )
-        ]).output()?;
+        ]).output().await?;
 
     let stdout = String::from_utf8(output.stdout)?;
     let stderr = String::from_utf8(output.stderr)?;
@@ -995,7 +998,10 @@ $pfx = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2
             .context("Expect azure_client_certificate secret")?,
         cmd,
     );
-    let output = Command::new("pwsh").args(["-Command", &command]).output()?;
+    let output = Command::new("pwsh")
+        .args(["-Command", &command])
+        .output()
+        .await?;
 
     match serde_json::from_slice::<T>(&output.stdout[..]) {
         Ok(out) => Ok(out),
@@ -1036,7 +1042,7 @@ mod test {
         run_powershell_get_user_vip,
     };
     use anyhow::{Context, Result};
-    use data_ingester_splunk::splunk::{set_ssphp_run, Splunk, ToHecEvents};
+    use data_ingester_splunk::splunk::{set_ssphp_run, Splunk, SplunkTrait, ToHecEvents};
     use data_ingester_supporting::keyvault::{get_keyvault_secrets, Secrets};
     use std::env;
 
