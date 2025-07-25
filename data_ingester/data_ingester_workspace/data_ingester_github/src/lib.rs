@@ -751,8 +751,8 @@ impl OctocrabGit {
             let now = std::time::SystemTime::now()
                 .duration_since(std::time::SystemTime::UNIX_EPOCH)
                 .context("Getting current time")?;
-            let sleep_duration =
-                tokio::time::Duration::from_secs(rate_limit.resources.core.reset - now.as_secs());
+            let sleep_duration = tokio::time::Duration::from_secs(rate_limit.resources.core.reset)
+                .saturating_sub(now);
             warn!(
                 "Sleeping for {} seconds because of Core API rate limit",
                 sleep_duration.as_secs()
