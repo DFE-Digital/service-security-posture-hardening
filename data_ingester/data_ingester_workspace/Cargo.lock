@@ -1997,6 +1997,7 @@ dependencies = [
  "tracing-serde",
  "tracing-subscriber",
  "uuid",
+ "valuable",
 ]
 
 [[package]]
