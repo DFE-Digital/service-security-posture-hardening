@@ -13,15 +13,51 @@ pub struct Projects {
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Project {
-    pub collection: Collection,
-    pub default_team: DefaultTeam,
+    pub collection: Option<Collection>,
+    pub default_team: Option<DefaultTeam>,
+    pub default_team_image_url: Option<String>,
+    pub description: Option<String>,
     pub id: String,
     pub last_update_time: String,
     pub name: String,
     pub revision: i64,
-    pub state: String,
+    pub state: ProjectState,
     pub url: String,
-    pub visibility: String,
+    pub visibility: ProjectVisibility,
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum ProjectVisibility {
+    /// The project is only visible to users with explicit access.
+    private,
+    /// The project is visible to all.
+    #[default]
+    public,
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum ProjectState {
+    /// Project is in the process of being deleted.
+    deleting,
+
+    /// Project is in the process of being created.
+    #[default]
+    new,
+
+    /// Project is completely created and ready to use.
+    wellFormed,
+
+    /// Project has been queued for creation, but the process has not yet started.
+    createPending,
+
+    /// All projects regardless of state except Deleted.
+    all,
+
+    /// Project has not been changed.
+    unchanged,
+
+    /// Project has been deleted.
+    deleted,
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -44,10 +80,10 @@ pub struct DefaultTeam {
 impl From<AdoResponse> for Projects {
     fn from(value: AdoResponse) -> Self {
         let projects = value.value.into_iter().filter_map(|project| {
-            match serde_json::from_value(project) {
+            match serde_json::from_value(project.clone()) {
                 Ok(project) => Some(project),
                 Err(err) => {
-                    error!(name="Azure DevOps", operation="From<AdoResponse> for Projects", error=?err);
+                    error!(name="Azure DevOps", operation="From<AdoResponse> for Projects", error=?err, project=?project);
                     None
                 }
             }
@@ -68,7 +104,7 @@ mod test {
 
     static PROJECTS_JSON: &str = r#"
 {
-  "count": 1,
+  "count": 2,
   "value": [
     {
       "collection": {
@@ -89,6 +125,15 @@ mod test {
       "state": "wellFormed",
       "url": "https://dev.azure.com/aktest0831/_apis/projects/2da91f47-0790-47a0-98cc-175fe8fb561e",
       "visibility": "private"
+    },
+    {
+      "id": "2da91f47-0790-47a0-98cc-175fe8fb561e",
+      "lastUpdateTime": "0001-01-01T00:00:00",
+      "name": "foobar",
+      "revision": 32,
+      "state": "wellFormed",
+      "url": "https://dev.azure.com/aktest0831/_apis/projects/2da91f47-0790-47a0-98cc-175fe8fb561e",
+      "visibility": "private"
     }
   ]
 }
@@ -104,7 +149,7 @@ mod test {
     fn test_ado_projects_from_ado_response() {
         let ado_response: AdoResponse = serde_json::from_str(PROJECTS_JSON).unwrap();
         let projects: Projects = Projects::from(ado_response);
-        assert_eq!(projects.projects.len(), 1);
+        assert_eq!(projects.projects.len(), 2);
     }
 
     #[test]
