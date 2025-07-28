@@ -106,14 +106,15 @@ async fn resource_graph_all(az_client: AzureRest, splunk: &Splunk) -> Result<()>
     Ok(())
 }
 
-#[async_recursion]
+//#[async_recursion]
 async fn make_request(
     az_client: &AzureRest,
     endpoint: &str,
     request_body: &ResourceGraphRequest,
     rate_limit: &mut RateLimit,
 ) -> Result<QueryResponse> {
-    let response = loop {
+    let mut request_body = request_body.clone();
+    let response = 'request: loop {
         rate_limit.wait().await?;
 
         let result = az_client
@@ -126,53 +127,55 @@ async fn make_request(
             ResourceGraphResponse::Query(response) => break response,
 
             // Known errors
-            ResourceGraphResponse::Error(error) => match error.error.code {
-                QueryErrorErrorCode::RateLimiting => {
-                    error!("Rate limited!:\n {:?}", error);
-                    tokio::time::sleep(rate_limit.interval).await;
-                    continue;
-                }
-                QueryErrorErrorCode::BadRequest => {
-                    match &error
-                        .error
-                        .details
-                        .first()
-                        .context("No error details")?
-                        .code
-                    {
-                        QueryErrorErrorDetailsCode::ResponsePayloadTooLarge => {
-                            error!("ResponsePayloadTooLarge error!");
-                            let mut new_request_body = request_body.clone();
-                            new_request_body.options.top = Some(1);
-                            break make_request(az_client, endpoint, &new_request_body, rate_limit)
-                                .await
-                                .context("ResonsePayloadTooLarge recovery")?;
-                        }
+            ResourceGraphResponse::Error(ref error) => {
+                match &error.error.code {
+                    QueryErrorErrorCode::RateLimiting => {
+                        error!("Rate limited!:\n {:?}", error);
+                        tokio::time::sleep(rate_limit.interval).await;
+                        continue;
+                    }
+                    QueryErrorErrorCode::BadRequest => {
+                        let details = if let Some(details) = error.error.details.as_ref() {
+                            details
+                        } else {
+                            error!(response=?&result, "Unknown BadRequest Type");
+                            anyhow::bail!("Unknown BadRequest Error Type : {:?}", result);
+                        };
 
-                        QueryErrorErrorDetailsCode::RateLimiting => {
-                            error!("Rate limited!:\n {:?}", error);
-                            tokio::time::sleep(rate_limit.interval).await;
-                            continue;
-                        }
+                        'bad_request: for bad_request_error in details {
+                            match &bad_request_error.code {
+                                QueryErrorErrorDetailsCode::ResponsePayloadTooLarge => {
+                                    error!("ResponsePayloadTooLarge error!");
+                                    request_body.options.top = Some(1);
+                                    continue 'request;
+                                }
 
-                        QueryErrorErrorDetailsCode::DisallowedLogicalTableName => {
-                            error!("Disallowed Logical Table: {:?}", &request_body);
-                            anyhow::bail!("Disallowed Logical Table: {:?}", &request_body);
-                        }
+                                QueryErrorErrorDetailsCode::RateLimiting => {
+                                    error!("Rate limited!:\n {:?}", error);
+                                    tokio::time::sleep(rate_limit.interval).await;
+                                    continue 'request;
+                                }
 
-                        // Unknown Errors and responses
-                        QueryErrorErrorDetailsCode::Other(other) => {
-                            error!("{:?}", &other);
-                            anyhow::bail!("Unknown Error Type : {:?}", other);
+                                QueryErrorErrorDetailsCode::DisallowedLogicalTableName => {
+                                    error!("Disallowed Logical Table: {:?}", &request_body);
+                                    anyhow::bail!("Disallowed Logical Table: {:?}", &request_body);
+                                }
+
+                                // Unknown Errors and responses
+                                QueryErrorErrorDetailsCode::Other(other) => {
+                                    error!("{:?}", &other);
+                                    anyhow::bail!("Unknown Error Type : {:?}", other);
+                                }
+                            }
                         }
                     }
+                    // Unknown Errors and responses
+                    QueryErrorErrorCode::Other(other) => {
+                        error!("{:?}", &other);
+                        anyhow::bail!("Unknown Error Type : {:?}", other);
+                    }
                 }
-                // Unknown Errors and responses
-                QueryErrorErrorCode::Other(other) => {
-                    error!("{:?}", &other);
-                    anyhow::bail!("Unknown Error Type : {:?}", other);
-                }
-            },
+            }
             // Unknown Errors and responses
             ResourceGraphResponse::Other(other) => {
                 error!("{:?}", &other);
@@ -273,6 +276,7 @@ struct QueryResponse {
     total_records: usize,
 }
 
+/// https://learn.microsoft.com/en-us/graph/errors#json-representation
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 struct QueryError {
@@ -280,10 +284,37 @@ struct QueryError {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
+#[serde(untagged)]
+enum ResourceGraphResponse {
+    Query(QueryResponse),
+    Error(QueryError),
+    Other(Value),
+}
+
+/// https://learn.microsoft.com/en-us/graph/errors#json-representation
+#[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 struct QueryErrorError {
+    /// An error code string for the error that occurred
     code: QueryErrorErrorCode,
+
+    /// A developer ready message about the error that occurred. This shouldn't be displayed to the user directly.
+    message: String,
+
+    /// Optional. A list of more error objects that might provide a breakdown of multiple errors encountered while processing the request.
+    details: Option<Vec<QueryErrorErrorDetails>>,
+
+    /// Optional. An additional error object that might be more specific than the top-level error.
+    inner_error: Option<QueryErrorInnerError>,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+struct QueryErrorInnerError {
+    /// An error code string for the error that occurred
+    code: QueryErrorErrorCode,
+    /// Optional. A list of more error objects that might provide a breakdown of multiple errors encountered while processing the request.
     details: Vec<QueryErrorErrorDetails>,
+    /// A developer ready message about the error that occurred. This shouldn't be displayed to the user directly.
     message: String,
 }
 
@@ -308,14 +339,6 @@ enum QueryErrorErrorDetailsCode {
     RateLimiting,
     ResponsePayloadTooLarge,
     DisallowedLogicalTableName,
-    Other(Value),
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-#[serde(untagged)]
-enum ResourceGraphResponse {
-    Query(QueryResponse),
-    Error(QueryError),
     Other(Value),
 }
 
