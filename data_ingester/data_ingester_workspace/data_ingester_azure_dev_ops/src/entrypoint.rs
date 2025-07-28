@@ -97,6 +97,11 @@ async fn collect_organization<A: AzureDevOpsClientMethods>(
     )
     .await;
 
+    info!(
+        name = crate::SSPHP_RUN_KEY,
+        ado_organization = &organization,
+        "collect_security_namespaces"
+    );
     let security_namespaces = try_collect_send(
         &format!("Security Namespaces {organization}"),
         ado.security_namespaces(organization),
@@ -104,18 +109,47 @@ async fn collect_organization<A: AzureDevOpsClientMethods>(
     )
     .await;
 
+    info!(
+        name = crate::SSPHP_RUN_KEY,
+        ado_organization = &organization,
+        "security_namespaces_outer"
+    );
     // Get Acls & Identities associated with all Security Namespaces
     if let Ok(security_namespaces) = security_namespaces {
+        info!(
+            name = crate::SSPHP_RUN_KEY,
+            ado_organization = &organization,
+            "security_namespaces_inner"
+        );
         let security_namespaces = SecurityNamespaces::from(security_namespaces);
 
+        info!(
+            name = crate::SSPHP_RUN_KEY,
+            ado_organization = &organization,
+            "collect_security_acls"
+        );
         let security_access_control_lists =
             collect_security_acls(ado, &splunk, security_namespaces, organization).await;
 
+        info!(
+            name = crate::SSPHP_RUN_KEY,
+            ado_organization = &organization,
+            "all_acl_descriptors"
+        );
         let identity_descriptors = security_access_control_lists.all_acl_descriptors();
 
+        info!(
+            name = crate::SSPHP_RUN_KEY,
+            ado_organization = &organization,
+            "collect_identities"
+        );
         let _ = collect_identities(ado, &splunk, identity_descriptors, organization).await;
     }
-
+    info!(
+        name = crate::SSPHP_RUN_KEY,
+        ado_organization = &organization,
+        "projects_list"
+    );
     let projects = try_collect_send(
         &format!("Projects for {organization}"),
         ado.projects_list(organization),
@@ -291,14 +325,17 @@ async fn collect_security_acls(
     organization: &str,
 ) -> Acls {
     let mut security_access_control_lists = Acls::default();
+
     // Get ACLS
     for namespace in &security_namespaces.namespaces {
+        let namespace_id = namespace.namespace_id.as_str();
         let security_access_control_list = try_collect_send(
-            &format!("Security Namespaces {organization}"),
-            ado.security_access_control_lists(organization, namespace.namespace_id.as_str()),
+            &format!("Security Access control lists {organization}/{namespace_id}"),
+            ado.security_access_control_lists(organization, namespace_id),
             splunk,
         )
         .await;
+
         // Process Acls for Splunk.
         // The aces_dictionary format is arduous to work with in Splunk so we convert to an aces_vec
         if let Ok(mut security_access_control_list) = security_access_control_list {
