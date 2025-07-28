@@ -103,7 +103,7 @@ impl Stat {
 struct Commit {
     commit_id: String,
     parents: Option<Vec<String>>,
-    tree_id: String,
+    tree_id: Option<String>,
     author: Author,
     committer: Author,
     comment: String,
@@ -114,7 +114,7 @@ struct Commit {
 #[serde(rename_all = "camelCase")]
 struct Author {
     name: String,
-    email: String,
+    email: Option<String>,
     date: String,
 }
 

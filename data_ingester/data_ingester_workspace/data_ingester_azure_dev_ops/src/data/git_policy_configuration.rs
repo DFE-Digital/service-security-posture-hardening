@@ -114,6 +114,7 @@ pub struct Scope {
 pub enum MatchKind {
     Exact,
     Prefix,
+    DefaultBranch,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -128,13 +129,13 @@ impl From<(AdoResponse, &str)> for PolicyConfigurations {
     fn from(value: (AdoResponse, &str)) -> Self {
         let (value, project_id) = value;
         let policies = value.value.into_iter().filter_map(|policy| {
-            match serde_json::from_value::<PolicyConfiguration>(policy) {
+            match serde_json::from_value::<PolicyConfiguration>(policy.clone()) {
                 Ok(mut policy) => {
                     policy.project_id = Some(project_id.to_string());
                     Some(policy)
                 },
                 Err(err) => {
-                    error!(name="Azure DevOps", operation="From<AdoResponse> for PolicyConfiguration", error=?err);
+                    error!(name="Azure DevOps", operation="From<AdoResponse> for PolicyConfiguration", error=?err, policy=?policy);
                     None
                 }
             }
