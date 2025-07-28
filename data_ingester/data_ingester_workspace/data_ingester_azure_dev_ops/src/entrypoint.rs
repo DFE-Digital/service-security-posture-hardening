@@ -5,9 +5,9 @@ use crate::{
     azure_dev_ops_client_oauth::AzureDevOpsClientOauth,
     azure_dev_ops_client_pat::AzureDevOpsClientPat,
     data::{
-        git_policy_configuration::PolicyConfigurations, identities::Identities, projects::Projects,
-        repositories::Repositories, repository_policy_join::RepoPolicyJoins, security_acl::Acls,
-        security_namespaces::SecurityNamespaces, stats::Stats,
+        git_policy_configuration::PolicyConfigurations, identities::Identities, organization,
+        projects::Projects, repositories::Repositories, repository_policy_join::RepoPolicyJoins,
+        security_acl::Acls, security_namespaces::SecurityNamespaces, stats::Stats,
     },
     SSPHP_RUN_KEY,
 };
@@ -39,8 +39,12 @@ pub async fn entrypoint(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()
         .await?;
 
         for organization in organizations.organizations {
+            let ado = AzureDevOpsClientOauth::new(client_id, client_secret, tenant_id)
+                .await
+                .context("Building AzureDevOpsClient")?;
+
             let _collection_result = collect_organization(
-                &ado,
+                ado,
                 splunk.clone(), //"CatsCakes").await;
                 &organization.organization_name,
             )
@@ -48,20 +52,33 @@ pub async fn entrypoint(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()
         }
     }
 
+    let mut tasks = vec![];
+
     for pat in secrets.ado_pats.iter() {
         if let Ok(ado) = AzureDevOpsClientPat::new(pat.organization(), pat.pat()) {
-            let _ = collect_organization(&ado, splunk.clone(), pat.organization()).await;
+            let organization = pat.organization().to_owned();
+            tasks.push((
+                pat.organization(),
+                tokio::spawn(collect_organization(ado, splunk.clone(), organization)),
+            ));
         }
+    }
+
+    for (org_name, task) in tasks {
+        task.await
+            .context("Tokio task has completed successfully")?
+            .with_context(|| format!("Running ADO collection for {}", org_name))?;
     }
 
     Ok(())
 }
 
-async fn collect_organization<A: AzureDevOpsClientMethods>(
-    ado: &A,
+async fn collect_organization<A: AzureDevOpsClientMethods, O: AsRef<str>>(
+    ado: A,
     splunk: Arc<Splunk>,
-    organization: &str,
+    organization: O,
 ) -> Result<()> {
+    let organization = organization.as_ref();
     let _users = try_collect_send(
         &format!("Users for {organization}"),
         ado.graph_users_list(organization),
@@ -129,7 +146,7 @@ async fn collect_organization<A: AzureDevOpsClientMethods>(
             "collect_security_acls"
         );
         let security_access_control_lists =
-            collect_security_acls(ado, &splunk, security_namespaces, organization).await;
+            collect_security_acls(&ado, &splunk, security_namespaces, organization).await;
 
         info!(
             name = crate::SSPHP_RUN_KEY,
@@ -143,7 +160,7 @@ async fn collect_organization<A: AzureDevOpsClientMethods>(
             ado_organization = &organization,
             "collect_identities"
         );
-        let _ = collect_identities(ado, &splunk, identity_descriptors, organization).await;
+        let _ = collect_identities(&ado, &splunk, identity_descriptors, organization).await;
     }
     info!(
         name = crate::SSPHP_RUN_KEY,
