@@ -14,6 +14,7 @@ pub(crate) struct Organizations {
 
 impl Organizations {
     pub(crate) fn from_csv(csv: &str, metadata: AdoMetadata) -> Self {
+        info!(csv=?csv, "THE ORG CSV");
         let mut csv_reader = ReaderBuilder::new()
             .trim(Trim::All)
             .from_reader(csv.as_bytes());
