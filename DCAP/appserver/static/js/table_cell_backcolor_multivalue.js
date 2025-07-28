@@ -12,6 +12,7 @@ require([
             return _(['state',
                       'Compliance Status',
                       'compliant_policies',
+                      'number_vips',
                       'repo_daysSinceLastCommit',
                       'actors_with_effectiveAllow_actions',
                       'policy_settings_minimumApproverCount',
