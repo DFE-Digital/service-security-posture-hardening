@@ -2,7 +2,7 @@ use anyhow::{anyhow, Context, Result};
 use csv::{ReaderBuilder, Trim};
 use data_ingester_splunk::splunk::ToHecEvents;
 use itertools::Itertools;
-use tracing::error;
+use tracing::{error, info};
 
 use crate::{ado_metadata::AdoMetadata, SSPHP_RUN_KEY};
 
@@ -14,9 +14,10 @@ pub(crate) struct Organizations {
 
 impl Organizations {
     pub(crate) fn from_csv(csv: &str, metadata: AdoMetadata) -> Self {
-        let csv_reader = ReaderBuilder::new()
+        let mut csv_reader = ReaderBuilder::new()
             .trim(Trim::All)
             .from_reader(csv.as_bytes());
+        info!(name="Azure DevOps", operation="Organizations::from_csv", headers=?csv_reader.headers());
         let organizations: Vec<Organization> = csv_reader
             .into_deserialize::<Organization>()
             .filter_map(|deserialize| match deserialize {
