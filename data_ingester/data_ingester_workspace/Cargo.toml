@@ -28,5 +28,11 @@ unwrap-used = "warn"
 unused_import-braces = "warn"
 unused_results = "warn"
 
+[profile.dev]
+debug = "full"
+lto = "off"
+
 [profile.release]
-# lto = true
+debug = "full"
+lto = "thin"
+incremental = true

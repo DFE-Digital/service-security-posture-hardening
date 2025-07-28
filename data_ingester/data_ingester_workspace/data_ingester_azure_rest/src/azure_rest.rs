@@ -17,6 +17,7 @@ use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use serde_json::Value;
 use std::iter;
 use std::{collections::HashMap, sync::Arc};
+use thiserror::Error;
 use tokio::time::{sleep, Duration};
 use tracing::{error, warn};
 use url::Url;
@@ -330,8 +331,9 @@ impl AzureRest {
                     "post_rest_request:status:{:?}, body:{:?}",
                     &status, &response_body
                 );
+                error!(status=?status, request_body=?post_body_json, response_body=?response_body, "Failed making request to Azure Resource Graph");
                 errors.push(anyhow!(error));
-                continue;
+                // continue;
             }
 
             let rt: T = match serde_json::from_str(&response_body) {
@@ -341,7 +343,7 @@ impl AzureRest {
                         "serde_json::from_str: err:{:?}, body:{:?}",
                         err, response_body
                     );
-                    warn!(error);
+                    error!(error);
                     errors.push(anyhow!(error));
                     continue;
                 }
