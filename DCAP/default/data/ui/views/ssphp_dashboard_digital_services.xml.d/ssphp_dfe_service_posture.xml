@@ -408,6 +408,11 @@
 
 | search ssphp.service.portfolio=$tkn_portfolio|s$ AND ssphp.service.service_line=$tkn_service_line|s$ AND ssphp.service.product=$tkn_product|s$
 
+
+``` **************** Regex Filter **************** ```
+| regex ssphp.resource.id="$tkn_filter_regex$"
+
+
 | eval ssphp.service.portfolio=trim('ssphp.service.portfolio'),
        ssphp.service.service_line=trim('ssphp.service.service_line'),
        ssphp.service.product=trim('ssphp.service.product')
