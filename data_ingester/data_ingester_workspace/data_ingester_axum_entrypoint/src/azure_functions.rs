@@ -14,6 +14,7 @@ use std::env;
 use std::sync::Arc;
 use tokio::sync::oneshot::Sender;
 use tracing::info;
+use tracing::trace;
 use valuable::Valuable;
 
 /// Start the Axum server
@@ -46,7 +47,8 @@ pub(crate) async fn start_server(tx: Sender<()>) -> Result<()> {
     info!(name = name, "Splunk tracing started");
 
     let app = Router::new()
-        .route("/", get(get_health_check))
+        .route("/", get(get_root))
+        .route("/healthcheck", get(get_health_check))
         .route("/aws", post(post_aws))
         .route("/azure", post(post_azure))
         .route("/azure_dev_ops", post(post_azure_dev_ops))
@@ -85,15 +87,29 @@ pub(crate) async fn start_server(tx: Sender<()>) -> Result<()> {
 }
 
 /// Health check
+async fn get_root(headers: HeaderMap) -> Json<AzureInvokeResponse> {
+    trace!("root request");
+    Json(AzureInvokeResponse {
+        outputs: None,
+        logs: vec![
+            "GET /".to_string(),
+            format!("GIT_HASH: {}", env!("GIT_HASH")),
+            format!("Headers: {:?}", headers),
+        ],
+        return_value: None,
+    })
+}
+
+/// Health check
 async fn get_health_check(
     headers: HeaderMap,
     State(state): State<Arc<AppState>>,
 ) -> Json<AzureInvokeResponse> {
-    info!("Health check");
+    trace!("Health check");
     let stats = state.stats.read().await;
     let app_state_health_check = AppStateHealthCheck::from((&state, &(*stats)));
 
-    info!(health_state = app_state_health_check.as_value(), headers=?headers);
+    trace!(health_state = app_state_health_check.as_value(), headers=?headers);
 
     let app_state_health_check_json = serde_json::to_string(&app_state_health_check)
         .unwrap_or_else(|_| "ERROR converting AppState to Json".to_string());

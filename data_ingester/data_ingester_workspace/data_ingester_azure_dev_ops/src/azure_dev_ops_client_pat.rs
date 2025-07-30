@@ -100,7 +100,7 @@ impl AzureDevOpsClient for AzureDevOpsClientPat {
 
             collection.count += ado_response.count();
             collection.value.extend(ado_response.values());
-            info!(
+            trace!(
                 collection_count = collection.count,
                 collection_len = collection.value.len()
             );
