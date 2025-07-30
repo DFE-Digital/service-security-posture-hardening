@@ -122,10 +122,6 @@ impl AzureDevOpsClient for AzureDevOpsTestClient {
 
         Ok(response)
     }
-
-    fn api_version(&self) -> &str {
-        "7.2-preview.1"
-    }
 }
 
 impl AzureDevOpsClientMethods for AzureDevOpsTestClient {}

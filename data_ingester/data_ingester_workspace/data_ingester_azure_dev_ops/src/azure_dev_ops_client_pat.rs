@@ -11,7 +11,6 @@ pub(crate) struct AzureDevOpsClientPat {
     #[allow(unused)]
     organization: String,
     pat: String,
-    api_version: String,
 }
 
 impl AzureDevOpsClientMethods for AzureDevOpsClientPat {}
@@ -25,7 +24,6 @@ impl AzureDevOpsClientPat {
 
         Ok(Self {
             client,
-            api_version: "7.2-preview.1".into(),
             pat: pat.into(),
             organization: organization.into(),
         })
@@ -38,10 +36,6 @@ impl AzureDevOpsClientPat {
 }
 
 impl AzureDevOpsClient for AzureDevOpsClientPat {
-    fn api_version(&self) -> &str {
-        self.api_version.as_str()
-    }
-
     fn ado_metadata_builder(&self) -> AdoMetadataBuilder<NoUrl, NoType, NoRestDocs> {
         AdoMetadataBuilder::new()
     }
@@ -102,7 +96,10 @@ impl AzureDevOpsClient for AzureDevOpsClientPat {
 
             collection.count += ado_response.count();
             collection.value.extend(ado_response.values());
-            info!(collection_count=collection.count, collection_len=collection.value.len());
+            info!(
+                collection_count = collection.count,
+                collection_len = collection.value.len()
+            );
             if continuation_token.is_empty() {
                 break;
             }
