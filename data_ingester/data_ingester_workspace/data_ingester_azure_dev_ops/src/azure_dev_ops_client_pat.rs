@@ -4,7 +4,7 @@ use crate::ado_response::{AddAdoResponse, AdoPaging, AdoRateLimiting, AdoRespons
 use crate::data::organization::Organizations;
 use anyhow::Result;
 use serde::de::DeserializeOwned;
-use tracing::{debug, error, info, trace};
+use tracing::{error, info, trace};
 
 pub(crate) struct AzureDevOpsClientPat {
     pub(crate) client: reqwest::Client,
@@ -50,14 +50,17 @@ impl AzureDevOpsClient for AzureDevOpsClientPat {
         loop {
             let next_url = if continuation_token.has_more() {
                 format!(
-                    "{}&continuationToken={}",
+                    "{}&$top=10000000&continuationToken={}",
                     collection.metadata.url(),
                     continuation_token.next_token()
                 )
             } else {
-                collection.metadata.url().to_string()
+                format!(
+                    "{}&$top=10000000&continuationToken=",
+                    collection.metadata.url().to_string()
+                )
             };
-            info!(next_url=?next_url);
+            trace!(next_url=?next_url);
 
             let response = self
                 .client
@@ -69,6 +72,7 @@ impl AzureDevOpsClient for AzureDevOpsClientPat {
             let status = response.status();
             let headers = response.headers().clone();
             let text = response.text().await?;
+            trace!(text=?text);
 
             if !status.is_success() {
                 error!(name="Azure Dev Ops", operation="GET request", error="Non 2xx status code",
@@ -81,8 +85,8 @@ impl AzureDevOpsClient for AzureDevOpsClientPat {
             collection.metadata.status.push(status.into());
 
             let rate_limit = AdoRateLimiting::from_headers(&headers);
-            debug!(rate_limit=?rate_limit);
-            info!(headers=?headers);
+            trace!(rate_limit=?rate_limit);
+            trace!(headers=?headers);
             continuation_token = AdoPaging::from_headers(&headers);
 
             trace!(
