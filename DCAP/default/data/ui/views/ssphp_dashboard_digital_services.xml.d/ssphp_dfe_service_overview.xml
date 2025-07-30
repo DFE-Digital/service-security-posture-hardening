@@ -1,7 +1,7 @@
 <dashboard version="1.1" theme="light" script="js/table_cell_backcolor_service_overview.js">
 
 <label>DfE Security Posture Continuous Assurance : Service Overview Dashboard</label>
-<description>{{environment}} v1.0.5</description>
+<description>{{environment}} v1.0.6</description>
 
   <init>
     <unset token="tkn_main_ready"></unset>
@@ -691,6 +691,8 @@
 
 | stats values(*) as * by ssphp.service.portfolio, ssphp.service.service_line, ssphp.service.product, ssphp.service.id
 
+| search $tkn_current_user_search_filter$
+
 ```| fillnull value="-" POSTURE, KUBERNETES, REPOS, CODE_SCAN, VULNERABILITY```
 
 ```
@@ -932,8 +934,11 @@
         <fields>Portfolio, "Service Line", Product, "Azure Posture Configuration", "Kubernetes AKS Configuration", "Repository Configuration", "Code Scanning Alerts", "VM Vulnerability Alerts"</fields>
       </table>
     </panel>
+  </row>
 
-    <panel depends="$debug$">
+
+  <row depends="$debug$">
+    <panel>
       <table>
         <search>
           <query>
@@ -947,6 +952,29 @@
         </search>
       </table>
     </panel>
+
+
+    <panel>
+        <table>
+            <search>
+                <query>
+| rest splunk_server=local /services/authentication/current-context
+| rename roles as user_roles
+
+| fields username, user_roles
+
+| rex field=user_roles "^dfe_ssphp_service_user_(?&lt;service_no&gt;\d*)$"
+
+| eval out_filter=case(mvcount(mvfilter(match('user_roles',"dfe_ssphp_service_user_multi")))&gt;0, "(ssphp.service.id=".mvjoin('service_no', " OR ssphp.service.id=").")",
+                       1==1,"ssphp.service.id=*")
+| table out_filter
+                  </query>
+                  <done>
+                    <set token="tkn_current_user_search_filter">$result.out_filter$</set>
+                  </done>
+              </search>
+          </table>
+      </panel>
+
   </row>
-  
 </dashboard>
