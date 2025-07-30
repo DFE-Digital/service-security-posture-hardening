@@ -4,14 +4,13 @@ use crate::ado_response::{AddAdoResponse, AdoPaging, AdoRateLimiting, AdoRespons
 use crate::data::organization::Organizations;
 use anyhow::Result;
 use serde::de::DeserializeOwned;
-use tracing::{debug, error, trace};
+use tracing::{error, info, trace};
 
 pub(crate) struct AzureDevOpsClientPat {
     pub(crate) client: reqwest::Client,
     #[allow(unused)]
     organization: String,
     pat: String,
-    api_version: String,
 }
 
 impl AzureDevOpsClientMethods for AzureDevOpsClientPat {}
@@ -25,7 +24,6 @@ impl AzureDevOpsClientPat {
 
         Ok(Self {
             client,
-            api_version: "7.2-preview.1".into(),
             pat: pat.into(),
             organization: organization.into(),
         })
@@ -38,10 +36,6 @@ impl AzureDevOpsClientPat {
 }
 
 impl AzureDevOpsClient for AzureDevOpsClientPat {
-    fn api_version(&self) -> &str {
-        self.api_version.as_str()
-    }
-
     fn ado_metadata_builder(&self) -> AdoMetadataBuilder<NoUrl, NoType, NoRestDocs> {
         AdoMetadataBuilder::new()
     }
@@ -56,13 +50,17 @@ impl AzureDevOpsClient for AzureDevOpsClientPat {
         loop {
             let next_url = if continuation_token.has_more() {
                 format!(
-                    "{}&continuationToken={}",
+                    "{}&$top=10000000&continuationToken={}",
                     collection.metadata.url(),
                     continuation_token.next_token()
                 )
             } else {
-                collection.metadata.url().to_string()
+                format!(
+                    "{}&$top=10000000&continuationToken=",
+                    collection.metadata.url().to_string()
+                )
             };
+            trace!(next_url=?next_url);
 
             let response = self
                 .client
@@ -74,16 +72,21 @@ impl AzureDevOpsClient for AzureDevOpsClientPat {
             let status = response.status();
             let headers = response.headers().clone();
             let text = response.text().await?;
+            trace!(text=?text);
 
             if !status.is_success() {
-                error!(name="Azure Dev Ops", operation="GET request", error="Non 2xx status code", url=?next_url, status=?status, headers=?headers, body=text);
+                error!(name="Azure Dev Ops", operation="GET request", error="Non 2xx status code",
+                       url=?next_url,
+                       status=?status,
+                       //headers=?headers,
+                       body=text);
                 anyhow::bail!("Azure Dev Org request failed with with Non 2xx status code");
             }
             collection.metadata.status.push(status.into());
 
             let rate_limit = AdoRateLimiting::from_headers(&headers);
-            debug!(rate_limit=?rate_limit);
-
+            trace!(rate_limit=?rate_limit);
+            trace!(headers=?headers);
             continuation_token = AdoPaging::from_headers(&headers);
 
             trace!(
@@ -97,7 +100,10 @@ impl AzureDevOpsClient for AzureDevOpsClientPat {
 
             collection.count += ado_response.count();
             collection.value.extend(ado_response.values());
-
+            info!(
+                collection_count = collection.count,
+                collection_len = collection.value.len()
+            );
             if continuation_token.is_empty() {
                 break;
             }

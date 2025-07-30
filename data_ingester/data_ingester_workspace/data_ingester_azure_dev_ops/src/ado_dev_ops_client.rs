@@ -11,8 +11,6 @@ pub(crate) trait AzureDevOpsClient {
         metadata: AdoMetadata,
     ) -> Result<AdoResponse>;
 
-    fn api_version(&self) -> &str;
-
     fn ado_metadata_builder(&self) -> AdoMetadataBuilder<NoUrl, NoType, NoRestDocs> {
         AdoMetadataBuilder::new()
     }
@@ -20,32 +18,34 @@ pub(crate) trait AzureDevOpsClient {
 
 pub(crate) trait AzureDevOpsClientMethods: AzureDevOpsClient {
     async fn projects_list(&self, organization: &str) -> Result<AdoResponse> {
+        let api_version = "7.2-preview.4";
         let url = format!(
             "https://dev.azure.com/{organization}/_apis/projects?api-version={}",
-            self.api_version()
+            api_version
         );
 
         let ado_metadata = self.ado_metadata_builder()
             .url(url)
             .organization(organization)
             .r#type("fn projects_list")
-            .rest_docs("https://learn.microsoft.com/en-us/rest/api/azure/devops/core/projects/list?view=azure-devops-rest-7.1&tabs=HTTP")
+            .rest_docs("https://learn.microsoft.com/en-us/rest/api/azure/devops/core/projects/list?view=azure-devops-rest-7.2")
             .build();
 
         self.get::<AdoResponse>(ado_metadata).await
     }
 
     async fn audit_streams(&self, organization: &str) -> Result<AdoResponse> {
+        let api_version = "7.2-preview.1";
         let url = format!(
             "https://auditservice.dev.azure.com/{organization}/_apis/audit/streams?api-version={}",
-            self.api_version()
+            api_version
         );
 
         let ado_metadata = self.ado_metadata_builder()
             .url(url)
             .organization(organization)
             .r#type("fn audit_streams")
-            .rest_docs("https://learn.microsoft.com/en-us/rest/api/azure/devops/audit/streams/query-all-streams?view=azure-devops-rest-7.1&tabs=HTTP")
+            .rest_docs("https://learn.microsoft.com/en-us/rest/api/azure/devops/audit/streams/query-all-streams?view=azure-devops-rest-7.2")
             .build();
 
         self.get::<AdoResponse>(ado_metadata).await
@@ -64,15 +64,16 @@ pub(crate) trait AzureDevOpsClientMethods: AzureDevOpsClient {
     // }
     #[allow(unused)]
     async fn pat_tokens(&self, organization: &str) -> Result<AdoResponse> {
+        let api_version = "7.2-preview.1";
         let url = format!(
             "https://vssps.dev.azure.com/{organization}/_apis/tokens/pats?api-version={}",
-            self.api_version()
+            api_version
         );
         let ado_metadata = self.ado_metadata_builder()
             .url(url)
             .organization(organization)
             .r#type("fn pat_tokens")
-            .rest_docs("https://learn.microsoft.com/en-us/rest/api/azure/devops/tokens/pats/list?view=azure-devops-rest-7.1&tabs=HTTP")
+            .rest_docs("https://learn.microsoft.com/en-us/rest/api/azure/devops/tokens/pats/list?view=azure-devops-rest-7.2")
             .build();
 
         self.get::<AdoResponse>(ado_metadata).await
@@ -83,34 +84,36 @@ pub(crate) trait AzureDevOpsClientMethods: AzureDevOpsClient {
         organization: &str,
         project: &Project,
     ) -> Result<AdoResponse> {
+        let api_version = "7.2-preview.1";
         let url = format!(
             "https://dev.azure.com/{organization}/{project_id}/_apis/policy/configurations?api-version={api_version}",
             project_id=project.id,
-            api_version=self.api_version(),
+            api_version=api_version,
         );
         let ado_metadata = self.ado_metadata_builder()
             .url(url)
             .organization(organization)
             .project(project)
             .r#type("fn policy_configuration_get")
-            .rest_docs("https://learn.microsoft.com/en-us/rest/api/azure/devops/policy/configurations/list?view=azure-devops-rest-7.1&tabs=HTTP")
+            .rest_docs("https://learn.microsoft.com/en-us/rest/api/azure/devops/policy/configurations/list?view=azure-devops-rest-7.2")
             .build();
 
         self.get::<AdoResponse>(ado_metadata).await
     }
 
     async fn policy_types_get(&self, organization: &str, project: &Project) -> Result<AdoResponse> {
+        let api_version = "7.2-preview.1";
         let url = format!(
             "https://dev.azure.com/{organization}/{project_id}/_apis/policy/types?api-version={api_version}",
             project_id=project.id,
-            api_version=self.api_version(),
+            api_version=api_version,
         );
         let ado_metadata = self.ado_metadata_builder()
             .url(url)
             .organization(organization)
             .project(project)
             .r#type("fn policy_types_get")
-            .rest_docs("https://learn.microsoft.com/en-us/rest/api/azure/devops/policy/types/list?view=azure-devops-rest-7.1&tabs=HTTP")
+            .rest_docs("https://learn.microsoft.com/en-us/rest/api/azure/devops/policy/types/list?view=azure-devops-rest-7.2")
             .build();
 
         self.get::<AdoResponse>(ado_metadata).await
@@ -123,17 +126,18 @@ pub(crate) trait AzureDevOpsClientMethods: AzureDevOpsClient {
         organization: &str,
         project: &Project,
     ) -> Result<AdoResponse> {
+        let api_version = "7.2-preview.1";
         let url = format!(
             "https://dev.azure.com/{organization}/{project_id}/_apis/git/policy/configurations?api-version={api_version}",
             project_id=project.id,
-            api_version=self.api_version(),
+            api_version=api_version,
         );
         let ado_metadata = self.ado_metadata_builder()
             .url(url)
             .organization(organization)
             .project(project)
             .r#type("fn git_policy_configuration_get")
-            .rest_docs("https://learn.microsoft.com/en-us/rest/api/azure/devops/git/policy-configurations/get?view=azure-devops-rest-7.1")
+            .rest_docs("https://learn.microsoft.com/en-us/rest/api/azure/devops/git/policy-configurations/get?view=azure-devops-rest-7.2")
             .build();
 
         self.get::<AdoResponse>(ado_metadata).await
@@ -148,11 +152,12 @@ pub(crate) trait AzureDevOpsClientMethods: AzureDevOpsClient {
         project: &Project,
         repo: &Repository,
     ) -> Result<AdoResponse> {
+        let api_version = "7.2-preview.1";
         let url = format!(
             "https://dev.azure.com/{organization}/{project_id}/_apis/git/policy/configurations?api-version={api_version}&repositoryId={repo_id}",
             project_id=project.id,
             repo_id=repo.id(),
-            api_version=self.api_version(),
+            api_version=api_version,
         );
         let ado_metadata = self.ado_metadata_builder()
             .url(url)
@@ -160,7 +165,7 @@ pub(crate) trait AzureDevOpsClientMethods: AzureDevOpsClient {
             .project(project)
             .repo(repo)
             .r#type("fn git_repo_policy_configuration_get")
-            .rest_docs("https://learn.microsoft.com/en-us/rest/api/azure/devops/git/policy-configurations/get?view=azure-devops-rest-7.1")
+            .rest_docs("https://learn.microsoft.com/en-us/rest/api/azure/devops/git/policy-configurations/get?view=azure-devops-rest-7.2")
             .build();
 
         self.get::<AdoResponse>(ado_metadata).await
@@ -171,72 +176,77 @@ pub(crate) trait AzureDevOpsClientMethods: AzureDevOpsClient {
         organization: &str,
         project: &Project,
     ) -> Result<AdoResponse> {
+        let api_version = "7.2-preview.2";
         let url = format!(
             "https://dev.azure.com/{organization}/{project_id}/_apis/git/repositories?api-version={api_version}",
             project_id=project.id,
-            api_version=self.api_version(),
+            api_version=api_version,
         );
         let ado_metadata = self.ado_metadata_builder()
             .url(url)
             .organization(organization)
             .project(project)
             .r#type("fn git_repository_list")
-            .rest_docs("https://learn.microsoft.com/en-us/rest/api/azure/devops/git/repositories/list?view=azure-devops-rest-7.1&tabs=HTTP")
+            .rest_docs("https://learn.microsoft.com/en-us/rest/api/azure/devops/git/repositories/list?view=azure-devops-rest-7.2")
             .build();
 
         self.get::<AdoResponse>(ado_metadata).await
     }
 
     async fn graph_users_list(&self, organization: &str) -> Result<AdoResponse> {
+        let api_version = "7.2-preview.1";
         let url = format!(
             "https://vssps.dev.azure.com/{organization}/_apis/graph/users?api-version={}",
-            self.api_version()
+            api_version
         );
 
         let ado_metadata = self.ado_metadata_builder()
             .url(url)
             .organization(organization)
             .r#type("fn graph_users_list")
-            .rest_docs("https://learn.microsoft.com/en-us/rest/api/azure/devops/graph/users/list?view=azure-devops-rest-7.1&tabs=HTTP")
+            .rest_docs("https://learn.microsoft.com/en-us/rest/api/azure/devops/graph/users/list?view=azure-devops-rest-7.2")
             .build();
 
         self.get::<AdoResponse>(ado_metadata).await
     }
 
     async fn graph_service_principals_list(&self, organization: &str) -> Result<AdoResponse> {
+        let api_version = "7.2-preview.1";
         let url = format!(
             "https://vssps.dev.azure.com/{organization}/_apis/graph/serviceprincipals?api-version={api_version}",
-            api_version=self.api_version()
+            api_version=api_version
         );
         let ado_metadata = self.ado_metadata_builder()
             .url(url)
             .organization(organization)
             .r#type("fn graph_service_principals_list")
-            .rest_docs("https://learn.microsoft.com/en-us/rest/api/azure/devops/graph/service-principals/list?view=azure-devops-rest-7.1&tabs=HTTP")
+            .rest_docs("https://learn.microsoft.com/en-us/rest/api/azure/devops/graph/service-principals/list?view=azure-devops-rest-7.2")
             .build();
 
         self.get::<AdoResponse>(ado_metadata).await
     }
 
     async fn graph_groups_list(&self, organization: &str) -> Result<AdoResponse> {
+        let api_version = "7.2-preview.1";
         let url = format!(
             "https://vssps.dev.azure.com/{organization}/_apis/graph/groups?api-version={api_version}",
-            api_version=self.api_version()
+            api_version=api_version
         );
         let ado_metadata = self.ado_metadata_builder()
             .url(url)
             .organization(organization)
             .r#type("fn graph_groups_list")
-            .rest_docs("https://learn.microsoft.com/en-us/rest/api/azure/devops/graph/groups/list?view=azure-devops-rest-7.1&tabs=HTTP")
+            .rest_docs("https://learn.microsoft.com/en-us/rest/api/azure/devops/graph/groups/list?view=azure-devops-rest-7.2")
             .build();
 
         self.get::<AdoResponse>(ado_metadata).await
     }
 
     async fn adv_security_org_enablement(&self, organization: &str) -> Result<AdoResponse> {
+        let api_version = "7.2-preview.3";
         let url = format!(
             "https://advsec.dev.azure.com/{organization}/_apis/management/enablement?api-version={api_version}&includeAllProperties=true",
-            api_version=self.api_version()
+            api_version=api_version,
         );
         let ado_metadata = self.ado_metadata_builder()
             .url(url)
@@ -249,15 +259,16 @@ pub(crate) trait AzureDevOpsClientMethods: AzureDevOpsClient {
     }
 
     async fn security_namespaces(&self, organization: &str) -> Result<AdoResponse> {
+        let api_version = "7.2-preview.1";
         let url = format!(
             "https://dev.azure.com/{organization}/_apis/securitynamespaces?api-version={api_version}",
-            api_version=self.api_version()
+            api_version=api_version,
         );
         let ado_metadata = self.ado_metadata_builder()
             .url(url)
             .organization(organization)
             .r#type("fn security_namespaces")
-            .rest_docs("https://learn.microsoft.com/en-us/rest/api/azure/devops/security/security-namespaces/query?view=azure-devops-rest-7.2&tabs=HTTP#all-security-namespaces")
+            .rest_docs("https://learn.microsoft.com/en-us/rest/api/azure/devops/security/security-namespaces/query?view=azure-devops-rest-7.2")
             .build();
 
         self.get::<AdoResponse>(ado_metadata).await
@@ -268,30 +279,32 @@ pub(crate) trait AzureDevOpsClientMethods: AzureDevOpsClient {
         organization: &str,
         namespace_id: &str,
     ) -> Result<AdoResponse> {
+        let api_version = "7.2-preview.1";
         let url = format!(
             "https://dev.azure.com/{organization}/_apis/accesscontrollists/{namespace_id}?api-version={api_version}&recurse=True&includeExtendedInfo=True",
-            api_version=self.api_version()
+            api_version=api_version
         );
         let ado_metadata = self.ado_metadata_builder()
             .url(url)
             .organization(organization)
             .r#type("fn security_access_control_lists")
-            .rest_docs("https://learn.microsoft.com/en-us/rest/api/azure/devops/security/access-control-lists/query?view=azure-devops-rest-7.2&tabs=HTTP#include-child-acls")
+            .rest_docs("https://learn.microsoft.com/en-us/rest/api/azure/devops/security/access-control-lists/query?view=azure-devops-rest-7.2")
             .build();
 
         self.get::<AdoResponse>(ado_metadata).await
     }
 
     async fn identities(&self, organization: &str, descriptor: &str) -> Result<AdoResponse> {
+        let api_version = "7.2-preview.1";
         let url = format!(
             "https://vssps.dev.azure.com/{organization}/_apis/identities?api-version={api_version}&descriptors={descriptor}",
-            api_version=self.api_version()
+            api_version=api_version
         );
         let ado_metadata = self.ado_metadata_builder()
             .url(url)
             .organization(organization)
             .r#type("fn identities")
-            .rest_docs("https://learn.microsoft.com/en-us/rest/api/azure/devops/ims/identities/read-identities?view=azure-devops-rest-7.2&tabs=HTTP")
+            .rest_docs("https://learn.microsoft.com/en-us/rest/api/azure/devops/ims/identities/read-identities?view=azure-devops-rest-7.2")
             .build();
 
         self.get::<AdoResponse>(ado_metadata).await
@@ -302,10 +315,11 @@ pub(crate) trait AzureDevOpsClientMethods: AzureDevOpsClient {
         organization: &str,
         project: &Project,
     ) -> Result<AdoResponse> {
+        let api_version = "7.2-preview.3";
         let url = format!(
             "https://advsec.dev.azure.com/{organization}/{project_id}/_apis/management/enablement?api-version={api_version}&includeAllProperties=true",
             project_id=project.id,
-            api_version=self.api_version(),
+            api_version=api_version
         );
         let ado_metadata = self.ado_metadata_builder()
             .url(url)
@@ -324,11 +338,12 @@ pub(crate) trait AzureDevOpsClientMethods: AzureDevOpsClient {
         project: &Project,
         repository: &Repository,
     ) -> Result<AdoResponse> {
+        let api_version = "7.2-preview.3";
         let url = format!(
             "https://advsec.dev.azure.com/{organization}/{project_id}/_apis/management/repositories/{repository_id}/enablement?api-version={api_version}&includeAllProperties=true",
             project_id=project.id,
             repository_id=repository.id(),
-            api_version=self.api_version()
+            api_version=api_version,
         );
 
         let ado_metadata = self.ado_metadata_builder()
@@ -349,11 +364,12 @@ pub(crate) trait AzureDevOpsClientMethods: AzureDevOpsClient {
         project: &Project,
         repository: &Repository,
     ) -> Result<AdoResponse> {
+        let api_version = "7.2-preview.1";
         let url = format!(
             "https://advsec.dev.azure.com/{organization}/{project_id}/_apis/alert/repositories/{repository_id}/alerts?api-version={api_version}",
             project_id=project.id,
             repository_id=repository.id(),
-            api_version=self.api_version()
+            api_version=api_version
         );
 
         let ado_metadata = self.ado_metadata_builder()
@@ -374,11 +390,12 @@ pub(crate) trait AzureDevOpsClientMethods: AzureDevOpsClient {
         project: &Project,
         repository: &Repository,
     ) -> Result<AdoResponse> {
+        let api_version = "7.2-preview.2";
         let url = format!(
             "https://dev.azure.com/{organization}/{project_id}/_apis/git/repositories/{repository_id}/stats/branches?api-version={api_version}",
             project_id=project.id,
             repository_id=repository.id(),
-            api_version=self.api_version()
+            api_version=api_version,
         );
 
         let ado_metadata = self.ado_metadata_builder()
@@ -398,10 +415,11 @@ pub(crate) trait AzureDevOpsClientMethods: AzureDevOpsClient {
         organization: &str,
         project: &Project,
     ) -> Result<AdoResponse> {
+        let api_version = "7.2-preview.1";
         let url = format!(
             "https://dev.azure.com/{organization}/{project_id}/_apis/build/generalsettings?api-version={api_version}",
             project_id=project.id,
-            api_version=self.api_version(),
+            api_version=api_version,
         );
         let ado_metadata = self.ado_metadata_builder()
             .url(url)

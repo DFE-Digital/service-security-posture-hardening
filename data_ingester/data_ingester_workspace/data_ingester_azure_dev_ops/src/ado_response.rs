@@ -339,13 +339,13 @@ impl<T: From<(Vec<I>, AdoMetadata)> + AdoMetadataTrait, I: DeserializeOwned> Fro
     for AdoLocalType<T, I>
 {
     fn from(value: AdoResponse) -> AdoLocalType<T, I> {
-        let collection = value.value.into_iter().filter_map(|repo| {
-            match serde_json::from_value::<I>(repo) {
-                Ok(repo) => {
-                    Some(repo)
+        let collection = value.value.into_iter().filter_map(|item| {
+            match serde_json::from_value::<I>(item.clone()) {
+                Ok(item) => {
+                    Some(item)
                 },
                 Err(err) => {
-                    error!(name="Azure DevOps", operation="From<AdoResponse> for Generic<T>", error=?err);
+                    error!(name="Azure DevOps", operation="From<AdoResponse> for Generic<T>", error=?err, item=?item);
                     None
                 }
             }

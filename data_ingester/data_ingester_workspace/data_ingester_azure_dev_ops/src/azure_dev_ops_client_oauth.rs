@@ -10,7 +10,6 @@ use tracing::{debug, error, trace};
 pub(crate) struct AzureDevOpsClientOauth {
     pub(crate) client: reqwest::Client,
     token: Token,
-    api_version: String,
     pub(crate) tenant_id: String,
 }
 
@@ -36,7 +35,6 @@ impl AzureDevOpsClientOauth {
 
         Ok(Self {
             client,
-            api_version: "7.2-preview.1".into(),
             token,
             tenant_id: tenant_id.into(),
         })
@@ -95,10 +93,6 @@ enum TokenType {
 }
 
 impl AzureDevOpsClient for AzureDevOpsClientOauth {
-    fn api_version(&self) -> &str {
-        self.api_version.as_str()
-    }
-
     fn ado_metadata_builder(&self) -> AdoMetadataBuilder<NoUrl, NoType, NoRestDocs> {
         AdoMetadataBuilder::new().tenant(&self.tenant_id)
     }
@@ -133,7 +127,11 @@ impl AzureDevOpsClient for AzureDevOpsClientOauth {
             let text = response.text().await?;
 
             if !status.is_success() {
-                error!(name="Azure Dev Ops", operation="GET request", error="Non 2xx status code", status=?status, headers=?headers, body=text, url=next_url);
+                error!(name="Azure Dev Ops", operation="GET request", error="Non 2xx status code",
+                       status=?status,
+                       //headers=?headers,
+                       body=text,
+                       url=next_url);
                 anyhow::bail!("Azure Dev Org request failed with with Non 2xx status code");
             }
             collection.metadata.status.push(status.into());

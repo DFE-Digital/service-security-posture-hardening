@@ -5,9 +5,9 @@ use crate::{
     azure_dev_ops_client_oauth::AzureDevOpsClientOauth,
     azure_dev_ops_client_pat::AzureDevOpsClientPat,
     data::{
-        git_policy_configuration::PolicyConfigurations, identities::Identities, projects::Projects,
-        repositories::Repositories, repository_policy_join::RepoPolicyJoins, security_acl::Acls,
-        security_namespaces::SecurityNamespaces, stats::Stats,
+        git_policy_configuration::PolicyConfigurations, identities::Identities, organization,
+        projects::Projects, repositories::Repositories, repository_policy_join::RepoPolicyJoins,
+        security_acl::Acls, security_namespaces::SecurityNamespaces, stats::Stats,
     },
     SSPHP_RUN_KEY,
 };
@@ -16,7 +16,7 @@ use data_ingester_splunk::splunk::{set_ssphp_run, try_collect_send, Splunk};
 use data_ingester_splunk::splunk::{SplunkTrait, ToHecEvents};
 use data_ingester_supporting::keyvault::Secrets;
 use std::sync::Arc;
-use tracing::{error, info};
+use tracing::{error, info, trace};
 
 pub async fn entrypoint(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
     set_ssphp_run(SSPHP_RUN_KEY)?;
@@ -39,8 +39,12 @@ pub async fn entrypoint(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()
         .await?;
 
         for organization in organizations.organizations {
+            let ado = AzureDevOpsClientOauth::new(client_id, client_secret, tenant_id)
+                .await
+                .context("Building AzureDevOpsClient")?;
+
             let _collection_result = collect_organization(
-                &ado,
+                ado,
                 splunk.clone(), //"CatsCakes").await;
                 &organization.organization_name,
             )
@@ -48,20 +52,41 @@ pub async fn entrypoint(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()
         }
     }
 
+    let mut tasks = vec![];
+
     for pat in secrets.ado_pats.iter() {
         if let Ok(ado) = AzureDevOpsClientPat::new(pat.organization(), pat.pat()) {
-            let _ = collect_organization(&ado, splunk.clone(), pat.organization()).await;
+            let organization = pat.organization().to_owned();
+            tasks.push((
+                pat.organization(),
+                tokio::spawn(collect_organization(ado, splunk.clone(), organization)),
+            ));
         }
+    }
+
+    for (org_name, task) in tasks {
+        task.await
+            .context("Tokio task has completed successfully")?
+            .with_context(|| format!("Running ADO collection for {}", org_name))?;
     }
 
     Ok(())
 }
 
-async fn collect_organization<A: AzureDevOpsClientMethods>(
-    ado: &A,
+async fn collect_organization<A: AzureDevOpsClientMethods, O: AsRef<str>>(
+    ado: A,
     splunk: Arc<Splunk>,
-    organization: &str,
+    organization: O,
 ) -> Result<()> {
+    let organization = organization.as_ref();
+    info!(
+        operation = "collect_organization",
+        stage = "start",
+        name = crate::SSPHP_RUN_KEY,
+        ado_organization = &organization,
+        "Starting ADO collection"
+    );
+
     let _users = try_collect_send(
         &format!("Users for {organization}"),
         ado.graph_users_list(organization),
@@ -97,6 +122,11 @@ async fn collect_organization<A: AzureDevOpsClientMethods>(
     )
     .await;
 
+    trace!(
+        name = crate::SSPHP_RUN_KEY,
+        ado_organization = &organization,
+        "collect_security_namespaces"
+    );
     let security_namespaces = try_collect_send(
         &format!("Security Namespaces {organization}"),
         ado.security_namespaces(organization),
@@ -104,18 +134,47 @@ async fn collect_organization<A: AzureDevOpsClientMethods>(
     )
     .await;
 
+    trace!(
+        name = crate::SSPHP_RUN_KEY,
+        ado_organization = &organization,
+        "security_namespaces_outer"
+    );
     // Get Acls & Identities associated with all Security Namespaces
     if let Ok(security_namespaces) = security_namespaces {
+        trace!(
+            name = crate::SSPHP_RUN_KEY,
+            ado_organization = &organization,
+            "security_namespaces_inner"
+        );
         let security_namespaces = SecurityNamespaces::from(security_namespaces);
 
+        trace!(
+            name = crate::SSPHP_RUN_KEY,
+            ado_organization = &organization,
+            "collect_security_acls"
+        );
         let security_access_control_lists =
-            collect_security_acls(ado, &splunk, security_namespaces, organization).await;
+            collect_security_acls(&ado, &splunk, security_namespaces, organization).await;
 
+        trace!(
+            name = crate::SSPHP_RUN_KEY,
+            ado_organization = &organization,
+            "all_acl_descriptors"
+        );
         let identity_descriptors = security_access_control_lists.all_acl_descriptors();
 
-        let _ = collect_identities(ado, &splunk, identity_descriptors, organization).await;
+        trace!(
+            name = crate::SSPHP_RUN_KEY,
+            ado_organization = &organization,
+            "collect_identities"
+        );
+        let _ = collect_identities(&ado, &splunk, identity_descriptors, organization).await;
     }
-
+    trace!(
+        name = crate::SSPHP_RUN_KEY,
+        ado_organization = &organization,
+        "projects_list"
+    );
     let projects = try_collect_send(
         &format!("Projects for {organization}"),
         ado.projects_list(organization),
@@ -131,7 +190,7 @@ async fn collect_organization<A: AzureDevOpsClientMethods>(
         }
     };
 
-    info!(
+    trace!(
         name = "Azure DevOps",
         operation = "colelct_organization",
         organization = organization,
@@ -215,7 +274,7 @@ async fn collect_organization<A: AzureDevOpsClientMethods>(
             let _ = splunk.send_batch(repo_policy_joins_hec_events).await;
         }
 
-        info!(
+        trace!(
             name = "Azure DevOps",
             operation = "collect_organization",
             organization = organization,
@@ -272,8 +331,9 @@ async fn collect_organization<A: AzureDevOpsClientMethods>(
         }
 
         info!(
-            name = "Azure DevOps",
-            operation = "colelct_organization",
+            name = crate::SSPHP_RUN_KEY,
+            operation = "collect_organization",
+            stage = "end",
             organization = organization,
             total_repo_count = total_repos,
             active_repo_count = active_repos,
@@ -291,14 +351,17 @@ async fn collect_security_acls(
     organization: &str,
 ) -> Acls {
     let mut security_access_control_lists = Acls::default();
+
     // Get ACLS
     for namespace in &security_namespaces.namespaces {
+        let namespace_id = namespace.namespace_id.as_str();
         let security_access_control_list = try_collect_send(
-            &format!("Security Namespaces {organization}"),
-            ado.security_access_control_lists(organization, namespace.namespace_id.as_str()),
+            &format!("Security Access control lists {organization}/{namespace_id}"),
+            ado.security_access_control_lists(organization, namespace_id),
             splunk,
         )
         .await;
+
         // Process Acls for Splunk.
         // The aces_dictionary format is arduous to work with in Splunk so we convert to an aces_vec
         if let Ok(mut security_access_control_list) = security_access_control_list {

@@ -103,7 +103,7 @@ impl Stat {
 struct Commit {
     commit_id: String,
     parents: Option<Vec<String>>,
-    tree_id: String,
+    tree_id: Option<String>,
     author: Author,
     committer: Author,
     comment: String,
@@ -114,7 +114,7 @@ struct Commit {
 #[serde(rename_all = "camelCase")]
 struct Author {
     name: String,
-    email: String,
+    email: Option<String>,
     date: String,
 }
 
@@ -141,15 +141,15 @@ mod test {
                     commit: Commit {
                         commit_id: "commit1".into(),
                         parents: Some(vec![]),
-                        tree_id: "tree1".into(),
+                        tree_id: Some("tree1".into()),
                         author: Author {
                             name: "author1".into(),
-                            email: "email@domain.com".into(),
+                            email: Some("email@domain.com".into()),
                             date: "2014-06-30T18:10:55Z".into(),
                         },
                         committer: Author {
                             name: "author1".into(),
-                            email: "email@domain.com".into(),
+                            email: Some("email@domain.com".into()),
                             date: "2014-05-30T18:10:55Z".into(),
                         },
                         comment: "todo".into(),
@@ -164,15 +164,15 @@ mod test {
                     commit: Commit {
                         commit_id: "commit2".into(),
                         parents: Some(vec![]),
-                        tree_id: "tree2".into(),
+                        tree_id: Some("tree2".into()),
                         author: Author {
                             name: "author2".into(),
-                            email: "email@domain.com".into(),
+                            email: Some("email@domain.com".into()),
                             date: "2014-04-30T18:10:55Z".into(),
                         },
                         committer: Author {
                             name: "author2".into(),
-                            email: "email@domain.com".into(),
+                            email: Some("email@domain.com".into()),
                             date: "2014-07-30T18:10:55Z".into(),
                         },
                         comment: "todo".into(),
@@ -193,7 +193,7 @@ mod test {
     fn test_author_date_parsing() {
         let author = Author {
             name: "nametest".to_string(),
-            email: "email@domain.com".to_string(),
+            email: Some("email@domain.com".to_string()),
             date: "2014-06-30T18:10:55Z".to_string(),
         };
         let date = author.date();
