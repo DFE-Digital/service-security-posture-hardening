@@ -291,6 +291,31 @@ enum ResourceGraphResponse {
     Other(Value),
 }
 
+#[test]
+fn test_json_into_resource_graph_response_error() {
+    let error_response = r#"
+{
+  "error": {
+    "code": "BadRequest",
+    "details": [
+      {
+        "code": "ResponsePayloadTooLarge",
+        "message": "Response payload size is ..."
+      }
+    ],
+    "message": "Please provide below info when asking for support"
+  }
+}"#;
+    let obj: QueryError =
+        serde_json::from_str(&error_response).expect("JSON should parse into QueryError");
+    let obj: ResourceGraphResponse =
+        serde_json::from_str(&error_response).expect("JSON should parse into ResoureGraphResponse");
+    assert!(
+        matches!(obj, ResourceGraphResponse::Error(_)),
+        "JSON didn't parse into a ResourceGraphResponse::Error"
+    );
+}
+
 /// https://learn.microsoft.com/en-us/graph/errors#json-representation
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
@@ -334,7 +359,6 @@ struct QueryErrorErrorDetails {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-#[serde(rename_all = "camelCase")]
 enum QueryErrorErrorDetailsCode {
     RateLimiting,
     ResponsePayloadTooLarge,
