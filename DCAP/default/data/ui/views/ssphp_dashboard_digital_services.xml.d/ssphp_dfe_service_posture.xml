@@ -2,7 +2,7 @@
 
 
 <label>DfE Security Posture Continuous Assurance : Service Posture Dashboard</label>
-<description>{{environment}} v1.0.7</description>
+<description>{{environment}} v1.0.10</description>
   
   <init>
     <set token="tkn_font_size_2">400</set>
@@ -450,9 +450,14 @@
 
 | table number_total_resources, number_passed_resources, perc_passed_resources, abs, compliant_both, compliant_line_width, compliant_line_non_width, compliant_color, ssphp.use_case.category
             </query>
-            <done>
-              <set token="tkn_rollup_ready">true</set>
-            </done>
+            <progress>
+              <condition match="'job.resultCount' > 0">
+                <set token="tkn_rollup_ready">true</set>
+              </condition>
+              <condition>
+                <unset token="tkn_rollup_ready"/>
+              </condition>
+            </progress>
         </search>
       </table>
     </panel>
