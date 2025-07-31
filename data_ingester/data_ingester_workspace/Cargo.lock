@@ -1838,6 +1838,7 @@ dependencies = [
  "tokio",
  "tracing",
  "url",
+ "valuable",
 ]
 
 [[package]]
