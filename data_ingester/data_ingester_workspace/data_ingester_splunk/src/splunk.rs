@@ -369,11 +369,8 @@ where
         }
     };
 
+    // Calculate stats
     let stats = hec_stats(&hec_events);
-    splunk
-        .send_batch(hec_events)
-        .await
-        .context("Sending events to Splunk")?;
 
     // Send HecEvnts to Splunk
     match splunk.send_batch(hec_events).await {
@@ -399,7 +396,6 @@ where
 
 /// Calculate stats for HecEvents
 pub fn hec_stats(hec_events: &[HecEvent]) -> TryCollectSendStats {
-
     let total_count = hec_events.len();
     let sourcetype_stats = hec_events
         .iter()
