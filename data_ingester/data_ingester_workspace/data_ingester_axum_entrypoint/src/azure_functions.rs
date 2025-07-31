@@ -49,6 +49,7 @@ pub(crate) async fn start_server(tx: Sender<()>) -> Result<()> {
     let app = Router::new()
         .route("/", get(get_root))
         .route("/healthcheck", get(get_health_check))
+        .route("/healthcheck", post(get_health_check))
         .route("/aws", post(post_aws))
         .route("/azure", post(post_azure))
         .route("/azure_dev_ops", post(post_azure_dev_ops))
@@ -109,7 +110,7 @@ async fn get_health_check(
     let stats = state.stats.read().await;
     let app_state_health_check = AppStateHealthCheck::from((&state, &(*stats)));
 
-    trace!(health_state = app_state_health_check.as_value(), headers=?headers);
+    info!(health_state = app_state_health_check.as_value(), headers=?headers);
 
     let app_state_health_check_json = serde_json::to_string(&app_state_health_check)
         .unwrap_or_else(|_| "ERROR converting AppState to Json".to_string());
