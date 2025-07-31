@@ -369,31 +369,11 @@ where
         }
     };
 
-    // Calculate stats for HecEvents
-    let total_count = hec_events.len();
-    let sourcetype_stats = hec_events
-        .iter()
-        .map(|hec_event| (hec_event.source.as_ref(), hec_event.sourcetype.as_ref()))
-        .fold(
-            HashMap::new(),
-            |mut acc: HashMap<(&str, &str), TryCollectSendSourceStat>, source_sourcetype| {
-                let _ = acc
-                    .entry(source_sourcetype)
-                    .and_modify(|entry| entry.count += 1)
-                    .or_insert(TryCollectSendSourceStat {
-                        source: source_sourcetype.0.into(),
-                        sourcetype: source_sourcetype.1.into(),
-                        count: 1,
-                    });
-                acc
-            },
-        )
-        .into_values()
-        .collect::<Vec<TryCollectSendSourceStat>>();
-    let stats = TryCollectSendStats {
-        total_count,
-        sourcetype_stats,
-    };
+    let stats = hec_stats(&hec_events);
+    splunk
+        .send_batch(hec_events)
+        .await
+        .context("Sending events to Splunk")?;
 
     // Send HecEvnts to Splunk
     match splunk.send_batch(hec_events).await {
@@ -417,8 +397,9 @@ where
     future_result
 }
 
+/// Calculate stats for HecEvents
 pub fn hec_stats(hec_events: &[HecEvent]) -> TryCollectSendStats {
-    // Calculate stats for HecEvents
+
     let total_count = hec_events.len();
     let sourcetype_stats = hec_events
         .iter()
@@ -439,11 +420,10 @@ pub fn hec_stats(hec_events: &[HecEvent]) -> TryCollectSendStats {
         )
         .into_values()
         .collect::<Vec<TryCollectSendSourceStat>>();
-    let stats = TryCollectSendStats {
+    TryCollectSendStats {
         total_count,
         sourcetype_stats,
-    };
-    stats
+    }
 }
 
 #[derive(Debug, Valuable)]
