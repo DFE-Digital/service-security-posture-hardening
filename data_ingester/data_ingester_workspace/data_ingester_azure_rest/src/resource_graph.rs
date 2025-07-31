@@ -85,6 +85,8 @@ async fn resource_graph_all(az_client: AzureRest, splunk: &Splunk) -> Result<()>
                     }
                 };
 
+            response.data.source = Some(format!("{}:{}:{}", sub_id, table, "0"));
+
             let events = (&response.data)
                 .to_hec_events()
                 .context("Serialize ResourceGraphResponse.data events")?;
@@ -123,6 +125,8 @@ async fn resource_graph_all(az_client: AzureRest, splunk: &Splunk) -> Result<()>
                 response = make_request(&az_client, endpoint, &request_body, &mut rate_limit)
                     .await
                     .context("Failed making Resource Graph API request")?;
+
+                response.data.source = Some(format!("{}:{}:{}", sub_id, table, batch));
 
                 let events = (&response.data)
                     .to_hec_events()
@@ -462,6 +466,8 @@ enum QueryErrorErrorDetailsCode {
 #[serde(transparent)]
 pub(crate) struct ResourceGraphData {
     inner: Vec<ResourceGraphDataInner>,
+    #[serde(default, skip)]
+    source: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -475,8 +481,12 @@ pub(crate) struct ResourceGraphDataInner {
 
 impl ToHecEvents for &ResourceGraphData {
     type Item = ResourceGraphDataInner;
+
     fn source(&self) -> &str {
-        "azure_resource_graph"
+        self.source
+            .as_ref()
+            .map(|s| s.as_str())
+            .unwrap_or("NO_SOURCE_SET")
     }
 
     fn sourcetype(&self) -> &str {
@@ -486,7 +496,7 @@ impl ToHecEvents for &ResourceGraphData {
         Box::new(self.inner.iter())
     }
     fn ssphp_run_key(&self) -> &str {
-        "azure_resource_graph"
+        crate::SSPHP_RUN_KEY
     }
 }
 
