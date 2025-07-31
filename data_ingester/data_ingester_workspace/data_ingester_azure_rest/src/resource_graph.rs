@@ -1,7 +1,7 @@
 use anyhow::{Context, Result};
 use async_recursion::async_recursion;
 use azure_core::auth::TokenCredential;
-use data_ingester_splunk::splunk::SplunkTrait;
+use data_ingester_splunk::splunk::{get_ssphp_run, hec_stats, SplunkTrait};
 use data_ingester_splunk::splunk::{set_ssphp_run, Splunk, ToHecEvents};
 use data_ingester_supporting::keyvault::Secrets;
 use serde::{Deserialize, Serialize};
@@ -12,11 +12,17 @@ use std::{
 };
 use tokio::time::{Duration, Instant};
 use tracing::{error, info};
-pub async fn azure_resource_graph(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
-    set_ssphp_run("azure_resource_graph")?;
+use valuable::Valuable;
 
-    info!("Starting Azure Resource Graph collection");
-    info!("GIT_HASH: {}", env!("GIT_HASH"));
+pub async fn azure_resource_graph(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
+    set_ssphp_run(crate::SSPHP_RUN_KEY)?;
+
+    info!(
+        name = crate::SSPHP_RUN_KEY,
+        ssphp_run = get_ssphp_run(crate::SSPHP_RUN_KEY),
+        git_build_hash = env!("GIT_HASH"),
+        stage = "Starting"
+    );
 
     let azure_rest = AzureRest::new(
         secrets
@@ -34,6 +40,7 @@ pub async fn azure_resource_graph(secrets: Arc<Secrets>, splunk: Arc<Splunk>) ->
     )
     .await
     .context("Can't build rest client")?;
+
     resource_graph_all(azure_rest, &splunk)
         .await
         .context("Running azure_resource_graph")?;
@@ -48,7 +55,14 @@ async fn resource_graph_all(az_client: AzureRest, splunk: &Splunk) -> Result<()>
         let sub_id = sub.subscription_id.as_ref().context("no subscription_id")?;
 
         for table in &crate::resource_graph::RESOURCE_GRAPH_TABLES {
-            info!("{}: {}", sub_id, table);
+            info!(
+                name = crate::SSPHP_RUN_KEY,
+                ssphp_run = get_ssphp_run(crate::SSPHP_RUN_KEY),
+                subscription_id = sub_id,
+                table = table,
+                "Getting table for subscription"
+            );
+
             let mut request_body =
                 ResourceGraphRequest::new(sub_id, &format!("{} | order by name asc", &table));
 
@@ -56,32 +70,54 @@ async fn resource_graph_all(az_client: AzureRest, splunk: &Splunk) -> Result<()>
                 request_body.options.top = Some(10);
             }
 
-            let mut response = match make_request(
-                &az_client,
-                endpoint,
-                &request_body,
-                &mut rate_limit,
-            )
-            .await
-            {
-                Ok(response) => response,
-                Err(err) => {
-                    error!(err=?err, table=table, "Failed making request for Azure resource graph table: {}", table);
-                    continue;
-                }
-            };
+            let mut response =
+                match make_request(&az_client, endpoint, &request_body, &mut rate_limit).await {
+                    Ok(response) => response,
+                    Err(err) => {
+                        error!(
+                        name=crate::SSPHP_RUN_KEY,
+                        ssphp_run=get_ssphp_run(crate::SSPHP_RUN_KEY),
+                        subscription_id=sub_id,
+                        table=table,
+                        error=?err,
+                        "Failed making request for Azure resource graph table");
+                        continue;
+                    }
+                };
 
             let events = (&response.data)
                 .to_hec_events()
                 .context("Serialize ResourceGraphResponse.data events")?;
+
+            let stats = hec_stats(&events);
             splunk
                 .send_batch(events)
                 .await
                 .context("Sending events to Splunk")?;
+
+            info!(
+                name = crate::SSPHP_RUN_KEY,
+                ssphp_run = get_ssphp_run(crate::SSPHP_RUN_KEY),
+                subscription_id = sub_id,
+                table = table,
+                stats = &stats.as_value(),
+                "Sent HecEvents to Splunk"
+            );
+
             let mut batch = 0;
+
             while let Some(ref skip_token) = response.skip_token {
                 batch += 1;
-                info!("{}: {}: batch {}", sub_id, table, batch);
+
+                info!(
+                    name = crate::SSPHP_RUN_KEY,
+                    ssphp_run = get_ssphp_run(crate::SSPHP_RUN_KEY),
+                    subscription_id = sub_id,
+                    table = table,
+                    batch = batch,
+                    "Getting additional batches for table for subscription"
+                );
+
                 request_body.add_skip_token(skip_token);
 
                 response = make_request(&az_client, endpoint, &request_body, &mut rate_limit)
@@ -91,10 +127,22 @@ async fn resource_graph_all(az_client: AzureRest, splunk: &Splunk) -> Result<()>
                 let events = (&response.data)
                     .to_hec_events()
                     .context("Serialize ResourceGraphResponse.data events")?;
+
+                let stats = hec_stats(&events);
+
                 splunk
                     .send_batch(events)
                     .await
                     .context("Sending events to Splunk")?;
+
+                info!(
+                    name = crate::SSPHP_RUN_KEY,
+                    ssphp_run = get_ssphp_run(crate::SSPHP_RUN_KEY),
+                    subscription_id = sub_id,
+                    table = table,
+                    stats = &stats.as_value(),
+                    "Sent HecEvents to Splunk"
+                );
             }
         }
         az_client
@@ -138,32 +186,64 @@ async fn make_request(
                         let details = if let Some(details) = error.error.details.as_ref() {
                             details
                         } else {
-                            error!(response=?&result, "Unknown BadRequest Type");
+                            error!(
+                                name=crate::SSPHP_RUN_KEY,
+                                ssphp_run=get_ssphp_run(crate::SSPHP_RUN_KEY),
+                                request_body=request_body.as_value(),
+                                response=?&result, "Unknown BadRequest Type");
                             anyhow::bail!("Unknown BadRequest Error Type : {:?}", result);
                         };
 
                         'bad_request: for bad_request_error in details {
                             match &bad_request_error.code {
                                 QueryErrorErrorDetailsCode::ResponsePayloadTooLarge => {
-                                    error!("ResponsePayloadTooLarge error!");
-                                    request_body.options.top = Some(1);
+                                    error!(
+                                        name = crate::SSPHP_RUN_KEY,
+                                        ssphp_run = get_ssphp_run(crate::SSPHP_RUN_KEY),
+                                        error = error.as_value(),
+                                        request_body = request_body.as_value(),
+                                        "ResponsePayloadTooLarge error!"
+                                    );
+                                    request_body.options.top = request_body
+                                        .options
+                                        .top
+                                        .map(|top| std::cmp::max(top / 2, 1))
+                                        .or(Some(500));
                                     continue 'request;
                                 }
 
                                 QueryErrorErrorDetailsCode::RateLimiting => {
-                                    error!("Rate limited!:\n {:?}", error);
+                                    error!(
+                                        name = crate::SSPHP_RUN_KEY,
+                                        ssphp_run = get_ssphp_run(crate::SSPHP_RUN_KEY),
+                                        error = error.as_value(),
+                                        request_body = request_body.as_value(),
+                                        "Rate limited",
+                                    );
                                     tokio::time::sleep(rate_limit.interval).await;
                                     continue 'request;
                                 }
 
                                 QueryErrorErrorDetailsCode::DisallowedLogicalTableName => {
-                                    error!("Disallowed Logical Table: {:?}", &request_body);
+                                    error!(
+                                        name = crate::SSPHP_RUN_KEY,
+                                        ssphp_run = get_ssphp_run(crate::SSPHP_RUN_KEY),
+                                        error = error.as_value(),
+                                        request_body = request_body.as_value(),
+                                        "Disallowed Logical Table"
+                                    );
                                     anyhow::bail!("Disallowed Logical Table: {:?}", &request_body);
                                 }
 
                                 // Unknown Errors and responses
                                 QueryErrorErrorDetailsCode::Other(other) => {
-                                    error!("{:?}", &other);
+                                    error!(
+                                        name = crate::SSPHP_RUN_KEY,
+                                        ssphp_run = get_ssphp_run(crate::SSPHP_RUN_KEY),
+                                        error = error.as_value(),
+                                        request_body = request_body.as_value(),
+                                        "Unknown QueryErrorErrorDetailsCode"
+                                    );
                                     anyhow::bail!("Unknown Error Type : {:?}", other);
                                 }
                             }
@@ -171,14 +251,26 @@ async fn make_request(
                     }
                     // Unknown Errors and responses
                     QueryErrorErrorCode::Other(other) => {
-                        error!("{:?}", &other);
+                        error!(
+                            name = crate::SSPHP_RUN_KEY,
+                            ssphp_run = get_ssphp_run(crate::SSPHP_RUN_KEY),
+                            error = error.as_value(),
+                            request_body = request_body.as_value(),
+                            "Unknown QueryErrorErrorCode"
+                        );
                         anyhow::bail!("Unknown Error Type : {:?}", other);
                     }
                 }
             }
             // Unknown Errors and responses
             ResourceGraphResponse::Other(other) => {
-                error!("{:?}", &other);
+                error!(
+                    name=crate::SSPHP_RUN_KEY,
+                    ssphp_run=get_ssphp_run(crate::SSPHP_RUN_KEY),
+                    // TODO: Serialize serde_json::Value as Valuable.
+                    error=?other,
+                    request_body=request_body.as_value(),
+                    "Unknown error response from Azure Resource Graph");
                 anyhow::bail!("Unknown response Error: {:?}", other);
             }
         };
@@ -219,7 +311,7 @@ pub(crate) static RESOURCE_GRAPH_TABLES: [&str; 27] = [
     "spotresources",
 ];
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Valuable, Serialize, Deserialize, Debug, Clone)]
 pub(crate) struct ResourceGraphRequest {
     subscriptions: Vec<String>,
     query: String,
@@ -246,7 +338,7 @@ impl ResourceGraphRequest {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Valuable, Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct ResourceGraphRequestOptions {
     #[serde(rename = "$skip")]
@@ -277,7 +369,7 @@ struct QueryResponse {
 }
 
 /// https://learn.microsoft.com/en-us/graph/errors#json-representation
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Valuable, Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 struct QueryError {
     error: QueryErrorError,
@@ -317,7 +409,7 @@ fn test_json_into_resource_graph_response_error() {
 }
 
 /// https://learn.microsoft.com/en-us/graph/errors#json-representation
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Valuable, Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 struct QueryErrorError {
     /// An error code string for the error that occurred
@@ -333,7 +425,7 @@ struct QueryErrorError {
     inner_error: Option<QueryErrorInnerError>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Valuable, Serialize, Deserialize, Debug)]
 struct QueryErrorInnerError {
     /// An error code string for the error that occurred
     code: QueryErrorErrorCode,
@@ -343,27 +435,27 @@ struct QueryErrorInnerError {
     message: String,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Valuable, Serialize, Deserialize, Debug)]
 #[non_exhaustive]
 enum QueryErrorErrorCode {
     RateLimiting,
     BadRequest,
-    Other(Value),
+    Other(#[valuable(skip)] Value),
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Valuable, Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 struct QueryErrorErrorDetails {
     code: QueryErrorErrorDetailsCode,
     message: String,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Valuable, Serialize, Deserialize, Debug)]
 enum QueryErrorErrorDetailsCode {
     RateLimiting,
     ResponsePayloadTooLarge,
     DisallowedLogicalTableName,
-    Other(Value),
+    Other(#[valuable(skip)] Value),
 }
 
 #[derive(Serialize, Deserialize, Debug)]
