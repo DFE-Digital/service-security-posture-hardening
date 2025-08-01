@@ -55,11 +55,14 @@ async fn resource_graph_all(az_client: AzureRest, splunk: &Splunk) -> Result<()>
         let sub_id = sub.subscription_id.as_ref().context("no subscription_id")?;
 
         for table in &crate::resource_graph::RESOURCE_GRAPH_TABLES {
+            let mut batch = 0;
+
             info!(
                 name = crate::SSPHP_RUN_KEY,
                 ssphp_run = get_ssphp_run(crate::SSPHP_RUN_KEY),
                 subscription_id = sub_id,
                 table = table,
+                batch = batch,
                 "Getting table for subscription"
             );
 
@@ -75,17 +78,18 @@ async fn resource_graph_all(az_client: AzureRest, splunk: &Splunk) -> Result<()>
                     Ok(response) => response,
                     Err(err) => {
                         error!(
-                        name=crate::SSPHP_RUN_KEY,
-                        ssphp_run=get_ssphp_run(crate::SSPHP_RUN_KEY),
-                        subscription_id=sub_id,
-                        table=table,
-                        error=?err,
-                        "Failed making request for Azure resource graph table");
+                            name=crate::SSPHP_RUN_KEY,
+                            ssphp_run=get_ssphp_run(crate::SSPHP_RUN_KEY),
+                            subscription_id=sub_id,
+                            table=table,
+                            batch = batch,                            
+                            error=?err,
+                            "Failed making request for Azure resource graph table");
                         continue;
                     }
                 };
 
-            response.data.source = Some(format!("{}:{}:{}", sub_id, table, "0"));
+            response.data.source = Some(format!("{}:{}:{}", sub_id, table, batch));
 
             let events = (&response.data)
                 .to_hec_events()
@@ -102,11 +106,10 @@ async fn resource_graph_all(az_client: AzureRest, splunk: &Splunk) -> Result<()>
                 ssphp_run = get_ssphp_run(crate::SSPHP_RUN_KEY),
                 subscription_id = sub_id,
                 table = table,
+                batch = batch,
                 stats = &stats.as_value(),
                 "Sent HecEvents to Splunk"
             );
-
-            let mut batch = 0;
 
             while let Some(ref skip_token) = response.skip_token {
                 batch += 1;
@@ -144,6 +147,7 @@ async fn resource_graph_all(az_client: AzureRest, splunk: &Splunk) -> Result<()>
                     ssphp_run = get_ssphp_run(crate::SSPHP_RUN_KEY),
                     subscription_id = sub_id,
                     table = table,
+                    batch = batch,
                     stats = &stats.as_value(),
                     "Sent HecEvents to Splunk"
                 );
