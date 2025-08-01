@@ -117,8 +117,6 @@ jobs:
         run: cd data_ingester/data_ingester_workspace; cargo test
 
   build:
-    needs: [audit, test]
-
     runs-on: ubuntu-latest
 
     steps:
@@ -161,7 +159,7 @@ jobs:
           compression-level: 9
 
   terraform_deploy:
-    needs: [build]
+    needs: [audit, test, build]
 
     runs-on: ubuntu-latest
 
