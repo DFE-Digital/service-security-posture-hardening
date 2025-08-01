@@ -27,7 +27,6 @@ jobs:
         with:
           toolchain: nightly-2025-07-01
           targets: x86_64-unknown-linux-musl
-          components: rust-src
 
       - name: cargo audit
         run: cargo install cargo-audit; cd data_ingester/data_ingester_workspace; cargo audit
@@ -45,10 +44,10 @@ jobs:
         with:
           toolchain: nightly-2025-07-01
           targets: x86_64-unknown-linux-musl
-          components: rust-src
+          components: rust-fmt
 
       - name: cargo fmt
-        run: cargo fmt --check
+        run: cd data_ingester/data_ingester_workspace; cargo fmt --check
 
   clippy:
     runs-on: ubuntu-latest
@@ -63,7 +62,7 @@ jobs:
         with:
           toolchain: nightly-2025-07-01
           targets: x86_64-unknown-linux-musl
-          components: rust-src, clippy
+          components: clippy
 
       - name: Cache build artifacts
         uses: actions/cache@v4
@@ -74,7 +73,7 @@ jobs:
           key: cache-rust-target-${{ steps.toolchain.outputs.name}}-${{ hashFiles('data_ingester/data_ingester_workspace/Cargo.lock') }}
 
       - name: cargo clippy
-        run: cargo clippy
+        run: cd data_ingester/data_ingester_workspace; cargo clippy
 
   test:
     runs-on: ubuntu-latest
@@ -89,7 +88,6 @@ jobs:
         with:
           toolchain: nightly-2025-07-01
           targets: x86_64-unknown-linux-musl
-          components: rust-src
 
       - name: Cache build artifacts
         uses: actions/cache@v4
@@ -100,7 +98,7 @@ jobs:
           key: cache-rust-target-${{ steps.toolchain.outputs.name}}-${{ hashFiles('data_ingester/data_ingester_workspace/Cargo.lock') }}
 
       - name: cargo test
-        run: cargo test
+        run: cd data_ingester/data_ingester_workspace; cargo test
 
   build:
     needs: [audit, test]
