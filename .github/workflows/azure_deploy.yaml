@@ -13,6 +13,22 @@ on:
 env:
   RUST_VERSION: "nightly-2025-07-01"
 
+permissions:
+#  actions: read|write|none
+#  attestations: read|write|none
+#  checks: read|write|none
+#  contents: read
+#  deployments: read|write|none
+  id-token: write
+#  issues: read|write|none
+#  models: read|none
+#  discussions: read|write|none
+#  packages: read|write|none
+  pages: write
+#  pull-requests: read|write|none
+#  security-events: read|write|none
+#  statuses: read|write|none
+
 jobs:
   audit:
     runs-on: ubuntu-latest
