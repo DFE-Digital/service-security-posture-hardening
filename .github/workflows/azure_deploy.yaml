@@ -156,7 +156,7 @@ jobs:
           key: cargo_llvm_cov-${{ steps.toolchain.outputs.name}}-${{ hashFiles('data_ingester/data_ingester_workspace/Cargo.lock') }}
 
       - name: Install cargo-llvm-cov
-        uses: cargo install cargo-llvm-cov --locked
+        run: cargo install cargo-llvm-cov --locked
 
       - name: Generate code coverage
         run: cd data_ingester/data_ingester_workspace; cargo llvm-cov --workspace --html --output-dir coverage
