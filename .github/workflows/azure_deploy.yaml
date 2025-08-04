@@ -289,7 +289,7 @@ jobs:
           name: data_ingester_axum_entrypoint_${{ github.sha }}
           path: data_ingester/data_ingester_workspace/data_ingester_axum_entrypoint/function_zip/
 
-      - uses: Set binary to +x
+      - name: Set binary to +x
         run: chmod +x data_ingester/data_ingester_workspace/data_ingester_axum_entrypoint/function_zip/data_ingester_axum_entrypoint
 
       - name: SHA256 for release binary
