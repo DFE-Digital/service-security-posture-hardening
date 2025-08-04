@@ -14,20 +14,20 @@ env:
   RUST_VERSION: "nightly-2025-07-01"
 
 permissions:
-#  actions: read|write|none
-#  attestations: read|write|none
-#  checks: read|write|none
-#  contents: read
-#  deployments: read|write|none
+  # actions: read|write|none
+  # attestations: read|write|none
+  # checks: read|write|none
+  # contents: read
+  # deployments: read|write|none
   id-token: write
-#  issues: read|write|none
-#  models: read|none
-#  discussions: read|write|none
-#  packages: read|write|none
+  # iessues: read|write|none
+  # nmodels: read|none
+  # discussions: read|write|none
+  # packages: read|write|none
   pages: write
-#  pull-requests: read|write|none
-#  security-events: read|write|none
-#  statuses: read|write|none
+  # pull-requests: read|write|none
+  # security-events: read|write|none
+  # statuses: read|write|none
 
 jobs:
   audit:
@@ -132,6 +132,53 @@ jobs:
       - name: cargo test
         run: cd data_ingester/data_ingester_workspace; cargo test
 
+  coverage:
+    name: Generate Code coverage metrics
+    runs-on: ubuntu-latest
+    env:
+      CARGO_TERM_COLOR: always
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: toolchain
+        id: toolchain
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: nightly-2025-07-01
+          targets: x86_64-unknown-linux-musl
+
+      - name: Cache build artifacts
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo
+            ${{ github.workspace }}/data_ingester/data_ingester_workspace/target
+          key: cargo_llvm_cov-${{ steps.toolchain.outputs.name}}-${{ hashFiles('data_ingester/data_ingester_workspace/Cargo.lock') }}
+
+      - name: Install cargo-llvm-cov
+        uses: cargo install cargo-llvm-cov --locked
+
+      - name: Generate code coverage
+        run: cd data_ingester/data_ingester_workspace; cargo llvm-cov --workspace --html --output-dir coverage
+
+  #     - name: Upload artifact
+  #       uses: actions/upload-pages-artifact@v3
+  #       with:
+  #         path: ${{ github.workspace }}/data_ingester/data_ingester_workspace/coverage
+
+  # publish_code_cov:
+  #   needs: [coverage]
+  #   name: publish coverage
+  #   environment:
+  #     name: github-pages
+  #     url: ${{ steps.deployment.outputs.page_url }}
+  #   runs-on: ubuntu-latest
+
+  #   steps:
+  #     - name: Publish Rust Docs to GitHub Pages
+  #       id: deployment
+  #       uses: actions/deploy-pages@v4
+
   generate_docs:
     name: generate rust docs
     runs-on: ubuntu-latest
@@ -173,16 +220,16 @@ jobs:
         with:
           path: ${{ github.workspace }}/data_ingester/data_ingester_workspace/target/doc
 
-  deploy_rust_docs:
+  publish_rust_docs:
     needs: [generate_docs]
-    name: deploy rust docs
+    name: publish rust docs
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
 
     steps:
-      - name: Deploy Rust Docs to GitHub Pages
+      - name: Publish Coverage to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
 
@@ -241,6 +288,9 @@ jobs:
         with:
           name: data_ingester_axum_entrypoint_${{ github.sha }}
           path: data_ingester/data_ingester_workspace/data_ingester_axum_entrypoint/function_zip/
+
+      - uses: Set binary to +x
+        run: chmod +x data_ingester/data_ingester_workspace/data_ingester_axum_entrypoint/function_zip/data_ingester_axum_entrypoint
 
       - name: SHA256 for release binary
         run: sha256sum data_ingester/data_ingester_workspace/data_ingester_axum_entrypoint/function_zip/data_ingester_axum_entrypoint
