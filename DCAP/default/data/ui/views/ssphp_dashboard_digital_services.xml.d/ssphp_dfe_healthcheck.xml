@@ -1,7 +1,7 @@
 <dashboard version="1.1" theme="dark">
 
 <label>DCAP Healthcheck Dashboard</label>
-<description>_DEV v3.3.13</description>
+<description>_DEV v3.3.17</description>
 
 
 
@@ -148,7 +148,64 @@ index="ssphp_metrics_data_health"
   
   <row>
     <panel>
-      <title>Have all the Defnder Alerts been Prioritised</title>
+      <title>Azure Resource Graph Event Ingestion Recociliation</title>
+      <single>
+        <search>
+          <query>
+index=*data* sourcetype=*azure_resource_graph*
+| spath SSPHP_RUN
+| rex field=source "^(?&lt;subscription_id&gt;[^:]+):(?&lt;table&gt;[^:]+):(?&lt;batch&gt;[\d]+)$" 
+| fields SSPHP_RUN subscription_id table batch 
+| stats count AS count_in_splunk by SSPHP_RUN subscription_id table batch 
+| join SSPHP_RUN subscription_id table batch
+      [| search index=*data* sourcetype=*rust* name=azure_resource_graph table=* message="Sent*"
+    | fields - SSPHP_RUN
+    | rename stats.sourcetype_stats{}.count AS count, ssphp_run AS SSPHP_RUN
+    | rex field=stats.sourcetype_stats{}.source "^(?&lt;subscription_id&gt;[^:]+):(?&lt;table&gt;[^:]+):(?&lt;batch&gt;[\d]+)$" 
+    | fields SSPHP_RUN subscription_id table batch count
+    | fillnull value=0 count 
+    | where count &gt; 0 
+    | stats sum(count) AS count_sent_to_splunk by SSPHP_RUN subscription_id table batch]
+| table SSPHP_RUN subscription_id table batch count_sent_to_splunk count_in_splunk 
+```| where 'count_sent_to_splunk' != 'count_in_splunk'```
+
+
+``` ***************** Delete after here to see base data *******************```
+
+| stats sum(eval(if('count_sent_to_splunk' != 'count_in_splunk',1,0))) as unhealthy, sum(eval(if('count_sent_to_splunk' = 'count_in_splunk',1,0))) as healthy
+
+| eval status=if('unhealthy'&gt;0,"Unhealthy","Healthy"),
+       range=if('status'="Healthy","low","severe")
+| table status, range
+          </query>
+          <earliest>@d</earliest>
+          <latest>now</latest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="colorBy">value</option>
+        <option name="colorMode">block</option>
+        <option name="drilldown">none</option>
+        <option name="numberPrecision">0</option>
+        <option name="rangeColors">["0x65a637","0x6db7c6","0xf7bc38","0xf58f39","0xd93f3c"]</option>
+        <option name="rangeValues">[0,30,70,100]</option>
+        <option name="showSparkline">1</option>
+        <option name="showTrendIndicator">1</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+        <option name="trendColorInterpretation">standard</option>
+        <option name="trendDisplayMode">absolute</option>
+        <option name="unitPosition">after</option>
+        <option name="useColors">0</option>
+        <option name="useThousandSeparators">1</option>
+      </single>
+    </panel>
+
+
+
+    <panel>
+      <title>Have all the Defender Alerts been Prioritised</title>
       <single>
         <search>
           <query>
