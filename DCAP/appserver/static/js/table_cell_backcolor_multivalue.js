@@ -10,6 +10,12 @@ require([
         canRender: function (cell) {
             //return true;
             return _(['state',
+                      'codeSecurityFeatures.dependencyScanningInjectionEnabled',
+                      'codeSecurityFeatures.codeQLEnabled',
+                      'codeSecurityFeatures.codeSecurityEnabled',
+                      'secretProtectionFeatures.secretProtectionEnabled',
+                      'secretProtectionFeatures.blockPushes',
+                      'codeSecurityFeatures.dependabotEnabled',
                       'Compliance Status',
                       'compliant_policies',
                       'number_vips',
