@@ -1,12 +1,15 @@
 use crate::ado_metadata::AdoMetadata;
 use crate::ado_metadata::AdoMetadataTrait;
 use anyhow::Result;
+use data_ingester_splunk::splunk::hec_stats;
 use data_ingester_splunk::splunk::Splunk;
 use data_ingester_splunk::splunk::SplunkTrait;
 use data_ingester_splunk::splunk::ToHecEvents;
 use itertools::Itertools;
 use serde::Serialize;
+use tracing::info;
 use tracing::warn;
+use valuable::Valuable;
 
 pub(crate) struct AdoToSplunk();
 
@@ -100,8 +103,14 @@ pub(crate) struct AdoToHecEvents<'metadata, 't, T: Serialize> {
 }
 
 impl<'metadata, 't, T: Serialize> AdoToHecEvents<'metadata, 't, T> {
-    pub(crate) async fn send(self, splunk: &Splunk) -> Result<()> {
+    pub(crate) async fn send(self, splunk: &Splunk, logging_name: &str) -> Result<()> {
         let events = self.to_hec_events()?;
+        let stats = hec_stats(&events);
+        info!(
+            name = logging_name,
+            stats = &stats.as_value(),
+            "Sent HecEvents to Splunk"
+        );
         splunk.send_batch(events).await
     }
 }

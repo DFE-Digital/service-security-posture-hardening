@@ -355,8 +355,9 @@ async fn collect_security_acls(
     // Get ACLS
     for namespace in &security_namespaces.namespaces {
         let namespace_id = namespace.namespace_id.as_str();
+        let name = &format!("Security Access control lists {organization}/{namespace_id}");
         let security_access_control_list = try_collect_send(
-            &format!("Security Access control lists {organization}/{namespace_id}"),
+            &name,
             ado.security_access_control_lists(organization, namespace_id),
             splunk,
         )
@@ -370,7 +371,7 @@ async fn collect_security_acls(
 
             let _ = AdoToSplunk::from_metadata(&metadata)
                 .events(&acls.inner)
-                .send(splunk)
+                .send(splunk, &name)
                 .await;
 
             security_access_control_lists.extend(acls);
