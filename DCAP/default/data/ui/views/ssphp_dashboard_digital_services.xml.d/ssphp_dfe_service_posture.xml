@@ -2,7 +2,7 @@
 
 
 <label>DfE Security Posture Continuous Assurance : Service Posture Dashboard</label>
-<description>{{environment}} v1.1.3</description>
+<description>{{environment}} v1.1.5</description>
   
   <init>
     <set token="tkn_font_size_2">400</set>
@@ -906,7 +906,7 @@
 
     <panel depends="$tkn_show_panel_N$">
       <table id="table1">
-        <title>Control Details &amp; Scores [$tkn_controls_total_list$]</title>
+        <title>Control Details &amp; Scores [$tkn_controls_total_list_N$]</title>
         <search>
           <query>
 | loadjob savedsearch="ssphp_app_account:DCAP{{environment}}:ssphp_create_dashboard_dataset_service{{environment}}"
@@ -958,7 +958,7 @@ $tkn_category$
 | eval number_controls_total_string=tostring('number_controls_total', "commas")
           </query>
           <done>
-            <eval token="tkn_controls_total_list">if(isnotnull($result.number_controls_total_string$),$result.number_controls_total_string$,"0")</eval>
+            <eval token="tkn_controls_total_list_N">if(isnotnull($result.number_controls_total_string$),$result.number_controls_total_string$,"0")</eval>
             <eval token="tkn_main_ready">if(isnotnull($result.number_controls_total$) AND $result.number_controls_total$!="" AND $result.number_controls_total$&gt;0,"true",null())</eval>
           </done>
         </search>
@@ -982,7 +982,7 @@ $tkn_category$
 
     <panel depends="$tkn_show_panel_R$">
       <table>
-        <title>Control Details &amp; Scores [$tkn_controls_total_list$]</title>
+        <title>Control Details by Resource [$tkn_controls_total_list_R$]</title>
         <search>
           <query>
 | loadjob savedsearch="ssphp_app_account:DCAP{{environment}}:ssphp_create_dashboard_dataset_service{{environment}}"
@@ -1031,8 +1031,7 @@ $tkn_category$
 | eval number_controls_total_string=tostring('number_controls_total', "commas")
           </query>
           <done>
-            <eval token="tkn_controls_total_list">if(isnotnull($result.number_controls_total_string$),$result.number_controls_total_string$,"0")</eval>
-            <eval token="tkn_main_ready">if(isnotnull($result.number_controls_total$) AND $result.number_controls_total$!="" AND $result.number_controls_total$&gt;0,"true",null())</eval>
+            <eval token="tkn_controls_total_list_R">if(isnotnull($result.number_controls_total_string$),$result.number_controls_total_string$,"0")</eval>
           </done>
         </search>
         <option name="count">100</option>
@@ -1053,7 +1052,7 @@ $tkn_category$
 
     <panel depends="$tkn_show_panel_U$">
       <table>
-        <title>Control Details &amp; Scores [$tkn_controls_total_list$]</title>
+        <title>Control Details by Use Case [$tkn_controls_total_list_U$]</title>
         <search>
           <query>
 | loadjob savedsearch="ssphp_app_account:DCAP{{environment}}:ssphp_create_dashboard_dataset_service{{environment}}"
@@ -1106,8 +1105,7 @@ $tkn_category$
 | eval number_controls_total_string=tostring('number_controls_total', "commas")
           </query>
           <done>
-            <eval token="tkn_controls_total_list">if(isnotnull($result.number_controls_total_string$),$result.number_controls_total_string$,"0")</eval>
-            <eval token="tkn_main_ready">if(isnotnull($result.number_controls_total$) AND $result.number_controls_total$!="" AND $result.number_controls_total$&gt;0,"true",null())</eval>
+            <eval token="tkn_controls_total_list_U">if(isnotnull($result.number_controls_total_string$),$result.number_controls_total_string$,"0")</eval>
           </done>
         </search>
         <option name="count">100</option>
