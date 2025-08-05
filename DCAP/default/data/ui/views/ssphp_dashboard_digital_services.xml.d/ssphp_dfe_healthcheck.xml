@@ -300,11 +300,12 @@ index=ssphp_metrics_data sourcetype=*rust* message=*sent*
 | stats sum(count) as sent by source, sourcetype
 
 
-``` ***************** Delete after here to see base data *******************```
-
 | join sourcetype source 
     [| search index=ssphp_metrics_data
      | stats count as splunk by sourcetype, source ]
+
+
+``` ***************** Delete after here to see base data *******************```
 
 | stats sum(eval(if('sent'!='splunk',1,0))) as unhealthy, sum(eval(if('sent'='splunk',1,0))) as healthy
 
