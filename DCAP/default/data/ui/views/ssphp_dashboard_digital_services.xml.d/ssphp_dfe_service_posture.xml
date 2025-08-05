@@ -2,7 +2,7 @@
 
 
 <label>DfE Security Posture Continuous Assurance : Service Posture Dashboard</label>
-<description>{{environment}} v1.0.10</description>
+<description>{{environment}} v1.1.3</description>
   
   <init>
     <set token="tkn_font_size_2">400</set>
@@ -726,12 +726,18 @@
     <html>
       <style>
         #f1 {
-          width: 75% !important;
+          width: 50% !important;
             -webkit-box-flex:unset;
             -ms-flex:unset;
             flex:unset;
         }
         #f2 {
+          width: 25% !important;
+            -webkit-box-flex:unset;
+            -ms-flex:unset;
+            flex:unset;
+        }
+        #f3 {
           width: 25% !important;
             -webkit-box-flex:unset;
             -ms-flex:unset;
@@ -747,6 +753,33 @@
     </panel>
     
     <panel id="f2">
+      <input type="dropdown" token="tkn_filter_groupby" searchWhenChanged="true">
+        <label>Group By</label>
+        <choice value="N">None</choice>
+       <choice value="R">Resource</choice>
+       <choice value="U">Use Case</choice>
+       <default>N</default>
+          <change>
+            <condition value="N">
+              <unset token="tkn_show_panel_R"></unset>
+              <unset token="tkn_show_panel_U"></unset>          
+              <set token="tkn_show_panel_N"></set>
+            </condition>  
+            <condition value="R">
+              <unset token="tkn_show_panel_N"></unset>
+              <unset token="tkn_show_panel_U"></unset>
+              <set token="tkn_show_panel_R"></set>
+            </condition>
+            <condition value="U">
+              <unset token="tkn_show_panel_N"></unset>
+              <unset token="tkn_show_panel_R"></unset>          
+              <set token="tkn_show_panel_U"></set>
+            </condition>
+          </change>
+      </input>
+    </panel>
+    
+    <panel id="f3">
       <input type="text" token="tkn_filter_regex" searchWhenChanged="true">
         <label>Resource Details : Filter Regex</label>
         <default>.*</default>
@@ -866,8 +899,12 @@
         </style>
       </html>
     </panel>
-    
-    <panel>
+
+
+
+<!-- ############################################# NO FILTER PANEL ####################################################################################### --> 
+
+    <panel depends="$tkn_show_panel_N$">
       <table id="table1">
         <title>Control Details &amp; Scores [$tkn_controls_total_list$]</title>
         <search>
@@ -938,6 +975,153 @@ $tkn_category$
         </drilldown>
       </table>
     </panel>
+
+
+
+<!-- ############################################# GROUP BY RESOURCE FILTER PANEL ####################################################################################### --> 
+
+    <panel depends="$tkn_show_panel_R$">
+      <table>
+        <title>Control Details &amp; Scores [$tkn_controls_total_list$]</title>
+        <search>
+          <query>
+| loadjob savedsearch="ssphp_app_account:DCAP{{environment}}:ssphp_create_dashboard_dataset_service{{environment}}"
+
+| fields ssphp.service.portfolio, ssphp.service.service_line, ssphp.service.product, ssphp.service.id, ssphp.assessment.source, ssphp.use_case.category, ssphp.use_case.id, ssphp.use_case.title, ssphp.assessment.display_name, ssphp.score.score, ssphp.score.compliance_status, ssphp.score.ciso_priority, ssphp.assessment.description, ssphp.score.color, ssphp.resource.id, ssphp.resource.tenant, ssphp.resource.subscription, ssphp.resource.subscription_name, ssphp.resource.resource_group, ssphp.score.remediation_priority, ssphp.exemption.status, SSPHP_UID
+
+| search ssphp.service.portfolio=$tkn_portfolio|s$ AND ssphp.service.service_line=$tkn_service_line|s$ AND ssphp.service.product=$tkn_product|s$
+$tkn_category$
+
+| search ssphp.resource.id!="" AND ssphp.exemption.status="comply" AND ssphp.score.ciso_priority="DfE Mandated" AND ssphp.score.compliance_status="Non-Compliant*"
+
+``` sort the lines properly ```
+```| fillnull value=0 n3
+| eval n4=case('ssphp.score.ciso_priority'="DfE Mandated",1,'ssphp.score.ciso_priority'="Recommended",2,'ssphp.score.ciso_priority'="Desirable",3,1==1,4),
+        n5=case(match('ssphp.score.compliance_status',"^Non-Compliant.*"),1,match('ssphp.score.compliance_status',"^Compliant.*"),2,1==1,3),
+        sort_field='n4'.'n5'
+| sort 0 sort_field, ssphp.use_case.id```
+
+| eval n4=case('ssphp.score.ciso_priority'="DfE Mandated",1,'ssphp.score.ciso_priority'="Recommended",2,'ssphp.score.ciso_priority'="Desirable",3,1==1,4)
+| sort 0 n4, ssphp.score.remediation_priority
+| streamstats count as rank
+| streamstats window=2 range("ssphp.score.remediation_priority") as range
+
+| eval rank=if(rank=1 OR range != 0, rank, null())
+| streamstats sum(eval(if(isnotnull('rank'),1,0))) as rank
+| sort 0 rank
+
+| fields ssphp.service.portfolio, ssphp.service.service_line, ssphp.service.product, ssphp.use_case.id, ssphp.use_case.title, ssphp.assessment.display_name, ssphp.score.score, ssphp.score.compliance_status, ssphp.score.ciso_priority, ssphp.assessment.description, ssphp.score.color, ssphp.resource.id, ssphp.score.remediation_priority, rank, SSPHP_UID
+
+
+| eval "DfE Service"='ssphp.service.id'
+| rex field=ssphp.score.score "^^(?&lt;count_score&gt;[^|]*)|"
+
+
+``` **************** Regex Filter **************** ```
+| regex ssphp.resource.id="$tkn_filter_regex$"
+
+| eval ssphp.use_case.title='ssphp.use_case.title'." :: ".'ssphp.assessment.display_name'
+
+| stats values(ssphp.use_case.title) as ssphp.use_case.title by ssphp.resource.id
+
+| rename ssphp.use_case.title as "Use Case",
+         ssphp.resource.id as "Resource Details"
+
+| eventstats count as number_controls_total
+| eval number_controls_total_string=tostring('number_controls_total', "commas")
+          </query>
+          <done>
+            <eval token="tkn_controls_total_list">if(isnotnull($result.number_controls_total_string$),$result.number_controls_total_string$,"0")</eval>
+            <eval token="tkn_main_ready">if(isnotnull($result.number_controls_total$) AND $result.number_controls_total$!="" AND $result.number_controls_total$&gt;0,"true",null())</eval>
+          </done>
+        </search>
+        <option name="count">100</option>
+        <option name="dataOverlayMode">none</option>
+        <option name="percentagesRow">false</option>
+        <option name="rowNumbers">false</option>
+        <option name="totalsRow">false</option>
+        <option name="wrap">true</option>
+        <option name="drilldown">row</option>
+        <fields>"Resource Details","Use Case"</fields>
+      </table>
+    </panel>
+
+
+
+
+<!-- ############################################# GROUP BY USE CASE FILTER PANEL ####################################################################################### --> 
+
+    <panel depends="$tkn_show_panel_U$">
+      <table>
+        <title>Control Details &amp; Scores [$tkn_controls_total_list$]</title>
+        <search>
+          <query>
+| loadjob savedsearch="ssphp_app_account:DCAP{{environment}}:ssphp_create_dashboard_dataset_service{{environment}}"
+
+| fields ssphp.service.portfolio, ssphp.service.service_line, ssphp.service.product, ssphp.service.id, ssphp.assessment.source, ssphp.use_case.category, ssphp.use_case.id, ssphp.use_case.title, ssphp.assessment.display_name, ssphp.score.score, ssphp.score.compliance_status, ssphp.score.ciso_priority, ssphp.assessment.description, ssphp.score.color, ssphp.resource.id, ssphp.resource.tenant, ssphp.resource.subscription, ssphp.resource.subscription_name, ssphp.resource.resource_group, ssphp.score.remediation_priority, ssphp.exemption.status, SSPHP_UID
+
+| search ssphp.service.portfolio=$tkn_portfolio|s$ AND ssphp.service.service_line=$tkn_service_line|s$ AND ssphp.service.product=$tkn_product|s$
+$tkn_category$
+
+| search ssphp.resource.id!="" AND ssphp.exemption.status="comply" AND ssphp.score.ciso_priority="DfE Mandated" AND ssphp.score.compliance_status="Non-Compliant*"
+
+``` sort the lines properly ```
+```| fillnull value=0 n3
+| eval n4=case('ssphp.score.ciso_priority'="DfE Mandated",1,'ssphp.score.ciso_priority'="Recommended",2,'ssphp.score.ciso_priority'="Desirable",3,1==1,4),
+        n5=case(match('ssphp.score.compliance_status',"^Non-Compliant.*"),1,match('ssphp.score.compliance_status',"^Compliant.*"),2,1==1,3),
+        sort_field='n4'.'n5'
+| sort 0 sort_field, ssphp.use_case.id```
+
+| eval n4=case('ssphp.score.ciso_priority'="DfE Mandated",1,'ssphp.score.ciso_priority'="Recommended",2,'ssphp.score.ciso_priority'="Desirable",3,1==1,4)
+| sort 0 n4, ssphp.score.remediation_priority
+| streamstats count as rank
+| streamstats window=2 range("ssphp.score.remediation_priority") as range
+
+| eval rank=if(rank=1 OR range != 0, rank, null())
+| streamstats sum(eval(if(isnotnull('rank'),1,0))) as rank
+| sort 0 rank
+
+| table ssphp.service.portfolio, ssphp.service.service_line, ssphp.service.product, ssphp.use_case.id, ssphp.use_case.title, ssphp.assessment.display_name, ssphp.score.score, ssphp.score.compliance_status, ssphp.score.ciso_priority, ssphp.assessment.description, ssphp.score.color, ssphp.resource.id, ssphp.score.remediation_priority, rank, SSPHP_UID
+
+
+| eval "DfE Service"='ssphp.service.id'
+| rex field=ssphp.score.score "^^(?&lt;count_score&gt;[^|]*)|"
+
+
+``` **************** Regex Filter **************** ```
+| regex ssphp.resource.id="$tkn_filter_regex$"
+
+| stats values(*) as * by ssphp.use_case.title
+
+| rename ssphp.use_case.title as "Use Case",
+         ssphp.assessment.display_name  as "Control Title", 
+         ssphp.score.score as "Score",
+         ssphp.score.compliance_status as "Compliance Status",
+         ssphp.score.ciso_priority as "Control Type",
+         ssphp.assessment.description as "Description",
+         ssphp.resource.id as "Resource Details",
+         rank as "Remediation Priority"
+
+| eventstats count as number_controls_total
+| eval number_controls_total_string=tostring('number_controls_total', "commas")
+          </query>
+          <done>
+            <eval token="tkn_controls_total_list">if(isnotnull($result.number_controls_total_string$),$result.number_controls_total_string$,"0")</eval>
+            <eval token="tkn_main_ready">if(isnotnull($result.number_controls_total$) AND $result.number_controls_total$!="" AND $result.number_controls_total$&gt;0,"true",null())</eval>
+          </done>
+        </search>
+        <option name="count">100</option>
+        <option name="dataOverlayMode">none</option>
+        <option name="percentagesRow">false</option>
+        <option name="rowNumbers">false</option>
+        <option name="totalsRow">false</option>
+        <option name="wrap">true</option>
+        <option name="drilldown">row</option>
+        <fields>"Use Case","Control Title","Score","Compliance Status","Control Type","Description","Resource Details","Remediation Priority"</fields>
+      </table>
+    </panel>
+
+
   </row>
 
 
