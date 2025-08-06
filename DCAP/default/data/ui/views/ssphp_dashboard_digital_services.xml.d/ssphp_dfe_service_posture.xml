@@ -2,7 +2,7 @@
 
 
 <label>DfE Security Posture Continuous Assurance : Service Posture Dashboard</label>
-<description>{{environment}} v1.1.5</description>
+<description>{{environment}} v1.1.11</description>
   
   <init>
     <set token="tkn_font_size_2">400</set>
@@ -1024,6 +1024,7 @@ $tkn_category$
 
 | stats values(ssphp.use_case.title) as ssphp.use_case.title by ssphp.resource.id
 
+
 | rename ssphp.use_case.title as "Use Case",
          ssphp.resource.id as "Resource Details"
 
@@ -1040,7 +1041,7 @@ $tkn_category$
         <option name="rowNumbers">false</option>
         <option name="totalsRow">false</option>
         <option name="wrap">true</option>
-        <option name="drilldown">row</option>
+        <option name="drilldown">none</option>
         <fields>"Resource Details","Use Case"</fields>
       </table>
     </panel>
@@ -1051,7 +1052,7 @@ $tkn_category$
 <!-- ############################################# GROUP BY USE CASE FILTER PANEL ####################################################################################### --> 
 
     <panel depends="$tkn_show_panel_U$">
-      <table>
+      <table id="table2">
         <title>Control Details by Use Case [$tkn_controls_total_list_U$]</title>
         <search>
           <query>
@@ -1092,6 +1093,8 @@ $tkn_category$
 
 | stats values(*) as * by ssphp.use_case.title
 
+| sort 0 rank
+
 | rename ssphp.use_case.title as "Use Case",
          ssphp.assessment.display_name  as "Control Title", 
          ssphp.score.score as "Score",
@@ -1114,7 +1117,7 @@ $tkn_category$
         <option name="rowNumbers">false</option>
         <option name="totalsRow">false</option>
         <option name="wrap">true</option>
-        <option name="drilldown">row</option>
+        <option name="drilldown">none</option>
         <fields>"Use Case","Control Title","Score","Compliance Status","Control Type","Description","Resource Details","Remediation Priority"</fields>
       </table>
     </panel>
