@@ -301,9 +301,10 @@ async fn collect_organization<A: AzureDevOpsClientMethods, O: AsRef<str>>(
             )
             .await;
 
+            let repo_stats_name = &format!("Repo stats list {organization}/{project_id}/{repo_id}");
             let stats = 'stats: {
                 let stats = try_collect_send(
-                    &format!("Repo stats list {organization}/{project_id}/{repo_id}"),
+                    repo_stats_name,
                     ado.repo_stats_list(organization, project, repo),
                     &splunk,
                 )
@@ -326,7 +327,7 @@ async fn collect_organization<A: AzureDevOpsClientMethods, O: AsRef<str>>(
 
             AdoToSplunk::from_metadata(&repos.metadata)
                 .event(&repo)
-                .send(&splunk)
+                .send(&splunk, &repo_stats_name)
                 .await?;
         }
 
@@ -397,12 +398,9 @@ async fn collect_identities(
     organization: &str,
 ) {
     for descriptor in identity_descriptors {
-        let user_identities = try_collect_send(
-            &format!("User identities {organization} {}", descriptor),
-            ado.identities(organization, descriptor),
-            splunk,
-        )
-        .await;
+        let name = &format!("User identities {organization} {}", descriptor);
+        let user_identities =
+            try_collect_send(name, ado.identities(organization, descriptor), splunk).await;
         if let Ok(user_identities) = user_identities {
             let metadata = user_identities.metadata.clone();
             let mut identities: Identities = user_identities.into();
@@ -411,7 +409,7 @@ async fn collect_identities(
                     id.descriptor = descriptor.to_string();
                     let _ = AdoToSplunk::from_metadata(&metadata)
                         .event(id)
-                        .send(splunk)
+                        .send(splunk, name)
                         .await;
                 }
             }

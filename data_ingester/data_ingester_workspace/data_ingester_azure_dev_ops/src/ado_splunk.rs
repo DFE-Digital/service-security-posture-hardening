@@ -52,8 +52,15 @@ pub(crate) struct AdoToHecEvent<'metadata, 't, T: Serialize> {
 }
 
 impl<'metadata, 't, T: Serialize> AdoToHecEvent<'metadata, 't, T> {
-    pub(crate) async fn send(self, splunk: &Splunk) -> Result<()> {
+    pub(crate) async fn send(self, splunk: &Splunk, logging_name: &str) -> Result<()> {
         let events = self.to_hec_events()?;
+        let stats = hec_stats(&events);
+        info!(
+            name = logging_name,
+            stats = &stats.as_value(),
+            "Sent HecEvents to Splunk"
+        );
+
         splunk.send_batch(events).await
     }
 }
