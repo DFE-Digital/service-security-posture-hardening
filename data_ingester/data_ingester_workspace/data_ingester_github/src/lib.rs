@@ -56,6 +56,11 @@ impl OctocrabGit {
     pub fn new_from_app(github_app: &GitHubApp) -> Result<Self> {
         let key = jsonwebtoken::EncodingKey::from_rsa_der(&github_app.private_key); // .context("Building jsonwebtoken from gihtub app der key")?;
 
+        // Initalise default crypto provider to prevent runtime error
+        // https://github.com/rustls/rustls/issues/1938
+        let _ = rustls::crypto::aws_lc_rs::default_provider().install_default();
+
+        let _ = rustls::crypto::aws_lc_rs::default_provider().install_default();
         let octocrab = Octocrab::builder()
             .app(github_app.app_id.into(), key)
             .build()
