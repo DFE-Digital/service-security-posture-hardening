@@ -10,8 +10,10 @@ use serde_json::Value;
 use std::sync::Arc;
 use tracing::info;
 
+pub static SSPHP_RUN_KEY: &str = "sonar_cloud";
+
 pub async fn entrypoint(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
-    set_ssphp_run("sonar_cloud")?;
+    set_ssphp_run(SSPHP_RUN_KEY)?;
     let sonar_api_key = secrets
         .sonar_api_key
         .as_ref()

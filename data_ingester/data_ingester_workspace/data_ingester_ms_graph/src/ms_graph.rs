@@ -779,8 +779,7 @@ pub struct Group {
 }
 
 pub async fn m365(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
-    let ssphp_run_key = "m365";
-    set_ssphp_run(ssphp_run_key)?;
+    set_ssphp_run(crate::SSPHP_RUN_KEY)?;
 
     info!("Starting M365 collection");
     info!("GIT_HASH: {}", env!("GIT_HASH"));
@@ -807,7 +806,7 @@ pub async fn m365(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
 
     info!("Loaded {} m365 sources", sources.len());
     sources
-        .process_sources(&ms_graph, &splunk, ssphp_run_key)
+        .process_sources(&ms_graph, &splunk, crate::SSPHP_RUN_KEY)
         .await?;
 
     // M365 1.1.17 V2

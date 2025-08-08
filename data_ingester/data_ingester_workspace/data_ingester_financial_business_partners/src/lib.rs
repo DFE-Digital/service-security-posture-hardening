@@ -12,6 +12,8 @@ use tiberius::{AuthMethod, Client, Config, Query, QueryItem, Row};
 use tokio::net::TcpStream;
 use tokio_util::compat::TokioAsyncWriteCompatExt;
 
+pub static SSPHP_RUN_KEY: &str = "financial_business_partners";
+
 async fn get_contact_details(secrets: Arc<Secrets>) -> Result<Vec<ContactDetails>> {
     let host = secrets
         .mssql_host
@@ -82,7 +84,7 @@ async fn get_contact_details(secrets: Arc<Secrets>) -> Result<Vec<ContactDetails
 }
 
 pub async fn entrypoint(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
-    set_ssphp_run("fbp")?;
+    set_ssphp_run(SSPHP_RUN_KEY)?;
 
     let contact_details = get_contact_details(secrets)
         .await
@@ -291,7 +293,7 @@ impl ToHecEvents for &ContactDetails {
 #[cfg(test)]
 mod live_tests {
     use anyhow::{Context, Result};
-    use data_ingester_splunk::splunk::{set_ssphp_run, Splunk};
+    use data_ingester_splunk::splunk::{set_ssphp_run, Splunk, SplunkTrait};
     use data_ingester_supporting::keyvault::get_keyvault_secrets;
     use std::io::Write;
     use std::{collections::HashSet, env, fs::File, sync::Arc};
@@ -303,7 +305,7 @@ mod live_tests {
         )
         .await
         .unwrap();
-        set_ssphp_run("fbp")?;
+        set_ssphp_run(crate::SSPHP_RUN_KEY)?;
 
         let splunk = Splunk::new(
             secrets.splunk_host.as_ref().context("No value")?,

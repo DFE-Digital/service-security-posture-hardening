@@ -116,7 +116,7 @@ mod live_tests {
         )
         .await
         .unwrap();
-        set_ssphp_run("fbp")?;
+        set_ssphp_run(crate::SSPHP_RUN_KEY)?;
 
         let fbp = FbpResult::get_results_from_splunk(Arc::new(secrets)).await?;
 

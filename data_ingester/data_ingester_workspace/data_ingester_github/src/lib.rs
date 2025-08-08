@@ -38,6 +38,8 @@ use teams::GitHubTeamsOrg;
 use tracing::{error, info, warn};
 use workflows::{WorkflowRunJobs, WorkflowRuns};
 
+pub static SSPHP_RUN_KEY: &str = "github";
+
 /// NewType for Octocrab provide additonal data source.
 #[derive(Debug, Clone)]
 pub struct OctocrabGit {

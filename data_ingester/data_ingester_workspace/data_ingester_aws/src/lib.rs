@@ -12,3 +12,5 @@ mod aws_s3;
 mod aws_s3control;
 mod aws_securityhub;
 mod aws_trail;
+
+pub static SSPHP_RUN_KEY: &str = "aws";
