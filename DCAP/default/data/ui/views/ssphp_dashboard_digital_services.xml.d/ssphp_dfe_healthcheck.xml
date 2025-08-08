@@ -1,7 +1,7 @@
 <dashboard version="1.1" theme="dark">
 
 <label>DCAP Healthcheck Dashboard</label>
-<description>_DEV v3.3.18</description>
+<description>_DEV v3.3.3</description>
 
 
 
@@ -557,6 +557,7 @@ index=ssphp_metrics_data sourcetype=*rust* message=*sent*
 | search tech_test="AWS"
 
 ``` ***************** Delete after here to see base data *******************```
+``` ***** Cloudtrail is for yesterday, not today ***** ```
 
 | stats sum(eval(if('status.health'="unhealthy",1,0))) as unhealthy, sum(eval(if('status.health'="healthy",1,0))) as healthy
 
@@ -744,7 +745,7 @@ index=ssphp_metrics_data sourcetype=*rust* message=*sent*
 
 
     <panel>
-      <title>QUALYS Data Ingestion</title>
+      <title>QUALYS Data Ingestion (yesterday)</title>
       <single>
         <search base="base_2">
           <query>
@@ -752,6 +753,8 @@ index=ssphp_metrics_data sourcetype=*rust* message=*sent*
 | search tech_test="QUALYS"
 
 ``` ***************** Delete after here to see base data *******************```
+
+``` ***************** NOTE : this compares the events YESTERDAY against previous days ***************** ```
 
 | stats sum(eval(if('status.health'="unhealthy",1,0))) as unhealthy, sum(eval(if('status.health'="healthy",1,0))) as healthy
 
