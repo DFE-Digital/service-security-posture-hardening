@@ -1,7 +1,7 @@
 <dashboard version="1.1" theme="dark">
 
 <label>DCAP Healthcheck Dashboard</label>
-<description>_DEV v3.3.3</description>
+<description>_DEV v3.3.5</description>
 
 
 
@@ -77,8 +77,8 @@
   <!-- base search for ingestion success row -->
   <search id="base_2">
     <query>
-index="ssphp_metrics_data_health" 
-    [| search index="ssphp_metrics_data_health"
+index="ssphp_metrics_data_health" health_check_type="1"
+    [| search index="ssphp_metrics_data_health" health_check_type="1"
      | stats max(SSPHP_RUN) as SSPHP_RUN
      | return SSPHP_RUN]
 
@@ -1232,29 +1232,20 @@ index="ssphp_metrics_data" earliest=-7d@d latest=now sourcetype!="data_ingester_
       <single>
         <search>
           <query>
-index=ssphp_metrics_summary earliest=-3d@d latest=now
-     
-| eval date=strftime('SSPHP_RUN',"%Y-%m-%d")
-| fields SSPHP_RUN, date, ssphp.use_case.savedsearch
-     
-| stats max(SSPHP_RUN) as SSPHP_RUN, count as count by ssphp.use_case.savedsearch, date
-| eval today_date=strftime(now(),"%Y-%m-%d"),
-       yesterday_date=strftime(now()-86400,"%Y-%m-%d"),
-       today_count=if('date'='today_date','count',null()),
-       yesterday_count=if('date'='yesterday_date','count',null())
-| where 'date'='today_date' OR 'date'='yesterday_date'
-| fields ssphp.use_case.savedsearch, today_count, yesterday_count
-| stats values(*) as * by ssphp.use_case.savedsearch
-| where 'today_count'&lt;('yesterday_count'*0.9) OR 'today_count'&gt;('yesterday_count'*1.1)
+index="ssphp_metrics_data_health" health_check_type="2"
+    [| search index="ssphp_metrics_data_health"
+     | stats max(SSPHP_RUN) as SSPHP_RUN
+     | return SSPHP_RUN]
 
-| fields ssphp.use_case.savedsearch, today_count, yesterday_count
+| eval savedsearch=coalesce('savedsearch','savedsearch{}'),
+       run_time=strftime('SSPHP_RUN',"%Y-%m-%d %H:%M:%S")
+       
+| table ssphp.use_case.savedsearch, event_count.*, stats.*, status.health, status.error
+| sort 0 status.health, ssphp.use_case.savedsearch
 
-| append 
-    [| makeresults]
-    
-| stats count
+| stats sum(eval(if('status.health'="healthy",1,0))) as healthy,  sum(eval(if('status.health'="unhealthy",1,0))) as unhealthy
 
-| eval status=if(count&lt;2,"Healthy","Unhealthy"),
+| eval status=if('unhealthy'>0,"Unhealthy","Healthy"),
        range=if('status'="Healthy","low","severe")
 | table status, range
           </query>
