@@ -138,7 +138,7 @@ async fn post_aws(
 ) -> Json<AzureInvokeResponse> {
     Json(
         function_runner(
-            "AWS",
+            data_ingester_aws::SSPHP_RUN_KEY,
             state.aws_lock.clone(),
             state,
             data_ingester_aws::aws::aws,
@@ -161,10 +161,32 @@ async fn post_azure(
 ) -> Json<AzureInvokeResponse> {
     Json(
         function_runner(
-            "Azure",
+            data_ingester_azure::SSPHP_RUN_KEY,
             state.azure_lock.clone(),
             state,
             data_ingester_azure::azure_users,
+            headers,
+            payload.unwrap_or(None),
+        )
+        .await,
+    )
+}
+
+#[axum::debug_handler]
+async fn post_azure_dev_ops(
+    headers: HeaderMap,
+    State(state): State<Arc<AppState>>,
+    payload: std::result::Result<
+        Option<Json<AzureInvokeRequest>>,
+        axum::extract::rejection::JsonRejection,
+    >,
+) -> Json<AzureInvokeResponse> {
+    Json(
+        function_runner(
+            data_ingester_azure_dev_ops::SSPHP_RUN_KEY,
+            state.azure_dev_ops_lock.clone(),
+            state,
+            data_ingester_azure_dev_ops::entrypoint::entrypoint,
             headers,
             payload.unwrap_or(None),
         )
@@ -184,7 +206,7 @@ async fn post_azure_resource_graph(
 ) -> Json<AzureInvokeResponse> {
     Json(
         function_runner(
-            "Azure Resource Graph",
+            data_ingester_azure_rest::SSPHP_RUN_KEY,
             state.azure_resource_graph_lock.clone(),
             state,
             data_ingester_azure_rest::resource_graph::azure_resource_graph,
@@ -207,7 +229,7 @@ async fn post_github(
 ) -> Json<AzureInvokeResponse> {
     Json(
         function_runner(
-            "GitHub",
+            data_ingester_github::SSPHP_RUN_KEY,
             state.github_lock.clone(),
             state,
             data_ingester_github::entrypoint::github_octocrab_entrypoint,
@@ -230,7 +252,7 @@ async fn post_github_custom_properties(
 ) -> Json<AzureInvokeResponse> {
     Json(
         function_runner(
-            "GitHub Custom Properties",
+            data_ingester_github::SSPHP_RUN_KEY,
             state.github_custom_properties_lock.clone(),
             state,
             data_ingester_github::entrypoint::github_set_custom_properties_entrypoint,
@@ -253,7 +275,7 @@ async fn post_m365(
 ) -> Json<AzureInvokeResponse> {
     Json(
         function_runner(
-            "M365",
+            data_ingester_ms_graph::SSPHP_RUN_KEY,
             state.m365_lock.clone(),
             state,
             data_ingester_ms_graph::ms_graph::m365,
@@ -276,8 +298,9 @@ async fn post_powershell(
         axum::extract::rejection::JsonRejection,
     >,
 ) -> Json<AzureInvokeResponse> {
+    let name = data_ingester_ms_powershell::SSPHP_RUN_KEY;
     if state.powershell_lock.try_lock().is_ok() && !*state.powershell_installed.lock().await {
-        info!("Powershell: Installing");
+        info!(name = name, "Installing Powershell");
 
         data_ingester_ms_powershell::powershell::install_powershell()
             .await
@@ -287,7 +310,7 @@ async fn post_powershell(
 
     Json(
         function_runner(
-            "Powershell",
+            name,
             state.powershell_lock.clone(),
             state,
             data_ingester_ms_powershell::runner::powershell,
@@ -310,7 +333,7 @@ async fn post_qualys_qvs(
 ) -> Json<AzureInvokeResponse> {
     Json(
         function_runner(
-            "Qualys QVS",
+            data_ingester_qualys::SSPHP_RUN_KEY,
             state.qualys_qvs_lock.clone(),
             state,
             data_ingester_qualys::entrypoint::qualys_qvs,
@@ -333,7 +356,7 @@ async fn post_sonar_cloud(
 ) -> Json<AzureInvokeResponse> {
     Json(
         function_runner(
-            "Sonar Cloud",
+            data_ingester_sonar_cloud::SSPHP_RUN_KEY,
             state.sonar_cloud.clone(),
             state,
             data_ingester_sonar_cloud::entrypoint,
@@ -356,7 +379,7 @@ async fn post_threagile(
 ) -> Json<AzureInvokeResponse> {
     Json(
         function_runner(
-            "Threagile",
+            data_ingester_threagile::SSPHP_RUN_KEY,
             state.threagile_lock.clone(),
             state,
             data_ingester_threagile::threagile,
@@ -378,32 +401,10 @@ async fn post_financial_business_partners(
 ) -> Json<AzureInvokeResponse> {
     Json(
         function_runner(
-            "Financial Business Partners",
+            data_ingester_financial_business_partners::SSPHP_RUN_KEY,
             state.financial_business_partners_lock.clone(),
             state,
             data_ingester_financial_business_partners::entrypoint,
-            headers,
-            payload.unwrap_or(None),
-        )
-        .await,
-    )
-}
-
-#[axum::debug_handler]
-async fn post_azure_dev_ops(
-    headers: HeaderMap,
-    State(state): State<Arc<AppState>>,
-    payload: std::result::Result<
-        Option<Json<AzureInvokeRequest>>,
-        axum::extract::rejection::JsonRejection,
-    >,
-) -> Json<AzureInvokeResponse> {
-    Json(
-        function_runner(
-            "Azure Dev Ops",
-            state.azure_dev_ops_lock.clone(),
-            state,
-            data_ingester_azure_dev_ops::entrypoint::entrypoint,
             headers,
             payload.unwrap_or(None),
         )

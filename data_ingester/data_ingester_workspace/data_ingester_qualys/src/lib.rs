@@ -10,6 +10,8 @@ use reqwest::{
 };
 use tracing::{info, warn};
 
+pub static SSPHP_RUN_KEY: &str = "qualys_qvs";
+
 /// A simple Qualys client
 #[derive(Debug, Default)]
 pub struct Qualys {

@@ -13,6 +13,8 @@ use std::os::unix::fs::PermissionsExt;
 use std::process::Command;
 use tracing::{debug, info};
 
+pub static SSPHP_RUN_KEY: &str = "threagile";
+
 fn extract_threagile() -> Result<PathBuf> {
     info!("Extracting threagile");
 
@@ -38,7 +40,7 @@ fn extract_threagile() -> Result<PathBuf> {
 }
 
 pub async fn threagile(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
-    set_ssphp_run("threagile")?;
+    set_ssphp_run(crate::SSPHP_RUN_KEY)?;
     info!("Extracting Threagile bins");
     let threagile_path = extract_threagile()?;
 

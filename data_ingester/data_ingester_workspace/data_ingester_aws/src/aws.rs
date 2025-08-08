@@ -46,7 +46,7 @@ use data_ingester_splunk::splunk::{set_ssphp_run, Splunk, ToHecEvents};
 use data_ingester_supporting::keyvault::Secrets;
 
 pub async fn aws(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
-    set_ssphp_run("aws")?;
+    set_ssphp_run(crate::SSPHP_RUN_KEY)?;
 
     info!("Starting AWS collection");
     info!("GIT_HASH: {}", env!("GIT_HASH"));

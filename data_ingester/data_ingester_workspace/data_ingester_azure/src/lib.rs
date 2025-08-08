@@ -8,8 +8,10 @@ use data_ingester_supporting::keyvault::Secrets;
 use std::sync::Arc;
 use tracing::info;
 
+pub static SSPHP_RUN_KEY: &str = "azure";
+
 pub async fn azure_users(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
-    set_ssphp_run("azure_users")?;
+    set_ssphp_run(SSPHP_RUN_KEY)?;
 
     info!("Starting Azure Users collection");
     info!("GIT_HASH: {}", env!("GIT_HASH"));

@@ -6,3 +6,5 @@ pub mod ms_graph;
 pub mod msgraph_data;
 pub mod roles;
 pub mod users;
+
+pub static SSPHP_RUN_KEY: &str = "m365";

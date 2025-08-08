@@ -11,7 +11,7 @@ use tracing::{error, info};
 
 /// Public entry point
 pub async fn github_octocrab_entrypoint(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
-    set_ssphp_run("github")?;
+    set_ssphp_run(crate::SSPHP_RUN_KEY)?;
 
     info!("Starting GitHub collection");
 
@@ -331,7 +331,7 @@ pub async fn github_set_custom_properties_entrypoint(
     secrets: Arc<Secrets>,
     splunk: Arc<Splunk>,
 ) -> Result<()> {
-    set_ssphp_run("github")?;
+    set_ssphp_run(crate::SSPHP_RUN_KEY)?;
     info!("Updating GitHub custom properties");
 
     let github_app = secrets
