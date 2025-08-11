@@ -285,7 +285,7 @@ impl ToHecEvents for &ContactDetails {
     }
 
     fn ssphp_run_key(&self) -> &str {
-        "fbp"
+        crate::SSPHP_RUN_KEY
     }
 }
 
