@@ -1,7 +1,7 @@
 <dashboard version="1.1" theme="dark">
 
 <label>DCAP Healthcheck Dashboard</label>
-<description>_DEV v3.3.5</description>
+<description>_DEV v3.3.8</description>
 
 
 
@@ -1029,33 +1029,30 @@ index=ssphp_asset_inventory earliest=-7d@d latest=now
       <single>
         <search>
           <query>
-index="ssphp_metrics_data" source="data_ingester_rust" stage=* earliest=-7d@d latest=now
-| eval date=strftime('_time',"%Y-%m-%d")
-| rename metadata.level as level
-| table _time, date, name, stage, complete, level
+index="ssphp_metrics_data" source="data_ingester_rust" stage=* earliest=-4d@d latest=@d
+| stats count by name
+| fields - count
 
-| eventstats max(date) as max_date by name
-| where date='max_date'
+| join type=outer name
+    [| search index="ssphp_metrics_data" source="data_ingester_rust" stage=* earliest=@d latest=now
+     | rename metadata.level as level
 
-| sort name, - _time
-| eval stage=if(stage="Complete",'stage'."::".'complete','stage')
-| fields - _time, max_date, level, complete
-| stats values(*) as * by name
-| eval today=strftime(now(),"%Y-%m-%d")
-| sort 0 name
+     | eval stage=if(stage="Complete",'stage'."::".'complete','stage')
+     | stats values(stage) as stage by name]
 
-| eval status=if(date='today' AND mvcount(mvfilter(match('stage',"Complete::true")))&gt;0 AND mvcount(mvfilter(match('stage',"Lock")))&gt;0 AND mvcount(mvfilter(match('stage',"Start")))&gt;0,
-                 "Healthy","Unhealthy"),
+| eval stage=split('stage'," ")
+| fillnull value="Ran on previous days but Did Not Start Today" stage
+
+| eval status=if(mvcount(mvfilter(match('stage',"Start")))>0 AND mvcount(mvfilter(match('stage',"Lock")))>0 AND mvcount(mvfilter(match('stage',"Complete::true")))>0,"Healthy","Unhealthy"),
        range=if('status'="Healthy","low","severe")
-| table status, range, date, name, stage
+| table status, range, name, stage
+| sort 0 - status, + name
 
-| append
-    [| makeresults
-     | eval status="Unhealthy"
-     | table status]
-| stats sum(eval(if(status="Unhealthy",1,0))) as number_unhealthy
+``` ***************** Delete after here to see base data *******************```
 
-| eval status=if('number_unhealthy'=1,"Healthy","Unhealthy"),
+| stats sum(eval(if('status'="Healthy",1,0))) as number_healthy, sum(eval(if('status'="Unhealthy",1,0))) as number_unhealthy
+
+| eval status=if('number_unhealthy'>0,"Unhealthy","Healthy"),
        range=if('status'="Healthy","low","severe")
 | table status, range
           </query>
@@ -1182,23 +1179,29 @@ index="ssphp_metrics_data" source="data_ingester_rust" stage=* earliest=-7d@d la
           <query>
 index="ssphp_metrics_data" earliest=-7d@d latest=now sourcetype!="data_ingester_rust"
 
-| stats count as most_recent_count by sourcetype, SSPHP_RUN
-| eventstats avg(most_recent_count) as avg_count, max(SSPHP_RUN) as most_recent_SSPHP_RUN by sourcetype
-| where SSPHP_RUN='most_recent_SSPHP_RUN'
-| eval avg_count=floor('avg_count'),
-       most_recent_ingest_date_ingest=strftime('SSPHP_RUN',"%Y-%m-%d %H:%M:%S"),
-       hours_since_ingest=floor((now()-most_recent_SSPHP_RUN)/60/60)
-| table sourcetype, most_recent_SSPHP_RUN, most_recent_ingest_date_ingest, hours_since_ingest, most_recent_count, avg_count
-| sort 0 - hours_since_ingest
+    [| search index="ssphp_metrics_data" earliest=-7d@d latest=now sourcetype!="data_ingester_rust"
+     | stats max(SSPHP_RUN) as SSPHP_RUN by sourcetype
+     | stats values(sourcetype) as sourcetype by SSPHP_RUN
 
-| where hours_since_ingest&gt;24 OR most_recent_count&lt;('avg_count'*0.75) OR most_recent_count&gt;('avg_count'*1.5)
+     | eval out="(SSPHP_RUN=\"" . 'SSPHP_RUN' . "\" AND sourcetype IN (\"" . mvjoin(sourcetype,"\",\"") . "\"))"
+     | stats values(out) as out
 
-| append 
-    [| makeresults]
+     | eval out=mvjoin('out'," OR ")
+     | return $out]
+
+| stats count, values(SSPHP_RUN) as SSPHP_RUN by sourcetype
+| eval last_drop=strftime('SSPHP_RUN',"%Y-%m-%d %H:%M:%S"),
+       hours_since_last_drop=round((now() - SSPHP_RUN)/60/60),
+       start_today_epoch=strptime(strftime(now(),"%Y-%m-%d")." 00:00:00","%Y-%m-%d %H:%M:%S"),
+       last_drop_today=if('SSPHP_RUN'>'start_today_epoch',"true","false")
+       
+| sort 0 - hours_since_last_drop, + sourcetype
+
+``` ***************** Delete after here to see base data *******************```
+
+| stats sum(eval(if('last_drop_today'="true",1,0))) as no_healthy, sum(eval(if('last_drop_today'="false",1,0))) as no_unhealthy
     
-| stats count
-
-| eval status=if(count&lt;2,"Healthy","Unhealthy"),
+| eval status=if('no_unhealthy'>0,"Unhealthy","Healthy"),
        range=if('status'="Healthy","low","severe")
 | table status, range
           </query>
@@ -1242,6 +1245,8 @@ index="ssphp_metrics_data_health" health_check_type="2"
        
 | table ssphp.use_case.savedsearch, event_count.*, stats.*, status.health, status.error
 | sort 0 status.health, ssphp.use_case.savedsearch
+
+``` ***************** Delete after here to see base data *******************```
 
 | stats sum(eval(if('status.health'="healthy",1,0))) as healthy,  sum(eval(if('status.health'="unhealthy",1,0))) as unhealthy
 
