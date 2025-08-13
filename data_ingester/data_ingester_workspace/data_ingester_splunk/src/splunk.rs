@@ -131,10 +131,26 @@ struct SsphpEvent<T: Serialize> {
     event: T,
 }
 
-pub fn set_ssphp_run(ssphp_run_key: &str) -> Result<()> {
+pub fn set_ssphp_run(ssphp_run_key: &str) -> Result<u64> {
     let start = SystemTime::now();
     let since_the_epoch = start.duration_since(UNIX_EPOCH)?.as_secs();
 
+    info!(
+        "Setting SSPHP_RUN[{}] to {}",
+        ssphp_run_key, since_the_epoch
+    );
+    match SSPHP_RUN_NEW.write() {
+        Ok(mut ssphp_run) => {
+            let _ = ssphp_run.insert(ssphp_run_key.to_string(), since_the_epoch);
+        }
+        Err(err) => {
+            error!("Unable to lock SSPHP_RUN for writing: {:?}", err);
+        }
+    }
+    Ok(since_the_epoch)
+}
+
+pub fn set_ssphp_run_with_seconds(ssphp_run_key: &str, since_the_epoch: u64) -> Result<()> {
     info!(
         "Setting SSPHP_RUN[{}] to {}",
         ssphp_run_key, since_the_epoch
