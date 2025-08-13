@@ -2,8 +2,8 @@ use anyhow::{Context, Result};
 use data_ingester_azure_rest::azure_rest::AzureRest;
 use data_ingester_ms_graph::ms_graph::MsGraph;
 use data_ingester_ms_graph::users::UsersMap;
-use data_ingester_splunk::splunk::try_collect_send;
 use data_ingester_splunk::splunk::{set_ssphp_run, Splunk, SplunkTrait, ToHecEvents};
+use data_ingester_splunk::splunk::{set_ssphp_run_with_seconds, try_collect_send};
 use data_ingester_supporting::keyvault::Secrets;
 use std::sync::Arc;
 use tracing::info;
@@ -11,7 +11,8 @@ use tracing::info;
 pub static SSPHP_RUN_KEY: &str = "azure";
 
 pub async fn azure_users(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
-    set_ssphp_run(SSPHP_RUN_KEY)?;
+    let ssphp_run = set_ssphp_run(SSPHP_RUN_KEY)?;
+    set_ssphp_run_with_seconds(data_ingester_azure_rest::SSPHP_RUN_KEY, ssphp_run)?;
 
     info!("Starting Azure Users collection");
     info!("GIT_HASH: {}", env!("GIT_HASH"));
