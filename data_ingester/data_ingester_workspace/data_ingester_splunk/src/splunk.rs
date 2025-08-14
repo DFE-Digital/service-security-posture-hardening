@@ -36,6 +36,8 @@ pub struct HecEvent {
     pub host: String,
     pub event: String,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub index: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub fields: Option<HecFields>,
 }
 
@@ -58,6 +60,7 @@ impl HecEvent {
             sourcetype: sourcetype.to_string(),
             host: hostname,
             event: serde_json::to_string(&ssphp_event)?,
+            index: None,
             fields: None,
         })
     }
@@ -77,6 +80,7 @@ impl HecEvent {
             sourcetype: sourcetype.to_string(),
             host: hostname,
             event: serde_json::to_string(&ssphp_event)?,
+            index: None,
             fields: None,
         })
     }
