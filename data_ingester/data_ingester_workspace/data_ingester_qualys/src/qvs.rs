@@ -33,7 +33,7 @@ impl ToHecEvents for &Qvs {
     }
 
     fn ssphp_run_key(&self) -> &str {
-        "qualys"
+        crate::SSPHP_RUN_KEY
     }
 }
 

@@ -73,7 +73,7 @@ impl AzureRest {
     pub async fn get_security_contacts(&self) -> Result<ReturnTypes> {
         let url_template = "https://management.azure.com/subscriptions/{}/providers/Microsoft.Security/securityContacts?api-version=2020-01-01-preview";
         let results = self
-            .rest_request_subscription_iter(url_template, "azure_users")
+            .rest_request_subscription_iter(url_template, crate::SSPHP_RUN_KEY)
             .await?;
         Ok(results)
     }
@@ -81,7 +81,7 @@ impl AzureRest {
     pub async fn get_security_center_built_in(&self) -> Result<ReturnTypes> {
         let url_template = "https://management.azure.com/subscriptions/{}/providers/Microsoft.Authorization/policyAssignments/SecurityCenterBuiltIn?api-version=2021-06-01";
         let results = self
-            .rest_request_subscription_iter(url_template, "azure_users")
+            .rest_request_subscription_iter(url_template, crate::SSPHP_RUN_KEY)
             .await?;
         Ok(results)
     }
@@ -163,7 +163,7 @@ impl AzureRest {
     pub async fn get_microsoft_security_settings(&self) -> Result<ReturnTypes> {
         let url_template = "https://management.azure.com/subscriptions/{}/providers/Microsoft.Security/settings?api-version=2021-06-01";
         let results = self
-            .rest_request_subscription_iter(url_template, "azure_users")
+            .rest_request_subscription_iter(url_template, crate::SSPHP_RUN_KEY)
             .await?;
         Ok(results)
     }
@@ -171,7 +171,7 @@ impl AzureRest {
     pub async fn get_microsoft_security_auto_provisioning_settings(&self) -> Result<ReturnTypes> {
         let url_template = "https://management.azure.com/subscriptions/{}/providers/Microsoft.Security/autoProvisioningSettings?api-version=2017-08-01-preview";
         let results = self
-            .rest_request_subscription_iter(url_template, "azure_users")
+            .rest_request_subscription_iter(url_template, crate::SSPHP_RUN_KEY)
             .await?;
         Ok(results)
     }
@@ -208,12 +208,10 @@ impl AzureRest {
                                 "https://management.azure.com{}/encryptionProtector?api-version=2022-05-01-preview",
                                 server_url);
                             let result = self.get_rest_request::<ReturnType>(&url).await?;
-                            collection.collection.push(
-                                result.into_return_type_wrapper(
-                                    url.as_str().to_string(),
-                                    "azure_users",
-                                ),
-                            );
+                            collection.collection.push(result.into_return_type_wrapper(
+                                url.as_str().to_string(),
+                                crate::SSPHP_RUN_KEY,
+                            ));
                         }
                     }
                 }

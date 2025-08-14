@@ -310,11 +310,13 @@ impl<'u> ToHecEvents for &UsersMap<'u> {
     fn sourcetype(&self) -> &str {
         "SSPHP.AAD.user"
     }
+
     fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
         Box::new(self.inner.values())
     }
+
     fn ssphp_run_key(&self) -> &str {
-        "azure_users"
+        crate::SSPHP_RUN_KEY
     }
 }
 
