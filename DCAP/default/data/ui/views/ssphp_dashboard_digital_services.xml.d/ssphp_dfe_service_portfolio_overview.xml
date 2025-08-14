@@ -1,7 +1,7 @@
 <dashboard version="1.1" theme="light" script="js/table_cell_backcolor_service_overview.js">
 
   <label>DfE Security Posture Continuous Assurance : Portfolio Overview Dashboard</label>
-  <description>{{environment}} v1.0.3</description>
+  <description>{{environment}} v1.0.4</description>
 
   <init>
 
@@ -143,7 +143,7 @@
     <panel>
       <html>
         <div class="absolute" style="background:$tkn_colour_tile$;">
-          <a href="ssphp_dfe_service_overview?tkn__portfolio=FAM" target="_blank">$tkn_FAM_score$</a>
+          <a href="ssphp_dfe_service_overview?tkn__portfolio=FAM" target="_blank">$tkn_FAM_score$%</a>
         </div>
         <div style="display: flex;">
           <div class="line" style="width: $tkn_margin$%; border-bottom: 5px solid $tkn_colour_tile$;"/>
@@ -162,7 +162,7 @@
     <panel>
       <html>
         <div class="absolute" style="background:$tkn_colour_tile$;">
-          <a href="ssphp_dfe_service_overview?tkn__portfolio=APPR" target="_blank">$tkn_APPR_score$</a>
+          <a href="ssphp_dfe_service_overview?tkn__portfolio=APPR" target="_blank">$tkn_APPR_score$%</a>
         </div>
         <div style="display: flex;">
           <div class="line" style="width: $tkn_margin$%; border-bottom: 5px solid $tkn_colour_tile$;"/>
@@ -181,7 +181,7 @@
     <panel>
       <html>
         <div class="absolute" style="background:$tkn_colour_tile$;">
-          <a href="ssphp_dfe_service_overview?tkn__portfolio=OPS" target="_blank">$tkn_OPS_score$</a>
+          <a href="ssphp_dfe_service_overview?tkn__portfolio=OPS" target="_blank">$tkn_OPS_score$%</a>
         </div>
         <div style="display: flex;">
           <div class="line" style="width: $tkn_margin$%; border-bottom: 5px solid $tkn_colour_tile$;"/>
@@ -200,7 +200,7 @@
     <panel>
       <html>
         <div class="absolute" style="background:$tkn_colour_tile$;">
-          <a href="ssphp_dfe_service_overview?tkn__portfolio=REG" target="_blank">$tkn_REG_score$</a>
+          <a href="ssphp_dfe_service_overview?tkn__portfolio=REG" target="_blank">$tkn_REG_score$%</a>
         </div>
         <div style="display: flex;">
           <div class="line" style="width: $tkn_margin$%; border-bottom: 5px solid $tkn_colour_tile$;"/>
@@ -219,7 +219,7 @@
     <panel>
       <html>
         <div class="absolute" style="background:$tkn_colour_tile$;">
-          <a href="ssphp_dfe_service_overview?tkn__portfolio=SCH" target="_blank">$tkn_SCH_score$</a>
+          <a href="ssphp_dfe_service_overview?tkn__portfolio=SCH" target="_blank">$tkn_SCH_score$%</a>
         </div>
         <div style="display: flex;">
           <div class="line" style="width: $tkn_margin$%; border-bottom: 5px solid $tkn_colour_tile$;"/>
@@ -242,7 +242,7 @@
     <panel>
       <html>
         <div class="absolute" style="background:$tkn_colour_tile$;">
-          <a href="ssphp_dfe_service_overview?tkn__portfolio=SKILL" target="_blank">$tkn_SKILL_score$</a>
+          <a href="ssphp_dfe_service_overview?tkn__portfolio=SKILL" target="_blank">$tkn_SKILL_score$%</a>
         </div>
         <div style="display: flex;">
           <div class="line" style="width: $tkn_margin$%; border-bottom: 5px solid $tkn_colour_tile$;"/>
@@ -261,7 +261,7 @@
     <panel>
       <html>
         <div class="absolute" style="background:$tkn_colour_tile$;">
-          <a href="ssphp_dfe_service_overview?tkn__portfolio=STD" target="_blank">$tkn_STD_score$</a>
+          <a href="ssphp_dfe_service_overview?tkn__portfolio=STD" target="_blank">$tkn_STD_score$%</a>
         </div>
         <div style="display: flex;">
           <div class="line" style="width: $tkn_margin$%; border-bottom: 5px solid $tkn_colour_tile$;"/>
@@ -280,7 +280,7 @@
     <panel>
       <html>
         <div class="absolute" style="background:$tkn_colour_tile$;">
-          <a href="ssphp_dfe_service_overview?tkn__portfolio=STRAT" target="_blank">$tkn_STRAT_score$</a>
+          <a href="ssphp_dfe_service_overview?tkn__portfolio=STRAT" target="_blank">$tkn_STRAT_score$%</a>
         </div>
         <div style="display: flex;">
           <div class="line" style="width: $tkn_margin$%; border-bottom: 5px solid $tkn_colour_tile$;"/>
@@ -299,7 +299,7 @@
     <panel>
       <html>
         <div class="absolute" style="background:$tkn_colour_tile$;">
-          <a href="ssphp_dfe_service_overview?tkn__portfolio=TRA" target="_blank">$tkn_TRA_score$</a>
+          <a href="ssphp_dfe_service_overview?tkn__portfolio=TRA" target="_blank">$tkn_TRA_score$%</a>
         </div>
         <div style="display: flex;">
           <div class="line" style="width: $tkn_margin$%; border-bottom: 5px solid $tkn_colour_tile$;"/>
