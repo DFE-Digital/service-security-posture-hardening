@@ -13,6 +13,7 @@ pub static SSPHP_RUN_KEY: &str = "azure";
 pub async fn azure_users(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
     let ssphp_run = set_ssphp_run(SSPHP_RUN_KEY)?;
     set_ssphp_run_with_seconds(data_ingester_azure_rest::SSPHP_RUN_KEY, ssphp_run)?;
+    set_ssphp_run_with_seconds("azure_users", ssphp_run)?;
 
     info!("Starting Azure Users collection");
     info!("GIT_HASH: {}", env!("GIT_HASH"));
