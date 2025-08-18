@@ -316,7 +316,7 @@ impl<'u> ToHecEvents for &UsersMap<'u> {
     }
 
     fn ssphp_run_key(&self) -> &str {
-        crate::SSPHP_RUN_KEY
+        "azure_users"
     }
 }
 
