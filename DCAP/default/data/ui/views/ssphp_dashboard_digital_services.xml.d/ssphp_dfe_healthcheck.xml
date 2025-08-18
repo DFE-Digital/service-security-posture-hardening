@@ -1,7 +1,7 @@
 <dashboard version="1.1" theme="dark">
 
 <label>DCAP Healthcheck Dashboard</label>
-<description>_DEV v3.3.8</description>
+<description>_DEV v3.3.10</description>
 
 
 
@@ -344,10 +344,10 @@ index=ssphp_metrics_data sourcetype=*rust* message=*sent*
       <single>
         <search>
           <query>
-| tstats count where index="ssphp_metrics_data" sourcetype!="Microsoft.Sql/servers/encryptionProtector" sourcetype!="github" sourcetype!="azure_resource_graph" sourcetype!="ado" source!="*code-security-configuration" earliest=-30d@d by _time sourcetype source span=1d
+| tstats count where index="ssphp_metrics_data" sourcetype!="Microsoft.Sql/servers/encryptionProtector" sourcetype!="github" sourcetype!="azure_resource_graph" sourcetype!="ado" source!="*code-security-configuration" earliest=-10d@d by _time sourcetype source span=1d
 
 | append 
-    [| tstats count where index="ssphp_metrics_data" sourcetype="azure_resource_graph" earliest=-30d@d by _time sourcetype span=1d
+    [| tstats count where index="ssphp_metrics_data" sourcetype="azure_resource_graph" earliest=-10d@d by _time sourcetype span=1d
      | eval source="azure_resource_graph"]
 
 | eval today=strftime(now(), "%Y-%m-%d")
@@ -367,65 +367,6 @@ index=ssphp_metrics_data sourcetype=*rust* message=*sent*
 | table sourcetype, source, count_today, count_median, count_mode, last_seen, seen_in_past_month
 
 ```| where count_today=0```
-``` ***************** Delete after here to see base data *******************```
-
-| stats sum(eval(if('count_today'="0",1,0))) as unhealthy, sum(eval(if('count_today'>"0",1,0))) as healthy
-
-| eval status=if('unhealthy'>0,"Unhealthy","Healthy"),
-       range=if('status'="Healthy","low","severe")
-| table status, range
-          </query>
-          <earliest>@d</earliest>
-          <latest>now</latest>
-          <sampleRatio>1</sampleRatio>
-        </search>
-        <option name="drilldown">none</option>
-        <option name="colorBy">value</option>
-        <option name="colorMode">block</option>
-        <option name="drilldown">none</option>
-        <option name="numberPrecision">0</option>
-        <option name="rangeColors">["0x65a637","0x6db7c6","0xf7bc38","0xf58f39","0xd93f3c"]</option>
-        <option name="rangeValues">[0,30,70,100]</option>
-        <option name="showSparkline">1</option>
-        <option name="showTrendIndicator">1</option>
-        <option name="trellis.enabled">0</option>
-        <option name="trellis.scales.shared">1</option>
-        <option name="trellis.size">medium</option>
-        <option name="trendColorInterpretation">standard</option>
-        <option name="trendDisplayMode">absolute</option>
-        <option name="unitPosition">after</option>
-        <option name="useColors">0</option>
-        <option name="useThousandSeparators">1</option>
-      </single>
-    </panel>
-
-
-
-    <panel>
-      <title>Source and Sourcetypes without Data Today (ONLY GitHub)</title>
-      <single>
-        <search>
-          <query>
-| tstats count where index="ssphp_metrics_data" sourcetype="github" source!="/repos/*/actions/jobs/*" earliest=-30d@d by _time, sourcetype, source span=1d
-
-| eval today=strftime(now(), "%Y-%m-%d")
-| eval count_today=if(strftime('_time', "%Y-%m-%d") = 'today', 'count', null()) 
-
-| stats list(count_today) as count_today,
-        list(count) as count_past, 
-        median(count) as count_median,
-        mode(count) as count_mode,
-        max(_time) as max__time 
-        by sourcetype, source
-
-| fillnull value=0 count_today
-| eval seen_in_past_month=mvcount(count_past)
-
-| eval last_seen=strftime('max__time', "%Y-%m-%d")
-| table sourcetype, source, count_today, count_median, count_mode, last_seen, seen_in_past_month
-
-```| where count_today=0```
-
 ``` ***************** Delete after here to see base data *******************```
 
 | stats sum(eval(if('count_today'="0",1,0))) as unhealthy, sum(eval(if('count_today'>"0",1,0))) as healthy
