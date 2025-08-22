@@ -2028,6 +2028,7 @@ dependencies = [
  "futures",
  "hickory-proto",
  "hickory-resolver",
+ "serde",
  "time",
  "tokio",
  "tracing",

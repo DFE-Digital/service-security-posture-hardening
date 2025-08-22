@@ -8,8 +8,11 @@ use anyhow::Context;
 use anyhow::Result;
 use axum::http::HeaderMap;
 use axum::{extract::State, routing::get, routing::post, Json, Router};
+use data_ingester_splunk::splunk::get_ssphp_run;
 use data_ingester_splunk::splunk::set_ssphp_run;
+use data_ingester_splunk::splunk::{HecEvent, SplunkTrait};
 use data_ingester_splunk::start_splunk_tracing;
+use data_ingester_supporting::keyvault::secret_health_check;
 use std::env;
 use std::sync::Arc;
 use tokio::sync::oneshot::Sender;
@@ -114,6 +117,22 @@ async fn get_health_check(
 
     let app_state_health_check_json = serde_json::to_string(&app_state_health_check)
         .unwrap_or_else(|_| "ERROR converting AppState to Json".to_string());
+
+    if let Ok(key_vault_name) = env::var("KEY_VAULT_NAME") {
+        if let Ok(secret_attributes) = secret_health_check(&key_vault_name).await {
+            let ssphp_run = get_ssphp_run("default");
+            let hec_events: Vec<HecEvent> = secret_attributes
+                .iter()
+                .filter_map(|sa| {
+                    let source = format!("{}:{}", &key_vault_name, sa.id);
+                    HecEvent::new_with_ssphp_run(sa, &source, "SSPPH_secret_attributes", ssphp_run)
+                        .ok()
+                })
+                .collect();
+            let _ = state.splunk.send_batch(hec_events).await;
+        }
+    }
+
     Json(AzureInvokeResponse {
         outputs: None,
         logs: vec![
