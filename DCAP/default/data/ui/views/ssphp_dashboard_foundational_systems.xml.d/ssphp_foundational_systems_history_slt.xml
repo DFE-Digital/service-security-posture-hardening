@@ -1,0 +1,175 @@
+<dashboard theme="light" version="1.1" hideFilters="true" script="js/addtags.js, js/table_cell_backcolor_control_progress.js">
+
+<label>DCAP Control Progress</label>
+<description>_DEV 1.0.3</description>
+
+  
+  <row>
+    <panel>
+      <html>
+        <style>
+          #table1 th:nth-child(1) {
+            width: 600px;
+          }
+          #table1 th:nth-child(2) {
+            width: 200px;
+          }
+          #table1 th, td {
+            text-align: left !important;
+          }
+           .css_for_green{ 
+           background-color: #009933 !important;
+           color:#FFFFFF !important;
+           font-size: 150% !important;
+           }
+           .css_for_green2{ 
+           background-color: #99CC33 !important;
+           color:#FFFFFF !important;
+           font-size: 150% !important;
+           }
+           .css_for_orange{ 
+           background-color: #FF6600 !important;
+           color:#FFFFFF !important;
+           font-size: 150% !important;
+           }
+           .css_for_orange2{ 
+           background-color: #FFC000 !important;
+           color:#FFFFFF !important;
+           font-size: 150% !important;
+           }
+           .css_for_red{
+           background-color: #CC0000 !important;
+           color:#FFFFFF !important;
+           font-size: 150% !important;
+           }
+           .css_for_blue{
+           background-color: #81abdf !important;
+           color:#FFFFFF !important;
+           font-size: 150% !important;
+           }
+          .key_colour{
+            color:#000000 !important;
+            font-weight: bold !important;
+            font-size: 150% !important;
+           }
+          .value_colour{
+            color:#000000 !important;
+           }
+      </style>
+    </html>
+      
+    <title>Security configuration posture - enterprise systems</title>
+      <table id="table1">
+        <search>
+          <query>
+`ssphp_summary_index` earliest=-12mon@mon latest=now
+ssphp.source.foundational_system="*"
+      (ssphp.use_case.id="azure*" OR ssphp.use_case.id="dns*" OR ssphp.use_case.id="m365*" OR ssphp.use_case.id="aad*" OR (ssphp.use_case.id="github*" AND ssphp.use_case.savedsearch="*_fs*"))
+      ssphp.use_case.id!="*_000"
+      ssphp.score.ciso_priority=1
+      ```ssphp.use_case.id="m365_001_cis_1-1-5"```
+      
+| eval run_month=strftime('SSPHP_RUN',"%Y-%m"),
+       run_date=strftime('SSPHP_RUN',"%Y-%m-%d")
+
+| eventstats max(SSPHP_RUN) as max_SSPHP_RUN by ssphp.use_case.id, run_month
+| where SSPHP_RUN='max_SSPHP_RUN'
+| sort 0 - run_month
+
+| fields SSPHP_RUN, run_month, run_date, ssphp.source.foundational_system, ssphp.use_case.id, ssphp.use_case.title, ssphp.benchmark.control.title, ssphp.score.ciso_priority, ssphp.score.score
+
+| stats count as number_controls_total, sum(eval(if('ssphp.score.score'="100",1,0))) as number_controls_compliant by ssphp.source.foundational_system, run_month
+
+
+| appendpipe
+    [| stats max(run_month) as run_month by ssphp.source.foundational_system
+     | eval ry=mvindex(split('run_month',"-"),0),
+            rm=mvindex(split('run_month',"-"),1),
+            nml=mvrange('rm'+1,13)
+     | fields - run_month
+     | mvexpand nml
+     | eval run_month='ry'."-".substr("00".'nml',len("00".'nml')-1,2)
+    | fields - nml, rm, ry
+    ]
+
+| eval score_{run_month}=coalesce(floor('number_controls_compliant'*100/'number_controls_total')," ")
+
+| stats values(*) as * by ssphp.source.foundational_system
+
+| fields ssphp.source.foundational_system, score_*
+
+| eval cm=strftime(now(),"score_"."%Y-%m"),
+       total_val=0,
+       no_vals=0,
+       post=""
+       
+| foreach score_* 
+    [| eval curr_val=if("&lt;&lt;FIELD&gt;&gt;"='cm','&lt;&lt;FIELD&gt;&gt;','curr_val'),
+            total_val=if(match('&lt;&lt;FIELD&gt;&gt;',"[0-9]+"),'total_val'+'&lt;&lt;FIELD&gt;&gt;','total_val'),
+            no_vals=if(match('&lt;&lt;FIELD&gt;&gt;',"[0-9]+"),'no_vals'+1,'no_vals'),
+            post=case('&lt;&lt;FIELD&gt;&gt;'&lt;25,"|red",
+                      '&lt;&lt;FIELD&gt;&gt;'&lt;50,"|orange",
+                      '&lt;&lt;FIELD&gt;&gt;'&lt;60,"|orange2",
+                      '&lt;&lt;FIELD&gt;&gt;'&lt;75,"|blue",
+                      '&lt;&lt;FIELD&gt;&gt;'&lt;90,"|green2",
+                      '&lt;&lt;FIELD&gt;&gt;'&lt;=100,"|green",
+                      1==1,"|grey"
+                      ),
+            &lt;&lt;FIELD&gt;&gt;=if(isnull('&lt;&lt;FIELD&gt;&gt;') OR '&lt;&lt;FIELD&gt;&gt;'="" OR '&lt;&lt;FIELD&gt;&gt;'=" "," ".'post','&lt;&lt;FIELD&gt;&gt;'."%".'post')
+    ]
+    
+| fillnull value=0 total_val
+
+| eval plus="++++++++++", minus="----------",
+       avg='total_val'/'no_vals',
+       delta=coalesce(floor(('curr_val'-'avg')*100/'avg'/10),0),
+       ssphp.source.foundational_system=if('ssphp.source.foundational_system'="DNS","ROUTE53 AWS",'ssphp.source.foundational_system'),
+       Owner=case('ssphp.source.foundational_system'="AAD","Martin Sivorn",
+                  'ssphp.source.foundational_system'="AZURE","Matt Evans",
+                  'ssphp.source.foundational_system'="ROUTE53 AWS","Matt Evans",
+                  'ssphp.source.foundational_system'="GITHUB","Service Teams",
+                  'ssphp.source.foundational_system'="M365","Jen O'Connor",
+                  1==1,null())
+                  
+| eval h_start="~!span class=\"key_colour\"~!",
+       d_start="~!span class=\"value_colour\"~!",
+       end="~!/span~!", 
+       br="~!br~!"
+       
+|eval fs=case('ssphp.source.foundational_system'="AAD",'h_start'."@Education AAD".'end'."
+
+Identity and Access management for all key systems. Remediation efforts currently paused due to loss of resource. Key risks on MFA for privileged access and client conditional access policies could lead to a significant compromise of DfE data.",
+                  'ssphp.source.foundational_system'="AZURE",'h_start'."Azure".'end'."
+
+Cloud hosting for all DfE services and data. Due to the way the Department has implemented Azure it is not currently possible to implement strong Data loss prevention from the hosting environment where the bulk of the Departments sensitive data is stored.",
+                  'ssphp.source.foundational_system'="ROUTE53 AWS",'h_start'."Route53 DNS".'end'."
+
+Primary DNS service for DfE digital services. 
+Risk – loss or misuse of DNS could stop access to systems or redirect users to malicious systems.",
+                  'ssphp.source.foundational_system'="GITHUB",'h_start'."GitHub".'end'."
+
+Not currently centrally managed.
+Risk – Compromise of a repository could lead to malicious code being added to a Department developed and run service leading to compromise or integrity of DfE services. Could also inadvertently contain sensitive data",
+                  'ssphp.source.foundational_system'="M365",'h_start'."M365".'end'."
+
+A critical productivity tool for all staff, key to developing policy and statutory instruments; and our ability to advise ministers. 
+Risk – Compromise of M365 could lead to the compromise of all of the Departments documents and email ",
+                  1==1,null())
+
+| table fs, Owner, score_*
+| rename score_* as *, fs as "Foundation System Protection"
+          </query>
+        </search>
+        <option name="count">100</option>
+        <option name="dataOverlayMode">none</option>
+        <option name="drilldown">none</option>
+        <format type="color">
+          <colorPalette type="list">[#a70000,#f1f1f1,#53A051]</colorPalette>
+          <scale type="threshold">30,100</scale>
+        </format>
+      </table>
+    </panel>
+  </row>
+
+
+</dashboard>

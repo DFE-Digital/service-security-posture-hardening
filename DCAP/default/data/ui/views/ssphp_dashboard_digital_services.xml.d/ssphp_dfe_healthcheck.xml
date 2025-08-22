@@ -1,7 +1,7 @@
 <dashboard version="1.1" theme="dark">
 
 <label>DCAP Healthcheck Dashboard</label>
-<description>_DEV v3.3.11</description>
+<description>_DEV v3.3.17</description>
 
 
 
@@ -731,6 +731,127 @@ index=ssphp_metrics_data sourcetype=*rust* message=*sent*
 
 
   <row>
+    <panel>
+      <title>Azure Token Expiry</title>
+      <single>
+        <search>
+          <query>
+index=ssphp_metrics_data sourcetype=SSPHP_secret_attributes 
+
+| stats latest(*) as * by id
+
+| where enabled="true" AND expires_on!="null"
+
+| eval expires=strftime('expires_on',"%Y-%m-%d %H:%M:%S"),
+       expiration_status=case('expires_on'&lt;=now(),"expired",
+                              'expires_on'&lt;=now()+(7*86400),"expires in less than a week",
+                              'expires_on'&lt;=now()+(4*7*86400),"expires in less than 4 weeks",
+                              1==1,"good")
+
+| table SSPHP_RUN, keyvault_id, id, expires_on, expires, expiration_status, created_on, updated_on, enabled, recovery_level
+
+
+``` ***************** Delete after here to see base data *******************```
+
+| stats count as total,
+        sum(eval(if(expiration_status="good",1,0))) as good,
+        sum(eval(if(expiration_status="expired",1,0))) as expired,
+        sum(eval(if(expiration_status="expires in less than a week",1,0))) as expired_7d,
+        sum(eval(if(expiration_status="expires in less than 4 weeks",1,0))) as expired_4w
+        
+
+| eval status=if('good'='total',"Healthy","Unhealthy"),
+       range=case('status'="Healthy","low",
+                  'expired'>0,"severe",
+                  'expired_7d'>0,"high",
+                  'expired_4w'>0,"elevated")
+                  
+| table status, range
+          </query>
+        </search>
+    <option name="drilldown">none</option>
+    <option name="colorBy">value</option>
+    <option name="colorMode">block</option>
+    <option name="drilldown">none</option>
+    <option name="numberPrecision">0</option>
+    <option name="rangeColors">["0x65a637","0x6db7c6","0xf7bc38","0xf58f39","0xd93f3c"]</option>
+    <option name="rangeValues">[0,30,70,100]</option>
+    <option name="showSparkline">1</option>
+    <option name="showTrendIndicator">1</option>
+    <option name="trellis.enabled">0</option>
+    <option name="trellis.scales.shared">1</option>
+    <option name="trellis.size">medium</option>
+    <option name="trendColorInterpretation">standard</option>
+    <option name="trendDisplayMode">absolute</option>
+    <option name="unitPosition">after</option>
+    <option name="useColors">0</option>
+    <option name="useThousandSeparators">1</option>
+      </single>
+    </panel>
+
+
+
+
+    <panel>
+      <title>Splunk Token Expiry</title>
+      <single>
+        <search>
+          <query>
+| rest /services/authorization/tokens splunk_server=local
+
+| search claims.sub="ssphp_*"
+
+| eval lastUsed=strftime('lastUsed',"%Y-%m-%d %H:%M:%S"),
+       expires=strftime('claims.exp',"%Y-%m-%d %H:%M:%S"),
+       expiration_status=case('claims.exp'&lt;=now(),"expired",
+                              'claims.exp'&lt;=now()+(7*86400),"expires in less than a week",
+                              'claims.exp'&lt;=now()+(4*7*86400),"expires in less than 4 weeks",
+                              1==1,"good")
+
+| table title, status, claims.sub, claims.iss, claims.exp, expires, expiration_status, eai:acl.perms.read, eai:acl.perms.write, lastUsed, lastUsedIp
+
+
+``` ***************** Delete after here to see base data *******************```
+
+| stats count as total,
+        sum(eval(if(expiration_status="good",1,0))) as good,
+        sum(eval(if(expiration_status="expired",1,0))) as expired,
+        sum(eval(if(expiration_status="expires in less than a week",1,0))) as expired_7d,
+        sum(eval(if(expiration_status="expires in less than 4 weeks",1,0))) as expired_4w
+
+
+| eval status=if('good'='total',"Healthy","Unhealthy"),
+       range=case('status'="Healthy","low",
+                  'expired'>0,"severe",
+                  'expired_7d'>0,"high",
+                  'expired_4w'>0,"elevated")
+                  
+| table status, range
+          </query>
+        </search>
+    <option name="drilldown">none</option>
+    <option name="colorBy">value</option>
+    <option name="colorMode">block</option>
+    <option name="drilldown">none</option>
+    <option name="numberPrecision">0</option>
+    <option name="rangeColors">["0x65a637","0x6db7c6","0xf7bc38","0xf58f39","0xd93f3c"]</option>
+    <option name="rangeValues">[0,30,70,100]</option>
+    <option name="showSparkline">1</option>
+    <option name="showTrendIndicator">1</option>
+    <option name="trellis.enabled">0</option>
+    <option name="trellis.scales.shared">1</option>
+    <option name="trellis.size">medium</option>
+    <option name="trendColorInterpretation">standard</option>
+    <option name="trendDisplayMode">absolute</option>
+    <option name="unitPosition">after</option>
+    <option name="useColors">0</option>
+    <option name="useThousandSeparators">1</option>
+      </single>
+    </panel>
+
+
+
+
     <panel>
       <title>FBP Data Ingestion Age</title>
       <single>
