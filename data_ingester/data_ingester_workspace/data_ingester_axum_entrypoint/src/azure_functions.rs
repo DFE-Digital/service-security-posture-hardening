@@ -125,7 +125,7 @@ async fn get_health_check(
                 .iter()
                 .filter_map(|sa| {
                     let source = format!("{}:{}", &key_vault_name, sa.id);
-                    HecEvent::new_with_ssphp_run(sa, &source, "SSPPH_secret_attributes", ssphp_run)
+                    HecEvent::new_with_ssphp_run(sa, &source, "SSPHP_secret_attributes", ssphp_run)
                         .ok()
                 })
                 .collect();

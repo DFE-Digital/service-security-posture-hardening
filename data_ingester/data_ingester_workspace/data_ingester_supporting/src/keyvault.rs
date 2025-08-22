@@ -10,7 +10,7 @@ use futures::StreamExt;
 use serde::Serialize;
 use std::sync::Arc;
 use tokio::task::JoinHandle;
-use tracing::{info, warn};
+use tracing::{error, info, warn};
 
 pub struct Secrets {
     pub splunk_host: Option<String>,
@@ -210,11 +210,32 @@ pub async fn secret_health_check(keyvault_name: &str) -> Result<Vec<SecretAttrib
     let mut attributes = vec![];
 
     for secret in list_secret_response {
-        let secret_attributes: SecretAttributes = client
-            .get(secret.id)
+        if !secret.attributes.enabled {
+            continue;
+        }
+
+        let secret_name = match secret.id.split("/").last() {
+            Some(name) => name,
+            _ => {
+                error!(
+                    name = "azure_key_vault",
+                    secret_id = secret.id,
+                    "Could not split name"
+                );
+                continue;
+            }
+        };
+        match client
+            .get(dbg!(secret_name))
             .await
-            .map(|response| (keyvault_name.to_owned(), response).into())?;
-        attributes.push(secret_attributes);
+            .map(|response| (keyvault_name.to_owned(), response).into())
+        {
+            Ok(secret_attribute) => attributes.push(secret_attribute),
+            Err(err) => {
+                error!(error=?err, name="azure_key_vault", secret_id=secret.id, "getting secret");
+                continue;
+            }
+        };
     }
 
     Ok(attributes)
