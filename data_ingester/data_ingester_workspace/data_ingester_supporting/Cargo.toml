@@ -14,6 +14,7 @@ futures = "0"
 tokio = { version = "1", features = ["full"] }
 hickory-proto = "0.25.0-alpha.4"
 hickory-resolver = { version = "0.25.0-alpha.4", features = ["dns-over-rustls"] }
+serde = {version = "1", features = ["derive"]}
 tracing = "0"
 
 [dev-dependencies]

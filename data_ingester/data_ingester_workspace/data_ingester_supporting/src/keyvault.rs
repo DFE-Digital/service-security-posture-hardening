@@ -2,12 +2,15 @@ use crate::dev_ops_pats::{azure_dev_ops_pats, AdoDevOpsPat};
 use anyhow::{Context, Result};
 use azure_identity::DefaultAzureCredential;
 use azure_identity::TokenCredentialOptions;
+use azure_security_keyvault::prelude::KeyVaultGetSecretResponse;
+use azure_security_keyvault::prelude::KeyVaultGetSecretsResponse;
 use azure_security_keyvault::{KeyvaultClient, SecretClient};
 use base64::prelude::*;
 use futures::StreamExt;
+use serde::Serialize;
 use std::sync::Arc;
 use tokio::task::JoinHandle;
-use tracing::{info, warn};
+use tracing::{error, info, warn};
 
 pub struct Secrets {
     pub splunk_host: Option<String>,
@@ -176,4 +179,89 @@ pub async fn get_keyvault_secrets(keyvault_name: &str) -> Result<Secrets> {
         mssql_password: mssql_password.await?,
         ado_pats,
     })
+}
+
+/// Get all secret name & attributes, but not the secret value. Used
+/// for healthcheck reporting on expired secrets.
+pub async fn secret_health_check(keyvault_name: &str) -> Result<Vec<SecretAttributes>> {
+    let credential = Arc::new(
+        DefaultAzureCredential::create(TokenCredentialOptions::default())
+            .context("Unable to build default Azure Credentials")?,
+    );
+
+    info!("KeyVault Secret Client created");
+    let keyvault_url = format!("https://{keyvault_name}.vault.azure.net");
+    let client = KeyvaultClient::new(&keyvault_url, credential.clone())
+        .context("Creating key vault client")?
+        .secret_client();
+
+    let list_secret_response = client
+        .list_secrets()
+        .into_stream()
+        .filter_map(|result| async move {
+            match result {
+                Ok(result) => Some(result.value),
+                Err(_) => None,
+            }
+        })
+        .concat()
+        .await;
+
+    let mut attributes = vec![];
+
+    for secret in list_secret_response {
+        if !secret.attributes.enabled {
+            continue;
+        }
+
+        let secret_name = match secret.id.split("/").last() {
+            Some(name) => name,
+            _ => {
+                error!(
+                    name = "azure_key_vault",
+                    secret_id = secret.id,
+                    "Could not split name"
+                );
+                continue;
+            }
+        };
+        match client
+            .get(dbg!(secret_name))
+            .await
+            .map(|response| (keyvault_name.to_owned(), response).into())
+        {
+            Ok(secret_attribute) => attributes.push(secret_attribute),
+            Err(err) => {
+                error!(error=?err, name="azure_key_vault", secret_id=secret.id, "getting secret");
+                continue;
+            }
+        };
+    }
+
+    Ok(attributes)
+}
+
+#[derive(Debug, Serialize)]
+pub struct SecretAttributes {
+    pub id: String,
+    pub keyvault_id: String,
+    enabled: bool,
+    expires_on: Option<i64>,
+    created_on: i64,
+    updated_on: i64,
+    recovery_level: String,
+}
+
+impl From<(String, KeyVaultGetSecretResponse)> for SecretAttributes {
+    fn from((keyvault_id, value): (String, KeyVaultGetSecretResponse)) -> Self {
+        SecretAttributes {
+            id: value.id,
+            keyvault_id,
+            enabled: value.attributes.enabled,
+            expires_on: value.attributes.expires_on.map(|t| t.unix_timestamp()),
+            created_on: value.attributes.created_on.unix_timestamp(),
+            updated_on: value.attributes.updated_on.unix_timestamp(),
+            recovery_level: value.attributes.recovery_level,
+        }
+    }
 }
