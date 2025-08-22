@@ -85,6 +85,30 @@ impl HecEvent {
         })
     }
 
+    pub fn new_with_ssphp_run_index<T: Serialize,
+				    S1: Into<String>,
+				    S2: Into<String>,
+				    S3: Into<String>,>(
+        event: &T,
+        source: S1,
+        sourcetype: S2,
+        index: S3,
+        ssphp_run: u64,
+    ) -> Result<HecEvent> {
+        let ssphp_event = SsphpEvent { ssphp_run, event };
+        let hostname = hostname::get()?
+            .into_string()
+            .unwrap_or("NO HOSTNAME".to_owned());
+        Ok(HecEvent {
+            source: source.into(),
+            sourcetype: sourcetype.into(),
+            host: hostname,
+            event: serde_json::to_string(&ssphp_event)?,
+            index: Some(index.into()),
+            fields: None,
+        })
+    }
+
     pub fn increase_resend_count(&mut self) {
         if let Some(ref mut fields) = self.fields {
             fields.resend_count += 1;

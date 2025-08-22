@@ -54,6 +54,7 @@ pub(crate) async fn start_server(tx: Sender<()>) -> Result<()> {
         .route("/azure", post(post_azure))
         .route("/azure_dev_ops", post(post_azure_dev_ops))
         .route("/azure_resource_graph", post(post_azure_resource_graph))
+        .route("/censys", post(post_censys))
         .route("/github", post(post_github))
         .route(
             "/github_custom_properties",
@@ -210,6 +211,29 @@ async fn post_azure_resource_graph(
             state.azure_resource_graph_lock.clone(),
             state,
             data_ingester_azure_rest::resource_graph::azure_resource_graph,
+            headers,
+            payload.unwrap_or(None),
+        )
+        .await,
+    )
+}
+
+/// Collect GitHub data
+#[axum::debug_handler]
+async fn post_censys(
+    headers: HeaderMap,
+    State(state): State<Arc<AppState>>,
+    payload: std::result::Result<
+        Option<Json<AzureInvokeRequest>>,
+        axum::extract::rejection::JsonRejection,
+    >,
+) -> Json<AzureInvokeResponse> {
+    Json(
+        function_runner(
+            data_ingester_github::SSPHP_RUN_KEY,
+            state.github_lock.clone(),
+            state,
+            data_ingester_censys::entrypoint,
             headers,
             payload.unwrap_or(None),
         )

@@ -36,6 +36,8 @@ pub struct Secrets {
     pub mssql_username: Option<String>,
     pub mssql_password: Option<String>,
     pub ado_pats: Vec<AdoDevOpsPat>,
+    pub censys_api: Option<String>,
+    pub censys_secret: Option<String>,
 }
 
 /// Store a Github App token
@@ -120,6 +122,8 @@ pub async fn get_keyvault_secrets(keyvault_name: &str) -> Result<Secrets> {
     let mssql_port = get_secret(&client, "mssql-port");
     let mssql_username = get_secret(&client, "mssql-username");
     let mssql_password = get_secret(&client, "mssql-password");
+    let censys_api = get_secret(&client, "censys-api");
+    let censys_secret = get_secret(&client, "censys-secret");
 
     let github_app = if let (Some(github_app_id_1), Some(github_private_key_1)) =
         (github_app_id_1.await?, github_private_key_1.await?)
@@ -174,6 +178,8 @@ pub async fn get_keyvault_secrets(keyvault_name: &str) -> Result<Secrets> {
         mssql_db: mssql_db.await?,
         mssql_username: mssql_username.await?,
         mssql_password: mssql_password.await?,
+        censys_api: censys_api.await?,
+        censys_secret: censys_secret.await?,
         ado_pats,
     })
 }
