@@ -1,7 +1,7 @@
 <dashboard theme="light" version="1.1" hideFilters="true" script="js/addtags.js, js/table_cell_backcolor_control_progress.js">
 
 <label>DCAP Control Progress</label>
-<description>_DEV 1.0.3</description>
+<description>_DEV 1.0.4</description>
 
   
   <row>
@@ -55,6 +55,14 @@
           .value_colour{
             color:#000000 !important;
            }
+           #table1 tbody tr td {
+            border-top-style: solid !important;
+            border-bottom-style: solid !important;
+            border-left-style: solid !important;
+            border-right-style: solid !important;
+            border-color: white !important;
+            border-width: 2px !important;
+          }
       </style>
     </html>
       
