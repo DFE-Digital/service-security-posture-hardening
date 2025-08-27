@@ -1,75 +1,11 @@
 <dashboard theme="light" version="1.1" hideFilters="true" script="js/addtags.js, js/table_cell_backcolor_control_progress.js">
 
 <label>DCAP Control Progress</label>
-<description>_DEV 1.0.4</description>
+<description>_DEV 1.1.2</description>
 
-  
-  <row>
-    <panel>
-      <html>
-        <style>
-          #table1 th:nth-child(1) {
-            width: 600px;
-          }
-          #table1 th:nth-child(2) {
-            width: 200px;
-          }
-          #table1 th, td {
-            text-align: left !important;
-          }
-           .css_for_green{ 
-           background-color: #009933 !important;
-           color:#FFFFFF !important;
-           font-size: 150% !important;
-           }
-           .css_for_green2{ 
-           background-color: #99CC33 !important;
-           color:#FFFFFF !important;
-           font-size: 150% !important;
-           }
-           .css_for_orange{ 
-           background-color: #FF6600 !important;
-           color:#FFFFFF !important;
-           font-size: 150% !important;
-           }
-           .css_for_orange2{ 
-           background-color: #FFC000 !important;
-           color:#FFFFFF !important;
-           font-size: 150% !important;
-           }
-           .css_for_red{
-           background-color: #CC0000 !important;
-           color:#FFFFFF !important;
-           font-size: 150% !important;
-           }
-           .css_for_blue{
-           background-color: #81abdf !important;
-           color:#FFFFFF !important;
-           font-size: 150% !important;
-           }
-          .key_colour{
-            color:#000000 !important;
-            font-weight: bold !important;
-            font-size: 150% !important;
-           }
-          .value_colour{
-            color:#000000 !important;
-           }
-           #table1 tbody tr td {
-            border-top-style: solid !important;
-            border-bottom-style: solid !important;
-            border-left-style: solid !important;
-            border-right-style: solid !important;
-            border-color: white !important;
-            border-width: 2px !important;
-          }
-      </style>
-    </html>
-      
-    <title>Security configuration posture - enterprise systems</title>
-      <table id="table1">
-        <search>
-          <query>
+
+<search id="base01">
+  <query>
 `ssphp_summary_index` earliest=-12mon@mon latest=now
 ssphp.source.foundational_system="*"
       (ssphp.use_case.id="azure*" OR ssphp.use_case.id="dns*" OR ssphp.use_case.id="m365*" OR ssphp.use_case.id="aad*" OR (ssphp.use_case.id="github*" AND ssphp.use_case.savedsearch="*_fs*"))
@@ -138,31 +74,103 @@ ssphp.source.foundational_system="*"
                   'ssphp.source.foundational_system'="GITHUB","Service Teams",
                   'ssphp.source.foundational_system'="M365","Jen O'Connor",
                   1==1,null())
-                  
+  </query>
+</search>
+
+
+
+  <row>
+    <panel>
+      <html>
+        <style>
+          #table1 th:nth-child(1) {
+            width: 600px;
+          }
+          #table1 th:nth-child(2) {
+            width: 200px;
+          }
+          #table1 th, td {
+            text-align: left !important;
+          }
+           .css_for_green{ 
+           background-color: #009933 !important;
+           color:#FFFFFF !important;
+           font-size: 150% !important;
+           }
+           .css_for_green2{ 
+           background-color: #99CC33 !important;
+           color:#FFFFFF !important;
+           font-size: 150% !important;
+           }
+           .css_for_orange{ 
+           background-color: #FF6600 !important;
+           color:#FFFFFF !important;
+           font-size: 150% !important;
+           }
+           .css_for_orange2{ 
+           background-color: #FFC000 !important;
+           color:#FFFFFF !important;
+           font-size: 150% !important;
+           }
+           .css_for_red{
+           background-color: #CC0000 !important;
+           color:#FFFFFF !important;
+           font-size: 150% !important;
+           }
+           .css_for_blue{
+           background-color: #81abdf !important;
+           color:#FFFFFF !important;
+           font-size: 150% !important;
+           }
+          .key_colour{
+            color:#000000 !important;
+            font-weight: bold !important;
+            font-size: 150% !important;
+           }
+          .value_colour{
+            color:#000000 !important;
+            font-size: 115% !important;
+           }
+           #table1 tbody tr td {
+            border-top-style: solid !important;
+            border-bottom-style: solid !important;
+            border-left-style: solid !important;
+            border-right-style: solid !important;
+            border-color: white !important;
+            border-width: 2px !important;
+          }
+      </style>
+    </html>
+      
+    <title>Security configuration posture - enterprise systems</title>
+      <table id="table1">
+        <search base="base01">
+          <query>
+
 | eval h_start="~!span class=\"key_colour\"~!",
        d_start="~!span class=\"value_colour\"~!",
        end="~!/span~!", 
        br="~!br~!"
        
-|eval fs=case('ssphp.source.foundational_system'="AAD",'h_start'."@Education AAD".'end'."
+| eval Owner='d_start'.'Owner'.'end'
+       
+| eval fs=case(
+'ssphp.source.foundational_system'="AAD",
+'h_start'."@Education AAD".'br'.'br'.'end'.'d_start'.$tkn_aad_commentary|s$,
 
-Identity and Access management for all key systems. Remediation efforts currently paused due to loss of resource. Key risks on MFA for privileged access and client conditional access policies could lead to a significant compromise of DfE data.",
-                  'ssphp.source.foundational_system'="AZURE",'h_start'."Azure".'end'."
+'ssphp.source.foundational_system'="AZURE",
+'h_start'."Azure".'br'.'br'.'end'.'d_start'.$tkn_azure_commentary|s$,
 
-Cloud hosting for all DfE services and data. Due to the way the Department has implemented Azure it is not currently possible to implement strong Data loss prevention from the hosting environment where the bulk of the Departments sensitive data is stored.",
-                  'ssphp.source.foundational_system'="ROUTE53 AWS",'h_start'."Route53 DNS".'end'."
+'ssphp.source.foundational_system'="ROUTE53 AWS",
+'h_start'."Route53 DNS".'br'.'br'.'end'.'d_start'.$tkn_aws_commentary|s$,
 
-Primary DNS service for DfE digital services. 
-Risk – loss or misuse of DNS could stop access to systems or redirect users to malicious systems.",
-                  'ssphp.source.foundational_system'="GITHUB",'h_start'."GitHub".'end'."
+'ssphp.source.foundational_system'="GITHUB",
+'h_start'."GitHub".'br'.'br'.'end'.'d_start'.$tkn_github_commentary|s$,
 
-Not currently centrally managed.
-Risk – Compromise of a repository could lead to malicious code being added to a Department developed and run service leading to compromise or integrity of DfE services. Could also inadvertently contain sensitive data",
-                  'ssphp.source.foundational_system'="M365",'h_start'."M365".'end'."
+'ssphp.source.foundational_system'="M365",
+'h_start'."M365".'br'.'br'.'end'.'d_start'.$tkn_m365_commentary|s$,
 
-A critical productivity tool for all staff, key to developing policy and statutory instruments; and our ability to advise ministers. 
-Risk – Compromise of M365 could lead to the compromise of all of the Departments documents and email ",
-                  1==1,null())
+1==1,null())
 
 | table fs, Owner, score_*
 | rename score_* as *, fs as "Foundation System Protection"
@@ -178,6 +186,174 @@ Risk – Compromise of M365 could lead to the compromise of all of the Departmen
       </table>
     </panel>
   </row>
+
+  <row>
+    <html><br></br><br></br></html>
+  </row>
+  
+  <row>
+    <panel depends="$never_show$">
+      <html>
+        <style>
+          #t1 .splunk-textinput
+          {
+            width: 2000px !important;
+          }
+          #t2 .splunk-textinput
+          {
+            width: 2000px !important;
+          }
+          #t3 .splunk-textinput
+          {
+            width: 2000px !important;
+          }
+          #t4 .splunk-textinput
+          {
+            width: 2000px !important;
+          }
+          #t5 .splunk-textinput
+          {
+            width: 2000px !important;
+          }
+        </style>
+      </html>
+    </panel>
+
+  </row>
+
+  <row>
+    <panel>
+      <input id="t1" type="text" token="tkn_aad_text" searchWhenChanged="true">
+        <label>AAD Commentary</label>
+        <initialValue>Identity and Access management for all key systems.\nRemediation efforts currently paused due to loss of resource. Key risks on MFA for privileged access and client conditional access policies could lead to a significant compromise of DfE data.</initialValue>
+        <default>Identity and Access management for all key systems.\nRemediation efforts currently paused due to loss of resource. Key risks on MFA for privileged access and client conditional access policies could lead to a significant compromise of DfE data.</default>
+      </input>
+    </panel>
+    
+    <panel depends="$never_show$">
+      <single>
+        <search>
+          <query>
+| makeresults
+| eval in_txt=$tkn_aad_text|s$,
+       out_txt=replace('in_txt',"\\\n","~!br~!")
+| table out_txt
+          </query>
+        <done>
+          <set token="tkn_aad_commentary">$result.out_txt$</set>
+        </done>
+        </search>
+      </single>
+    </panel>
+  </row>
+
+
+  <row>
+    <panel>
+      <input id="t2" type="text" token="tkn_azure_text" searchWhenChanged="true">
+        <label>Azure Commentary</label>
+        <initialValue>Cloud hosting for all DfE services and data.\nDue to the way the Department has implemented Azure it is not currently possible to implement strong Data loss prevention from the hosting environment where the bulk of the Departments sensitive data is stored.</initialValue>
+        <default>Cloud hosting for all DfE services and data.\nDue to the way the Department has implemented Azure it is not currently possible to implement strong Data loss prevention from the hosting environment where the bulk of the Departments sensitive data is stored.</default>
+      </input>
+    </panel>
+    
+    <panel depends="$never_show$">
+      <single>
+        <search>
+          <query>
+| makeresults
+| eval in_txt=$tkn_azure_text|s$,
+       out_txt=replace('in_txt',"\\\n","~!br~!")
+| table out_txt
+          </query>
+        <done>
+          <set token="tkn_azure_commentary">$result.out_txt$</set>
+        </done>
+        </search>
+      </single>
+    </panel>
+  </row>
+
+
+  <row>
+    <panel>
+      <input id="t3" type="text" token="tkn_aws_text" searchWhenChanged="true">
+        <label>AWS Commentary</label>
+        <initialValue>Primary DNS service for DfE digital services.\nRisk – loss or misuse of DNS could stop access to systems or redirect users to malicious systems.</initialValue>
+        <default>Primary DNS service for DfE digital services.\nRisk – loss or misuse of DNS could stop access to systems or redirect users to malicious systems.</default>
+      </input>
+    </panel>
+    
+    <panel depends="$never_show$">
+      <single>
+        <search>
+          <query>
+| makeresults
+| eval in_txt=$tkn_aws_text|s$,
+       out_txt=replace('in_txt',"\\\n","~!br~!")
+| table out_txt
+          </query>
+        <done>
+          <set token="tkn_aws_commentary">$result.out_txt$</set>
+        </done>
+        </search>
+      </single>
+    </panel>
+  </row>
+
+
+  <row>
+    <panel>
+      <input id="t4" type="text" token="tkn_github_text" searchWhenChanged="true">
+        <label>GitHub Commentary</label>
+        <initialValue>Not currently centrally managed.\nRisk – Compromise of a repository could lead to malicious code being added to a Department developed and run service leading to compromise or integrity of DfE services. Could also inadvertently contain sensitive data</initialValue>
+        <default>Not currently centrally managed.\nRisk – Compromise of a repository could lead to malicious code being added to a Department developed and run service leading to compromise or integrity of DfE services. Could also inadvertently contain sensitive data</default>
+      </input>
+    </panel>
+    
+    <panel depends="$never_show$">
+      <single>
+        <search>
+          <query>
+| makeresults
+| eval in_txt=$tkn_github_text|s$,
+       out_txt=replace('in_txt',"\\\n","~!br~!")
+| table out_txt
+          </query>
+        <done>
+          <set token="tkn_github_commentary">$result.out_txt$</set>
+        </done>
+        </search>
+      </single>
+    </panel>
+  </row>
+
+  <row>
+    <panel>
+      <input id="t5" type="text" token="tkn_m365_text" searchWhenChanged="true">
+        <label>M365 Commentary</label>
+        <initialValue>A critical productivity tool for all staff, key to developing policy and statutory instruments; and our ability to advise ministers.\nRisk – Compromise of M365 could lead to the compromise of all of the Departments documents and email</initialValue>
+        <default>A critical productivity tool for all staff, key to developing policy and statutory instruments; and our ability to advise ministers.\nRisk – Compromise of M365 could lead to the compromise of all of the Departments documents and email</default>
+      </input>
+    </panel>
+    
+    <panel depends="$never_show$">
+      <single>
+        <search>
+          <query>
+| makeresults
+| eval in_txt=$tkn_m365_text|s$,
+       out_txt=replace('in_txt',"\\\n","~!br~!")
+| table out_txt
+          </query>
+        <done>
+          <set token="tkn_m365_commentary">$result.out_txt$</set>
+        </done>
+        </search>
+      </single>
+    </panel>
+  </row>
+  
 
 
 </dashboard>

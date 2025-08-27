@@ -2,7 +2,7 @@
 
 
 <label>DfE Security Posture Continuous Assurance : Service Posture Dashboard</label>
-<description>{{environment}} v1.1.11</description>
+<description>{{environment}} v1.1.15</description>
   
   <init>
     <set token="tkn_font_size_2">400</set>
@@ -777,13 +777,17 @@
             </condition>
           </change>
       </input>
-    </panel>
-    
-    <panel id="f3">
+
       <input type="text" token="tkn_filter_regex" searchWhenChanged="true">
         <label>Resource Details : Filter Regex</label>
         <default>.*</default>
       </input>
+    </panel>
+    
+    <panel id="f3">
+      <html>
+        <a class="btn grey" role="button" href="/api/search/jobs/$DOWNLOAD_QUERY$/results?isDownload=true&amp;maxLines=0&amp;count=0&amp;filename=remediation_list_$DOWNLOAD_DATE$&amp;outputMode=csv">Download Remediation List</a>
+      </html>
     </panel>
   </row>
   
@@ -1126,6 +1130,33 @@ $tkn_category$
   </row>
 
 
+<!-- ############################################# DOWNLOAD DATA TABLE ####################################################################################### --> 
+  <row depends="$debug$">
+    <panel>
+      <title>Download Data Table</title>
+      <table>
+        <search>
+          <query>
+| loadjob savedsearch="ssphp_app_account:DCAP_DEV:ssphp_create_dashboard_dataset_service_DEV"
+| eval ssphp.score.score=mvindex(split('ssphp.score.score',"|"),0),
+       ssphp.score.compliance_status=mvindex(split('ssphp.score.compliance_status',"|"),0)
+
+| search ssphp.service.portfolio=$tkn_portfolio|s$ AND ssphp.service.service_line=$tkn_service_line|s$ AND ssphp.service.product=$tkn_product|s$
+| search (ssphp.use_case.category="CODE_SCAN" OR ssphp.use_case.category="KUBERNETES" OR ssphp.use_case.category="POSTURE" OR ssphp.use_case.category="REPOS" OR ssphp.use_case.category="VULNERABILITY")
+
+| search ssphp.resource.id!="" AND ssphp.exemption.status="comply" AND ssphp.score.ciso_priority="DfE Mandated" AND ssphp.score.compliance_status="Non-Compliant*"
+
+| eval DOWNLOAD_DATE=round(now())
+| table ssphp.service.portfolio, ssphp.service.service_line, ssphp.service.product, ssphp.service.id, ssphp.assessment.source, ssphp.use_case.category, ssphp.use_case.id, ssphp.use_case.title, ssphp.assessment.display_name, ssphp.score.score, ssphp.score.color, ssphp.score.compliance_status, ssphp.score.ciso_priority, ssphp.assessment.description, ssphp.resource.id, ssphp.resource.tenant, ssphp.resource.subscription, ssphp.resource.subscription_name, ssphp.resource.resource_group, ssphp.score.remediation_priority, ssphp.exemption.status, SSPHP_UID, DOWNLOAD_DATE
+          </query>
+          <done>
+            <set token="DOWNLOAD_QUERY">$job.sid$</set>
+            <set token="DOWNLOAD_DATE">$result.DOWNLOAD_DATE$</set>
+          </done>
+        </search>
+      </table>
+    </panel>
+  </row>
 
 
 
