@@ -120,7 +120,8 @@ async fn get_health_check(
 
     if let Ok(key_vault_name) = env::var("KEY_VAULT_NAME") {
         if let Ok(secret_attributes) = secret_health_check(&key_vault_name).await {
-            let ssphp_run = get_ssphp_run("default");
+            let _ = set_ssphp_run("SSPHP_secret_attributes");
+            let ssphp_run = get_ssphp_run("SSPHP_secret_attributes");
             let hec_events: Vec<HecEvent> = secret_attributes
                 .iter()
                 .filter_map(|sa| {
