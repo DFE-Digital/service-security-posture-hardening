@@ -5,7 +5,7 @@ use anyhow::{Context, Result};
 use data_ingester_splunk::splunk::{HecEvent, Splunk, SplunkTrait, get_ssphp_run, set_ssphp_run};
 use data_ingester_supporting::keyvault::Secrets;
 use serde::Serialize;
-use tracing::info;
+use tracing::{error, info};
 use valuable::Value;
 
 static SSPHP_RUN_KEY: &str = "censys";
@@ -27,9 +27,9 @@ pub async fn entrypoint(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()
 
     let client = CensysApi {
         api_id: api_id.to_string(),
-	// api_id: "FOOFOO".to_string(),
-       secret: secret.to_string(),
-       // secret: "BARBAR".to_string(),	
+        // api_id: "FOOFOO".to_string(),
+        secret: secret.to_string(),
+        // secret: "BARBAR".to_string(),
     };
 
     dbg!(1);
@@ -38,16 +38,22 @@ pub async fn entrypoint(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()
         q: "sch.uk".to_string(),
         per_page: 100,
         virtual_hosts: V2::HostSearchRequestVirtualHosts::Include,
-	fields: Some(["dns.names",
-		 "ip",
-		 "services.port","services.extended_service_name",
-		 "services.tls.certificate.names",
-		 "autonomous_system.name",
-		 "location.province",
-		 "services.labels",
-		 "services.software.uniform_resource_identifier",
-		 "services.tls.certificate.parsed.validity_period.not_after",
-		 "whois.network.cidrs"].join(",")),
+        fields: Some(
+            //[
+            vec![
+                "autonomous_system.name".into(),
+                "dns.names".into(),
+                "ip".into(),
+                "location.province".into(),
+                "services.extended_service_name".into(),
+                "services.labels".into(),
+                "services.port".into(),
+                "services.software.uniform_resource_identifier".into(),
+                "services.tls.certificate.names".into(),
+                "services.tls.certificate.parsed.validity_period.not_after".into(),
+                "whois.network.cidrs".into(),
+            ],
+        ),
         ..Default::default()
     };
     dbg!(2);
@@ -64,7 +70,7 @@ pub async fn entrypoint(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()
             HecEvent::new_with_ssphp_run_index(
                 result,
                 q.clone(),
-                "censys",
+                "censys:json",
                 "ssphp_test",
                 ssphp_run,
             )
@@ -72,7 +78,53 @@ pub async fn entrypoint(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()
         })
         .collect::<Vec<HecEvent>>();
 
-    splunk.send_batch(hec_events).await;
+    dbg!(&hec_events);
+
+    //splunk.send_batch(hec_events).await;
+
+    let hosts: Vec<V2::HostResult> = results
+        .into_iter()
+        .flat_map(|value| {
+            let host = serde_json::from_value::<V2::HostResult>(value);
+            match host {
+                Ok(host) => Some(host),
+                Err(err) => {
+                    error!(error=?err, "Error converting Value into V2::HostResult");
+                    return None;
+                }
+            }
+        })
+        .collect();
+
+    //let mut hec_events: Vec<HecEvent> = vec![];
+
+    for host in hosts {
+        if !host.ports().contains(&80) {
+            continue;
+        }
+        for name in host.tls_names() {
+            info!(virtual_host = name, host_ip = host.ip);
+            let http_response = match host.http_request(80, &name).await {
+                Ok(response) => response,
+                Err(err) => {
+                    error!(error=?err, virtual_host=name, "Error sending HTTP request");
+                    continue;
+                }
+            };
+            let source = format!("{}:{}:{}", &host.ip, "80", &name);
+            let hec_event = HecEvent::new_with_ssphp_run_index(
+                &http_response,
+                source,
+                "censys:json:http_response",
+                "ssphp_test",
+                ssphp_run,
+            )?;
+            dbg!(&hec_event);
+            splunk.send_batch([hec_event]).await;
+        }
+    }
+
+    //splunk.send_batch(dbg!(hec_events)).await;
 
     Ok(())
 }
@@ -95,16 +147,121 @@ mod V2 {
     use anyhow::Result;
     use serde::{Deserialize, Serialize};
     use serde_json::Value;
+    use std::{collections::HashMap, net::SocketAddr};
     use tracing::{error, info};
     use valuable::Valuable;
+
+    #[derive(Debug, Deserialize)]
+    pub struct HostResult {
+        pub ip: String,
+        dns: Option<HostResultDns>,
+        services: Vec<HostResultService>,
+    }
+
+    impl HostResult {
+        pub fn ports(&self) -> Vec<u16> {
+            self.services.iter().map(|service| service.port).collect()
+        }
+
+        pub fn tls_names(&self) -> Vec<String> {
+            self.services
+                .iter()
+                .flat_map(|service| {
+                    service
+                        .tls
+                        .as_ref()
+                        .map(|tls| tls.certificate.names.clone())
+                })
+                .flatten()
+                .collect()
+        }
+        pub async fn http_request(&self, port: u16, virtual_host: &str) -> Result<HttpResponse> {
+            let socket: SocketAddr = format!("{}:{}", self.ip, port).parse()?;
+            let client = reqwest::ClientBuilder::new()
+                .resolve(virtual_host, socket)
+                .redirect(reqwest::redirect::Policy::none())
+                .build()?;
+
+            let url = format!("http://{virtual_host}:{port}/");
+            let response = client.get(&url).send().await?;
+            let headers = response
+                .headers()
+                .iter()
+                .map(|(header_name, header_value)| {
+                    (
+                        header_name.as_str().to_owned(),
+                        // This should be most robust
+                        header_value.to_str().unwrap_or_default().to_owned(),
+                    )
+                })
+                .collect::<HashMap<String, String>>();
+            let status = response.status();
+            let body = response.text().await?;
+            let http_response = HttpResponse {
+                request: HttpRequest {
+                    host: virtual_host.into(),
+                    ip: self.ip.to_owned(),
+                    port: port,
+                    url: url.into(),
+                },
+                headers: headers,
+                status: status.into(),
+                body,
+            };
+            Ok(http_response)
+        }
+    }
+
+    #[derive(Debug, Deserialize, Serialize)]
+    pub struct HttpResponse {
+        request: HttpRequest,
+        headers: HashMap<String, String>,
+        status: u16,
+        body: String,
+    }
+
+    #[derive(Debug, Deserialize, Serialize)]
+    struct HttpRequest {
+        host: String,
+        ip: String,
+        port: u16,
+        url: String,
+    }
+
+    #[derive(Debug, Deserialize, Serialize)]
+    struct HostResultDns {
+        names: Vec<String>,
+    }
+
+    #[derive(Debug, Deserialize)]
+    struct HostResultService {
+        extended_service_name: String,
+        labels: Vec<String>,
+        port: u16,
+        tls: Option<HostResultSerivceTls>,
+    }
+
+    #[derive(Debug, Deserialize)]
+    struct HostResultSerivceTls {
+        certificate: HostResultServiceTlsCertificate,
+    }
+
+    #[derive(Debug, Deserialize)]
+    struct HostResultServiceTlsCertificate {
+        names: Vec<String>,
+    }
 
     pub(crate) trait CensysApiTrait {
         fn api_id(&self) -> &str;
         fn secret(&self) -> &str;
-        async fn post_hosts_search(&self, request_body: &mut HostSearchRequest) -> Result<Vec<Value>> {
+        async fn post_hosts_search(
+            &self,
+            request_body: &mut HostSearchRequest,
+        ) -> Result<Vec<Value>> {
             let client = reqwest::Client::new();
             let url = "https://search.censys.io/api/v2/hosts/search";
             dbg!(&url);
+
             let response = client
                 .post(url)
                 .json(&request_body)
@@ -190,7 +347,7 @@ mod V2 {
         pub(crate) sort: HostSearchRequestSort,
         // Comma separated list of up to 25 fields to be returned for each result. (This parameter is only available to paid users.)
         #[serde(skip_serializing_if = "Option::is_none")]
-        pub(crate) fields: Option<String>,
+        pub(crate) fields: Option<Vec<String>>,
     }
 
     #[derive(Debug, Serialize, Default)]

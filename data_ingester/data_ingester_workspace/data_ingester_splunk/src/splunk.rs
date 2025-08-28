@@ -85,10 +85,12 @@ impl HecEvent {
         })
     }
 
-    pub fn new_with_ssphp_run_index<T: Serialize,
-				    S1: Into<String>,
-				    S2: Into<String>,
-				    S3: Into<String>,>(
+    pub fn new_with_ssphp_run_index<
+        T: Serialize,
+        S1: Into<String>,
+        S2: Into<String>,
+        S3: Into<String>,
+    >(
         event: &T,
         source: S1,
         sourcetype: S2,
