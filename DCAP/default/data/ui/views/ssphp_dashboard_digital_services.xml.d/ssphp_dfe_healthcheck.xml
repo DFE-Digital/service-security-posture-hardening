@@ -1,11 +1,12 @@
-<dashboard version="1.1" theme="dark">
+<form version="1.1" theme="dark">
+  <label>DCAP Healthcheck Dashboard</label>
+  <description>_DEV v4.0.0</description>
+  
 
-<label>DCAP Healthcheck Dashboard</label>
-<description>_DEV v3.3.18</description>
+<!-- ******************************************************************************************************************* -->
+<!-- ************************************* BASE SEARCHES *************************************************************** -->
+<!-- ******************************************************************************************************************* -->
 
-
-
-  <!-- base search -->
   <search id="base_1">
     <query>
 | rest /servicesNS/-/-/saved/searches splunk_server=local
@@ -43,7 +44,7 @@
 
      | makemv errors
      | eval errors=if(run_time&lt;'avg_run_time'/$tkn_sensitivity$,"run time too short",null()),
-            errors=if(run_time>'avg_run_time'*$tkn_sensitivity$,mvappend('errors',"run time too long"),'errors'),
+            errors=if(run_time&gt;'avg_run_time'*$tkn_sensitivity$,mvappend('errors',"run time too long"),'errors'),
             errors=if(result_count&lt;avg_result_count/$tkn_sensitivity$,mvappend('errors',"result count too low"),'errors'),
             errors=if(result_count&gt;avg_result_count*$tkn_sensitivity$,mvappend('errors',"result count too high"),'errors'),
             errors=if(like('status',"success"),'errors',mvappend('errors',"status not success")),
@@ -70,10 +71,7 @@
     <latest>now</latest>
     <sampleRatio>1</sampleRatio>
   </search>
-
-
-
-
+  
   <!-- base search for ingestion success row -->
   <search id="base_2">
     <query>
@@ -93,60 +91,180 @@ index="ssphp_metrics_data_health" health_check_type="1"
   </search>
 
 
-<!-- *************************************************************************************************************** -->
-<!-- ************************************************** ROWs FOR INGESTION SUCCESS TODAY *************************** -->
-<!-- *************************************************************************************************************** -->
+  <fieldset submitButton="false"></fieldset>
+  
 
+  
+
+<!-- ******************************************************************************************************************* -->
+<!-- ************************************* CSS ************************************************************************* -->
+<!-- ******************************************************************************************************************* -->
 
 
   <row>
-    <panel>
-      <title>FS Use Cases with No Data Errors</title>
-      <chart>
-        <search>
-          <query>`ssphp_summary_index`
-| search ssphp.error.no_records="true"
-| timechart count by ssphp.use_case.id limit=0</query>
-          <earliest>-7d@h</earliest>
-          <latest>now</latest>
-          <sampleRatio>1</sampleRatio>
-        </search>
-        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
-        <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
-        <option name="charting.axisTitleX.visibility">visible</option>
-        <option name="charting.axisTitleY.visibility">visible</option>
-        <option name="charting.axisTitleY2.visibility">visible</option>
-        <option name="charting.axisX.abbreviation">none</option>
-        <option name="charting.axisX.scale">linear</option>
-        <option name="charting.axisY.abbreviation">none</option>
-        <option name="charting.axisY.scale">linear</option>
-        <option name="charting.axisY2.abbreviation">none</option>
-        <option name="charting.axisY2.enabled">0</option>
-        <option name="charting.axisY2.scale">inherit</option>
-        <option name="charting.chart">line</option>
-        <option name="charting.chart.bubbleMaximumSize">50</option>
-        <option name="charting.chart.bubbleMinimumSize">10</option>
-        <option name="charting.chart.bubbleSizeBy">area</option>
-        <option name="charting.chart.nullValueMode">gaps</option>
-        <option name="charting.chart.showDataLabels">none</option>
-        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
-        <option name="charting.chart.stackMode">default</option>
-        <option name="charting.chart.style">shiny</option>
-        <option name="charting.drilldown">none</option>
-        <option name="charting.layout.splitSeries">0</option>
-        <option name="charting.layout.splitSeries.allowIndependentYRanges">0</option>
-        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
-        <option name="charting.legend.mode">standard</option>
-        <option name="charting.legend.placement">right</option>
-        <option name="charting.lineWidth">2</option>
-        <option name="trellis.enabled">0</option>
-        <option name="trellis.scales.shared">1</option>
-        <option name="trellis.size">medium</option>
-      </chart>
+    <panel depends="$alwaysHideCSS$">
+      <html>
+        <style>
+          #i1{
+            width:60% !important;
+            -webkit-box-flex:unset;
+            -ms-flex:unset;
+            flex:unset;
+          }
+          #i2{
+            width:40% !important;
+            -webkit-box-flex:unset;
+            -ms-flex:unset;
+            flex:unset;
+          }
+          .absolute {
+            text-align: left !important;
+            color: yellow !important;
+            font-size: 150% !important;
+            font-weight: bold;
+            line-height: 1.5 !important;
+          }
+        </style>
+      </html>
+    </panel>
+
+  
+
+<!-- ******************************************************************************************************************* -->
+<!-- ************************************* SOURCE SYSTEMS & SPLUNK ***************************************************** -->
+<!-- ******************************************************************************************************************* -->
+
+
+    <panel id="i1">
+      <html>
+        <div class="absolute">SOURCE SYSTEMS</div>
+      </html>
+    </panel>
+    
+    <panel id="i2">
+      <html>
+        <div class="absolute">SPLUNK</div>
+      </html>
     </panel>
   </row>
   
   <row>
+    <panel>
+      <title>Azure Token Expiry</title>
+      <single>
+        <search>
+          <query>
+index=ssphp_metrics_data sourcetype=SSPHP_secret_attributes 
+    [| search index=ssphp_metrics_data sourcetype=SSPHP_secret_attributes 
+    | stats max(SSPHP_RUN) as SSPHP_RUN
+    | return SSPHP_RUN]
+
+| stats latest(*) as * by id
+
+| where enabled="true" AND expires_on!="null"
+
+| eval expires=strftime('expires_on',"%Y-%m-%d %H:%M:%S"),
+       expiration_status=case('expires_on'&lt;=now(),"expired",
+                              'expires_on'&lt;=now()+(7*86400),"expires in less than a week",
+                              'expires_on'&lt;=now()+(4*7*86400),"expires in less than 4 weeks",
+                              1==1,"good")
+
+| table SSPHP_RUN, keyvault_id, id, expires_on, expires, expiration_status, created_on, updated_on, enabled, recovery_level
+
+
+``` ***************** Delete after here to see base data *******************```
+
+| stats count as total,
+        sum(eval(if(expiration_status="good",1,0))) as good,
+        sum(eval(if(expiration_status="expired",1,0))) as expired,
+        sum(eval(if(expiration_status="expires in less than a week",1,0))) as expired_7d,
+        sum(eval(if(expiration_status="expires in less than 4 weeks",1,0))) as expired_4w
+        
+
+| eval status=if('good'='total',"Healthy","Unhealthy"),
+       range=case('status'="Healthy","low",
+                  'expired'&gt;0,"severe",
+                  'expired_7d'&gt;0,"high",
+                  'expired_4w'&gt;0,"elevated")
+                  
+| table status, range
+          </query>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="colorBy">value</option>
+        <option name="colorMode">block</option>
+        <option name="drilldown">none</option>
+        <option name="numberPrecision">0</option>
+        <option name="rangeColors">["0x65a637","0x6db7c6","0xf7bc38","0xf58f39","0xd93f3c"]</option>
+        <option name="rangeValues">[0,30,70,100]</option>
+        <option name="showSparkline">1</option>
+        <option name="showTrendIndicator">1</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+        <option name="trendColorInterpretation">standard</option>
+        <option name="trendDisplayMode">absolute</option>
+        <option name="unitPosition">after</option>
+        <option name="useColors">0</option>
+        <option name="useThousandSeparators">1</option>
+      </single>
+    </panel>
+    
+    
+    <panel>
+      <title>Ingestion Completions</title>
+      <single>
+        <search>
+          <query>
+index="ssphp_metrics_data" source="data_ingester_rust" stage=* earliest=-4d@d latest=@d
+| stats count by name
+| fields - count
+
+| join type=outer name
+    [| search index="ssphp_metrics_data" source="data_ingester_rust" stage=* earliest=@d latest=now
+     | rename metadata.level as level
+
+     | eval stage=if(stage="Complete",'stage'."::".'complete','stage')
+     | stats values(stage) as stage by name]
+
+| eval stage=split('stage'," ")
+| fillnull value="Ran on previous days but Did Not Start Today" stage
+
+| eval status=if(mvcount(mvfilter(match('stage',"Start")))&gt;0 AND mvcount(mvfilter(match('stage',"Lock")))&gt;0 AND mvcount(mvfilter(match('stage',"Complete::true")))&gt;0,"Healthy","Unhealthy"),
+       range=if('status'="Healthy","low","severe")
+| table status, range, name, stage
+| sort 0 - status, + name
+
+``` ***************** Delete after here to see base data *******************```
+
+| stats sum(eval(if('status'="Healthy",1,0))) as number_healthy, sum(eval(if('status'="Unhealthy",1,0))) as number_unhealthy
+
+| eval status=if('number_unhealthy'&gt;0,"Unhealthy","Healthy"),
+       range=if('status'="Healthy","low","severe")
+| table status, range
+          </query>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="colorBy">value</option>
+        <option name="colorMode">block</option>
+        <option name="drilldown">none</option>
+        <option name="numberPrecision">0</option>
+        <option name="rangeColors">["0x65a637","0x6db7c6","0xf7bc38","0xf58f39","0xd93f3c"]</option>
+        <option name="rangeValues">[0,30,70,100]</option>
+        <option name="showSparkline">1</option>
+        <option name="showTrendIndicator">1</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+        <option name="trendColorInterpretation">standard</option>
+        <option name="trendDisplayMode">absolute</option>
+        <option name="unitPosition">after</option>
+        <option name="useColors">0</option>
+        <option name="useThousandSeparators">1</option>
+      </single>
+    </panel>
+    
+    
     <panel>
       <title>Azure Resource Graph Event Ingestion Recociliation</title>
       <single>
@@ -201,9 +319,139 @@ index=*data* sourcetype=*azure_resource_graph*
         <option name="useThousandSeparators">1</option>
       </single>
     </panel>
+    
+    
+    <panel>
+      <title>Splunk Token Expiry</title>
+      <single>
+        <search>
+          <query>
+| rest /services/authorization/tokens splunk_server=local
+
+| search claims.sub="ssphp_*"
+
+| eval lastUsed=strftime('lastUsed',"%Y-%m-%d %H:%M:%S"),
+       expires=strftime('claims.exp',"%Y-%m-%d %H:%M:%S"),
+       expiration_status=case('claims.exp'&lt;=now(),"expired",
+                              'claims.exp'&lt;=now()+(7*86400),"expires in less than a week",
+                              'claims.exp'&lt;=now()+(4*7*86400),"expires in less than 4 weeks",
+                              1==1,"good")
+
+| table title, status, claims.sub, claims.iss, claims.exp, expires, expiration_status, eai:acl.perms.read, eai:acl.perms.write, lastUsed, lastUsedIp
 
 
+``` ***************** Delete after here to see base data *******************```
 
+| stats count as total,
+        sum(eval(if(expiration_status="good",1,0))) as good,
+        sum(eval(if(expiration_status="expired",1,0))) as expired,
+        sum(eval(if(expiration_status="expires in less than a week",1,0))) as expired_7d,
+        sum(eval(if(expiration_status="expires in less than 4 weeks",1,0))) as expired_4w
+
+
+| eval status=if('good'='total',"Healthy","Unhealthy"),
+       range=case('status'="Healthy","low",
+                  'expired'&gt;0,"severe",
+                  'expired_7d'&gt;0,"high",
+                  'expired_4w'&gt;0,"elevated")
+                  
+| table status, range
+          </query>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="colorBy">value</option>
+        <option name="colorMode">block</option>
+        <option name="drilldown">none</option>
+        <option name="numberPrecision">0</option>
+        <option name="rangeColors">["0x65a637","0x6db7c6","0xf7bc38","0xf58f39","0xd93f3c"]</option>
+        <option name="rangeValues">[0,30,70,100]</option>
+        <option name="showSparkline">1</option>
+        <option name="showTrendIndicator">1</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+        <option name="trendColorInterpretation">standard</option>
+        <option name="trendDisplayMode">absolute</option>
+        <option name="unitPosition">after</option>
+        <option name="useColors">0</option>
+        <option name="useThousandSeparators">1</option>
+      </single>
+    </panel>
+    
+    
+    <panel>
+      <title>Does Splunk get all Events Sent</title>
+      <single>
+        <search>
+          <query>
+index=ssphp_metrics_data sourcetype=*rust* message=*sent*
+
+| spath stats 
+| spath stats.sourcetype_stats{} 
+| fields stats.sourcetype_stats{}.*, stats.total_count
+| where 'stats.total_count'&gt;0
+
+| rename stats.sourcetype_stats{}.* as * 
+| eval foo=mvzip(mvzip(source,sourcetype,"|"),count,"|") 
+| fields foo 
+| mvexpand foo 
+| eval source=mvindex(split('foo', "|"), 0),sourcetype=mvindex(split('foo', "|"), 1),count=mvindex(split('foo', "|"), 2) 
+| stats sum(count) as sent by source, sourcetype
+
+
+| join sourcetype source 
+    [| search index=ssphp_metrics_data
+     | stats count as splunk by sourcetype, source ]
+
+```| where 'sent'!='splunk'```
+
+``` ***************** Delete after here to see base data *******************```
+
+| stats sum(eval(if('sent'!='splunk',1,0))) as unhealthy, sum(eval(if('sent'='splunk',1,0))) as healthy
+
+| eval status=if('unhealthy'&gt;0,"Unhealthy","Healthy"),
+       range=if('status'="Healthy","low","severe")
+| table status, range
+          </query>
+          <earliest>@d</earliest>
+          <latest>now</latest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="colorBy">value</option>
+        <option name="colorMode">block</option>
+        <option name="drilldown">none</option>
+        <option name="numberPrecision">0</option>
+        <option name="rangeColors">["0x65a637","0x6db7c6","0xf7bc38","0xf58f39","0xd93f3c"]</option>
+        <option name="rangeValues">[0,30,70,100]</option>
+        <option name="showSparkline">1</option>
+        <option name="showTrendIndicator">1</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+        <option name="trendColorInterpretation">standard</option>
+        <option name="trendDisplayMode">absolute</option>
+        <option name="unitPosition">after</option>
+        <option name="useColors">0</option>
+        <option name="useThousandSeparators">1</option>
+      </single>
+    </panel>
+  </row>
+
+  
+
+<!-- ******************************************************************************************************************* -->
+<!-- ************************************* DCAP INTERNAL *************************************************************** -->
+<!-- ******************************************************************************************************************* -->
+
+  <row>
+    <panel>
+      <html>
+        <div class="absolute">DCAP INTERNAL</div>
+      </html>
+    </panel>
+  </row>
+  <row>
     <panel>
       <title>Have all the Defender Alerts been Prioritised</title>
       <single>
@@ -279,586 +527,8 @@ index=*data* sourcetype=*azure_resource_graph*
         <option name="useThousandSeparators">1</option>
       </single>
     </panel>
-
-
-    <panel>
-      <title>Does Splunk get all Events Sent</title>
-      <single>
-        <search>
-          <query>
-index=ssphp_metrics_data sourcetype=*rust* message=*sent*
-
-| spath stats 
-| spath stats.sourcetype_stats{} 
-| fields stats.sourcetype_stats{}.*, stats.total_count
-| where 'stats.total_count'&gt;0
-
-| rename stats.sourcetype_stats{}.* as * 
-| eval foo=mvzip(mvzip(source,sourcetype,"|"),count,"|") 
-| fields foo 
-| mvexpand foo 
-| eval source=mvindex(split('foo', "|"), 0),sourcetype=mvindex(split('foo', "|"), 1),count=mvindex(split('foo', "|"), 2) 
-| stats sum(count) as sent by source, sourcetype
-
-
-| join sourcetype source 
-    [| search index=ssphp_metrics_data
-     | stats count as splunk by sourcetype, source ]
-
-```| where 'sent'!='splunk'```
-
-``` ***************** Delete after here to see base data *******************```
-
-| stats sum(eval(if('sent'!='splunk',1,0))) as unhealthy, sum(eval(if('sent'='splunk',1,0))) as healthy
-
-| eval status=if('unhealthy'>0,"Unhealthy","Healthy"),
-       range=if('status'="Healthy","low","severe")
-| table status, range
-          </query>
-          <earliest>@d</earliest>
-          <latest>now</latest>
-          <sampleRatio>1</sampleRatio>
-        </search>
-        <option name="drilldown">none</option>
-        <option name="colorBy">value</option>
-        <option name="colorMode">block</option>
-        <option name="drilldown">none</option>
-        <option name="numberPrecision">0</option>
-        <option name="rangeColors">["0x65a637","0x6db7c6","0xf7bc38","0xf58f39","0xd93f3c"]</option>
-        <option name="rangeValues">[0,30,70,100]</option>
-        <option name="showSparkline">1</option>
-        <option name="showTrendIndicator">1</option>
-        <option name="trellis.enabled">0</option>
-        <option name="trellis.scales.shared">1</option>
-        <option name="trellis.size">medium</option>
-        <option name="trendColorInterpretation">standard</option>
-        <option name="trendDisplayMode">absolute</option>
-        <option name="unitPosition">after</option>
-        <option name="useColors">0</option>
-        <option name="useThousandSeparators">1</option>
-      </single>
-    </panel>
-
-    <panel>
-      <title>Source and Sourcetypes without Data Today (NOT GitHub)</title>
-      <single>
-        <search>
-          <query>
-| tstats count where index="ssphp_metrics_data" sourcetype!="Microsoft.Sql/servers/encryptionProtector" sourcetype!="github" sourcetype!="azure_resource_graph" sourcetype!="ado" source!="*code-security-configuration" earliest=-10d@d by _time sourcetype source span=1d
-
-| append 
-    [| tstats count where index="ssphp_metrics_data" sourcetype="azure_resource_graph" earliest=-10d@d by _time sourcetype span=1d
-     | eval source="azure_resource_graph"]
-
-| eval today=strftime(now(), "%Y-%m-%d")
-| eval count_today=if(strftime('_time', "%Y-%m-%d") = 'today', 'count', null()) 
-
-| stats list(count_today) as count_today,
-        list(count) as count_past, 
-        median(count) as count_median,
-        mode(count) as count_mode,
-        max(_time) as max__time 
-        by sourcetype, source
-
-| fillnull value=0 count_today
-| eval seen_in_past_month=mvcount(count_past)
-
-| eval last_seen=strftime('max__time', "%Y-%m-%d")
-
-| rex field=source ".*\/subscriptions\/(?&lt;subscription&gt;[^\/]*)\/"
-
-| table sourcetype, source, subscription, count_today, count_median, count_mode, last_seen, seen_in_past_month
-| sort 0 subscription
-
-```| where count_today=0```
-``` ***************** Delete after here to see base data *******************```
-
-| stats sum(eval(if('count_today'="0",1,0))) as unhealthy, sum(eval(if('count_today'>"0",1,0))) as healthy
-
-| eval status=if('unhealthy'&gt;0,"Unhealthy","Healthy"),
-       range=if('status'="Healthy","low","severe")
-| table status, range
-          </query>
-          <earliest>@d</earliest>
-          <latest>now</latest>
-          <sampleRatio>1</sampleRatio>
-        </search>
-        <option name="drilldown">none</option>
-        <option name="colorBy">value</option>
-        <option name="colorMode">block</option>
-        <option name="drilldown">none</option>
-        <option name="numberPrecision">0</option>
-        <option name="rangeColors">["0x65a637","0x6db7c6","0xf7bc38","0xf58f39","0xd93f3c"]</option>
-        <option name="rangeValues">[0,30,70,100]</option>
-        <option name="showSparkline">1</option>
-        <option name="showTrendIndicator">1</option>
-        <option name="trellis.enabled">0</option>
-        <option name="trellis.scales.shared">1</option>
-        <option name="trellis.size">medium</option>
-        <option name="trendColorInterpretation">standard</option>
-        <option name="trendDisplayMode">absolute</option>
-        <option name="unitPosition">after</option>
-        <option name="useColors">0</option>
-        <option name="useThousandSeparators">1</option>
-      </single>
-    </panel>
     
-  </row>
-
-
-
-
-
-
-<!-- *************************************************************************************************************** -->
-<!-- *************************** ROW FOR INGESTION SUCCESS FOR EVERY SOURCE / SOURCETYPE *************************** -->
-<!-- *************************************************************************************************************** -->
-
-  <row>
-    <panel>
-      <title>AAD ENTRA Data Ingestion</title>
-      <single>
-        <search base="base_2">
-          <query>
-
-| search tech_test="AAD"
-
-``` ***************** Delete after here to see base data *******************```
-
-| stats sum(eval(if('status.health'="unhealthy",1,0))) as unhealthy, sum(eval(if('status.health'="healthy",1,0))) as healthy
-
-
-| eval status=if('unhealthy'&gt;0,"Unhealthy","Healthy"),
-       range=if('status'="Healthy","low","severe")
-| table status, range
-          </query>
-        </search>
-    <option name="drilldown">none</option>
-    <option name="colorBy">value</option>
-    <option name="colorMode">block</option>
-    <option name="drilldown">none</option>
-    <option name="numberPrecision">0</option>
-    <option name="rangeColors">["0x65a637","0x6db7c6","0xf7bc38","0xf58f39","0xd93f3c"]</option>
-    <option name="rangeValues">[0,30,70,100]</option>
-    <option name="showSparkline">1</option>
-    <option name="showTrendIndicator">1</option>
-    <option name="trellis.enabled">0</option>
-    <option name="trellis.scales.shared">1</option>
-    <option name="trellis.size">medium</option>
-    <option name="trendColorInterpretation">standard</option>
-    <option name="trendDisplayMode">absolute</option>
-    <option name="unitPosition">after</option>
-    <option name="useColors">0</option>
-    <option name="useThousandSeparators">1</option>
-      </single>
-    </panel>
-
-
-    <panel>
-      <title>ADO Data Ingestion</title>
-      <single>
-        <search base="base_2">
-          <query>
-
-| search tech_test="ADO"
-
-``` ***************** Delete after here to see base data *******************```
-
-| stats sum(eval(if('status.health'="unhealthy",1,0))) as unhealthy, sum(eval(if('status.health'="healthy",1,0))) as healthy
-
-
-| eval status=if('unhealthy'&gt;0,"Unhealthy","Healthy"),
-       range=if('status'="Healthy","low","severe")
-| table status, range
-          </query>
-        </search>
-    <option name="drilldown">none</option>
-    <option name="colorBy">value</option>
-    <option name="colorMode">block</option>
-    <option name="drilldown">none</option>
-    <option name="numberPrecision">0</option>
-    <option name="rangeColors">["0x65a637","0x6db7c6","0xf7bc38","0xf58f39","0xd93f3c"]</option>
-    <option name="rangeValues">[0,30,70,100]</option>
-    <option name="showSparkline">1</option>
-    <option name="showTrendIndicator">1</option>
-    <option name="trellis.enabled">0</option>
-    <option name="trellis.scales.shared">1</option>
-    <option name="trellis.size">medium</option>
-    <option name="trendColorInterpretation">standard</option>
-    <option name="trendDisplayMode">absolute</option>
-    <option name="unitPosition">after</option>
-    <option name="useColors">0</option>
-    <option name="useThousandSeparators">1</option>
-      </single>
-    </panel>
-
-
-    <panel>
-      <title>AWS Data Ingestion</title>
-      <single>
-        <search base="base_2">
-          <query>
-
-| search tech_test="AWS"
-
-``` ***************** Delete after here to see base data *******************```
-``` ***** Cloudtrail is for yesterday, not today ***** ```
-
-| stats sum(eval(if('status.health'="unhealthy",1,0))) as unhealthy, sum(eval(if('status.health'="healthy",1,0))) as healthy
-
-
-| eval status=if('unhealthy'&gt;0,"Unhealthy","Healthy"),
-       range=if('status'="Healthy","low","severe")
-| table status, range
-          </query>
-        </search>
-    <option name="drilldown">none</option>
-    <option name="colorBy">value</option>
-    <option name="colorMode">block</option>
-    <option name="drilldown">none</option>
-    <option name="numberPrecision">0</option>
-    <option name="rangeColors">["0x65a637","0x6db7c6","0xf7bc38","0xf58f39","0xd93f3c"]</option>
-    <option name="rangeValues">[0,30,70,100]</option>
-    <option name="showSparkline">1</option>
-    <option name="showTrendIndicator">1</option>
-    <option name="trellis.enabled">0</option>
-    <option name="trellis.scales.shared">1</option>
-    <option name="trellis.size">medium</option>
-    <option name="trendColorInterpretation">standard</option>
-    <option name="trendDisplayMode">absolute</option>
-    <option name="unitPosition">after</option>
-    <option name="useColors">0</option>
-    <option name="useThousandSeparators">1</option>
-      </single>
-    </panel>
-
-
-    <panel>
-      <title>AZURE Data Ingestion</title>
-      <single>
-        <search base="base_2">
-          <query>
-
-| search tech_test="AZURE"
-
-``` ***************** Delete after here to see base data *******************```
-
-| stats sum(eval(if('status.health'="unhealthy",1,0))) as unhealthy, sum(eval(if('status.health'="healthy",1,0))) as healthy
-
-
-| eval status=if('unhealthy'&gt;0,"Unhealthy","Healthy"),
-       range=if('status'="Healthy","low","severe")
-| table status, range
-          </query>
-        </search>
-    <option name="drilldown">none</option>
-    <option name="colorBy">value</option>
-    <option name="colorMode">block</option>
-    <option name="drilldown">none</option>
-    <option name="numberPrecision">0</option>
-    <option name="rangeColors">["0x65a637","0x6db7c6","0xf7bc38","0xf58f39","0xd93f3c"]</option>
-    <option name="rangeValues">[0,30,70,100]</option>
-    <option name="showSparkline">1</option>
-    <option name="showTrendIndicator">1</option>
-    <option name="trellis.enabled">0</option>
-    <option name="trellis.scales.shared">1</option>
-    <option name="trellis.size">medium</option>
-    <option name="trendColorInterpretation">standard</option>
-    <option name="trendDisplayMode">absolute</option>
-    <option name="unitPosition">after</option>
-    <option name="useColors">0</option>
-    <option name="useThousandSeparators">1</option>
-      </single>
-    </panel>
-
-
-    <panel>
-      <title>DEFENDER Data Ingestion</title>
-      <single>
-        <search base="base_2">
-          <query>
-
-| search tech_test="DEFENDER"
-
-``` ***************** Delete after here to see base data *******************```
-
-| stats sum(eval(if('status.health'="unhealthy",1,0))) as unhealthy, sum(eval(if('status.health'="healthy",1,0))) as healthy
-
-
-| eval status=if('unhealthy'&gt;0,"Unhealthy","Healthy"),
-       range=if('status'="Healthy","low","severe")
-| table status, range
-          </query>
-        </search>
-    <option name="drilldown">none</option>
-    <option name="colorBy">value</option>
-    <option name="colorMode">block</option>
-    <option name="drilldown">none</option>
-    <option name="numberPrecision">0</option>
-    <option name="rangeColors">["0x65a637","0x6db7c6","0xf7bc38","0xf58f39","0xd93f3c"]</option>
-    <option name="rangeValues">[0,30,70,100]</option>
-    <option name="showSparkline">1</option>
-    <option name="showTrendIndicator">1</option>
-    <option name="trellis.enabled">0</option>
-    <option name="trellis.scales.shared">1</option>
-    <option name="trellis.size">medium</option>
-    <option name="trendColorInterpretation">standard</option>
-    <option name="trendDisplayMode">absolute</option>
-    <option name="unitPosition">after</option>
-    <option name="useColors">0</option>
-    <option name="useThousandSeparators">1</option>
-      </single>
-    </panel>
-
-
-    <panel>
-      <title>GITHUB Data Ingestion</title>
-      <single>
-        <search base="base_2">
-          <query>
-
-| search tech_test="GITHUB"
-
-``` ***************** Delete after here to see base data *******************```
-
-| stats sum(eval(if('status.health'="unhealthy",1,0))) as unhealthy, sum(eval(if('status.health'="healthy",1,0))) as healthy
-
-
-| eval status=if('unhealthy'&gt;0,"Unhealthy","Healthy"),
-       range=if('status'="Healthy","low","severe")
-| table status, range
-          </query>
-        </search>
-    <option name="drilldown">none</option>
-    <option name="colorBy">value</option>
-    <option name="colorMode">block</option>
-    <option name="drilldown">none</option>
-    <option name="numberPrecision">0</option>
-    <option name="rangeColors">["0x65a637","0x6db7c6","0xf7bc38","0xf58f39","0xd93f3c"]</option>
-    <option name="rangeValues">[0,30,70,100]</option>
-    <option name="showSparkline">1</option>
-    <option name="showTrendIndicator">1</option>
-    <option name="trellis.enabled">0</option>
-    <option name="trellis.scales.shared">1</option>
-    <option name="trellis.size">medium</option>
-    <option name="trendColorInterpretation">standard</option>
-    <option name="trendDisplayMode">absolute</option>
-    <option name="unitPosition">after</option>
-    <option name="useColors">0</option>
-    <option name="useThousandSeparators">1</option>
-      </single>
-    </panel>
-
-
-    <panel>
-      <title>M365 Data Ingestion</title>
-      <single>
-        <search base="base_2">
-          <query>
-
-| search tech_test="M365"
-
-``` ***************** Delete after here to see base data *******************```
-
-| stats sum(eval(if('status.health'="unhealthy",1,0))) as unhealthy, sum(eval(if('status.health'="healthy",1,0))) as healthy
-
-
-| eval status=if('unhealthy'&gt;0,"Unhealthy","Healthy"),
-       range=if('status'="Healthy","low","severe")
-| table status, range
-          </query>
-        </search>
-    <option name="drilldown">none</option>
-    <option name="colorBy">value</option>
-    <option name="colorMode">block</option>
-    <option name="drilldown">none</option>
-    <option name="numberPrecision">0</option>
-    <option name="rangeColors">["0x65a637","0x6db7c6","0xf7bc38","0xf58f39","0xd93f3c"]</option>
-    <option name="rangeValues">[0,30,70,100]</option>
-    <option name="showSparkline">1</option>
-    <option name="showTrendIndicator">1</option>
-    <option name="trellis.enabled">0</option>
-    <option name="trellis.scales.shared">1</option>
-    <option name="trellis.size">medium</option>
-    <option name="trendColorInterpretation">standard</option>
-    <option name="trendDisplayMode">absolute</option>
-    <option name="unitPosition">after</option>
-    <option name="useColors">0</option>
-    <option name="useThousandSeparators">1</option>
-      </single>
-    </panel>
-
-
-    <panel>
-      <title>QUALYS Data Ingestion (yesterday)</title>
-      <single>
-        <search base="base_2">
-          <query>
-
-| search tech_test="QUALYS"
-
-``` ***************** Delete after here to see base data *******************```
-
-``` ***************** NOTE : this compares the events YESTERDAY against previous days ***************** ```
-
-| stats sum(eval(if('status.health'="unhealthy",1,0))) as unhealthy, sum(eval(if('status.health'="healthy",1,0))) as healthy
-
-
-| eval status=if('unhealthy'&gt;0,"Unhealthy","Healthy"),
-       range=if('status'="Healthy","low","severe")
-| table status, range
-          </query>
-        </search>
-    <option name="drilldown">none</option>
-    <option name="colorBy">value</option>
-    <option name="colorMode">block</option>
-    <option name="drilldown">none</option>
-    <option name="numberPrecision">0</option>
-    <option name="rangeColors">["0x65a637","0x6db7c6","0xf7bc38","0xf58f39","0xd93f3c"]</option>
-    <option name="rangeValues">[0,30,70,100]</option>
-    <option name="showSparkline">1</option>
-    <option name="showTrendIndicator">1</option>
-    <option name="trellis.enabled">0</option>
-    <option name="trellis.scales.shared">1</option>
-    <option name="trellis.size">medium</option>
-    <option name="trendColorInterpretation">standard</option>
-    <option name="trendDisplayMode">absolute</option>
-    <option name="unitPosition">after</option>
-    <option name="useColors">0</option>
-    <option name="useThousandSeparators">1</option>
-      </single>
-    </panel>
-  </row>
-
-
-
-
-
-  <row>
-    <panel>
-      <title>Azure Token Expiry</title>
-      <single>
-        <search>
-          <query>
-index=ssphp_metrics_data sourcetype=SSPHP_secret_attributes 
-    [| search index=ssphp_metrics_data sourcetype=SSPHP_secret_attributes 
-    | stats max(SSPHP_RUN) as SSPHP_RUN
-    | return SSPHP_RUN]
-
-| stats latest(*) as * by id
-
-| where enabled="true" AND expires_on!="null"
-
-| eval expires=strftime('expires_on',"%Y-%m-%d %H:%M:%S"),
-       expiration_status=case('expires_on'&lt;=now(),"expired",
-                              'expires_on'&lt;=now()+(7*86400),"expires in less than a week",
-                              'expires_on'&lt;=now()+(4*7*86400),"expires in less than 4 weeks",
-                              1==1,"good")
-
-| table SSPHP_RUN, keyvault_id, id, expires_on, expires, expiration_status, created_on, updated_on, enabled, recovery_level
-
-
-``` ***************** Delete after here to see base data *******************```
-
-| stats count as total,
-        sum(eval(if(expiration_status="good",1,0))) as good,
-        sum(eval(if(expiration_status="expired",1,0))) as expired,
-        sum(eval(if(expiration_status="expires in less than a week",1,0))) as expired_7d,
-        sum(eval(if(expiration_status="expires in less than 4 weeks",1,0))) as expired_4w
-        
-
-| eval status=if('good'='total',"Healthy","Unhealthy"),
-       range=case('status'="Healthy","low",
-                  'expired'>0,"severe",
-                  'expired_7d'>0,"high",
-                  'expired_4w'>0,"elevated")
-                  
-| table status, range
-          </query>
-        </search>
-    <option name="drilldown">none</option>
-    <option name="colorBy">value</option>
-    <option name="colorMode">block</option>
-    <option name="drilldown">none</option>
-    <option name="numberPrecision">0</option>
-    <option name="rangeColors">["0x65a637","0x6db7c6","0xf7bc38","0xf58f39","0xd93f3c"]</option>
-    <option name="rangeValues">[0,30,70,100]</option>
-    <option name="showSparkline">1</option>
-    <option name="showTrendIndicator">1</option>
-    <option name="trellis.enabled">0</option>
-    <option name="trellis.scales.shared">1</option>
-    <option name="trellis.size">medium</option>
-    <option name="trendColorInterpretation">standard</option>
-    <option name="trendDisplayMode">absolute</option>
-    <option name="unitPosition">after</option>
-    <option name="useColors">0</option>
-    <option name="useThousandSeparators">1</option>
-      </single>
-    </panel>
-
-
-
-
-    <panel>
-      <title>Splunk Token Expiry</title>
-      <single>
-        <search>
-          <query>
-| rest /services/authorization/tokens splunk_server=local
-
-| search claims.sub="ssphp_*"
-
-| eval lastUsed=strftime('lastUsed',"%Y-%m-%d %H:%M:%S"),
-       expires=strftime('claims.exp',"%Y-%m-%d %H:%M:%S"),
-       expiration_status=case('claims.exp'&lt;=now(),"expired",
-                              'claims.exp'&lt;=now()+(7*86400),"expires in less than a week",
-                              'claims.exp'&lt;=now()+(4*7*86400),"expires in less than 4 weeks",
-                              1==1,"good")
-
-| table title, status, claims.sub, claims.iss, claims.exp, expires, expiration_status, eai:acl.perms.read, eai:acl.perms.write, lastUsed, lastUsedIp
-
-
-``` ***************** Delete after here to see base data *******************```
-
-| stats count as total,
-        sum(eval(if(expiration_status="good",1,0))) as good,
-        sum(eval(if(expiration_status="expired",1,0))) as expired,
-        sum(eval(if(expiration_status="expires in less than a week",1,0))) as expired_7d,
-        sum(eval(if(expiration_status="expires in less than 4 weeks",1,0))) as expired_4w
-
-
-| eval status=if('good'='total',"Healthy","Unhealthy"),
-       range=case('status'="Healthy","low",
-                  'expired'>0,"severe",
-                  'expired_7d'>0,"high",
-                  'expired_4w'>0,"elevated")
-                  
-| table status, range
-          </query>
-        </search>
-    <option name="drilldown">none</option>
-    <option name="colorBy">value</option>
-    <option name="colorMode">block</option>
-    <option name="drilldown">none</option>
-    <option name="numberPrecision">0</option>
-    <option name="rangeColors">["0x65a637","0x6db7c6","0xf7bc38","0xf58f39","0xd93f3c"]</option>
-    <option name="rangeValues">[0,30,70,100]</option>
-    <option name="showSparkline">1</option>
-    <option name="showTrendIndicator">1</option>
-    <option name="trellis.enabled">0</option>
-    <option name="trellis.scales.shared">1</option>
-    <option name="trellis.size">medium</option>
-    <option name="trendColorInterpretation">standard</option>
-    <option name="trendDisplayMode">absolute</option>
-    <option name="unitPosition">after</option>
-    <option name="useColors">0</option>
-    <option name="useThousandSeparators">1</option>
-      </single>
-    </panel>
-
-
-
-
+    
     <panel>
       <title>FBP Data Ingestion Age</title>
       <single>
@@ -874,127 +544,27 @@ index=ssphp_metrics_data sourcetype=SSPHP_secret_attributes
 | table status, range
           </query>
         </search>
-
-    <option name="drilldown">none</option>
-    <option name="colorBy">value</option>
-    <option name="colorMode">block</option>
-    <option name="drilldown">none</option>
-    <option name="numberPrecision">0</option>
-    <option name="rangeColors">["0x65a637","0x6db7c6","0xf7bc38","0xf58f39","0xd93f3c"]</option>
-    <option name="rangeValues">[0,30,70,100]</option>
-    <option name="showSparkline">1</option>
-    <option name="showTrendIndicator">1</option>
-    <option name="trellis.enabled">0</option>
-    <option name="trellis.scales.shared">1</option>
-    <option name="trellis.size">medium</option>
-    <option name="trendColorInterpretation">standard</option>
-    <option name="trendDisplayMode">absolute</option>
-    <option name="unitPosition">after</option>
-    <option name="useColors">0</option>
-    <option name="useThousandSeparators">1</option>
-      </single>
-    </panel>
-
-
-
-    <panel>
-      <title>Service Dashboard Loadjob Dataset</title>
-      <single>
-        <search base="base_bdmc">
-          <query>
-| eval key='ssphp.use_case.category'.'ssphp.service.portfolio'.'ssphp.service.service_line'.'ssphp.service.product'
-
-| stats count, max(SSPHP_RUN) as SSPHP_RUN, dc(key) as no_key
-
-| eval ssphp_run_age=round((now() - SSPHP_RUN)/60/60/24)
-
-| eval status=if(count>300 AND ssphp_run_age&lt;1 AND no_key&gt;350 ,"Healthy","Unhealthy"),
-       range=if('status'="Healthy","low","severe")
-| table status, range
-          </query>
-        </search>
-
-    <option name="drilldown">none</option>
-    <option name="colorBy">value</option>
-    <option name="colorMode">block</option>
-    <option name="drilldown">none</option>
-    <option name="numberPrecision">0</option>
-    <option name="rangeColors">["0x65a637","0x6db7c6","0xf7bc38","0xf58f39","0xd93f3c"]</option>
-    <option name="rangeValues">[0,30,70,100]</option>
-    <option name="showSparkline">1</option>
-    <option name="showTrendIndicator">1</option>
-    <option name="trellis.enabled">0</option>
-    <option name="trellis.scales.shared">1</option>
-    <option name="trellis.size">medium</option>
-    <option name="trendColorInterpretation">standard</option>
-    <option name="trendDisplayMode">absolute</option>
-    <option name="unitPosition">after</option>
-    <option name="useColors">0</option>
-    <option name="useThousandSeparators">1</option>
-      </single>
-    </panel>
-
-
-
-
-    <panel>
-      <title>Database Creation Sequence</title>
-      <single>
-        <search>
-          <query>
-| inputlookup ssphp_bdmc_fbp.csv
-| stats max(SSPHP_RUN) as SSPHP_RUN_ssphp_bdmc_fbp
-
-| append [| inputlookup ssphp_bdmc.csv
-          | stats max(SSPHP_RUN) as SSPHP_RUN_ssphp_bdmc]
-          
-| append [| inputlookup ssphp_bdmc_resource_groups.csv
-          | stats max(SSPHP_RUN) as SSPHP_RUN_ssphp_bdmc_resource_groups]
-          
-| append [| inputlookup ssphp_cost_centre_owner_emals.csv
-          | stats max(SSPHP_RUN) as SSPHP_RUN_ssphp_cost_centre_owner_emals]
-          
-| stats values(*) as *
-
-| makemv run_order
-| foreach * 
-    [| eval run_order=mvappend('run_order',strftime('&lt;&lt;FIELD&gt;&gt;',"%Y-%m-%d %H:%M:%S")." - "."&lt;&lt;FIELD&gt;&gt;")]
-| eval run_order=mvsort('run_order')
-
-| eval status=if(SSPHP_RUN_ssphp_cost_centre_owner_emals>'SSPHP_RUN_ssphp_bdmc_fbp' AND 
-                 SSPHP_RUN_ssphp_bdmc_resource_groups&gt;'SSPHP_RUN_ssphp_bdmc_fbp' AND
-                 SSPHP_RUN_ssphp_bdmc&gt;'SSPHP_RUN_ssphp_bdmc_resource_groups' AND
-                 SSPHP_RUN_ssphp_bdmc&gt;'SSPHP_RUN_ssphp_bdmc_fbp' AND
-                 SSPHP_RUN_ssphp_bdmc&gt;'SSPHP_RUN_ssphp_cost_centre_owner_emals',
-                 "Healthy","Unhealthy"),
-       range=if('status'="Healthy","low","severe")
-| table status, range
-          </query>
-        </search>
-
-    <option name="drilldown">none</option>
-    <option name="colorBy">value</option>
-    <option name="colorMode">block</option>
-    <option name="drilldown">none</option>
-    <option name="numberPrecision">0</option>
-    <option name="rangeColors">["0x65a637","0x6db7c6","0xf7bc38","0xf58f39","0xd93f3c"]</option>
-    <option name="rangeValues">[0,30,70,100]</option>
-    <option name="showSparkline">1</option>
-    <option name="showTrendIndicator">1</option>
-    <option name="trellis.enabled">0</option>
-    <option name="trellis.scales.shared">1</option>
-    <option name="trellis.size">medium</option>
-    <option name="trendColorInterpretation">standard</option>
-    <option name="trendDisplayMode">absolute</option>
-    <option name="unitPosition">after</option>
-    <option name="useColors">0</option>
-    <option name="useThousandSeparators">1</option>
+        <option name="drilldown">none</option>
+        <option name="colorBy">value</option>
+        <option name="colorMode">block</option>
+        <option name="drilldown">none</option>
+        <option name="numberPrecision">0</option>
+        <option name="rangeColors">["0x65a637","0x6db7c6","0xf7bc38","0xf58f39","0xd93f3c"]</option>
+        <option name="rangeValues">[0,30,70,100]</option>
+        <option name="showSparkline">1</option>
+        <option name="showTrendIndicator">1</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+        <option name="trendColorInterpretation">standard</option>
+        <option name="trendDisplayMode">absolute</option>
+        <option name="unitPosition">after</option>
+        <option name="useColors">0</option>
+        <option name="useThousandSeparators">1</option>
       </single>
     </panel>
     
-
-
-
+    
     <panel>
       <title>FBP Database</title>
       <single>
@@ -1028,29 +598,82 @@ index=ssphp_metrics_data sourcetype=SSPHP_secret_attributes
 | table status, range
           </query>
         </search>
-
-    <option name="drilldown">none</option>
-    <option name="colorBy">value</option>
-    <option name="colorMode">block</option>
-    <option name="drilldown">none</option>
-    <option name="numberPrecision">0</option>
-    <option name="rangeColors">["0x65a637","0x6db7c6","0xf7bc38","0xf58f39","0xd93f3c"]</option>
-    <option name="rangeValues">[0,30,70,100]</option>
-    <option name="showSparkline">1</option>
-    <option name="showTrendIndicator">1</option>
-    <option name="trellis.enabled">0</option>
-    <option name="trellis.scales.shared">1</option>
-    <option name="trellis.size">medium</option>
-    <option name="trendColorInterpretation">standard</option>
-    <option name="trendDisplayMode">absolute</option>
-    <option name="unitPosition">after</option>
-    <option name="useColors">0</option>
-    <option name="useThousandSeparators">1</option>
+        <option name="drilldown">none</option>
+        <option name="colorBy">value</option>
+        <option name="colorMode">block</option>
+        <option name="drilldown">none</option>
+        <option name="numberPrecision">0</option>
+        <option name="rangeColors">["0x65a637","0x6db7c6","0xf7bc38","0xf58f39","0xd93f3c"]</option>
+        <option name="rangeValues">[0,30,70,100]</option>
+        <option name="showSparkline">1</option>
+        <option name="showTrendIndicator">1</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+        <option name="trendColorInterpretation">standard</option>
+        <option name="trendDisplayMode">absolute</option>
+        <option name="unitPosition">after</option>
+        <option name="useColors">0</option>
+        <option name="useThousandSeparators">1</option>
       </single>
     </panel>
     
+    
+    <panel>
+      <title>Database Creation Sequence</title>
+      <single>
+        <search>
+          <query>
+| inputlookup ssphp_bdmc_fbp.csv
+| stats max(SSPHP_RUN) as SSPHP_RUN_ssphp_bdmc_fbp
 
+| append [| inputlookup ssphp_bdmc.csv
+          | stats max(SSPHP_RUN) as SSPHP_RUN_ssphp_bdmc]
+          
+| append [| inputlookup ssphp_bdmc_resource_groups.csv
+          | stats max(SSPHP_RUN) as SSPHP_RUN_ssphp_bdmc_resource_groups]
+          
+| append [| inputlookup ssphp_cost_centre_owner_emals.csv
+          | stats max(SSPHP_RUN) as SSPHP_RUN_ssphp_cost_centre_owner_emals]
+          
+| stats values(*) as *
 
+| makemv run_order
+| foreach * 
+    [| eval run_order=mvappend('run_order',strftime('&lt;&lt;FIELD&gt;&gt;',"%Y-%m-%d %H:%M:%S")." - "."&lt;&lt;FIELD&gt;&gt;")]
+| eval run_order=mvsort('run_order')
+
+| eval status=if(SSPHP_RUN_ssphp_cost_centre_owner_emals&gt;'SSPHP_RUN_ssphp_bdmc_fbp' AND 
+                 SSPHP_RUN_ssphp_bdmc_resource_groups&gt;'SSPHP_RUN_ssphp_bdmc_fbp' AND
+                 SSPHP_RUN_ssphp_bdmc&gt;'SSPHP_RUN_ssphp_bdmc_resource_groups' AND
+                 SSPHP_RUN_ssphp_bdmc&gt;'SSPHP_RUN_ssphp_bdmc_fbp' AND
+                 SSPHP_RUN_ssphp_bdmc&gt;'SSPHP_RUN_ssphp_cost_centre_owner_emals',
+                 "Healthy","Unhealthy"),
+       range=if('status'="Healthy","low","severe")
+| table status, range
+          </query>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="colorBy">value</option>
+        <option name="colorMode">block</option>
+        <option name="drilldown">none</option>
+        <option name="numberPrecision">0</option>
+        <option name="rangeColors">["0x65a637","0x6db7c6","0xf7bc38","0xf58f39","0xd93f3c"]</option>
+        <option name="rangeValues">[0,30,70,100]</option>
+        <option name="showSparkline">1</option>
+        <option name="showTrendIndicator">1</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+        <option name="trendColorInterpretation">standard</option>
+        <option name="trendDisplayMode">absolute</option>
+        <option name="unitPosition">after</option>
+        <option name="useColors">0</option>
+        <option name="useThousandSeparators">1</option>
+      </single>
+    </panel>
+    
+    
     <panel>
       <title>Azure Asset Database</title>
       <single>
@@ -1092,155 +715,86 @@ index=ssphp_asset_inventory earliest=-7d@d latest=now
     </panel>
   </row>
 
+  
+
+<!-- ******************************************************************************************************************* -->
+<!-- ************************************* INGESTION INTO SPLUNK ******************************************************* -->
+<!-- ******************************************************************************************************************* -->
+
+
   <row>
     <panel>
-      <title>Ingestion Completions</title>
+      <html>
+        <div class="absolute">INGESTION INTO SPLUNK</div>
+      </html>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>Source and Sourcetypes without Data Today (NOT GitHub)</title>
       <single>
         <search>
           <query>
-index="ssphp_metrics_data" source="data_ingester_rust" stage=* earliest=-4d@d latest=@d
-| stats count by name
-| fields - count
+| tstats count where index="ssphp_metrics_data" sourcetype!="Microsoft.Sql/servers/encryptionProtector" sourcetype!="github" sourcetype!="azure_resource_graph" sourcetype!="ado" source!="*code-security-configuration" earliest=-10d@d by _time sourcetype source span=1d
 
-| join type=outer name
-    [| search index="ssphp_metrics_data" source="data_ingester_rust" stage=* earliest=@d latest=now
-     | rename metadata.level as level
+| append 
+    [| tstats count where index="ssphp_metrics_data" sourcetype="azure_resource_graph" earliest=-10d@d by _time sourcetype span=1d
+     | eval source="azure_resource_graph"]
 
-     | eval stage=if(stage="Complete",'stage'."::".'complete','stage')
-     | stats values(stage) as stage by name]
+| eval today=strftime(now(), "%Y-%m-%d")
+| eval count_today=if(strftime('_time', "%Y-%m-%d") = 'today', 'count', null()) 
 
-| eval stage=split('stage'," ")
-| fillnull value="Ran on previous days but Did Not Start Today" stage
+| stats list(count_today) as count_today,
+        list(count) as count_past, 
+        median(count) as count_median,
+        mode(count) as count_mode,
+        max(_time) as max__time 
+        by sourcetype, source
 
-| eval status=if(mvcount(mvfilter(match('stage',"Start")))>0 AND mvcount(mvfilter(match('stage',"Lock")))>0 AND mvcount(mvfilter(match('stage',"Complete::true")))>0,"Healthy","Unhealthy"),
-       range=if('status'="Healthy","low","severe")
-| table status, range, name, stage
-| sort 0 - status, + name
+| fillnull value=0 count_today
+| eval seen_in_past_month=mvcount(count_past)
 
+| eval last_seen=strftime('max__time', "%Y-%m-%d")
+
+| rex field=source ".*\/subscriptions\/(?&lt;subscription&gt;[^\/]*)\/"
+
+| table sourcetype, source, subscription, count_today, count_median, count_mode, last_seen, seen_in_past_month
+| sort 0 subscription
+
+```| where count_today=0```
 ``` ***************** Delete after here to see base data *******************```
 
-| stats sum(eval(if('status'="Healthy",1,0))) as number_healthy, sum(eval(if('status'="Unhealthy",1,0))) as number_unhealthy
+| stats sum(eval(if('count_today'="0",1,0))) as unhealthy, sum(eval(if('count_today'&gt;"0",1,0))) as healthy
 
-| eval status=if('number_unhealthy'>0,"Unhealthy","Healthy"),
+| eval status=if('unhealthy'&gt;0,"Unhealthy","Healthy"),
        range=if('status'="Healthy","low","severe")
 | table status, range
           </query>
+          <earliest>@d</earliest>
+          <latest>now</latest>
+          <sampleRatio>1</sampleRatio>
         </search>
-
-    <option name="drilldown">none</option>
-    <option name="colorBy">value</option>
-    <option name="colorMode">block</option>
-    <option name="drilldown">none</option>
-    <option name="numberPrecision">0</option>
-    <option name="rangeColors">["0x65a637","0x6db7c6","0xf7bc38","0xf58f39","0xd93f3c"]</option>
-    <option name="rangeValues">[0,30,70,100]</option>
-    <option name="showSparkline">1</option>
-    <option name="showTrendIndicator">1</option>
-    <option name="trellis.enabled">0</option>
-    <option name="trellis.scales.shared">1</option>
-    <option name="trellis.size">medium</option>
-    <option name="trendColorInterpretation">standard</option>
-    <option name="trendDisplayMode">absolute</option>
-    <option name="unitPosition">after</option>
-    <option name="useColors">0</option>
-    <option name="useThousandSeparators">1</option>
-      </single>
-    </panel>
-
-
-    <panel>
-      <title>Unassigned Qualys Vulnerabilities</title>
-      <single>
-        <search base="base_bdmc">
-          <query>
-| search ssphp.use_case.category="VULNERABILITY" AND ssphp.service.portfolio="Unassigned"
-
-| stats count
-
-| eval status=if(count&lt;100,"Healthy","Unhealthy"),
-       range=if('status'="Healthy","low","severe")
-| table status, range
-          </query>
-        </search>
-
-    <option name="drilldown">none</option>
-    <option name="colorBy">value</option>
-    <option name="colorMode">block</option>
-    <option name="drilldown">none</option>
-    <option name="numberPrecision">0</option>
-    <option name="rangeColors">["0x65a637","0x6db7c6","0xf7bc38","0xf58f39","0xd93f3c"]</option>
-    <option name="rangeValues">[0,30,70,100]</option>
-    <option name="showSparkline">1</option>
-    <option name="showTrendIndicator">1</option>
-    <option name="trellis.enabled">0</option>
-    <option name="trellis.scales.shared">1</option>
-    <option name="trellis.size">medium</option>
-    <option name="trendColorInterpretation">standard</option>
-    <option name="trendDisplayMode">absolute</option>
-    <option name="unitPosition">after</option>
-    <option name="useColors">0</option>
-    <option name="useThousandSeparators">1</option>
+        <option name="drilldown">none</option>
+        <option name="colorBy">value</option>
+        <option name="colorMode">block</option>
+        <option name="drilldown">none</option>
+        <option name="numberPrecision">0</option>
+        <option name="rangeColors">["0x65a637","0x6db7c6","0xf7bc38","0xf58f39","0xd93f3c"]</option>
+        <option name="rangeValues">[0,30,70,100]</option>
+        <option name="showSparkline">1</option>
+        <option name="showTrendIndicator">1</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+        <option name="trendColorInterpretation">standard</option>
+        <option name="trendDisplayMode">absolute</option>
+        <option name="unitPosition">after</option>
+        <option name="useColors">0</option>
+        <option name="useThousandSeparators">1</option>
       </single>
     </panel>
     
-
-
-    <panel>
-      <title>Unassigned Defender Assessments</title>
-      <single>
-        <search base="base_bdmc">
-          <query>
-| search ssphp.use_case.category="POSTURE" AND ssphp.service.portfolio="Unassigned"
-
-| stats count
-
-| eval status=if(count&lt;100,"Healthy","Unhealthy"),
-       range=if('status'="Healthy","low","severe")
-| table status, range
-          </query>
-        </search>
-
-    <option name="drilldown">none</option>
-    <option name="colorBy">value</option>
-    <option name="colorMode">block</option>
-    <option name="drilldown">none</option>
-    <option name="numberPrecision">0</option>
-    <option name="rangeColors">["0x65a637","0x6db7c6","0xf7bc38","0xf58f39","0xd93f3c"]</option>
-    <option name="rangeValues">[0,30,70,100]</option>
-    <option name="showSparkline">1</option>
-    <option name="showTrendIndicator">1</option>
-    <option name="trellis.enabled">0</option>
-    <option name="trellis.scales.shared">1</option>
-    <option name="trellis.size">medium</option>
-    <option name="trendColorInterpretation">standard</option>
-    <option name="trendDisplayMode">absolute</option>
-    <option name="unitPosition">after</option>
-    <option name="useColors">0</option>
-    <option name="useThousandSeparators">1</option>
-      </single>
-    </panel>
-   
-   
-   
-
-<!-- ######################################################### BASE QUERY ################################################################################################################# -->   
     
-    <panel depends="$never_show$">
-      <title>Service Dashboard Dataset</title>
-      <table>
-        <search id="base_bdmc">
-          <query>
-| loadjob savedsearch="ssphp_app_account:DCAP:ssphp_create_dashboard_dataset_service"
-
-| table ssphp.service.portfolio, ssphp.service.service_line, ssphp.service.product, ssphp.assessment.source, ssphp.use_case.category, ssphp.use_case.id, ssphp.use_case.title, ssphp.assessment.display_name, ssphp.score.score, ssphp.score.compliance_status, ssphp.score.ciso_priority, ssphp.assessment.description, ssphp.score.color, ssphp.resource.id, ssphp.resource.tenant, ssphp.resource.subscription, ssphp.resource.resource_group, SSPHP_UID, SSPHP_RUN
-
-          </query>
-        </search>
-      </table>
-    </panel>
-
-
-
     <panel>
       <title>Sourcetype Data Update Timing</title>
       <single>
@@ -1262,7 +816,7 @@ index="ssphp_metrics_data" earliest=-7d@d latest=now sourcetype!="data_ingester_
 | eval last_drop=strftime('SSPHP_RUN',"%Y-%m-%d %H:%M:%S"),
        hours_since_last_drop=round((now() - SSPHP_RUN)/60/60),
        start_today_epoch=strptime(strftime(now(),"%Y-%m-%d")." 00:00:00","%Y-%m-%d %H:%M:%S"),
-       last_drop_today=if('SSPHP_RUN'>'start_today_epoch',"true","false")
+       last_drop_today=if('SSPHP_RUN'&gt;'start_today_epoch',"true","false")
        
 | sort 0 - hours_since_last_drop, + sourcetype
 
@@ -1270,35 +824,371 @@ index="ssphp_metrics_data" earliest=-7d@d latest=now sourcetype!="data_ingester_
 
 | stats sum(eval(if('last_drop_today'="true",1,0))) as no_healthy, sum(eval(if('last_drop_today'="false",1,0))) as no_unhealthy
     
-| eval status=if('no_unhealthy'>0,"Unhealthy","Healthy"),
+| eval status=if('no_unhealthy'&gt;0,"Unhealthy","Healthy"),
        range=if('status'="Healthy","low","severe")
 | table status, range
           </query>
         </search>
-
-    <option name="drilldown">none</option>
-    <option name="colorBy">value</option>
-    <option name="colorMode">block</option>
-    <option name="drilldown">none</option>
-    <option name="numberPrecision">0</option>
-    <option name="rangeColors">["0x65a637","0x6db7c6","0xf7bc38","0xf58f39","0xd93f3c"]</option>
-    <option name="rangeValues">[0,30,70,100]</option>
-    <option name="showSparkline">1</option>
-    <option name="showTrendIndicator">1</option>
-    <option name="trellis.enabled">0</option>
-    <option name="trellis.scales.shared">1</option>
-    <option name="trellis.size">medium</option>
-    <option name="trendColorInterpretation">standard</option>
-    <option name="trendDisplayMode">absolute</option>
-    <option name="unitPosition">after</option>
-    <option name="useColors">0</option>
-    <option name="useThousandSeparators">1</option>
+        <option name="drilldown">none</option>
+        <option name="colorBy">value</option>
+        <option name="colorMode">block</option>
+        <option name="drilldown">none</option>
+        <option name="numberPrecision">0</option>
+        <option name="rangeColors">["0x65a637","0x6db7c6","0xf7bc38","0xf58f39","0xd93f3c"]</option>
+        <option name="rangeValues">[0,30,70,100]</option>
+        <option name="showSparkline">1</option>
+        <option name="showTrendIndicator">1</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+        <option name="trendColorInterpretation">standard</option>
+        <option name="trendDisplayMode">absolute</option>
+        <option name="unitPosition">after</option>
+        <option name="useColors">0</option>
+        <option name="useThousandSeparators">1</option>
       </single>
     </panel>
+    
+    
+    <panel>
+      <title>QUALYS Data Ingestion (yesterday)</title>
+      <single>
+        <search base="base_2">
+          <query>
+
+| search tech_test="QUALYS"
+
+``` ***************** Delete after here to see base data *******************```
+
+``` ***************** NOTE : this compares the events YESTERDAY against previous days ***************** ```
+
+| stats sum(eval(if('status.health'="unhealthy",1,0))) as unhealthy, sum(eval(if('status.health'="healthy",1,0))) as healthy
 
 
+| eval status=if('unhealthy'&gt;0,"Unhealthy","Healthy"),
+       range=if('status'="Healthy","low","severe")
+| table status, range
+          </query>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="colorBy">value</option>
+        <option name="colorMode">block</option>
+        <option name="drilldown">none</option>
+        <option name="numberPrecision">0</option>
+        <option name="rangeColors">["0x65a637","0x6db7c6","0xf7bc38","0xf58f39","0xd93f3c"]</option>
+        <option name="rangeValues">[0,30,70,100]</option>
+        <option name="showSparkline">1</option>
+        <option name="showTrendIndicator">1</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+        <option name="trendColorInterpretation">standard</option>
+        <option name="trendDisplayMode">absolute</option>
+        <option name="unitPosition">after</option>
+        <option name="useColors">0</option>
+        <option name="useThousandSeparators">1</option>
+      </single>
+    </panel>
+  </row>
+
+  
+
+<!-- ******************************************************************************************************************* -->
+<!-- ************************************* INGESTION INTO SPLUNK ******************************************************* -->
+<!-- ******************************************************************************************************************* -->
 
 
+  <row>
+    <panel>
+      <title>AAD ENTRA Data Ingestion</title>
+      <single>
+        <search base="base_2">
+          <query>
+
+| search tech_test="AAD"
+
+``` ***************** Delete after here to see base data *******************```
+
+| stats sum(eval(if('status.health'="unhealthy",1,0))) as unhealthy, sum(eval(if('status.health'="healthy",1,0))) as healthy
+
+
+| eval status=if('unhealthy'&gt;0,"Unhealthy","Healthy"),
+       range=if('status'="Healthy","low","severe")
+| table status, range
+          </query>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="colorBy">value</option>
+        <option name="colorMode">block</option>
+        <option name="drilldown">none</option>
+        <option name="numberPrecision">0</option>
+        <option name="rangeColors">["0x65a637","0x6db7c6","0xf7bc38","0xf58f39","0xd93f3c"]</option>
+        <option name="rangeValues">[0,30,70,100]</option>
+        <option name="showSparkline">1</option>
+        <option name="showTrendIndicator">1</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+        <option name="trendColorInterpretation">standard</option>
+        <option name="trendDisplayMode">absolute</option>
+        <option name="unitPosition">after</option>
+        <option name="useColors">0</option>
+        <option name="useThousandSeparators">1</option>
+      </single>
+    </panel>
+    
+    
+    <panel>
+      <title>ADO Data Ingestion</title>
+      <single>
+        <search base="base_2">
+          <query>
+
+| search tech_test="ADO"
+
+``` ***************** Delete after here to see base data *******************```
+
+| stats sum(eval(if('status.health'="unhealthy",1,0))) as unhealthy, sum(eval(if('status.health'="healthy",1,0))) as healthy
+
+
+| eval status=if('unhealthy'&gt;0,"Unhealthy","Healthy"),
+       range=if('status'="Healthy","low","severe")
+| table status, range
+          </query>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="colorBy">value</option>
+        <option name="colorMode">block</option>
+        <option name="drilldown">none</option>
+        <option name="numberPrecision">0</option>
+        <option name="rangeColors">["0x65a637","0x6db7c6","0xf7bc38","0xf58f39","0xd93f3c"]</option>
+        <option name="rangeValues">[0,30,70,100]</option>
+        <option name="showSparkline">1</option>
+        <option name="showTrendIndicator">1</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+        <option name="trendColorInterpretation">standard</option>
+        <option name="trendDisplayMode">absolute</option>
+        <option name="unitPosition">after</option>
+        <option name="useColors">0</option>
+        <option name="useThousandSeparators">1</option>
+      </single>
+    </panel>
+    
+    
+    <panel>
+      <title>AWS Data Ingestion</title>
+      <single>
+        <search base="base_2">
+          <query>
+
+| search tech_test="AWS"
+
+``` ***************** Delete after here to see base data *******************```
+``` ***** Cloudtrail is for yesterday, not today ***** ```
+
+| stats sum(eval(if('status.health'="unhealthy",1,0))) as unhealthy, sum(eval(if('status.health'="healthy",1,0))) as healthy
+
+
+| eval status=if('unhealthy'&gt;0,"Unhealthy","Healthy"),
+       range=if('status'="Healthy","low","severe")
+| table status, range
+          </query>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="colorBy">value</option>
+        <option name="colorMode">block</option>
+        <option name="drilldown">none</option>
+        <option name="numberPrecision">0</option>
+        <option name="rangeColors">["0x65a637","0x6db7c6","0xf7bc38","0xf58f39","0xd93f3c"]</option>
+        <option name="rangeValues">[0,30,70,100]</option>
+        <option name="showSparkline">1</option>
+        <option name="showTrendIndicator">1</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+        <option name="trendColorInterpretation">standard</option>
+        <option name="trendDisplayMode">absolute</option>
+        <option name="unitPosition">after</option>
+        <option name="useColors">0</option>
+        <option name="useThousandSeparators">1</option>
+      </single>
+    </panel>
+    
+    
+    <panel>
+      <title>AZURE Data Ingestion</title>
+      <single>
+        <search base="base_2">
+          <query>
+
+| search tech_test="AZURE"
+
+``` ***************** Delete after here to see base data *******************```
+
+| stats sum(eval(if('status.health'="unhealthy",1,0))) as unhealthy, sum(eval(if('status.health'="healthy",1,0))) as healthy
+
+
+| eval status=if('unhealthy'&gt;0,"Unhealthy","Healthy"),
+       range=if('status'="Healthy","low","severe")
+| table status, range
+          </query>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="colorBy">value</option>
+        <option name="colorMode">block</option>
+        <option name="drilldown">none</option>
+        <option name="numberPrecision">0</option>
+        <option name="rangeColors">["0x65a637","0x6db7c6","0xf7bc38","0xf58f39","0xd93f3c"]</option>
+        <option name="rangeValues">[0,30,70,100]</option>
+        <option name="showSparkline">1</option>
+        <option name="showTrendIndicator">1</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+        <option name="trendColorInterpretation">standard</option>
+        <option name="trendDisplayMode">absolute</option>
+        <option name="unitPosition">after</option>
+        <option name="useColors">0</option>
+        <option name="useThousandSeparators">1</option>
+      </single>
+    </panel>
+    
+    
+    <panel>
+      <title>DEFENDER Data Ingestion</title>
+      <single>
+        <search base="base_2">
+          <query>
+
+| search tech_test="DEFENDER"
+
+``` ***************** Delete after here to see base data *******************```
+
+| stats sum(eval(if('status.health'="unhealthy",1,0))) as unhealthy, sum(eval(if('status.health'="healthy",1,0))) as healthy
+
+
+| eval status=if('unhealthy'&gt;0,"Unhealthy","Healthy"),
+       range=if('status'="Healthy","low","severe")
+| table status, range
+          </query>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="colorBy">value</option>
+        <option name="colorMode">block</option>
+        <option name="drilldown">none</option>
+        <option name="numberPrecision">0</option>
+        <option name="rangeColors">["0x65a637","0x6db7c6","0xf7bc38","0xf58f39","0xd93f3c"]</option>
+        <option name="rangeValues">[0,30,70,100]</option>
+        <option name="showSparkline">1</option>
+        <option name="showTrendIndicator">1</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+        <option name="trendColorInterpretation">standard</option>
+        <option name="trendDisplayMode">absolute</option>
+        <option name="unitPosition">after</option>
+        <option name="useColors">0</option>
+        <option name="useThousandSeparators">1</option>
+      </single>
+    </panel>
+    
+    
+    <panel>
+      <title>GITHUB Data Ingestion</title>
+      <single>
+        <search base="base_2">
+          <query>
+
+| search tech_test="GITHUB"
+
+``` ***************** Delete after here to see base data *******************```
+
+| stats sum(eval(if('status.health'="unhealthy",1,0))) as unhealthy, sum(eval(if('status.health'="healthy",1,0))) as healthy
+
+
+| eval status=if('unhealthy'&gt;0,"Unhealthy","Healthy"),
+       range=if('status'="Healthy","low","severe")
+| table status, range
+          </query>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="colorBy">value</option>
+        <option name="colorMode">block</option>
+        <option name="drilldown">none</option>
+        <option name="numberPrecision">0</option>
+        <option name="rangeColors">["0x65a637","0x6db7c6","0xf7bc38","0xf58f39","0xd93f3c"]</option>
+        <option name="rangeValues">[0,30,70,100]</option>
+        <option name="showSparkline">1</option>
+        <option name="showTrendIndicator">1</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+        <option name="trendColorInterpretation">standard</option>
+        <option name="trendDisplayMode">absolute</option>
+        <option name="unitPosition">after</option>
+        <option name="useColors">0</option>
+        <option name="useThousandSeparators">1</option>
+      </single>
+    </panel>
+    
+    
+    <panel>
+      <title>M365 Data Ingestion</title>
+      <single>
+        <search base="base_2">
+          <query>
+
+| search tech_test="M365"
+
+``` ***************** Delete after here to see base data *******************```
+
+| stats sum(eval(if('status.health'="unhealthy",1,0))) as unhealthy, sum(eval(if('status.health'="healthy",1,0))) as healthy
+
+
+| eval status=if('unhealthy'&gt;0,"Unhealthy","Healthy"),
+       range=if('status'="Healthy","low","severe")
+| table status, range
+          </query>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="colorBy">value</option>
+        <option name="colorMode">block</option>
+        <option name="drilldown">none</option>
+        <option name="numberPrecision">0</option>
+        <option name="rangeColors">["0x65a637","0x6db7c6","0xf7bc38","0xf58f39","0xd93f3c"]</option>
+        <option name="rangeValues">[0,30,70,100]</option>
+        <option name="showSparkline">1</option>
+        <option name="showTrendIndicator">1</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+        <option name="trendColorInterpretation">standard</option>
+        <option name="trendDisplayMode">absolute</option>
+        <option name="unitPosition">after</option>
+        <option name="useColors">0</option>
+        <option name="useThousandSeparators">1</option>
+      </single>
+    </panel>
+  </row>
+
+
+  
+
+<!-- ******************************************************************************************************************* -->
+<!-- ************************************* USE CASES ******************************************************************* -->
+<!-- ******************************************************************************************************************* -->
+
+
+  <row>
+    <panel>
+      <html>
+        <div class="absolute">USE CASES</div>
+      </html>
+    </panel>
+  </row>
+  <row>
     <panel>
       <title>Use Case Outputs</title>
       <single>
@@ -1319,100 +1209,264 @@ index="ssphp_metrics_data_health" health_check_type="2"
 
 | stats sum(eval(if('status.health'="healthy",1,0))) as healthy,  sum(eval(if('status.health'="unhealthy",1,0))) as unhealthy
 
-| eval status=if('unhealthy'>0,"Unhealthy","Healthy"),
+| eval status=if('unhealthy'&gt;0,"Unhealthy","Healthy"),
        range=if('status'="Healthy","low","severe")
 | table status, range
           </query>
         </search>
+        <option name="drilldown">none</option>
+        <option name="colorBy">value</option>
+        <option name="colorMode">block</option>
+        <option name="drilldown">none</option>
+        <option name="numberPrecision">0</option>
+        <option name="rangeColors">["0x65a637","0x6db7c6","0xf7bc38","0xf58f39","0xd93f3c"]</option>
+        <option name="rangeValues">[0,30,70,100]</option>
+        <option name="showSparkline">1</option>
+        <option name="showTrendIndicator">1</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+        <option name="trendColorInterpretation">standard</option>
+        <option name="trendDisplayMode">absolute</option>
+        <option name="unitPosition">after</option>
+        <option name="useColors">0</option>
+        <option name="useThousandSeparators">1</option>
+      </single>
+    </panel>
+    
+    
+    <panel>
+      <title>Unassigned Defender Assessments</title>
+      <single>
+        <search base="base_bdmc">
+          <query>
+| search ssphp.use_case.category="POSTURE" AND ssphp.service.portfolio="Unassigned"
 
-    <option name="drilldown">none</option>
-    <option name="colorBy">value</option>
-    <option name="colorMode">block</option>
-    <option name="drilldown">none</option>
-    <option name="numberPrecision">0</option>
-    <option name="rangeColors">["0x65a637","0x6db7c6","0xf7bc38","0xf58f39","0xd93f3c"]</option>
-    <option name="rangeValues">[0,30,70,100]</option>
-    <option name="showSparkline">1</option>
-    <option name="showTrendIndicator">1</option>
-    <option name="trellis.enabled">0</option>
-    <option name="trellis.scales.shared">1</option>
-    <option name="trellis.size">medium</option>
-    <option name="trendColorInterpretation">standard</option>
-    <option name="trendDisplayMode">absolute</option>
-    <option name="unitPosition">after</option>
-    <option name="useColors">0</option>
-    <option name="useThousandSeparators">1</option>
+| stats count
+
+| eval status=if(count&lt;100,"Healthy","Unhealthy"),
+       range=if('status'="Healthy","low","severe")
+| table status, range
+          </query>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="colorBy">value</option>
+        <option name="colorMode">block</option>
+        <option name="drilldown">none</option>
+        <option name="numberPrecision">0</option>
+        <option name="rangeColors">["0x65a637","0x6db7c6","0xf7bc38","0xf58f39","0xd93f3c"]</option>
+        <option name="rangeValues">[0,30,70,100]</option>
+        <option name="showSparkline">1</option>
+        <option name="showTrendIndicator">1</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+        <option name="trendColorInterpretation">standard</option>
+        <option name="trendDisplayMode">absolute</option>
+        <option name="unitPosition">after</option>
+        <option name="useColors">0</option>
+        <option name="useThousandSeparators">1</option>
       </single>
     </panel>
 
+
+    <panel>
+      <title>Unassigned Qualys Vulnerabilities</title>
+      <single>
+        <search base="base_bdmc">
+          <query>
+| search ssphp.use_case.category="VULNERABILITY" AND ssphp.service.portfolio="Unassigned"
+
+| stats count
+
+| eval status=if(count&lt;100,"Healthy","Unhealthy"),
+       range=if('status'="Healthy","low","severe")
+| table status, range
+          </query>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="colorBy">value</option>
+        <option name="colorMode">block</option>
+        <option name="drilldown">none</option>
+        <option name="numberPrecision">0</option>
+        <option name="rangeColors">["0x65a637","0x6db7c6","0xf7bc38","0xf58f39","0xd93f3c"]</option>
+        <option name="rangeValues">[0,30,70,100]</option>
+        <option name="showSparkline">1</option>
+        <option name="showTrendIndicator">1</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+        <option name="trendColorInterpretation">standard</option>
+        <option name="trendDisplayMode">absolute</option>
+        <option name="unitPosition">after</option>
+        <option name="useColors">0</option>
+        <option name="useThousandSeparators">1</option>
+      </single>
+    </panel>
   </row>
 
+
+  
+
+<!-- ******************************************************************************************************************* -->
+<!-- ************************************* DASHBOARDS ****************************************************************** -->
+<!-- ******************************************************************************************************************* -->
 
 
   <row>
     <panel>
       <html>
-        <div>Failed SavedSearches &amp; Use Cases</div> 
+        <div class="absolute">DASHBOARDS</div>
       </html>
-    </panel> 
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>Service Dashboard Loadjob Dataset</title>
+      <single>
+        <search base="base_bdmc">
+          <query>
+| eval key='ssphp.use_case.category'.'ssphp.service.portfolio'.'ssphp.service.service_line'.'ssphp.service.product'
+
+| stats count, max(SSPHP_RUN) as SSPHP_RUN, dc(key) as no_key
+
+| eval ssphp_run_age=round((now() - SSPHP_RUN)/60/60/24)
+
+| eval status=if(count&gt;300 AND ssphp_run_age&lt;1 AND no_key&gt;350 ,"Healthy","Unhealthy"),
+       range=if('status'="Healthy","low","severe")
+| table status, range
+          </query>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="colorBy">value</option>
+        <option name="colorMode">block</option>
+        <option name="drilldown">none</option>
+        <option name="numberPrecision">0</option>
+        <option name="rangeColors">["0x65a637","0x6db7c6","0xf7bc38","0xf58f39","0xd93f3c"]</option>
+        <option name="rangeValues">[0,30,70,100]</option>
+        <option name="showSparkline">1</option>
+        <option name="showTrendIndicator">1</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+        <option name="trendColorInterpretation">standard</option>
+        <option name="trendDisplayMode">absolute</option>
+        <option name="unitPosition">after</option>
+        <option name="useColors">0</option>
+        <option name="useThousandSeparators">1</option>
+      </single>
+    </panel>
   </row>
 
 
-<row>
-  <panel>
-    <input type="dropdown" token="tkn_date" searchWhenChanged="true">
-      <label>Date</label>
-      <fieldForLabel>date</fieldForLabel>
-      <fieldForValue>starttime</fieldForValue>
-      <selectFirstChoice>true</selectFirstChoice>
-      <search>
-        <query>
+  
+
+<!-- ******************************************************************************************************************* -->
+<!-- ************************************* OTHER STUFF ***************************************************************** -->
+<!-- ******************************************************************************************************************* -->
+
+
+  <row>
+    <panel>
+      <html>
+        <div class="absolute">OTHER STUFF</div>
+      </html>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>FS Use Cases with No Data Errors</title>
+      <chart>
+        <search>
+          <query>`ssphp_summary_index`
+| search ssphp.error.no_records="true"
+| timechart count by ssphp.use_case.id limit=0</query>
+          <earliest>-7d@h</earliest>
+          <latest>now</latest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
+        <option name="charting.axisTitleX.visibility">visible</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.abbreviation">none</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.abbreviation">none</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.abbreviation">none</option>
+        <option name="charting.axisY2.enabled">0</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">line</option>
+        <option name="charting.chart.bubbleMaximumSize">50</option>
+        <option name="charting.chart.bubbleMinimumSize">10</option>
+        <option name="charting.chart.bubbleSizeBy">area</option>
+        <option name="charting.chart.nullValueMode">gaps</option>
+        <option name="charting.chart.showDataLabels">none</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.stackMode">default</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">none</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.layout.splitSeries.allowIndependentYRanges">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.mode">standard</option>
+        <option name="charting.legend.placement">right</option>
+        <option name="charting.lineWidth">2</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <input type="dropdown" token="tkn_date" searchWhenChanged="true">
+        <label>Date</label>
+        <fieldForLabel>date</fieldForLabel>
+        <fieldForValue>starttime</fieldForValue>
+        <selectFirstChoice>true</selectFirstChoice>
+        <search>
+          <query>
 | gentimes start=-30 end=1
 | eval date=strftime('starttime',"%Y-%m-%d")
 | sort 0 - date
 | table date, starttime
         </query>
-      </search>
-    </input>
-    
-    <input type="radio" token="tkn_app" searchWhenChanged="true">
-      <label>App</label>
-      <choice value="DCAP">DCAP</choice>
-      <choice value="DCAP_DEV">DCAP_DEV</choice>
-      <default>DCAP</default>
-    </input>
-    
-    <input type="radio" token="tkn_show" searchWhenChanged="true">
-      <label>Show</label>
-      <choice value="*">ALL</choice>
-      <choice value="bad">Bad Only</choice>
-      <default>bad</default>
-    </input>
-    
-    
-    <input type="dropdown" token="tkn_sensitivity" searchWhenChanged="true">
-      <label>Sensitivity (lower = more sensitive)</label>
-      <fieldForLabel>sensitivity</fieldForLabel>
-      <fieldForValue>sensitivity</fieldForValue>
-      <default>2</default>
-      <search>
-        <query>
+        </search>
+      </input>
+      <input type="radio" token="tkn_app" searchWhenChanged="true">
+        <label>App</label>
+        <choice value="DCAP">DCAP</choice>
+        <choice value="DCAP_DEV">DCAP_DEV</choice>
+        <default>DCAP</default>
+      </input>
+      <input type="radio" token="tkn_show" searchWhenChanged="true">
+        <label>Show</label>
+        <choice value="*">ALL</choice>
+        <choice value="bad">Bad Only</choice>
+        <default>bad</default>
+      </input>
+      <input type="dropdown" token="tkn_sensitivity" searchWhenChanged="true">
+        <label>Sensitivity (lower = more sensitive)</label>
+        <fieldForLabel>sensitivity</fieldForLabel>
+        <fieldForValue>sensitivity</fieldForValue>
+        <default>2</default>
+        <search>
+          <query>
 | makeresults count=10
 | streamstats count as sensitivity
 | table sensitivity
         </query>
-      </search>
-    </input>
-  </panel>
-
-  <panel>
-    <html>
+        </search>
+      </input>
+    </panel>
+    <panel>
+      <html>
       <br/>
     </html>
-  </panel>
-</row>
-
-  
+    </panel>
+  </row>
   <row depends="$debug$">
     <panel>
       <table>
@@ -1433,9 +1487,6 @@ index="ssphp_metrics_data_health" health_check_type="2"
       </table>
     </panel>
   </row>
-  
-  
-  
   <row>
     <panel>
       <title>SavedSearches [$tkn_count$]</title>
@@ -1460,8 +1511,6 @@ index="ssphp_metrics_data_health" health_check_type="2"
         <fields>target_date, savedsearch_name, eai:acl.app, disabled, outcome, errors, result_count, avg_result_count, cron_schedule, target_run_time, scheduled_time, start_time, completed_time, run_time, avg_run_time, status</fields>
       </table>
     </panel>
-
-
     <panel>
       <title>Sourcetype Ingestion Age [$tkn_sourcetype_count$]</title>
       <table>
@@ -1502,8 +1551,18 @@ index="ssphp_metrics_data" earliest=-7d@d latest=now
         <fields>sourcetype, "Last SSPHP_RUN", "Last Ingestion", "Hours since Ingestion", "Recent Count", "Average Count"</fields>
       </table>
     </panel>
+    <panel depends="$never_show$">
+      <title>Service Dashboard Dataset</title>
+      <table>
+        <search id="base_bdmc">
+          <query>
+| loadjob savedsearch="ssphp_app_account:DCAP:ssphp_create_dashboard_dataset_service"
+
+| table ssphp.service.portfolio, ssphp.service.service_line, ssphp.service.product, ssphp.assessment.source, ssphp.use_case.category, ssphp.use_case.id, ssphp.use_case.title, ssphp.assessment.display_name, ssphp.score.score, ssphp.score.compliance_status, ssphp.score.ciso_priority, ssphp.assessment.description, ssphp.score.color, ssphp.resource.id, ssphp.resource.tenant, ssphp.resource.subscription, ssphp.resource.resource_group, SSPHP_UID, SSPHP_RUN
+
+          </query>
+        </search>
+      </table>
+    </panel>
   </row>
-
-
-  
-</dashboard>
+</form>
