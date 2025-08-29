@@ -4,9 +4,18 @@ use V2::CensysApiTrait;
 use anyhow::{Context, Result};
 use data_ingester_splunk::splunk::{HecEvent, Splunk, SplunkTrait, get_ssphp_run, set_ssphp_run};
 use data_ingester_supporting::keyvault::Secrets;
+use hickory_proto::rr::record_type;
+use hickory_resolver::lookup;
 use serde::Serialize;
+use tracing::warn;
 use tracing::{error, info};
 use valuable::Value;
+
+use hickory_proto::rr::RData;
+use hickory_proto::rr::record_type::RecordType;
+use hickory_resolver::Name;
+use hickory_resolver::TokioResolver;
+use hickory_resolver::config::*;
 
 static SSPHP_RUN_KEY: &str = "censys";
 
@@ -98,33 +107,72 @@ pub async fn entrypoint(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()
 
     //let mut hec_events: Vec<HecEvent> = vec![];
 
+    let resolver = TokioResolver::tokio(ResolverConfig::default(), ResolverOpts::default());
+
+    let record_types = [
+        RecordType::A,
+        RecordType::MX,
+        RecordType::NS,
+        RecordType::AAAA,
+        RecordType::CNAME,
+        RecordType::TXT,
+    ];
+
     for host in hosts {
-        if !host.ports().contains(&80) {
-            continue;
-        }
         for name in host.tls_names() {
-            info!(virtual_host = name, host_ip = host.ip);
-            let http_response = match host.http_request(80, &name).await {
-                Ok(response) => response,
-                Err(err) => {
-                    error!(error=?err, virtual_host=name, "Error sending HTTP request");
-                    continue;
-                }
-            };
-            let source = format!("{}:{}:{}", &host.ip, "80", &name);
-            let hec_event = HecEvent::new_with_ssphp_run_index(
-                &http_response,
-                source,
-                "censys:json:http_response",
-                "ssphp_test",
-                ssphp_run,
-            )?;
-            dbg!(&hec_event);
-            splunk.send_batch([hec_event]).await;
+            for port in host.ports_http_https() {
+                info!(virtual_host = name, host_ip = host.ip);
+                let http_response = match host.http_request(port, &name).await {
+                    Ok(response) => response,
+                    Err(err) => {
+                        error!(error=?err, virtual_host=name, "Error sending HTTP request");
+                        continue;
+                    }
+                };
+                let source = format!("{}:{}:{}", &host.ip, port.to_string(), &name);
+                let hec_event = HecEvent::new_with_ssphp_run_index(
+                    &http_response,
+                    source,
+                    "censys:json:http_response",
+                    "ssphp_test",
+                    ssphp_run,
+                )?;
+                //dbg!(&hec_event);
+                splunk.send_batch([hec_event]).await;
+            }
+        }
+
+        for name in host.all_names() {
+            for record_type in record_types {
+                let lookup_result = match resolver.lookup(name, record_type).await {
+                    Ok(result) => result,
+                    Err(err) => {
+                        warn!(name=name, record_type=?record_type, "Unable to lookup record");
+                        continue;
+                    }
+                };
+                dbg!(&lookup_result);
+                let hec_events: Vec<HecEvent> = lookup_result
+                    .records()
+                    .iter()
+                    .map(|record| {
+                        let source = format!("{}:{}:{}", &host.ip, &name, &record_type);
+                        let hec_event = HecEvent::new_with_ssphp_run_index(
+                            &record,
+                            source,
+                            "censys:json:dns_lookup",
+                            "ssphp_test",
+                            ssphp_run,
+                        )
+                        .unwrap();
+                        dbg!(&hec_event);
+                        hec_event
+                    })
+                    .collect();
+                splunk.send_batch(hec_events).await;
+            }
         }
     }
-
-    //splunk.send_batch(dbg!(hec_events)).await;
 
     Ok(())
 }
@@ -155,12 +203,39 @@ mod V2 {
     pub struct HostResult {
         pub ip: String,
         dns: Option<HostResultDns>,
-        services: Vec<HostResultService>,
+        pub(crate) services: Vec<HostResultService>,
     }
 
     impl HostResult {
+        pub fn all_names(&self) -> Vec<&str> {
+            let dns_names_iter = self
+                .dns
+                .as_ref()
+                .map(|dns| dns.names.iter())
+                .or(Some([].iter()))
+                .expect(".or() should always work");
+
+            let tls_names_iter = self
+                .services
+                .iter()
+                .filter_map(|service| service.tls.as_ref())
+                .flat_map(|tls| tls.certificate.names.iter());
+            dns_names_iter
+                .chain(tls_names_iter)
+                .map(|name| name.as_str())
+                .collect()
+        }
+
         pub fn ports(&self) -> Vec<u16> {
             self.services.iter().map(|service| service.port).collect()
+        }
+
+        pub fn ports_http_https(&self) -> Vec<u16> {
+            self.services
+                .iter()
+                .filter(|service| service.extended_service_name.contains("HTTP"))
+                .map(|service| service.port)
+                .collect()
         }
 
         pub fn tls_names(&self) -> Vec<String> {
@@ -175,6 +250,7 @@ mod V2 {
                 .flatten()
                 .collect()
         }
+
         pub async fn http_request(&self, port: u16, virtual_host: &str) -> Result<HttpResponse> {
             let socket: SocketAddr = format!("{}:{}", self.ip, port).parse()?;
             let client = reqwest::ClientBuilder::new()
@@ -235,7 +311,7 @@ mod V2 {
 
     #[derive(Debug, Deserialize)]
     struct HostResultService {
-        extended_service_name: String,
+        pub(crate) extended_service_name: String,
         labels: Vec<String>,
         port: u16,
         tls: Option<HostResultSerivceTls>,
@@ -388,6 +464,57 @@ mod V2 {
         links: HostSearchResponseLinks,
     }
 
+    // #[derive(Debug, Deserialize, Default)]
+    // struct HostSearchResponseHit {
+    //     dns: HostSearchResponseHitDns,
+    //     services: Vec<HostSearchResponseHitService>,
+    //     #[serde(flatten)]
+    //     extra: HashMap<Value, Value>,
+    // }
+
+    // impl HostSearchResponseHit {
+    //     fn dns_names(&self) -> Vec<&str> {
+    //         let dns_names_iter = self.dns.names
+    //             .iter();
+    //         let tls_names_iter = self.services
+    //             .iter()
+    //             .filter_map(|service| service.tls.as_ref())
+    //             .flat_map(|tls| tls.certificate.names.iter());
+    //         dns_names_iter
+    //             .chain(tls_names_iter)
+    //             .map(|name| name.as_str())
+    //             .collect()
+    //     }
+    // }
+
+    // #[derive(Debug, Deserialize, Default)]
+    // struct HostSearchResponseHitDns {
+    //     names: Vec<String>,
+    // }
+
+    // #[derive(Debug, Deserialize, Default)]
+    // struct HostSearchResponseHitService {
+    //     extende_service_name: String,
+    //     port: u16,
+    //     tls: Option<HostSearchResponseHitServiceTls>,
+    //     #[serde(flatten)]
+    //     extra: HashMap<Value, Value>,
+    // }
+
+    // #[derive(Debug, Deserialize, Default)]
+    // struct HostSearchResponseHitServiceTls {
+    //     certificate: HostSearchResponseHitServiceTlsCertificate,
+    //     #[serde(flatten)]
+    //     extra: HashMap<Value, Value>,
+    // }
+
+    // #[derive(Debug, Deserialize, Default)]
+    // struct HostSearchResponseHitServiceTlsCertificate {
+    //     names: Vec<String>,
+    //     #[serde(flatten)]
+    //     extra: HashMap<Value, Value>,
+    // }
+
     #[derive(Debug, Deserialize, Default)]
     struct HostSearchResponseLinks {
         prev: String,
@@ -401,9 +528,52 @@ mod tests {
     //  "{\"code\": 200, \"status\": \"OK\", \"result\": {\"query\": \"foo.sch.uk\", \"total\": 0, \"duration\": 105, \"hits\": [], \"links\": {\"next\": \"\", \"prev\": \"\"}}}"
     use super::*;
 
+    // #[tokio::test]
+    // async fn run_entrypoint() {
+    //     entrypoint().await;
+    //     assert!(false);
+    // }
+
     #[tokio::test]
-    async fn run_entrypoint() {
-        entrypoint().await;
+    async fn test_resolver() {
+        let resolver = TokioResolver::tokio(ResolverConfig::default(), ResolverOpts::default());
+        let name = "alexa.kinnane.io";
+        let record_types = [RecordType::A];
+        for record_type in record_types {
+            let lookup_result = match resolver.lookup(name, record_type).await {
+                Ok(result) => result,
+                Err(err) => {
+                    warn!(name=name, record_type=?record_type, "Unable to lookup record");
+                    continue;
+                }
+            };
+            dbg!(lookup_result);
+        }
         assert!(false);
     }
 }
+
+// mod dns {
+//     use hickory_proto::rr::record_type::RecordType;
+//     use hickory_proto::rr::RData;
+//     use hickory_resolver::config::*;
+//     use hickory_resolver::Name;
+//     use hickory_resolver::TokioResolver;
+
+//     struct Dns {
+//         name: String,
+//         resolver: &TokioResolver
+//     }
+
+//     impl Dns {
+//         fn new(resolver: () name: &str) -> Self {
+//             Self {
+//                 resolver,
+//                 name: name.into()
+//             }
+//         }
+
+//         async fn lookup_dns_records()
+//     }
+
+// }
