@@ -1,7 +1,7 @@
 <dashboard version="1.1" theme="dark">
 
 <label>DCAP Healthcheck Dashboard</label>
-<description>_DEV v3.3.17</description>
+<description>_DEV v3.3.18</description>
 
 
 
@@ -364,14 +364,18 @@ index=ssphp_metrics_data sourcetype=*rust* message=*sent*
 | eval seen_in_past_month=mvcount(count_past)
 
 | eval last_seen=strftime('max__time', "%Y-%m-%d")
-| table sourcetype, source, count_today, count_median, count_mode, last_seen, seen_in_past_month
+
+| rex field=source ".*\/subscriptions\/(?&lt;subscription&gt;[^\/]*)\/"
+
+| table sourcetype, source, subscription, count_today, count_median, count_mode, last_seen, seen_in_past_month
+| sort 0 subscription
 
 ```| where count_today=0```
 ``` ***************** Delete after here to see base data *******************```
 
 | stats sum(eval(if('count_today'="0",1,0))) as unhealthy, sum(eval(if('count_today'>"0",1,0))) as healthy
 
-| eval status=if('unhealthy'>0,"Unhealthy","Healthy"),
+| eval status=if('unhealthy'&gt;0,"Unhealthy","Healthy"),
        range=if('status'="Healthy","low","severe")
 | table status, range
           </query>
@@ -737,6 +741,9 @@ index=ssphp_metrics_data sourcetype=*rust* message=*sent*
         <search>
           <query>
 index=ssphp_metrics_data sourcetype=SSPHP_secret_attributes 
+    [| search index=ssphp_metrics_data sourcetype=SSPHP_secret_attributes 
+    | stats max(SSPHP_RUN) as SSPHP_RUN
+    | return SSPHP_RUN]
 
 | stats latest(*) as * by id
 
