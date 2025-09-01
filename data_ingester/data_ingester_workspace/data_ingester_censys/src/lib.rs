@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::sync::Arc;
 
 use V2::{CensysApiTrait, convert_txt_record_data_to_ascii};
@@ -119,6 +120,8 @@ pub async fn entrypoint(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()
         RecordType::TXT,
     ];
 
+    let mut names_seen = HashSet::<String>::new();
+
     for host in hosts {
         for name in host.tls_names() {
             for port in host.ports_http_https() {
@@ -144,6 +147,11 @@ pub async fn entrypoint(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()
         }
 
         for name in host.all_names() {
+            // let name = if name.starts_with("*.") {
+            // }
+            if !names_seen.insert(name.to_owned()) {
+                continue;
+            }
             for record_type in record_types {
                 let lookup_result = match resolver.lookup(name, record_type).await {
                     Ok(result) => result,
@@ -527,32 +535,27 @@ mod V2 {
     /// Rewrite a Hickory DNS Response containing txt data to contain an ASCII string instead
     pub(crate) fn convert_txt_record_data_to_ascii(value: Value) -> Value {
         let mut value = value;
-        let as_string = if let Some(txt_data) = value
-            .as_object()
-            .and_then(|obj| obj.get("rdata"))
-            .and_then(|rdata| rdata.as_object())
-            .and_then(|rdata| rdata.get("TXT"))
-            .and_then(|txt| txt.as_object())
-            .and_then(|txt| txt.get("txt_data"))
-            .and_then(|txt_data| txt_data.as_array())
-        {
-            txt_data
-                .iter()
-                .flat_map(|item| {
-                    item.as_u64()
-                        .and_then(|u8_char| Some(u8_char as u8 as char))
-                })
-                .collect::<String>()
-        } else {
-            return value;
-        };
         value
             .as_object_mut()
             .and_then(|obj| obj.get_mut("rdata"))
             .and_then(|rdata| rdata.as_object_mut())
             .and_then(|rdata| rdata.get_mut("TXT"))
             .and_then(|txt| txt.as_object_mut())
-            .and_then(|txt| txt.insert("txt_data".into(), as_string.into()));
+            .and_then(|txt| txt.get_mut("txt_data"))
+            .and_then(|txt_data| txt_data.as_array_mut())
+            .and_then(|txt_data| {
+                txt_data.iter_mut().for_each(|mut txt_data_array| {
+                    dbg!(&txt_data_array);
+                    *txt_data_array = txt_data_array
+                        .as_array()
+                        .iter()
+                        .flat_map(|array| array.iter())
+                        .filter_map(|char| char.as_u64().map(|char| char as u8 as char))
+                        .collect::<String>()
+                        .into();
+                });
+                None::<()>
+            });
         value
     }
 }
@@ -563,32 +566,54 @@ mod tests {
     use super::V2::convert_txt_record_data_to_ascii;
     use serde_json::json;
 
-    //  "{\"code\": 200, \"status\": \"OK\", \"result\": {\"query\": \"foo.sch.uk\", \"total\": 0, \"duration\": 105, \"hits\": [], \"links\": {\"next\": \"\", \"prev\": \"\"}}}"
     use super::*;
-
-    // #[tokio::test]
-    // async fn run_entrypoint() {
-    //     entrypoint().await;
-    //     assert!(false);
-    // }
 
     #[test]
     fn test_convert_txt_record_data_to_ascii() {
-        let value = json!({"rdata": { "TXT": { "txt_data": [ 72, 101, 108, 108, 111, 44, 32, 119, 111, 114, 108, 100, 33] } } });
+        let value = json!({"rdata": { "TXT": { "txt_data": vec![[ 72, 101, 108, 108, 111, 44, 32, 119, 111, 114, 108, 100, 33]] } } });
         //let value = serde_json::from_str(&json).unwrap();
         let updated_value = convert_txt_record_data_to_ascii(value);
         let new_json = serde_json::to_string(&updated_value).unwrap();
         assert_eq!(
             new_json,
-            r#"{"rdata":{"TXT":{"txt_data":"Hello, world!"}}}"#
+            r#"{"rdata":{"TXT":{"txt_data":["Hello, world!"]}}}"#
         );
+    }
+
+    #[tokio::test]
+    async fn test_txt_record_resolver() {
+        // let resolver = TokioResolver::tokio(ResolverConfig::default(), ResolverOpts::default());
+        let resolver = TokioResolver::tokio_from_system_conf().unwrap();
+        let name = "google.com";
+        let record_types = [RecordType::TXT];
+        for record_type in record_types {
+            let lookup_result = match resolver.lookup(name, record_type).await {
+                Ok(result) => result,
+                Err(err) => {
+                    warn!(name=name, record_type=?record_type, "Unable to lookup record");
+                    continue;
+                }
+            };
+            let value = lookup_result
+                .records()
+                .iter()
+                .inspect(|record| {
+                    dbg!(&record);
+                })
+                .map(|record| serde_json::to_value(&record).unwrap())
+                .map(|value| convert_txt_record_data_to_ascii(value))
+                .for_each(|value| {
+                });
+        }
+
+        assert!(false);
     }
 
     #[tokio::test]
     async fn test_resolver() {
         // let resolver = TokioResolver::tokio(ResolverConfig::default(), ResolverOpts::default());
         let resolver = TokioResolver::tokio_from_system_conf().unwrap();
-        let name = "alexa.kinnane.io";
+        let name = "www.google.com";
         let record_types = [RecordType::A];
         for record_type in record_types {
             let lookup_result = match resolver.lookup(name, record_type).await {
