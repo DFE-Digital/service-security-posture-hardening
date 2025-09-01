@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use V2::CensysApiTrait;
+use V2::{convert_txt_record_data_to_ascii, CensysApiTrait};
 use anyhow::{Context, Result};
 use data_ingester_splunk::splunk::{HecEvent, Splunk, SplunkTrait, get_ssphp_run, set_ssphp_run};
 use data_ingester_supporting::keyvault::Secrets;
@@ -156,8 +156,10 @@ pub async fn entrypoint(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()
                 let hec_events: Vec<HecEvent> = lookup_result
                     .records()
                     .iter()
+                    .filter_map(|record| serde_json::to_value(record).ok())
+                    .map(|record| convert_txt_record_data_to_ascii(record))
                     .map(|record| {
-                        let source = format!("{}:{}:{}", &host.ip, &name, &record_type);
+                        let source = format!("{}^{}^{}", &host.ip, &name, &record_type);
                         let hec_event = HecEvent::new_with_ssphp_run_index(
                             &record,
                             source,
@@ -521,10 +523,38 @@ mod V2 {
         prev: String,
         next: String,
     }
+
+
+    /// Rewrite a Hickory DNS Response containing txt data to contain an ASCII string instead
+    pub(crate) fn convert_txt_record_data_to_ascii(value: Value ) -> Value {
+        let mut value = value;
+        let as_string = if let Some(txt_data) = value.as_object()
+            .and_then(|obj| obj.get("rdata"))
+            .and_then(|rdata| rdata.as_object())
+            .and_then(|rdata| rdata.get("TXT"))
+            .and_then(|txt| txt.as_object())
+            .and_then(|txt| txt.get("txt_data"))
+            .and_then(|txt_data| txt_data.as_array()) {
+                txt_data.iter()
+                    .flat_map(|item| item.as_u64().and_then(|u8_char| Some(u8_char as u8 as char))).collect::<String>()
+            } else {
+                return value
+            };
+        value.as_object_mut()
+            .and_then(|obj| obj.get_mut("rdata"))
+            .and_then(|rdata| rdata.as_object_mut())
+            .and_then(|rdata| rdata.get_mut("TXT"))
+            .and_then(|txt| txt.as_object_mut())
+            .and_then(|txt| txt.insert("txt_data".into(), as_string.into()));
+        value
+    }
 }
 
 #[cfg(test)]
 mod tests {
+
+    use serde_json::json;
+    use super::V2::convert_txt_record_data_to_ascii;
 
     //  "{\"code\": 200, \"status\": \"OK\", \"result\": {\"query\": \"foo.sch.uk\", \"total\": 0, \"duration\": 105, \"hits\": [], \"links\": {\"next\": \"\", \"prev\": \"\"}}}"
     use super::*;
@@ -535,6 +565,16 @@ mod tests {
     //     assert!(false);
     // }
 
+    #[test]
+    fn test_convert_txt_record_data_to_ascii() {
+        let value = json!({"rdata": { "TXT": { "txt_data": [ 72, 101, 108, 108, 111, 44, 32, 119, 111, 114, 108, 100, 33] } } });
+        //let value = serde_json::from_str(&json).unwrap();
+        let updated_value = convert_txt_record_data_to_ascii(value);
+        let new_json = serde_json::to_string(&updated_value).unwrap();
+        assert_eq!(new_json, r#"{"rdata":{"TXT":{"txt_data":"Hello, world!"}}}"#);
+        
+    }
+    
     #[tokio::test]
     async fn test_resolver() {
         // let resolver = TokioResolver::tokio(ResolverConfig::default(), ResolverOpts::default());
