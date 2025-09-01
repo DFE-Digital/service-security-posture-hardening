@@ -1850,6 +1850,8 @@ dependencies = [
  "anyhow",
  "data_ingester_splunk",
  "data_ingester_supporting",
+ "hickory-proto",
+ "hickory-resolver",
  "reqwest",
  "serde",
  "serde_json",

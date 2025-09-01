@@ -107,7 +107,8 @@ pub async fn entrypoint(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()
 
     //let mut hec_events: Vec<HecEvent> = vec![];
 
-    let resolver = TokioResolver::tokio(ResolverConfig::default(), ResolverOpts::default());
+    //let resolver = TokioResolver::tokio(ResolverConfig::default(), ResolverOpts::default());
+    let resolver = TokioResolver::tokio_from_system_conf().unwrap();
 
     let record_types = [
         RecordType::A,
@@ -147,7 +148,7 @@ pub async fn entrypoint(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()
                 let lookup_result = match resolver.lookup(name, record_type).await {
                     Ok(result) => result,
                     Err(err) => {
-                        warn!(name=name, record_type=?record_type, "Unable to lookup record");
+                        warn!(error=?err, name=name, record_type=?record_type, "Unable to lookup record");
                         continue;
                     }
                 };
@@ -536,7 +537,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_resolver() {
-        let resolver = TokioResolver::tokio(ResolverConfig::default(), ResolverOpts::default());
+        // let resolver = TokioResolver::tokio(ResolverConfig::default(), ResolverOpts::default());
+	let resolver = TokioResolver::tokio_from_system_conf().unwrap();	
         let name = "alexa.kinnane.io";
         let record_types = [RecordType::A];
         for record_type in record_types {
