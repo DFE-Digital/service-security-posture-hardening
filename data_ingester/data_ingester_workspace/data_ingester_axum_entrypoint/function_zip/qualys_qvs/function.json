@@ -1,12 +1,8 @@
 {
     "bindings": [
         {
-            "name": "timer",
-            "schedule": "0 55 3 * * *",
-            "direction": "in",
-            "type": "timerTrigger",
-            "runOnStartup": false,
-            "UseMonitor": false
+            "type": "manualTrigger",
+            "direction": "in"
         }
     ]
 }
