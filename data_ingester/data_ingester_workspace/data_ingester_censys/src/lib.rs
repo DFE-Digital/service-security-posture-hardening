@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 use std::sync::Arc;
 
-use V2::{CensysApiTrait, convert_txt_record_data_to_ascii};
+use V2::{CensysApiTrait, HostResult, convert_txt_record_data_to_ascii};
 use anyhow::{Context, Result};
 use data_ingester_splunk::splunk::{HecEvent, Splunk, SplunkTrait, get_ssphp_run, set_ssphp_run};
 use data_ingester_supporting::keyvault::Secrets;
@@ -12,6 +12,7 @@ use tracing::warn;
 use tracing::{error, info};
 use valuable::Value;
 
+use futures::stream::{FuturesUnordered, StreamExt};
 use hickory_proto::rr::RData;
 use hickory_proto::rr::record_type::RecordType;
 use hickory_resolver::Name;
@@ -122,67 +123,86 @@ pub async fn entrypoint(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()
 
     let mut names_seen = HashSet::<String>::new();
 
-    for host in hosts {
-        for name in host.tls_names() {
-            for port in host.ports_http_https() {
-                info!(virtual_host = name, host_ip = host.ip);
-                let http_response = match host.http_request(port, &name).await {
-                    Ok(response) => response,
-                    Err(err) => {
-                        error!(error=?err, virtual_host=name, "Error sending HTTP request");
-                        continue;
-                    }
-                };
-                let source = format!("{}:{}:{}", &host.ip, port.to_string(), &name);
+    let resolve_records = async |ip: String, name: String, record_type: RecordType| {
+        let lookup_result = match resolver.lookup(&name, record_type).await {
+            Ok(result) => result,
+            Err(err) => {
+                warn!(error=?err, name=name, record_type=?record_type, "Unable to lookup record");
+                return ();
+            }
+        };
+        dbg!(&lookup_result);
+        let hec_events: Vec<HecEvent> = lookup_result
+            .records()
+            .iter()
+            .filter_map(|record| serde_json::to_value(record).ok())
+            .map(|record| convert_txt_record_data_to_ascii(record))
+            .map(|record| {
+                let source = format!("{}^{}^{}", &ip, &name, &record_type);
                 let hec_event = HecEvent::new_with_ssphp_run_index(
-                    &http_response,
+                    &record,
                     source,
-                    "censys:json:http_response",
+                    "censys:json:dns_lookup",
                     "ssphp_test",
                     ssphp_run,
-                )?;
-                //dbg!(&hec_event);
-                splunk.send_batch([hec_event]).await;
+                )
+                .unwrap();
+                dbg!(&hec_event);
+                hec_event
+            })
+            .collect();
+        splunk.send_batch(hec_events).await;
+    };
+
+    let http_request = async |host: HostResult, name: String, port: u16| {
+        info!(virtual_host = name, host_ip = host.ip);
+        let http_response = match host.http_request(port, &name).await {
+            Ok(response) => response,
+            Err(err) => {
+                error!(error=?err, virtual_host=name, "Error sending HTTP request");
+                return ();
+            }
+        };
+        let source = format!("{}:{}:{}", &host.ip, port.to_string(), &name);
+        let hec_event = HecEvent::new_with_ssphp_run_index(
+            &http_response,
+            source,
+            "censys:json:http_response",
+            "ssphp_test",
+            ssphp_run,
+        )
+        .unwrap();
+        //dbg!(&hec_event);
+        splunk.send_batch([hec_event]).await;
+    };
+
+    for host in hosts {
+        let mut web_requests = FuturesUnordered::new();
+
+        for name in host.tls_names() {
+            for port in host.ports_http_https() {
+                web_requests.push(http_request(host.clone(), name.clone(), port));
             }
         }
 
+        let mut dns_requests = FuturesUnordered::new();
+
         for name in host.all_names() {
-            // let name = if name.starts_with("*.") {
-            // }
             if !names_seen.insert(name.to_owned()) {
                 continue;
             }
-            for record_type in record_types {
-                let lookup_result = match resolver.lookup(name, record_type).await {
-                    Ok(result) => result,
-                    Err(err) => {
-                        warn!(error=?err, name=name, record_type=?record_type, "Unable to lookup record");
-                        continue;
-                    }
-                };
-                dbg!(&lookup_result);
-                let hec_events: Vec<HecEvent> = lookup_result
-                    .records()
-                    .iter()
-                    .filter_map(|record| serde_json::to_value(record).ok())
-                    .map(|record| convert_txt_record_data_to_ascii(record))
-                    .map(|record| {
-                        let source = format!("{}^{}^{}", &host.ip, &name, &record_type);
-                        let hec_event = HecEvent::new_with_ssphp_run_index(
-                            &record,
-                            source,
-                            "censys:json:dns_lookup",
-                            "ssphp_test",
-                            ssphp_run,
-                        )
-                        .unwrap();
-                        dbg!(&hec_event);
-                        hec_event
-                    })
-                    .collect();
-                splunk.send_batch(hec_events).await;
-            }
+
+            let requests: Vec<_> = record_types
+                .iter()
+                .map(|record_type| {
+                    resolve_records(host.ip.to_owned(), name.to_owned(), record_type.clone())
+                })
+                .collect();
+            dns_requests.extend(requests);
         }
+
+        let _: Vec<_> = web_requests.collect().await;
+        let _: Vec<_> = dns_requests.collect().await;
     }
 
     Ok(())
@@ -210,7 +230,7 @@ mod V2 {
     use tracing::{error, info};
     use valuable::Valuable;
 
-    #[derive(Debug, Deserialize)]
+    #[derive(Debug, Deserialize, Clone)]
     pub struct HostResult {
         pub ip: String,
         dns: Option<HostResultDns>,
@@ -315,12 +335,12 @@ mod V2 {
         url: String,
     }
 
-    #[derive(Debug, Deserialize, Serialize)]
+    #[derive(Debug, Deserialize, Serialize, Clone)]
     struct HostResultDns {
         names: Vec<String>,
     }
 
-    #[derive(Debug, Deserialize)]
+    #[derive(Debug, Deserialize, Clone)]
     struct HostResultService {
         pub(crate) extended_service_name: String,
         labels: Vec<String>,
@@ -328,12 +348,12 @@ mod V2 {
         tls: Option<HostResultSerivceTls>,
     }
 
-    #[derive(Debug, Deserialize)]
+    #[derive(Debug, Deserialize, Clone)]
     struct HostResultSerivceTls {
         certificate: HostResultServiceTlsCertificate,
     }
 
-    #[derive(Debug, Deserialize)]
+    #[derive(Debug, Deserialize, Clone)]
     struct HostResultServiceTlsCertificate {
         names: Vec<String>,
     }
@@ -602,8 +622,7 @@ mod tests {
                 })
                 .map(|record| serde_json::to_value(&record).unwrap())
                 .map(|value| convert_txt_record_data_to_ascii(value))
-                .for_each(|value| {
-                });
+                .for_each(|value| {});
         }
 
         assert!(false);
