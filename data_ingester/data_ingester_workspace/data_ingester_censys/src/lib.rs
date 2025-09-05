@@ -429,6 +429,10 @@ mod V2 {
                 .redirect(reqwest::redirect::Policy::none())
                 .connect_timeout(Duration::from_secs(3))
                 .timeout(Duration::from_secs(5))
+                // Some requests are expected fail TLS cert checks
+                // TODO: record TLS checks
+                .danger_accept_invalid_certs(true)
+                .danger_accept_invalid_hostnames(true)
                 .build()?;
             let protocol = if tls { "https" } else { "http" };
             let url = format!("{}://{}:{}/", protocol, virtual_host.0, port.0);
