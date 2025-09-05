@@ -136,7 +136,7 @@ pub async fn entrypoint(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()
             }
         })
         .map(|hec_event| splunk.send_batch([hec_event]))
-        .buffer_unordered(10);
+        .buffer_unordered(10).boxed();
 
     while let Some(fut) = stream.next().await {
         dbg!(fut);
