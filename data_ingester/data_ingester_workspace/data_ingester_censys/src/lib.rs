@@ -135,9 +135,8 @@ pub async fn entrypoint(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()
                 }
             }
         })
-        .map(|hec_event| splunk.send_batch([hec_event]))
-        .buffer_unordered(10)
-        .boxed();
+        .map(|hec_event| splunk.send_batch([hec_event]).ok())
+        .buffer_unordered(10).collect::<()>();
 
     while let Some(fut) = stream.next().await {
         dbg!(fut);
@@ -251,7 +250,8 @@ mod V2 {
     use itertools::Itertools;
     use serde::{Deserialize, Serialize};
     use serde_json::Value;
-    use std::{collections::HashMap, net::SocketAddr};
+    use tokio::time::timeout;
+    use std::{collections::HashMap, net::SocketAddr, time::Duration};
     use tracing::{error, info, warn};
     use valuable::Valuable;
 
@@ -404,6 +404,8 @@ mod V2 {
             let client = reqwest::ClientBuilder::new()
                 .resolve(virtual_host.0.as_str(), socket)
                 .redirect(reqwest::redirect::Policy::none())
+                .connect_timeout(Duration::from_secs(3))
+                .timeout(Duration::from_secs(5))
                 .build()?;
 
             let url = format!("http://{}:{}/", virtual_host.0, port.0);
