@@ -95,7 +95,7 @@ pub async fn entrypoint(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()
 
     dbg!(&hec_events);
 
-    //splunk.send_batch(hec_events).await;
+    splunk.send_batch(hec_events).await;
 
     let hosts: Vec<V2::HostResult> = results
         .into_iter()
