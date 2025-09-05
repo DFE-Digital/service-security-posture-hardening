@@ -5,20 +5,24 @@ use V2::{CensysApiTrait, HostResult, convert_txt_record_data_to_ascii};
 use anyhow::{Context, Result};
 use data_ingester_splunk::splunk::{HecEvent, Splunk, SplunkTrait, get_ssphp_run, set_ssphp_run};
 use data_ingester_supporting::keyvault::Secrets;
+use futures::FutureExt;
+use futures::future::join_all;
 use hickory_proto::rr::record_type;
 use hickory_resolver::lookup;
+use itertools::{Itertools, interleave};
 use serde::Serialize;
 use tracing::warn;
 use tracing::{error, info};
 use valuable::Value;
 
-use futures::stream::{FuturesUnordered, StreamExt};
+use V2::PendingHttpRequest;
+use V2::ToSplunk;
+use futures::stream::{self, FuturesUnordered, StreamExt};
 use hickory_proto::rr::RData;
 use hickory_proto::rr::record_type::RecordType;
 use hickory_resolver::Name;
 use hickory_resolver::TokioResolver;
 use hickory_resolver::config::*;
-
 static SSPHP_RUN_KEY: &str = "censys";
 
 pub async fn entrypoint(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
@@ -107,106 +111,124 @@ pub async fn entrypoint(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()
         })
         .collect();
 
-    //let mut hec_events: Vec<HecEvent> = vec![];
+    let http_requests = hosts
+        .iter()
+        .flat_map(|host| host.request_all_http_ports_all_virtual_hosts())
+        .map(|request| request.run_request());
 
-    //let resolver = TokioResolver::tokio(ResolverConfig::default(), ResolverOpts::default());
-    let resolver = TokioResolver::tokio_from_system_conf().unwrap();
-
-    let record_types = [
-        RecordType::A,
-        RecordType::MX,
-        RecordType::NS,
-        RecordType::AAAA,
-        RecordType::CNAME,
-        RecordType::TXT,
-    ];
-
-    let mut names_seen = HashSet::<String>::new();
-
-    let resolve_records = async |ip: String, name: String, record_type: RecordType| {
-        let lookup_result = match resolver.lookup(&name, record_type).await {
-            Ok(result) => result,
-            Err(err) => {
-                warn!(error=?err, name=name, record_type=?record_type, "Unable to lookup record");
-                return ();
+    let mut stream = stream::iter(http_requests)
+        .buffer_unordered(10)
+        .filter_map(|response| async { response.complete_processing() })
+        .filter_map(|response| async move {
+            let hec_event_result = HecEvent::new_with_ssphp_run_index(
+                &response.response,
+                response.source(),
+                response.sourcetype(),
+                "ssphp_test",
+                ssphp_run,
+            );
+            match hec_event_result {
+                Ok(hec_event) => Some(hec_event),
+                Err(err) => {
+                    warn!(error=?err, response=?response, "Unable to create HecEvent");
+                    None
+                }
             }
-        };
-        dbg!(&lookup_result);
-        let hec_events: Vec<HecEvent> = lookup_result
-            .records()
-            .iter()
-            .filter_map(|record| serde_json::to_value(record).ok())
-            .map(|record| convert_txt_record_data_to_ascii(record))
-            .map(|record| {
-                let source = format!("{}^{}^{}", &ip, &name, &record_type);
-                let hec_event = HecEvent::new_with_ssphp_run_index(
-                    &record,
-                    source,
-                    "censys:json:dns_lookup",
-                    "ssphp_test",
-                    ssphp_run,
-                )
-                .unwrap();
-                dbg!(&hec_event);
-                hec_event
-            })
-            .collect();
-        splunk.send_batch(hec_events).await;
-    };
+        })
+        .map(|hec_event| splunk.send_batch([hec_event]))
+        .buffer_unordered(10)
+        .boxed();
 
-    let http_request = async |host: HostResult, name: String, port: u16| {
-        info!(virtual_host = name, host_ip = host.ip);
-        let http_response = match host.http_request(port, &name).await {
-            Ok(response) => response,
-            Err(err) => {
-                error!(error=?err, virtual_host=name, "Error sending HTTP request");
-                return ();
-            }
-        };
-        let source = format!("{}:{}:{}", &host.ip, port.to_string(), &name);
-        let hec_event = HecEvent::new_with_ssphp_run_index(
-            &http_response,
-            source,
-            "censys:json:http_response",
-            "ssphp_test",
-            ssphp_run,
-        )
-        .unwrap();
-        //dbg!(&hec_event);
-        splunk.send_batch([hec_event]).await;
-    };
-
-    for host in hosts {
-        let mut web_requests = FuturesUnordered::new();
-
-        for name in host.tls_names() {
-            for port in host.ports_http_https() {
-                web_requests.push(http_request(host.clone(), name.clone(), port));
-            }
-        }
-
-        let mut dns_requests = FuturesUnordered::new();
-
-        for name in host.all_names() {
-            if !names_seen.insert(name.to_owned()) {
-                continue;
-            }
-
-            let requests: Vec<_> = record_types
-                .iter()
-                .map(|record_type| {
-                    resolve_records(host.ip.to_owned(), name.to_owned(), record_type.clone())
-                })
-                .collect();
-            dns_requests.extend(requests);
-        }
-
-        let _: Vec<_> = web_requests.collect().await;
-        let _: Vec<_> = dns_requests.collect().await;
+    while let Some(fut) = stream.next().await {
+        dbg!(fut);
     }
 
     Ok(())
 }
+
+// async fn collect_hosts_http(hosts: Vec<V2::HostResult>, splunk: Arc<Splunk>, ssphp_run: u64) -> () {
+//     let http_request = async |ip: String, name: String, port: u16| {
+//         info!(virtual_host = name, host_ip = ip);
+//         let http_response = match host.http_request(port, &name).await {
+//             Ok(response) => response,
+//             Err(err) => {
+//                 error!(error=?err, virtual_host=name, "Error sending HTTP request");
+//                 return ();
+//             }
+//         };
+//         let source = format!("{}^{}^{}", &ip, port.to_string(), &name);
+//         let hec_event = HecEvent::new_with_ssphp_run_index(
+//             &http_response,
+//             source,
+//             "censys:json:http_response",
+//             "ssphp_test",
+//             ssphp_run,
+//         )
+//             .unwrap();
+//         //dbg!(&hec_event);
+//         let _ = splunk.send_batch([hec_event]).await;
+//     };
+
+//     let http_stream = stream::iter(
+//         hosts
+//             .clone()
+//             .into_iter()
+//             .flat_map(|host| {
+//                 let names: Vec<String> = host.all_names().iter().map(|s| s.to_string()).collect();
+//                 //                let ha = host.clone();
+//                 names.into_iter().map(move |name| (host.clone(), name))
+//             })
+//             .flat_map(|(host, name)| {
+//                 host.ports_http_https()
+//                     .into_iter()
+//                     .map(move |port| (host.ip.to_string(), name.clone(), port))
+//             })
+//             //.inspect(|(ip, name, port)| {dbg!(&ip, &name, &port);})
+//             .map(|(ip, name, port)| async move { dbg!(ip, name, port) }),
+//             .map(|(ip, name, port)| async move { http_request(host }),
+//     )
+//     .buffer_unordered(2)
+//     .for_each(|n| async {})
+//             .boxed()
+//     }
+// }
+
+// async fn collect_hosts_http(hosts: Vec<V2::HostResult>, splunk: Arc<Splunk>, ssphp_run: u64) -> () {
+
+//     let record_types = [
+//         RecordType::A,
+//         RecordType::MX,
+//         RecordType::NS,
+//         RecordType::AAAA,
+//         RecordType::CNAME,
+//         RecordType::TXT,
+//     ];
+
+//     let mut names_seen = HashSet::<String>::new();
+
+//     let resolver = TokioResolver::tokio_from_system_conf().unwrap();
+
+//     let dns_stream = stream::iter(
+//         hosts
+//             .iter()
+//             .flat_map(|host| {
+//                 host.all_names()
+//                     .into_iter()
+//                     .map(|name| (host.ip.to_string(), name.to_string()))
+//             })
+//             .filter(move |(ip, name): &(String, String)| names_seen.insert(name.to_string()))
+//             .cartesian_product(record_types)
+//             .map(|((ip, name), record_type)| async move { dbg!(ip, name, record_type) }),
+//         // .inspect(|((ip, name), record_type)| resolve_records(ip.to_string(), name.to_string(), record_type.clone()))
+//         // .map(|((ip, name), record_type)| resolve_records(ip.to_string(), name.to_string(), record_type.clone()))
+//         //            .map(|a| ())
+//     )
+//     .buffer_unordered(2)
+//     .for_each(|n| async {})
+//     .boxed();
+
+//     join_all([http_stream, dns_stream]).await;
+// }
 
 struct CensysApi {
     api_id: String,
@@ -224,21 +246,100 @@ impl CensysApiTrait for CensysApi {
 
 mod V2 {
     use anyhow::Result;
+    use data_ingester_splunk::splunk::HecEvent;
+    use futures::{FutureExt, future::BoxFuture};
+    use itertools::Itertools;
     use serde::{Deserialize, Serialize};
     use serde_json::Value;
     use std::{collections::HashMap, net::SocketAddr};
-    use tracing::{error, info};
+    use tracing::{error, info, warn};
     use valuable::Valuable;
+
+    use crate::SSPHP_RUN_KEY;
 
     #[derive(Debug, Deserialize, Clone)]
     pub struct HostResult {
-        pub ip: String,
-        dns: Option<HostResultDns>,
+        pub ip: Ip,
+        pub(crate) dns: Option<HostResultDns>,
         pub(crate) services: Vec<HostResultService>,
+    }
+    #[derive(Debug, Serialize, Deserialize, Clone)]
+    struct Ip(String);
+    #[derive(Debug, Serialize, Deserialize, Clone)]
+    struct VHost(String);
+    #[derive(Debug, Serialize, Deserialize, Clone)]
+    struct Port(u16);
+
+    //#[derive()]
+    pub struct PendingHttpRequest<'a> {
+        ip: &'a Ip,
+        vhost: &'a VHost,
+        port: &'a Port,
+        request: BoxFuture<'a, Result<HttpResponse>>,
+    }
+
+    impl<'a> PendingHttpRequest<'a> {
+        pub async fn run_request(self) -> ProcessingHttpRequest<'a> {
+            ProcessingHttpRequest {
+                ip: self.ip,
+                vhost: self.vhost,
+                port: self.port,
+                response: self.request.await,
+            }
+        }
+    }
+
+    #[derive(Debug)]
+    pub struct ProcessingHttpRequest<'a> {
+        ip: &'a Ip,
+        vhost: &'a VHost,
+        port: &'a Port,
+        pub response: Result<HttpResponse>,
+    }
+
+    impl<'a> ProcessingHttpRequest<'a> {
+        pub fn complete_processing(self) -> Option<ProcessedHttpRequest> {
+            if let Ok(response) = self.response {
+                Some(ProcessedHttpRequest {
+                    ip: self.ip.0.to_string(),
+                    vhost: self.vhost.0.to_string(),
+                    port: self.port.0.to_string(),
+                    response: response,
+                })
+            } else {
+                None
+            }
+        }
+    }
+
+    #[derive(Debug)]
+    pub struct ProcessedHttpRequest {
+        ip: String,
+        vhost: String,
+        port: String,
+        pub response: HttpResponse,
+    }
+
+    impl ToSplunk for ProcessedHttpRequest {
+        fn source(&self) -> String {
+            format!("{}^{}^{}", &self.ip, self.port, self.vhost)
+        }
+
+        fn sourcetype(&self) -> String {
+            "censys:json:http_response".into()
+        }
+
+        //        fn
+    }
+
+    pub(crate) trait ToSplunk {
+        fn source(&self) -> String;
+
+        fn sourcetype(&self) -> String;
     }
 
     impl HostResult {
-        pub fn all_names(&self) -> Vec<&str> {
+        pub fn all_names(&self) -> impl Iterator<Item = &VHost> {
             let dns_names_iter = self
                 .dns
                 .as_ref()
@@ -251,45 +352,61 @@ mod V2 {
                 .iter()
                 .filter_map(|service| service.tls.as_ref())
                 .flat_map(|tls| tls.certificate.names.iter());
-            dns_names_iter
-                .chain(tls_names_iter)
-                .map(|name| name.as_str())
-                .collect()
+            dns_names_iter.chain(tls_names_iter)
         }
 
-        pub fn ports(&self) -> Vec<u16> {
-            self.services.iter().map(|service| service.port).collect()
+        pub fn ports(&self) -> impl Iterator<Item = &Port> {
+            self.services.iter().map(|service| &service.port)
         }
 
-        pub fn ports_http_https(&self) -> Vec<u16> {
+        pub fn ports_http_https(&self) -> impl Iterator<Item = &Port> {
             self.services
                 .iter()
                 .filter(|service| service.extended_service_name.contains("HTTP"))
-                .map(|service| service.port)
-                .collect()
+                .map(|service| &service.port)
         }
 
-        pub fn tls_names(&self) -> Vec<String> {
+        pub fn tls_names(&self) -> impl Iterator<Item = &VHost> {
             self.services
                 .iter()
-                .flat_map(|service| {
-                    service
-                        .tls
-                        .as_ref()
-                        .map(|tls| tls.certificate.names.clone())
-                })
+                .flat_map(|service| service.tls.as_ref().map(|tls| tls.certificate.names.iter()))
                 .flatten()
-                .collect()
         }
 
-        pub async fn http_request(&self, port: u16, virtual_host: &str) -> Result<HttpResponse> {
-            let socket: SocketAddr = format!("{}:{}", self.ip, port).parse()?;
+        pub fn all_http_ports_all_virtual_hosts_combo(
+            &self,
+        ) -> impl Iterator<Item = (&VHost, &Port)> {
+            self.all_names()
+                .cartesian_product(self.ports_http_https().collect::<Vec<_>>())
+        }
+
+        pub fn request_all_http_ports_all_virtual_hosts(
+            &self,
+        ) -> impl Iterator<Item = PendingHttpRequest> {
+            self.all_http_ports_all_virtual_hosts_combo()
+                .map(|(vhost, port)| PendingHttpRequest {
+                    ip: &self.ip,
+                    vhost,
+                    port: port,
+                    request: self.http_request(port, vhost).boxed(),
+                })
+        }
+
+        async fn process_pending_http_requests<'a>(
+            &self,
+            pending_requests: impl Iterator<Item = PendingHttpRequest<'a>>,
+        ) -> impl Iterator<Item = impl Future<Output = ProcessingHttpRequest<'a>>> {
+            pending_requests.map(|request| request.run_request())
+        }
+
+        async fn http_request(&self, port: &Port, virtual_host: &VHost) -> Result<HttpResponse> {
+            let socket: SocketAddr = format!("{}:{}", self.ip.0, port.0).parse()?;
             let client = reqwest::ClientBuilder::new()
-                .resolve(virtual_host, socket)
+                .resolve(virtual_host.0.as_str(), socket)
                 .redirect(reqwest::redirect::Policy::none())
                 .build()?;
 
-            let url = format!("http://{virtual_host}:{port}/");
+            let url = format!("http://{}:{}/", virtual_host.0, port.0);
             let response = client.get(&url).send().await?;
             let headers = response
                 .headers()
@@ -306,9 +423,9 @@ mod V2 {
             let body = response.text().await?;
             let http_response = HttpResponse {
                 request: HttpRequest {
-                    host: virtual_host.into(),
-                    ip: self.ip.to_owned(),
-                    port: port,
+                    host: virtual_host.0.to_owned(),
+                    ip: self.ip.0.to_owned(),
+                    port: port.0,
                     url: url.into(),
                 },
                 headers: headers,
@@ -337,14 +454,14 @@ mod V2 {
 
     #[derive(Debug, Deserialize, Serialize, Clone)]
     struct HostResultDns {
-        names: Vec<String>,
+        names: Vec<VHost>,
     }
 
     #[derive(Debug, Deserialize, Clone)]
     struct HostResultService {
         pub(crate) extended_service_name: String,
         labels: Vec<String>,
-        port: u16,
+        port: Port,
         tls: Option<HostResultSerivceTls>,
     }
 
@@ -355,7 +472,7 @@ mod V2 {
 
     #[derive(Debug, Deserialize, Clone)]
     struct HostResultServiceTlsCertificate {
-        names: Vec<String>,
+        names: Vec<VHost>,
     }
 
     pub(crate) trait CensysApiTrait {
@@ -577,6 +694,49 @@ mod V2 {
                 None::<()>
             });
         value
+    }
+
+    #[cfg(test)]
+    mod tests {
+
+        use crate::collect_host;
+
+        //        use super::V2::convert_txt_record_data_to_ascii;
+        use super::HostResult;
+        use super::HostResultDns;
+        use serde_json::json;
+
+        use super::*;
+
+        fn host_result() -> HostResult {
+            HostResult {
+                ip: "1.2.3.4".into(),
+                dns: Some(HostResultDns {
+                    names: vec!["google.com".into()],
+                }),
+                services: vec![HostResultService {
+                    extended_service_name: "HTTPS".into(),
+                    labels: vec![],
+                    port: 443,
+                    tls: Some(HostResultSerivceTls {
+                        certificate: HostResultServiceTlsCertificate {
+                            names: vec![
+                                "google.com".into(),
+                                "wwww.google.com".into(),
+                                "wwww.googe.co.uk".into(),
+                            ],
+                        },
+                    }),
+                }],
+            }
+        }
+
+        #[tokio::test]
+        async fn test_collect_hosts() {
+            let hosts = vec![host_result()];
+            collect_host(hosts).await;
+            assert!(false);
+        }
     }
 }
 

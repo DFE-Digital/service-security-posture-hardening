@@ -16,6 +16,7 @@ valuable = { version = "*", features = ["derive"]}
 hickory-resolver = "0.25.0-alpha.4"
 hickory-proto = {version = "0.25.0-alpha.4", features = ["serde"]}
 futures = "*"
+itertools = "*"
 
 [lints]
 workspace = true
