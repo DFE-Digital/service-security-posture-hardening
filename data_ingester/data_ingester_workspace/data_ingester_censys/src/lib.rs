@@ -136,7 +136,8 @@ pub async fn entrypoint(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()
             }
         })
         .map(|hec_event| splunk.send_batch([hec_event]))
-        .buffer_unordered(10).boxed();
+        .buffer_unordered(10)
+        .boxed();
 
     while let Some(fut) = stream.next().await {
         dbg!(fut);
@@ -250,8 +251,8 @@ mod V2 {
     use itertools::Itertools;
     use serde::{Deserialize, Serialize};
     use serde_json::Value;
-    use tokio::time::timeout;
     use std::{collections::HashMap, net::SocketAddr, time::Duration};
+    use tokio::time::timeout;
     use tracing::{error, info, warn};
     use valuable::Valuable;
 
@@ -276,6 +277,7 @@ mod V2 {
         vhost: &'a VHost,
         port: &'a Port,
         request: BoxFuture<'a, Result<HttpResponse>>,
+        tls: bool,
     }
 
     impl<'a> PendingHttpRequest<'a> {
@@ -285,6 +287,7 @@ mod V2 {
                 vhost: self.vhost,
                 port: self.port,
                 response: self.request.await,
+                tls: self.tls,
             }
         }
     }
@@ -295,6 +298,7 @@ mod V2 {
         vhost: &'a VHost,
         port: &'a Port,
         pub response: Result<HttpResponse>,
+        tls: bool,
     }
 
     impl<'a> ProcessingHttpRequest<'a> {
@@ -305,6 +309,7 @@ mod V2 {
                     vhost: self.vhost.0.to_string(),
                     port: self.port.0.to_string(),
                     response: response,
+                    tls: self.tls,
                 })
             } else {
                 None
@@ -318,6 +323,7 @@ mod V2 {
         vhost: String,
         port: String,
         pub response: HttpResponse,
+        tls: bool,
     }
 
     impl ToSplunk for ProcessedHttpRequest {
@@ -336,6 +342,12 @@ mod V2 {
         fn source(&self) -> String;
 
         fn sourcetype(&self) -> String;
+    }
+
+    #[derive(Debug, Clone)]
+    struct Protocol<'a> {
+        port: &'a Port,
+        tls: bool,
     }
 
     impl HostResult {
@@ -359,11 +371,14 @@ mod V2 {
             self.services.iter().map(|service| &service.port)
         }
 
-        pub fn ports_http_https(&self) -> impl Iterator<Item = &Port> {
+        pub fn ports_http_https(&self) -> impl Iterator<Item = Protocol> {
             self.services
                 .iter()
                 .filter(|service| service.extended_service_name.contains("HTTP"))
-                .map(|service| &service.port)
+                .map(|service| Protocol {
+                    port: &service.port,
+                    tls: service.tls.is_some(),
+                })
         }
 
         pub fn tls_names(&self) -> impl Iterator<Item = &VHost> {
@@ -375,7 +390,7 @@ mod V2 {
 
         pub fn all_http_ports_all_virtual_hosts_combo(
             &self,
-        ) -> impl Iterator<Item = (&VHost, &Port)> {
+        ) -> impl Iterator<Item = (&VHost, Protocol)> {
             self.all_names()
                 .cartesian_product(self.ports_http_https().collect::<Vec<_>>())
         }
@@ -384,11 +399,14 @@ mod V2 {
             &self,
         ) -> impl Iterator<Item = PendingHttpRequest> {
             self.all_http_ports_all_virtual_hosts_combo()
-                .map(|(vhost, port)| PendingHttpRequest {
+                .map(|(vhost, protocol)| PendingHttpRequest {
                     ip: &self.ip,
                     vhost,
-                    port: port,
-                    request: self.http_request(port, vhost).boxed(),
+                    port: protocol.port,
+                    request: self
+                        .http_request(protocol.port, vhost, protocol.tls)
+                        .boxed(),
+                    tls: protocol.tls,
                 })
         }
 
@@ -399,7 +417,12 @@ mod V2 {
             pending_requests.map(|request| request.run_request())
         }
 
-        async fn http_request(&self, port: &Port, virtual_host: &VHost) -> Result<HttpResponse> {
+        async fn http_request(
+            &self,
+            port: &Port,
+            virtual_host: &VHost,
+            tls: bool,
+        ) -> Result<HttpResponse> {
             let socket: SocketAddr = format!("{}:{}", self.ip.0, port.0).parse()?;
             let client = reqwest::ClientBuilder::new()
                 .resolve(virtual_host.0.as_str(), socket)
@@ -407,8 +430,8 @@ mod V2 {
                 .connect_timeout(Duration::from_secs(3))
                 .timeout(Duration::from_secs(5))
                 .build()?;
-
-            let url = format!("http://{}:{}/", virtual_host.0, port.0);
+            let protocol = if tls { "https" } else { "http" };
+            let url = format!("{}://{}:{}/", protocol, virtual_host.0, port.0);
             let response = client.get(&url).send().await?;
             let headers = response
                 .headers()
