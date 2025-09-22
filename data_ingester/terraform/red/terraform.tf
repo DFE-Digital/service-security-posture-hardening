@@ -33,6 +33,7 @@ locals {
     "0870054a-44a7-4ddf-af8d-e48276f81df4",
     "14b985a0-2abe-4844-b1ac-82ca64943724",
     "b7ecf1ae-c14f-4be8-a8d1-db7b5157d5d9",
+    "413963da-47c3-4a68-8e6c-0ac529eadd3c",
   ] # 7e53 = GitHub Actions - TODO; check if still required
 }
 
