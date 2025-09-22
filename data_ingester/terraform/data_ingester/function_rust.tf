@@ -23,12 +23,14 @@ resource "azurerm_linux_function_app" "SSPHP_rust" {
   service_plan_id            = azurerm_service_plan.SSPHP_rust.id
   enabled                    = true
   builtin_logging_enabled    = false
+  https_only                 = true
 
   identity {
     type = "SystemAssigned"
   }
 
   site_config {
+    minimum_tls_version        = "1.2"
     cors {
       allowed_origins     = ["https://portal.azure.com", ]
       support_credentials = true

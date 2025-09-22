@@ -6,7 +6,7 @@ resource "azurerm_key_vault" "SSPHP" {
   resource_group_name             = azurerm_resource_group.tfstate.name
   tags                            = var.tags
   tenant_id                       = data.azurerm_client_config.current.tenant_id
-  soft_delete_retention_days      = 7
+  soft_delete_retention_days      = 90
   purge_protection_enabled        = true
   enabled_for_template_deployment = true
   sku_name                        = "standard"
