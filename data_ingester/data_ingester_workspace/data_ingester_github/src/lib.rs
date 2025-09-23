@@ -350,7 +350,13 @@ impl OctocrabGit {
         self.get_collection(&uri).await
     }
 
-    /// Get Collaborators for Repo
+    /// Get Dependency Graph
+    pub(crate) async fn repo_dependency_graph(&self, repo: &str) -> Result<GithubResponses> {
+        let uri = format!("/repos/{repo}/dependency-graph/sbom");
+        self.get_collection(&uri).await
+    }
+
+    /// Get Teams for Repo
     pub(crate) async fn repo_teams(&self, repo: &str) -> Result<GithubResponses> {
         let uri = format!("/repos/{repo}/teams");
         self.get_collection(&uri).await
@@ -1112,6 +1118,28 @@ mod test {
         }
         Ok(())
     }
+
+
+    /// Test repo dependency graph
+    #[tokio::test]
+    async fn test_repo_dependency_graph() -> Result<()> {
+        let client = TestClient::new().await;
+        for repo in client.repos().iter() {
+            let repo_name = client.repo_name(&repo.name);
+            let dependency_graph = client
+                .client
+                .repo_repo_dependency_graph(&repo_name, &workflows)
+                .await?;
+            let hec_events = (&dependency_graph)
+                .to_hec_events()
+                .context("Convert SarifHec to HecEvents")?;
+
+            client.splunk.send_batch(hec_events).await?;
+        }
+        Ok(())
+    }
+
+
 
     #[tokio::test]
     async fn test_repo_actions_list_workflow_runs() -> Result<()> {

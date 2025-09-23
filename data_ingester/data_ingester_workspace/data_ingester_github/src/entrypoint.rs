@@ -186,6 +186,13 @@ async fn github_collect_installation_org(
         )
         .await;
 
+        let _repo_dependency_graph = try_collect_send(
+            &format!("Dependency Graph for {repo_name}"),
+            github_client.repo_dependency_graph(&repo_name),
+            &splunk,
+        )
+        .await;
+
         let _repo_teams = try_collect_send(
             &format!("Teams for {repo_name}"),
             github_client.repo_teams(&repo_name),
