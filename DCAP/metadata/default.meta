@@ -2,7 +2,7 @@
 {% if environment=="_DEV" %}
 access = read : [ dfe_ssphp_service_power, admin, sc_admin ], write : [ admin, sc_admin ]
 {% else %}
-access = read : [ ssphp_api_search, dfe_ssphp_service_power, dfe_ssphp_service_user_593, dfe_ssphp_service_user_614, dfe_ssphp_service_user_771, dfe_ssphp_service_user_562, dfe_ssphp_service_user_s184, power, admin, sc_admin, dfe_ssphp_service_user_metrics, ssphp_get_qualys_cves, dfe_ssphp_service_user_aad, dfe_ssphp_service_user_aws, dfe_ssphp_service_user_azure, dfe_ssphp_service_user_m365, dfe_ssphp_service_user_smt ], write : [ admin, sc_admin ]
+access = read : [ dfe_ssphp_service_user_562, dfe_ssphp_service_user_593, dfe_ssphp_service_user_614, dfe_ssphp_service_user_771, dfe_ssphp_service_user_968, dfe_ssphp_service_user_s184, dfe_ssphp_service_user_metrics, ssphp_get_qualys_cves, dfe_ssphp_service_user_aad, dfe_ssphp_service_user_aws, dfe_ssphp_service_user_azure, dfe_ssphp_service_user_m365, dfe_ssphp_service_user_smt, ssphp_api_search, power, admin, sc_admin, dfe_ssphp_service_power ], write : [ admin, sc_admin ]
 {% endif %}  
 
 [lookups]
