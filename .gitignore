@@ -25,3 +25,4 @@ rustc-ice*.txt
 *.profraw
 *.zip
 **~$*.xlsx
+outfiles
