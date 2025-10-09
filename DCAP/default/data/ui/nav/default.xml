@@ -15,7 +15,6 @@
   <collection label="DfE Digital Services" >
     <a href="ssphp_dfe_service_portfolio_overview">Portfolio Overview</a>
     <a href="ssphp_dfe_service_overview">Service Overview</a>
-    <a href="ssphp_dfe_service_posture">Service Posture</a>
   </collection>
 
 {% if environment=="_DEV" %}
