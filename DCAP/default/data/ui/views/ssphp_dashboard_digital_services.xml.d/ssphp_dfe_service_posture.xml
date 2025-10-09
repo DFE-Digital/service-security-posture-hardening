@@ -1137,7 +1137,7 @@ $tkn_category$
       <table>
         <search>
           <query>
-| loadjob savedsearch="ssphp_app_account:DCAP_DEV:ssphp_create_dashboard_dataset_service_DEV"
+| loadjob savedsearch="ssphp_app_account:DCAP{{environment}}:ssphp_create_dashboard_dataset_service{{environment}}"
 | eval ssphp.score.score=mvindex(split('ssphp.score.score',"|"),0),
        ssphp.score.compliance_status=mvindex(split('ssphp.score.compliance_status',"|"),0)
 
