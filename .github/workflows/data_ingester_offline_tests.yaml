@@ -7,47 +7,153 @@ on:
       - '!data_ingester/terraform/infrastructure_for_test/**'
   workflow_dispatch:
 
-jobs:
-  build:
+env:
+  RUST_VERSION: "nightly-2025-10-5"
 
+# permissions:
+#   actions: read|write|none
+#   attestations: read|write|none
+#   checks: read|write|none
+#   contents: read
+#   deployments: read|write|none
+#   id-token: write
+#   iessues: read|write|none
+#   nmodels: read|none
+#   discussions: read|write|none
+#   packages: read|write|none
+#   pages: write
+#   pull-requests: read|write|none
+#   security-events: read|write|none
+#   statuses: read|write|none
+
+jobs:
+  audit:
     runs-on: ubuntu-latest
 
     steps:
       - name: checkout
         uses: actions/checkout@v4
 
-      - uses: awalsh128/cache-apt-pkgs-action@v1
-        with:
-          packages: musl-tools
-          version: 1.0
-
       - name: toolchain
+        id: toolchain
         uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: nightly-2025-03-23
+          toolchain: nightly-2025-10-5
           targets: x86_64-unknown-linux-musl
-          components: rust-src, clippy
 
       - name: Cache build artifacts
         uses: actions/cache@v4
         with:
           path: |
-            ~/.cargo/registry
-            ~/.cargo/git
+            ~/.cargo
             ${{ github.workspace }}/data_ingester/data_ingester_workspace/target
-          key: cache-rust-target-${{steps.toolchain.outputs.name}}-${{ hashFiles('${{ github.workspace }}/data_ingester/data_ingester_workspace/Cargo.lock') }}
+          key: cargo_audit-${{ steps.toolchain.outputs.name}} }}
 
       - name: cargo audit
         run: cargo install cargo-audit; cd data_ingester/data_ingester_workspace; cargo audit
 
+  formatting:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+
+      - name: toolchain
+        id: toolchain
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: nightly-2025-10-5
+          targets: x86_64-unknown-linux-musl
+          components: rust-fmt
+
       - name: Cache build artifacts
         uses: actions/cache@v4
         with:
           path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            data_ingester/data_ingester_workspace/target
-          key: cache-rust-target-${{ hashFiles('data_ingester/data_ingester_workspace/Cargo.lock') }}
+            ~/.cargo
+            ${{ github.workspace }}/data_ingester/data_ingester_workspace/target
+          key: cargo-fmt-${{ steps.toolchain.outputs.name}}-${{ hashFiles('data_ingester/data_ingester_workspace/Cargo.lock') }}
 
-      - name: cargo build
+      - name: cargo fmt
+        run: cd data_ingester/data_ingester_workspace; cargo fmt --check
+
+  clippy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+
+      - name: toolchain
+        id: toolchain
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: nightly-2025-10-5
+          targets: x86_64-unknown-linux-musl
+          components: clippy
+
+      - name: Cache build artifacts
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo
+            ${{ github.workspace }}/data_ingester/data_ingester_workspace/target
+          key: cargo-clippy-${{ steps.toolchain.outputs.name}}-${{ hashFiles('data_ingester/data_ingester_workspace/Cargo.lock') }}
+
+      - name: cargo clippy
+        run: cd data_ingester/data_ingester_workspace; cargo clippy
+
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+
+      - name: toolchain
+        id: toolchain
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: nightly-2025-10-5
+          targets: x86_64-unknown-linux-musl
+
+      - name: Cache build artifacts
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo
+            ${{ github.workspace }}/data_ingester/data_ingester_workspace/target
+          key: cargo_test-${{ steps.toolchain.outputs.name}}-${{ hashFiles('data_ingester/data_ingester_workspace/Cargo.lock') }}
+
+      - name: cargo test
         run: cd data_ingester/data_ingester_workspace; cargo test
+
+  coverage:
+    name: Generate Code coverage metrics
+    runs-on: ubuntu-latest
+    env:
+      CARGO_TERM_COLOR: always
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: toolchain
+        id: toolchain
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: nightly-2025-10-5
+          targets: x86_64-unknown-linux-musl
+
+      - name: Cache build artifacts
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo
+            ${{ github.workspace }}/data_ingester/data_ingester_workspace/target
+          key: cargo_llvm_cov-${{ steps.toolchain.outputs.name}}-${{ hashFiles('data_ingester/data_ingester_workspace/Cargo.lock') }}
+
+      - name: Install cargo-llvm-cov
+        run: cargo install cargo-llvm-cov --locked
+
+      - name: Generate code coverage
+        run: cd data_ingester/data_ingester_workspace; cargo llvm-cov --workspace --html --output-dir coverage
