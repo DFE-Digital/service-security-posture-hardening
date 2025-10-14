@@ -81,6 +81,44 @@ jobs:
       - name: cargo fmt
         run: cd data_ingester/data_ingester_workspace; cargo fmt --check
 
+  terraform_validate_red:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+
+      - name: Deploy terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.9.5
+
+      - name: Terraform version
+        run: terraform -version
+
+        # Terraform
+      - name: Run terraform
+        run: cd data_ingester/terraform/red; terraform init -backend=false; terraform validate
+
+  terraform_fmt:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+
+      - name: Deploy terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.9.5
+
+      - name: Terraform version
+        run: terraform -version
+
+        # Terraform
+      - name: Run terraform
+        run: cd data_ingester/terraform; terraform fmt -check -recursive .
+
   clippy:
     runs-on: ubuntu-latest
 
