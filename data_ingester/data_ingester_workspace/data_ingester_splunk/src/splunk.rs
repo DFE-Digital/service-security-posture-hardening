@@ -252,6 +252,7 @@ unsafe impl Sync for Splunk {}
 // pub(crate) struct Message {
 //     pub event: String,
 // }
+//
 
 impl SplunkTrait for Splunk {
     fn new(host: &str, token: &str, hec_acknowledgment: bool) -> Result<Self>
