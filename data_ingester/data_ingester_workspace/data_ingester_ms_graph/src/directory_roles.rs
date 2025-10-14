@@ -86,7 +86,7 @@ fn directory_role_ids() {
         members: None,
         is_privileged: None,
     };
-    let roles = vec![role1, role2];
+    let roles = [role1, role2];
     let roles = roles.iter().collect::<DirectoryRoles>();
     assert_eq!(roles.ids(), ["id_1", "id_2"]);
 }

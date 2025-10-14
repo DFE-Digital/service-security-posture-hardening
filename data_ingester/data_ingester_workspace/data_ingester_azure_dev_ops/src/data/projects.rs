@@ -27,37 +27,39 @@ pub struct Project {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
 pub enum ProjectVisibility {
     /// The project is only visible to users with explicit access.
-    private,
+    Private,
     /// The project is visible to all.
     #[default]
-    public,
+    Public,
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub enum ProjectState {
     /// Project is in the process of being deleted.
-    deleting,
+    Deleting,
 
     /// Project is in the process of being created.
     #[default]
-    new,
+    New,
 
     /// Project is completely created and ready to use.
-    wellFormed,
+    WellFormed,
 
     /// Project has been queued for creation, but the process has not yet started.
-    createPending,
+    CreatePending,
 
     /// All projects regardless of state except Deleted.
-    all,
+    All,
 
     /// Project has not been changed.
-    unchanged,
+    Unchanged,
 
     /// Project has been deleted.
-    deleted,
+    Deleted,
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]

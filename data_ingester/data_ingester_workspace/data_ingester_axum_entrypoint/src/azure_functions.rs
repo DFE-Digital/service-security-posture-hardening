@@ -38,7 +38,7 @@ pub(crate) async fn start_server(tx: Sender<()>) -> Result<()> {
 
     let app_state = AppState::new().await.context("Building App State")?;
 
-    set_ssphp_run("default")?;
+    let _ = set_ssphp_run("default")?;
     start_splunk_tracing(
         app_state.splunk.clone(),
         "data_ingester_rust",

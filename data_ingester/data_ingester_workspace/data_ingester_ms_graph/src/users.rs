@@ -130,7 +130,7 @@ impl User<'_> {
         }
     }
 
-    pub fn groups(&self) -> Groups {
+    pub fn groups(&self) -> Groups<'_> {
         self.transitive_member_of
             .as_ref()
             .map(|tmo| {
@@ -144,7 +144,7 @@ impl User<'_> {
             .unwrap_or_default()
     }
 
-    pub fn roles(&self) -> DirectoryRoles {
+    pub fn roles(&self) -> DirectoryRoles<'_> {
         self.transitive_member_of
             .as_ref()
             .map(|tmo| {

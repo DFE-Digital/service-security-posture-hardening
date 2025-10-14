@@ -44,10 +44,10 @@ pub(crate) struct HecAckQueryResponse {
     pub(crate) acks: HashMap<String, bool>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Default)]
-pub(crate) struct HecAckQueryResponseParsed {
-    pub(crate) acks: HashMap<u32, bool>,
-}
+// #[derive(Debug, Serialize, Deserialize, Default)]
+// pub(crate) struct HecAckQueryResponseParsed {
+//     pub(crate) acks: HashMap<u32, bool>,
+// }
 
 /// An async task to send messages to Splunk.
 /// Listens on a channel for `HecEvent`s, serializes them, sends them

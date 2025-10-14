@@ -5,9 +5,9 @@ use crate::{
     azure_dev_ops_client_oauth::AzureDevOpsClientOauth,
     azure_dev_ops_client_pat::AzureDevOpsClientPat,
     data::{
-        git_policy_configuration::PolicyConfigurations, identities::Identities, organization,
-        projects::Projects, repositories::Repositories, repository_policy_join::RepoPolicyJoins,
-        security_acl::Acls, security_namespaces::SecurityNamespaces, stats::Stats,
+        git_policy_configuration::PolicyConfigurations, identities::Identities, projects::Projects,
+        repositories::Repositories, repository_policy_join::RepoPolicyJoins, security_acl::Acls,
+        security_namespaces::SecurityNamespaces, stats::Stats,
     },
     SSPHP_RUN_KEY,
 };
@@ -19,7 +19,7 @@ use std::sync::Arc;
 use tracing::{error, info, trace};
 
 pub async fn entrypoint(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
-    set_ssphp_run(SSPHP_RUN_KEY)?;
+    let _ = set_ssphp_run(SSPHP_RUN_KEY)?;
     info!("Starting Azure DevOps ADO collection");
 
     if let (Some(client_id), Some(client_secret), Some(tenant_id)) = (
@@ -327,7 +327,7 @@ async fn collect_organization<A: AzureDevOpsClientMethods, O: AsRef<str>>(
 
             AdoToSplunk::from_metadata(&repos.metadata)
                 .event(&repo)
-                .send(&splunk, &repo_stats_name)
+                .send(&splunk, repo_stats_name)
                 .await?;
         }
 
@@ -358,7 +358,7 @@ async fn collect_security_acls(
         let namespace_id = namespace.namespace_id.as_str();
         let name = &format!("Security Access control lists {organization}/{namespace_id}");
         let security_access_control_list = try_collect_send(
-            &name,
+            name,
             ado.security_access_control_lists(organization, namespace_id),
             splunk,
         )
@@ -372,7 +372,7 @@ async fn collect_security_acls(
 
             let _ = AdoToSplunk::from_metadata(&metadata)
                 .events(&acls.inner)
-                .send(splunk, &name)
+                .send(splunk, name)
                 .await;
 
             security_access_control_lists.extend(acls);

@@ -2,19 +2,20 @@ use serde::Serialize;
 
 use crate::aws_trail::date_time_def;
 use data_ingester_splunk::splunk::ToHecEvents;
-#[derive(::std::clone::Clone, ::std::cmp::PartialEq, ::std::fmt::Debug, Serialize)]
-pub struct DescribeKeyOutput {
-    /// <p>Metadata associated with the key.</p>
-    pub key_metadata: ::std::option::Option<KeyMetadata>,
-}
 
-impl From<aws_sdk_kms::operation::describe_key::DescribeKeyOutput> for DescribeKeyOutput {
-    fn from(value: aws_sdk_kms::operation::describe_key::DescribeKeyOutput) -> Self {
-        Self {
-            key_metadata: value.key_metadata.map(|km| km.into()),
-        }
-    }
-}
+// #[derive(::std::clone::Clone, ::std::cmp::PartialEq, ::std::fmt::Debug, Serialize)]
+// pub struct DescribeKeyOutput {
+//     /// <p>Metadata associated with the key.</p>
+//     pub key_metadata: ::std::option::Option<KeyMetadata>,
+// }
+
+// impl From<aws_sdk_kms::operation::describe_key::DescribeKeyOutput> for DescribeKeyOutput {
+//     fn from(value: aws_sdk_kms::operation::describe_key::DescribeKeyOutput) -> Self {
+//         Self {
+//             key_metadata: value.key_metadata.map(|km| km.into()),
+//         }
+//     }
+// }
 
 #[derive(::std::clone::Clone, ::std::cmp::PartialEq, ::std::fmt::Debug, Serialize)]
 pub struct KeyMetadatas {

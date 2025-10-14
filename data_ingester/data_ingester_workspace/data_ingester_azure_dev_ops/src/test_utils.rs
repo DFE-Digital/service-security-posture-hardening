@@ -7,8 +7,6 @@ use crate::{
 #[cfg(feature = "live_tests")]
 use anyhow::Context;
 use anyhow::Result;
-#[cfg(feature = "live_tests")]
-use data_ingester_splunk::splunk::Splunk;
 use data_ingester_splunk::splunk::{HecEvent, SplunkTrait};
 #[cfg(feature = "live_tests")]
 use data_ingester_supporting::keyvault::get_keyvault_secrets;
@@ -90,8 +88,32 @@ impl AzureDevOpsClient for AzureDevOpsTestClient {
 
         let response = match std::fs::read_to_string(&storage_key) {
             Ok(test_json) => test_json,
+
+            #[cfg(not(feature = "live_tests"))]
             Err(err) => {
-                #[cfg(feature = "live_tests")]
+                // #[cfg(feature = "live_tests")]
+                // let test_json = {
+                //     // Get real data from the API
+                //     let ado_response = self
+                //         .real_client
+                //         .get::<T>(metadata)
+                //         .await
+                //         .expect("request to complete");
+
+                //     // Save the data to the test fixtures
+                //     let json = serde_json::to_string(&ado_response)
+                //         .expect("ado_response should serialize");
+                //     std::fs::write(&storage_key, json.as_bytes()).expect("file should be written");
+
+                //     json
+                // };
+
+                let error = format!("Unable to read file {storage_key}: {}", &err);
+                panic!("{}", error);
+            }
+
+            #[cfg(feature = "live_tests")]
+            Err(_err) => {
                 let test_json = {
                     // Get real data from the API
                     let ado_response = self
@@ -108,12 +130,6 @@ impl AzureDevOpsClient for AzureDevOpsTestClient {
                     json
                 };
 
-                #[cfg(not(feature = "live_tests"))]
-                let error = format!("Unable to read file {storage_key}: {}", &err);
-                #[cfg(not(feature = "live_tests"))]
-                panic!("{}", error);
-
-                #[cfg(feature = "live_tests")]
                 test_json
             }
         };

@@ -33,7 +33,7 @@ impl State {
     }
 
     /// Access resources with filtering
-    pub fn resources(&self) -> ResourcesFilter {
+    pub fn resources(&self) -> ResourcesFilter<'_, '_> {
         ResourcesFilter {
             inner: self.resources.as_slice(),
             provider: vec![],

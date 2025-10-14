@@ -248,10 +248,10 @@ pub struct Splunk {
 unsafe impl Send for Splunk {}
 unsafe impl Sync for Splunk {}
 
-#[derive(Debug, Serialize, Deserialize, Default)]
-pub(crate) struct Message {
-    pub event: String,
-}
+// #[derive(Debug, Serialize, Deserialize, Default)]
+// pub(crate) struct Message {
+//     pub event: String,
+// }
 
 impl SplunkTrait for Splunk {
     fn new(host: &str, token: &str, hec_acknowledgment: bool) -> Result<Self>

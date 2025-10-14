@@ -14,7 +14,7 @@ struct Cve {
 }
 
 pub async fn qualys_qvs(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
-    set_ssphp_run(crate::SSPHP_RUN_KEY)?;
+    let _ = set_ssphp_run(crate::SSPHP_RUN_KEY)?;
 
     let mut search_client = SplunkApiClient::new_from_secrets(secrets.clone())?.set_app("DCAP");
 

@@ -2,7 +2,10 @@ use data_ingester_splunk::splunk::ToHecEvents;
 use serde::ser::SerializeMap;
 use serde::Deserialize;
 use serde::Serialize;
-use serde::__private::ser::FlatMapSerializer;
+// Serde are using the patch version to make __private$$ different on every release.
+// Replace 228 with the current serde version.
+// https://github.com/serde-rs/serde/pull/2980/commits/cbe98a98883a1d6e292a4feeb1e12e1ea7feccdd
+use serde::__private228::ser::FlatMapSerializer;
 use serde::ser::Serializer;
 use std::collections::HashMap;
 
@@ -140,7 +143,7 @@ mod test {
         for (id, qv) in qvs.iter() {
             match id.as_str() {
                 "CVE-2021-36765" => {
-                    let expected_data = vec![
+                    let expected_data = [
                         ("id", json!("CVE-2021-36765")),
                         ("idType", json!("CVE")),
                         ("qvs", json!("28")),
@@ -155,7 +158,7 @@ mod test {
                     }
                 }
                 "CVE-2021-36798" => {
-                    let expected_data = vec![
+                    let expected_data = [
                         ("id", json!("CVE-2021-36798")),
                         ("idType", json!("CVE")),
                         ("qvs", json!("78")),

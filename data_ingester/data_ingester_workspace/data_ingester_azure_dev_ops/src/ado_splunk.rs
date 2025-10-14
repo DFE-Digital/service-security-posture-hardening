@@ -14,7 +14,7 @@ use valuable::Valuable;
 pub(crate) struct AdoToSplunk();
 
 impl AdoToSplunk {
-    pub(crate) fn from_metadata(metadata: &AdoMetadata) -> AdoToSplunkBuilder {
+    pub(crate) fn from_metadata(metadata: &AdoMetadata) -> AdoToSplunkBuilder<'_> {
         AdoToSplunkBuilder { metadata }
     }
 }

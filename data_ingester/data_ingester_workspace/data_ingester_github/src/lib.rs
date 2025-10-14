@@ -837,6 +837,7 @@ mod test {
     use std::{borrow::Borrow, env};
 
     use anyhow::{Context, Result};
+    use data_ingester_splunk::splunk::SplunkTrait;
     use data_ingester_splunk::splunk::{Splunk, ToHecEvents};
     use data_ingester_supporting::keyvault::get_keyvault_secrets;
     use futures::future::{BoxFuture, FutureExt};
@@ -1119,17 +1120,13 @@ mod test {
         Ok(())
     }
 
-
     /// Test repo dependency graph
     #[tokio::test]
     async fn test_repo_dependency_graph() -> Result<()> {
         let client = TestClient::new().await;
         for repo in client.repos().iter() {
             let repo_name = client.repo_name(&repo.name);
-            let dependency_graph = client
-                .client
-                .repo_repo_dependency_graph(&repo_name, &workflows)
-                .await?;
+            let dependency_graph = client.client.repo_dependency_graph(&repo_name).await?;
             let hec_events = (&dependency_graph)
                 .to_hec_events()
                 .context("Convert SarifHec to HecEvents")?;
@@ -1138,8 +1135,6 @@ mod test {
         }
         Ok(())
     }
-
-
 
     #[tokio::test]
     async fn test_repo_actions_list_workflow_runs() -> Result<()> {

@@ -146,6 +146,7 @@ mod live_tests {
     use crate::{ms_graph::MsGraph, msgraph_data::load_m365_toml};
     use anyhow::{Context, Result};
     use data_ingester_splunk::splunk::Splunk;
+    use data_ingester_splunk::splunk::SplunkTrait;
     use data_ingester_supporting::keyvault::get_keyvault_secrets;
 
     #[tokio::test]

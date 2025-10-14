@@ -21,7 +21,6 @@ use crate::powershell::run_powershell_get_email_tenant_settings;
 use crate::powershell::run_powershell_get_eop_protection_policy_rule;
 use crate::powershell::run_powershell_get_hosted_content_filter_policy;
 use crate::powershell::run_powershell_get_hosted_outbound_spam_filter_policy;
-use crate::powershell::run_powershell_get_mailbox;
 use crate::powershell::run_powershell_get_malware_filter_policy;
 use crate::powershell::run_powershell_get_management_role_assignment;
 use crate::powershell::run_powershell_get_organization_config;
@@ -35,7 +34,7 @@ use crate::powershell::run_powershell_get_transport_rule;
 use crate::powershell::run_powershell_get_user_vip;
 
 pub async fn powershell(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
-    set_ssphp_run(crate::SSPHP_RUN_KEY)?;
+    let _ = set_ssphp_run(crate::SSPHP_RUN_KEY)?;
 
     info!("Starting M365 Powershell collection");
     info!("GIT_HASH: {}", env!("GIT_HASH"));
