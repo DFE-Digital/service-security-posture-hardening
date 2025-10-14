@@ -11,7 +11,7 @@ on:
   workflow_dispatch:
 
 env:
-  RUST_VERSION: "nightly-2025-07-01"
+  RUST_VERSION: "nightly-2025-10-5"
 
 permissions:
   # actions: read|write|none
@@ -41,7 +41,7 @@ jobs:
         id: toolchain
         uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: nightly-2025-07-01
+          toolchain: nightly-2025-10-5
           targets: x86_64-unknown-linux-musl
 
       - name: Cache build artifacts
@@ -66,7 +66,7 @@ jobs:
         id: toolchain
         uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: nightly-2025-07-01
+          toolchain: nightly-2025-10-5
           targets: x86_64-unknown-linux-musl
           components: rust-fmt
 
@@ -92,7 +92,7 @@ jobs:
         id: toolchain
         uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: nightly-2025-07-01
+          toolchain: nightly-2025-10-5
           targets: x86_64-unknown-linux-musl
           components: clippy
 
@@ -118,7 +118,7 @@ jobs:
         id: toolchain
         uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: nightly-2025-07-01
+          toolchain: nightly-2025-10-5
           targets: x86_64-unknown-linux-musl
 
       - name: Cache build artifacts
@@ -144,7 +144,7 @@ jobs:
         id: toolchain
         uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: nightly-2025-07-01
+          toolchain: nightly-2025-10-5
           targets: x86_64-unknown-linux-musl
 
       - name: Cache build artifacts
@@ -249,7 +249,7 @@ jobs:
         id: toolchain
         uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: nightly-2025-07-01
+          toolchain: nightly-2025-10-5
           targets: x86_64-unknown-linux-musl
           components: rust-src
 
