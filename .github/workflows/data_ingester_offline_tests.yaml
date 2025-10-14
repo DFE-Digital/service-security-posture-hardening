@@ -3,8 +3,7 @@ name: Data Ingester Offline tests
 on:
   pull_request:
     paths:
-      - 'data_ingester/**'
-      - '!data_ingester/terraform/infrastructure_for_test/**'
+      - 'data_ingester/data_ingester_workspace/**'
   workflow_dispatch:
 
 env:
