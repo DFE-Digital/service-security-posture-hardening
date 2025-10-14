@@ -17,7 +17,6 @@ use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use serde_json::Value;
 use std::iter;
 use std::{collections::HashMap, sync::Arc};
-use thiserror::Error;
 use tokio::time::{sleep, Duration};
 use tracing::{error, warn};
 use url::Url;
@@ -581,6 +580,7 @@ pub(crate) mod live_tests {
 
     use crate::azure_rest::Subscriptions;
     use anyhow::{Context, Result};
+    use data_ingester_splunk::splunk::SplunkTrait;
     use data_ingester_splunk::splunk::{set_ssphp_run, Splunk, ToHecEvents};
     use data_ingester_supporting::keyvault::get_keyvault_secrets;
 
@@ -599,7 +599,7 @@ pub(crate) mod live_tests {
             true,
         )?;
 
-        set_ssphp_run("default")?;
+        let _ = set_ssphp_run("default")?;
 
         let azure_rest = AzureRest::new(
             secrets

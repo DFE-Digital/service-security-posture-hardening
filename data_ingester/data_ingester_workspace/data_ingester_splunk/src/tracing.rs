@@ -70,6 +70,7 @@ mod test {
     use crate::splunk::Splunk;
 
     use super::SplunkLayer;
+    use crate::splunk::SplunkTrait;
     use anyhow::{Context, Result};
     use data_ingester_supporting::keyvault::get_keyvault_secrets;
     use tracing::info;
@@ -101,12 +102,6 @@ mod test {
 
         info!("This will be logged to stdout SPLUNK");
         info!("message");
-        Ok(())
-    }
-
-    #[tracing::instrument]
-    fn foo(n: usize) -> Result<()> {
-        info!("inside foo");
         Ok(())
     }
 }

@@ -11,7 +11,7 @@ use tracing::{error, info};
 
 /// Public entry point
 pub async fn github_octocrab_entrypoint(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
-    set_ssphp_run(crate::SSPHP_RUN_KEY)?;
+    let _ = set_ssphp_run(crate::SSPHP_RUN_KEY)?;
 
     info!("Starting GitHub collection");
 
@@ -338,7 +338,7 @@ pub async fn github_set_custom_properties_entrypoint(
     secrets: Arc<Secrets>,
     splunk: Arc<Splunk>,
 ) -> Result<()> {
-    set_ssphp_run(crate::SSPHP_RUN_KEY)?;
+    let _ = set_ssphp_run(crate::SSPHP_RUN_KEY)?;
     info!("Updating GitHub custom properties");
 
     let github_app = secrets
@@ -447,6 +447,8 @@ mod live_tests {
     use crate::entrypoint::github_set_custom_properties_entrypoint;
     use crate::OctocrabGit;
     use data_ingester_financial_business_partners::validator::Validator;
+    use data_ingester_splunk::splunk::SplunkTrait;
+
     use tracing::error;
 
     #[tokio::test]

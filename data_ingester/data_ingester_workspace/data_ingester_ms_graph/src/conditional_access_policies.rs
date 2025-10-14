@@ -93,7 +93,7 @@ impl ConditionalAccessPolicy {
         false
     }
 
-    pub fn to_user_conditional_access_policy(&self) -> UserConditionalAccessPolicy {
+    pub fn to_user_conditional_access_policy(&self) -> UserConditionalAccessPolicy<'_> {
         UserConditionalAccessPolicy {
             id: self.id.as_str(),
             display_name: self.display_name.as_deref(),

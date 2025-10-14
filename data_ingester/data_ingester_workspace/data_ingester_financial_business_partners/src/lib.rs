@@ -84,7 +84,7 @@ async fn get_contact_details(secrets: Arc<Secrets>) -> Result<Vec<ContactDetails
 }
 
 pub async fn entrypoint(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
-    set_ssphp_run(SSPHP_RUN_KEY)?;
+    let _ = set_ssphp_run(SSPHP_RUN_KEY)?;
 
     let contact_details = get_contact_details(secrets)
         .await
@@ -305,7 +305,7 @@ mod live_tests {
         )
         .await
         .unwrap();
-        set_ssphp_run(crate::SSPHP_RUN_KEY)?;
+        let _ = set_ssphp_run(crate::SSPHP_RUN_KEY)?;
 
         let splunk = Splunk::new(
             secrets.splunk_host.as_ref().context("No value")?,

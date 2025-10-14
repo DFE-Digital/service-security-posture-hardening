@@ -1,4 +1,3 @@
-use data_ingester_splunk::splunk::ToHecEvents;
 use jiff::Timestamp;
 use serde::Deserialize;
 use serde::Serialize;
@@ -6,36 +5,36 @@ use serde::Serialize;
 use crate::ado_metadata::AdoMetadata;
 use crate::ado_metadata::AdoMetadataTrait;
 
-#[derive(Default, Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub(crate) struct RepoMostRecentCommit {
-    metadata: AdoMetadata,
-    // organization: String,
-    // project_id: String,
-    // repositor_id: String,
-    commit_date: String,
-    stat: Stat,
-}
+// #[derive(Default, Debug, Clone, Serialize, Deserialize)]
+// #[serde(rename_all = "camelCase")]
+// pub(crate) struct RepoMostRecentCommit {
+//     metadata: AdoMetadata,
+//     // organization: String,
+//     // project_id: String,
+//     // repositor_id: String,
+//     commit_date: String,
+//     stat: Stat,
+// }
 
-impl ToHecEvents for RepoMostRecentCommit {
-    type Item = Self;
+// impl ToHecEvents for RepoMostRecentCommit {
+//     type Item = Self;
 
-    fn source(&self) -> &str {
-        &self.metadata.source
-    }
+//     fn source(&self) -> &str {
+//         &self.metadata.source
+//     }
 
-    fn sourcetype(&self) -> &str {
-        "ADO"
-    }
+//     fn sourcetype(&self) -> &str {
+//         "ADO"
+//     }
 
-    fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
-        Box::new(std::iter::once(self))
-    }
+//     fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
+//         Box::new(std::iter::once(self))
+//     }
 
-    fn ssphp_run_key(&self) -> &str {
-        crate::SSPHP_RUN_KEY
-    }
-}
+//     fn ssphp_run_key(&self) -> &str {
+//         crate::SSPHP_RUN_KEY
+//     }
+// }
 
 pub(crate) struct Stats {
     stats: Vec<Stat>,

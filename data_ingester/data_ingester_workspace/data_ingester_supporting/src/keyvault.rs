@@ -3,7 +3,6 @@ use anyhow::{Context, Result};
 use azure_identity::DefaultAzureCredential;
 use azure_identity::TokenCredentialOptions;
 use azure_security_keyvault::prelude::KeyVaultGetSecretResponse;
-use azure_security_keyvault::prelude::KeyVaultGetSecretsResponse;
 use azure_security_keyvault::{KeyvaultClient, SecretClient};
 use base64::prelude::*;
 use futures::StreamExt;

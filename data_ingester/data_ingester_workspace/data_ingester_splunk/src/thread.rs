@@ -73,6 +73,7 @@ impl Drop for SplunkTask {
 #[cfg(feature = "live_tests")]
 #[cfg(test)]
 mod live_tests {
+    use crate::splunk::SplunkTrait;
     use crate::{
         splunk::{HecEvent, Splunk},
         thread::SplunkTask,

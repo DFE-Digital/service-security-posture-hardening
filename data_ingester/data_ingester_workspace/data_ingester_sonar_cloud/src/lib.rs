@@ -13,7 +13,7 @@ use tracing::info;
 pub static SSPHP_RUN_KEY: &str = "sonar_cloud";
 
 pub async fn entrypoint(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
-    set_ssphp_run(SSPHP_RUN_KEY)?;
+    let _ = set_ssphp_run(SSPHP_RUN_KEY)?;
     let sonar_api_key = secrets
         .sonar_api_key
         .as_ref()
@@ -150,6 +150,7 @@ mod test {
     use std::env;
 
     use anyhow::{Context, Result};
+    use data_ingester_splunk::splunk::SplunkTrait;
     use data_ingester_splunk::splunk::{Splunk, ToHecEvents};
     use data_ingester_supporting::keyvault::get_keyvault_secrets;
 

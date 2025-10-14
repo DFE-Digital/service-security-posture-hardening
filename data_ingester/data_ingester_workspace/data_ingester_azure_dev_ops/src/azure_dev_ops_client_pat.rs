@@ -4,7 +4,7 @@ use crate::ado_response::{AddAdoResponse, AdoPaging, AdoRateLimiting, AdoRespons
 use crate::data::organization::Organizations;
 use anyhow::Result;
 use serde::de::DeserializeOwned;
-use tracing::{error, info, trace};
+use tracing::{error, trace};
 
 pub(crate) struct AzureDevOpsClientPat {
     pub(crate) client: reqwest::Client,
@@ -57,7 +57,7 @@ impl AzureDevOpsClient for AzureDevOpsClientPat {
             } else {
                 format!(
                     "{}&$top=10000000&continuationToken=",
-                    collection.metadata.url().to_string()
+                    collection.metadata.url()
                 )
             };
             trace!(next_url=?next_url);

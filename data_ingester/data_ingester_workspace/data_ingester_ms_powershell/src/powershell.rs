@@ -13,7 +13,7 @@ async fn fetch_url(url: &str, file_name: &str) -> Result<()> {
     let response = reqwest::get(url).await?;
     let mut file = std::fs::File::create(file_name)?;
     let mut content = Cursor::new(response.bytes().await?);
-    std::io::copy(&mut content, &mut file)?;
+    let _ = std::io::copy(&mut content, &mut file)?;
     Ok(())
 }
 
@@ -1049,7 +1049,7 @@ mod test {
     async fn setup() -> Result<(Splunk, Secrets)> {
         let secrets = get_keyvault_secrets(&env::var("KEY_VAULT_NAME")?).await?;
 
-        set_ssphp_run("default")?;
+        let _ = set_ssphp_run("default")?;
 
         let splunk = Splunk::new(
             secrets.splunk_host.as_ref().context("No value")?,

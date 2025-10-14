@@ -1,6 +1,5 @@
 use serde::Deserialize;
 use serde::Serialize;
-use serde_json::Value;
 use tracing::error;
 
 use crate::ado_response::AdoResponse;
@@ -85,22 +84,22 @@ pub struct Settings {
     // pub settings_type: SettingsType,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub enum SettingsType {
-    Build(SettingsBuild),
-    Unknown(Value),
-}
+// #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+// #[serde(rename_all = "camelCase")]
+// pub enum SettingsType {
+//     Build(SettingsBuild),
+//     Unknown(Value),
+// }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct SettingsBuild {
-    pub build_definition_id: u32,
-    pub display_name: Option<String>,
-    pub manual_queue_only: bool,
-    pub queue_on_source_update_only: bool,
-    pub filename_patterns: Option<Vec<String>>,
-}
+// #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+// #[serde(rename_all = "camelCase")]
+// pub struct SettingsBuild {
+//     pub build_definition_id: u32,
+//     pub display_name: Option<String>,
+//     pub manual_queue_only: bool,
+//     pub queue_on_source_update_only: bool,
+//     pub filename_patterns: Option<Vec<String>>,
+// }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]

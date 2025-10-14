@@ -216,7 +216,7 @@ impl MsGraph {
         Ok(roles)
     }
 
-    pub async fn list_groups(&self) -> Result<Groups> {
+    pub async fn list_groups(&self) -> Result<Groups<'_>> {
         let mut stream = self
             .client
             .groups()
@@ -779,7 +779,7 @@ pub struct Group {
 }
 
 pub async fn m365(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
-    set_ssphp_run(crate::SSPHP_RUN_KEY)?;
+    let _ = set_ssphp_run(crate::SSPHP_RUN_KEY)?;
 
     info!("Starting M365 collection");
     info!("GIT_HASH: {}", env!("GIT_HASH"));
@@ -920,13 +920,14 @@ pub(crate) mod live_tests {
     use crate::users::UsersMap;
 
     use anyhow::{Context, Result};
+    use data_ingester_splunk::splunk::SplunkTrait;
     use data_ingester_splunk::splunk::{set_ssphp_run, Splunk, ToHecEvents};
     use data_ingester_supporting::keyvault::get_keyvault_secrets;
 
     pub async fn setup() -> Result<(Splunk, MsGraph)> {
         let secrets = get_keyvault_secrets(&env::var("KEY_VAULT_NAME")?).await?;
 
-        set_ssphp_run("default")?;
+        let _ = set_ssphp_run("default")?;
         let ms_graph = MsGraph::new(
             secrets
                 .azure_client_id

@@ -40,7 +40,7 @@ fn extract_threagile() -> Result<PathBuf> {
 }
 
 pub async fn threagile(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
-    set_ssphp_run(crate::SSPHP_RUN_KEY)?;
+    let _ = set_ssphp_run(crate::SSPHP_RUN_KEY)?;
     info!("Extracting Threagile bins");
     let threagile_path = extract_threagile()?;
 
@@ -132,6 +132,7 @@ mod test {
 
     use anyhow::{Context, Result};
     use data_ingester_splunk::splunk::Splunk;
+    use data_ingester_splunk::splunk::SplunkTrait;
     use tracing_subscriber::{layer::SubscriberExt, EnvFilter, Registry};
 
     #[tokio::test]

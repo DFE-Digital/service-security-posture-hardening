@@ -244,7 +244,7 @@ mod tests {
     #[allow(dead_code)]
     pub async fn setup() -> Result<Splunk> {
         let secrets = get_keyvault_secrets(&env::var("KEY_VAULT_NAME")?).await?;
-        set_ssphp_run("default")?;
+        let _ = set_ssphp_run("default")?;
         let splunk = Splunk::new(
             secrets.splunk_host.as_ref().context("No value")?,
             secrets.splunk_token.as_ref().context("No value")?,

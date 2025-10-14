@@ -86,8 +86,8 @@ impl From<aws_sdk_s3control::types::PublicAccessBlockConfiguration>
     }
 }
 
-#[derive(::std::clone::Clone, ::std::cmp::PartialEq, ::std::fmt::Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct GetPublicAccessBlocks {
-    pub inner: Vec<GetPublicAccessBlockOutput>,
-}
+// #[derive(::std::clone::Clone, ::std::cmp::PartialEq, ::std::fmt::Debug, Serialize)]
+// #[serde(rename_all = "camelCase")]
+// pub struct GetPublicAccessBlocks {
+//     pub inner: Vec<GetPublicAccessBlockOutput>,
+// }

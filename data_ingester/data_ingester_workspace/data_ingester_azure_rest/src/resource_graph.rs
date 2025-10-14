@@ -1,5 +1,4 @@
 use anyhow::{Context, Result};
-use async_recursion::async_recursion;
 use azure_core::auth::TokenCredential;
 use data_ingester_splunk::splunk::{get_ssphp_run, hec_stats, SplunkTrait};
 use data_ingester_splunk::splunk::{set_ssphp_run, Splunk, ToHecEvents};
@@ -11,11 +10,11 @@ use std::{
     sync::Arc,
 };
 use tokio::time::{Duration, Instant};
-use tracing::{error, info};
+use tracing::{error, info, warn};
 use valuable::Valuable;
 
 pub async fn azure_resource_graph(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
-    set_ssphp_run(crate::SSPHP_RUN_KEY)?;
+    let _ = set_ssphp_run(crate::SSPHP_RUN_KEY)?;
 
     info!(
         name = crate::SSPHP_RUN_KEY,
@@ -202,7 +201,16 @@ async fn make_request(
                             anyhow::bail!("Unknown BadRequest Error Type : {:?}", result);
                         };
 
-                        'bad_request: for bad_request_error in details {
+                        // The next for loop only iterates once, on
+                        // the first entry in details.  How often do
+                        // we get more than one error details? Should
+                        // this observe all errors, then decide on an
+                        // action?
+                        if details.len() > 1 {
+                            warn!( details=?details, details_len=details.len(), "");
+                        }
+                        #[allow(clippy::never_loop)]
+                        for bad_request_error in details {
                             match &bad_request_error.code {
                                 QueryErrorErrorDetailsCode::ResponsePayloadTooLarge => {
                                     error!(
@@ -406,10 +414,10 @@ fn test_json_into_resource_graph_response_error() {
     "message": "Please provide below info when asking for support"
   }
 }"#;
-    let obj: QueryError =
-        serde_json::from_str(&error_response).expect("JSON should parse into QueryError");
+    // let obj: QueryError =
+    //     serde_json::from_str(&error_response).expect("JSON should parse into QueryError");
     let obj: ResourceGraphResponse =
-        serde_json::from_str(&error_response).expect("JSON should parse into ResoureGraphResponse");
+        serde_json::from_str(error_response).expect("JSON should parse into ResoureGraphResponse");
     assert!(
         matches!(obj, ResourceGraphResponse::Error(_)),
         "JSON didn't parse into a ResourceGraphResponse::Error"
@@ -487,10 +495,7 @@ impl ToHecEvents for &ResourceGraphData {
     type Item = ResourceGraphDataInner;
 
     fn source(&self) -> &str {
-        self.source
-            .as_ref()
-            .map(|s| s.as_str())
-            .unwrap_or("NO_SOURCE_SET")
+        self.source.as_deref().unwrap_or("NO_SOURCE_SET")
     }
 
     fn sourcetype(&self) -> &str {
