@@ -68,7 +68,7 @@ jobs:
         with:
           toolchain: nightly-2025-10-14
           targets: x86_64-unknown-linux-musl
-          components: rust-fmt
+          components: rustfmt
 
       - name: Cache build artifacts
         uses: actions/cache@v4
@@ -314,7 +314,7 @@ jobs:
           compression-level: 9
 
   terraform_deploy:
-    needs: [audit, test, build]
+    needs: [audit, test, build, terraform_validate_red]
 
     runs-on: ubuntu-latest
 
