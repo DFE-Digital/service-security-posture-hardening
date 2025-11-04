@@ -1,11 +1,5 @@
-
 app = "DCAP"
 environment = ""
 version = ""
 splunk_user = "ssphp_app_account"
-
-[package_config]
-app = "DCAP"
-environment = ""
-version = ""
-splunk_user = "ssphp_app_account"
+app_version = "1.0.3237"
