@@ -10,6 +10,7 @@ require([
         canRender: function (cell) {
             //return true;
             return _(['state',
+                      'methodsRegistered',
                       'codeSecurityFeatures.dependencyScanningInjectionEnabled',
                       'codeSecurityFeatures.codeQLEnabled',
                       'codeSecurityFeatures.codeSecurityEnabled',
