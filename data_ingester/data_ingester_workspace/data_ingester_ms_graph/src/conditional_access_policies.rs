@@ -83,6 +83,13 @@ impl ConditionalAccessPolicy {
         if condition_users.include_roles.contains("All") {
             return true;
         }
+
+        for role_template_id in user.roles().template_ids() {
+            if condition_users.include_roles.contains(role_template_id) {
+                return true;
+            }
+        }
+
         for role_id in user.roles().ids() {
             if condition_users.include_roles.contains(role_id) {
                 return true;
