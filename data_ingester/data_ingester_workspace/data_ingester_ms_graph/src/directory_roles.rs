@@ -49,6 +49,13 @@ impl DirectoryRoles<'_> {
     pub fn ids(&self) -> Vec<&'_ str> {
         self.value.iter().map(|role| role.id.as_str()).collect()
     }
+
+    pub fn template_ids(&self) -> Vec<&'_ str> {
+        self.value
+            .iter()
+            .map(|role| role.role_template_id.as_str())
+            .collect()
+    }
 }
 
 // impl<'a> ToHecEvents for DirectoryRoles<'a> {
