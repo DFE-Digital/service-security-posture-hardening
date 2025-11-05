@@ -56,6 +56,12 @@ impl ConditionalAccessPolicy {
             }
         }
 
+        for role_template_id in user.roles().template_ids() {
+            if condition_users.exclude_roles.contains(role_template_id) {
+                return false;
+            }
+        }
+
         // -- Check includes
 
         // Users
@@ -84,14 +90,14 @@ impl ConditionalAccessPolicy {
             return true;
         }
 
-        for role_template_id in user.roles().template_ids() {
-            if condition_users.include_roles.contains(role_template_id) {
+        for role_id in user.roles().ids() {
+            if condition_users.include_roles.contains(role_id) {
                 return true;
             }
         }
 
-        for role_id in user.roles().ids() {
-            if condition_users.include_roles.contains(role_id) {
+        for role_template_id in user.roles().template_ids() {
+            if condition_users.include_roles.contains(role_template_id) {
                 return true;
             }
         }
@@ -206,7 +212,7 @@ mod conditional_access_policy {
             GroupOrRole::Role(DirectoryRole {
                 id: "role1".to_owned(),
                 display_name: Some("role_1_name".to_owned()),
-                role_template_id: "role1id".to_owned(),
+                role_template_id: "role1_template_id".to_owned(),
                 members: None,
                 is_privileged: None,
             }),
@@ -268,6 +274,17 @@ mod conditional_access_policy {
             .users
             .include_roles
             .insert("role1".to_owned());
+        assert!(cap.affects_user(&user));
+    }
+
+    #[test]
+    fn affected_user_by_role_template_id() {
+        let (user, mut cap) = setup();
+        _ = cap
+            .conditions
+            .users
+            .include_roles
+            .insert("role1_template_id".to_owned());
         assert!(cap.affects_user(&user));
     }
 
@@ -349,6 +366,22 @@ mod conditional_access_policy {
             .users
             .exclude_roles
             .insert("role1".to_owned());
+        assert!(!cap.affects_user(&user));
+    }
+
+    #[test]
+    fn affected_user_excluded_by_role_template_id() {
+        let (user, mut cap) = setup();
+        _ = cap
+            .conditions
+            .users
+            .include_users
+            .insert(user.id.to_owned());
+        _ = cap
+            .conditions
+            .users
+            .exclude_roles
+            .insert("role1_template_id".to_owned());
         assert!(!cap.affects_user(&user));
     }
 }
