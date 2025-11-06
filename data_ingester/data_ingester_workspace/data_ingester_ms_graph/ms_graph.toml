@@ -71,11 +71,32 @@ permission_grant_policies = { endpoint = "/v1.0/policies/permissionGrantPolicies
 ] }
 
 # Azure support recommended using the beta endpoint
-role_eligiblity_schedule = { endpoint = "/beta/roleManagement/directory/roleAssignmentScheduleInstances?$expand=activatedUsing,appScope,directoryScope,principal,roleDefinition", permissions_required = [
+role_assignment_schedule_instances = { endpoint = "/beta/roleManagement/directory/roleAssignmentScheduleInstances?$expand=activatedUsing,appScope,directoryScope,principal,roleDefinition", permissions_required = [
   "",
 ], cis_controls = [
   { filename = "CIS_Microsoft_365_Foundations_Benchmark_v2.0.0.pdf", control_id = "1.1.15" },
 ] }
+
+role_assignment_schedules = { endpoint = "/beta/roleManagement/directory/roleAssignmentSchedules?$expand=activatedUsing,,appScope,directoryScope,principal,roleDefinition", permissions_required = [
+  "",
+], cis_controls = [
+  { filename = "CIS_Microsoft_365_Foundations_Benchmark_v2.0.0.pdf", control_id = "1.1.15" },
+] }
+
+
+role_eligibility_schedules = { endpoint = "/beta/roleManagement/directory/roleEligibilitySchedules?$expand=appScope,directoryScope,principal,roleDefinition", permissions_required = [
+  "",
+], cis_controls = [
+  { filename = "CIS_Microsoft_365_Foundations_Benchmark_v2.0.0.pdf", control_id = "1.1.15" },
+] }
+
+role_eligibility_schedule_instances = { endpoint = "/beta/roleManagement/directory/roleEligibilityScheduleInstances?$expand=appScope,directoryScope,principal,roleDefinition", permissions_required = [
+  "",
+], cis_controls = [
+  { filename = "CIS_Microsoft_365_Foundations_Benchmark_v2.0.0.pdf", control_id = "1.1.15" },
+] }
+
+
 
 token_lifetime_policies = { endpoint = "/v1.0/policies/tokenLifetimePolicies", permissions_required = [
   "",
