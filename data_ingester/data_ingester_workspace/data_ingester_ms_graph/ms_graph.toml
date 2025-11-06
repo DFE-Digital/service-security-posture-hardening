@@ -77,7 +77,7 @@ role_assignment_schedule_instances = { endpoint = "/beta/roleManagement/director
   { filename = "CIS_Microsoft_365_Foundations_Benchmark_v2.0.0.pdf", control_id = "1.1.15" },
 ] }
 
-role_assignment_schedules = { endpoint = "/beta/roleManagement/directory/roleAssignmentSchedules?$expand=activatedUsing,,appScope,directoryScope,principal,roleDefinition", permissions_required = [
+role_assignment_schedules = { endpoint = "/beta/roleManagement/directory/roleAssignmentSchedules?$expand=activatedUsing,appScope,directoryScope,principal,roleDefinition", permissions_required = [
   "",
 ], cis_controls = [
   { filename = "CIS_Microsoft_365_Foundations_Benchmark_v2.0.0.pdf", control_id = "1.1.15" },
@@ -96,8 +96,6 @@ role_eligibility_schedule_instances = { endpoint = "/beta/roleManagement/directo
   { filename = "CIS_Microsoft_365_Foundations_Benchmark_v2.0.0.pdf", control_id = "1.1.15" },
 ] }
 
-
-
 token_lifetime_policies = { endpoint = "/v1.0/policies/tokenLifetimePolicies", permissions_required = [
   "",
 ], cis_controls = [
@@ -111,7 +109,7 @@ admin_forms = { endpoint = "/beta/admin/forms", permissions_required = [
   { filename = "CIS_Microsoft_365_Foundations_Benchmark_v2.0.0.pdf", control_id = "2.10" },
 ] }
 
-role_definitions = { endpoint = "/beta/directory/roleDefinitions", permissions_required = [
+role_definitions = { endpoint = "/beta/roleManagement/directory/roleDefinitions", permissions_required = [
   "",
 ], cis_controls = [
   { filename = "CIS_Microsoft_Azure_Foundations_Benchmark_v2.0.0.pdf", control_id = ""},
