@@ -94,12 +94,18 @@ pub async fn azure_users(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<(
         .send_batch((&aad_role_definitions).to_hec_events()?)
         .await?;
 
+    info!("Getting PIM role assignment schedules");
+    let mut aad_pim_role_assignment_schedules = ms_graph.list_role_assignment_schedules().await?;
+    info!("Getting PIM role eligibility schedules");
+    let aad_pim_role_eligibility_schedules = ms_graph.list_role_eligibility_schedules().await?;
+    aad_pim_role_assignment_schedules
+        .inner
+        .extend(aad_pim_role_eligibility_schedules.inner);
+
     let splunk_clone = splunk.clone();
     let process_to_splunk = tokio::spawn(async move {
         while let Some(mut users) = reciever.recv().await {
-            users.set_is_privileged(&aad_role_definitions);
-
-            users.process_caps(&caps);
+            users.add_pim_membership(&aad_pim_role_assignment_schedules, &aad_role_definitions);
 
             users
                 .add_azure_roles(
@@ -107,6 +113,10 @@ pub async fn azure_users(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<(
                     &subscription_role_definitions,
                 )
                 .context("Failed to add azure roles")?;
+
+            users.set_is_privileged(&aad_role_definitions);
+
+            users.process_caps(&caps);
 
             splunk_clone.send_batch((&users).to_hec_events()?).await?;
         }

@@ -2,6 +2,7 @@ use crate::admin_request_consent_policy::AdminRequestConsentPolicy;
 
 use crate::conditional_access_policies::ConditionalAccessPolicies;
 use crate::groups::Groups;
+use crate::role_assignment_schedule::RoleSchedules;
 use data_ingester_supporting::dns::resolve_txt_record;
 use data_ingester_supporting::keyvault::Secrets;
 use graph_oauth::ClientSecretCredential;
@@ -135,11 +136,31 @@ impl MsGraph {
         Ok(GroupSettings { inner: result })
     }
 
-    pub async fn list_role_eligiblity_schedule_instance(
+    pub async fn list_role_eligibility_schedule_instance(
         &self,
     ) -> Result<RoleEligibilityScheduleInstance> {
-        let result = self.get_url("/roleManagement/directory/roleAssignmentScheduleInstances?$expand=activatedUsing,appScope,directoryScope,principal,roleDefinition").await?;
+        let result = self.get_url("/roleManagement/directory/roleEligibilityScheduleInstances?$expand=activatedUsing,appScope,directoryScope,principal,roleDefinition").await?;
         Ok(RoleEligibilityScheduleInstance { inner: result })
+    }
+
+    pub async fn list_role_eligibility_schedules(&self) -> Result<RoleSchedules> {
+        let result = self.get_url("/beta/roleManagement/directory/roleAssignmentScheduleInstances?$expand=activatedUsing,appScope,directoryScope,principal,roleDefinition").await?;
+        let schedules = result
+            .into_iter()
+	    // TODO REMOVE UNWRAP 
+            .map(|v| serde_json::from_value(v).unwrap())
+            .collect();
+        Ok(RoleSchedules { inner: schedules })
+    }
+
+    pub async fn list_role_assignment_schedules(&self) -> Result<RoleSchedules> {
+        let result = self.get_url("/beta/roleManagement/directory/roleAssignmentScheduleInstances?$expand=appScope,directoryScope,principal,roleDefinition").await?;
+        let schedules = result
+            .into_iter()
+	    // TODO REMOVE UNWRAP 	    
+            .map(|v| serde_json::from_value(v).unwrap())
+            .collect();
+        Ok(RoleSchedules { inner: schedules })
     }
 
     /// M365 V2 1.1.17
@@ -820,7 +841,7 @@ pub async fn m365(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
     // M365 1.1.15 V2
     let _ = try_collect_send(
         "MS Graph List Role Eligibility Schedules",
-        ms_graph.list_role_eligiblity_schedule_instance(),
+        ms_graph.list_role_eligibility_schedule_instance(),
         &splunk,
     )
     .await;
@@ -1113,8 +1134,27 @@ pub(crate) mod live_tests {
     #[tokio::test]
     async fn list_role_eligiblity_schedule_instance() -> Result<()> {
         let (splunk, ms_graph) = setup().await?;
-        let result = ms_graph.list_role_eligiblity_schedule_instance().await?;
+        let result = ms_graph.list_role_eligibility_schedule_instance().await?;
         splunk.send_batch((&result).to_hec_events()?).await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn list_role_eligibility_schedules() -> Result<()> {
+        let (splunk, ms_graph) = setup().await?;
+        let result = ms_graph.list_role_eligibility_schedules().await?;
+        dbg!(&result);
+        //splunk.send_batch((&result).to_hec_events()?).await?;
+        assert!(result.inner.len() > 2);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn list_role_assignment_schedules() -> Result<()> {
+        let (splunk, ms_graph) = setup().await?;
+        let result = ms_graph.list_role_assignment_schedules().await?;
+        //splunk.send_batch((&result).to_hec_events()?).await?;
+        assert!(result.inner.len() > 2);
         Ok(())
     }
 
