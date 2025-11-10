@@ -145,17 +145,18 @@ impl MsGraph {
                         return Err(error);
                     }
                 };
-                user.transitive_member_of = transitive_member_of.into_iter()
-		.map(|membership| {
-		    match serde_json::from_value(membership.clone()) {
-			Ok(result) => result,
-			Err(err) => {
-			    error!(error=?err, value=?membership, "Failed to transmute Value to GroupOrRole");
-			    panic!("Failed to transmute Value to GroupOrRole\nerror:{:#?}\nvalue:{:#?}", err, membership);
+                user.transitive_member_of = transitive_member_of
+		    .into_iter()
+		    .map(|membership| {
+			match serde_json::from_value(membership.clone()) {
+			    Ok(result) => result,
+			    Err(err) => {
+				error!(error=?err, value=?membership, "Failed to transmute Value to GroupOrRole");
+				panic!("Failed to transmute Value to GroupOrRole\nerror:{:#?}\nvalue:{:#?}", err, membership);
+			    }
 			}
 		    }
-		}
-		).collect();
+		    ).collect();
                 Ok(())
             };
             tasks.push(task);
