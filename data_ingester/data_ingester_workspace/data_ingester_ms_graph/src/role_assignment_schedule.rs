@@ -98,7 +98,6 @@ struct ScheduleInfo {
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
-
 struct Expiration {
     duration: Option<String>,
     end_date_time: Option<String>,

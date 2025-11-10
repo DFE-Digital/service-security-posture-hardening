@@ -4,16 +4,12 @@ use crate::directory_roles::DirectoryRole;
 use crate::directory_roles::DirectoryRoles;
 use crate::groups::Group;
 use crate::groups::Groups;
-use crate::role_assignment_schedule::{
-    PrincipalType as RoleAssignmentPrincipalType, RoleSchedules,
-};
-use crate::roles::RoleDefinition;
+use crate::role_assignment_schedule::RoleSchedules;
 use crate::roles::RoleDefinitions;
 use crate::roles::RoleDefinitions as EntraRoleDefinitions;
 use anyhow::Context;
 use anyhow::Result;
 use azure_mgmt_authorization::package_2022_04_01::models::role_assignment_properties::PrincipalType;
-use azure_mgmt_authorization::package_2022_04_01::role_definitions;
 use data_ingester_azure_rest::azure_rest::RoleAssignments as AzureRoleAssignments;
 use data_ingester_azure_rest::azure_rest::RoleDefinitions as AzureRoleDefinitions;
 use data_ingester_splunk::splunk::ToHecEvents;
@@ -32,7 +28,7 @@ use tracing::warn;
 #[serde(rename_all = "camelCase")]
 pub struct User<'a> {
     is_privileged: Option<bool>,
-    account_enabled: Option<bool>,
+    pub account_enabled: Option<bool>,
     #[serde(skip_serializing_if = "Vec::is_empty")]
     assigned_plans: Vec<AssignedPlan>,
     // business_phones: Option<Vec<String>>,
@@ -137,6 +133,7 @@ impl User<'_> {
             transitive_member_of: None,
             user_principal_name: None,
             user_type: None,
+            pim_member_of: None,
         }
     }
 
@@ -270,7 +267,7 @@ impl<'a> UsersMap<'a> {
             let role_definition_id = &role_schedule.role_definition_id;
             let principal_id = &role_schedule.principal_id;
 
-            let Some(ref role_definition) = role_definitions.value.get(role_definition_id) else {
+            let Some(role_definition) = role_definitions.value.get(role_definition_id) else {
                 warn!(
                     role_definition_id = role_definition_id,
                     "Unable to find role definition"
@@ -296,21 +293,15 @@ impl<'a> UsersMap<'a> {
                 display_name: role_definition.display_name.clone(),
                 role_template_id: role_definition.id.clone(),
                 members: None,
-                is_privileged: role_definition.is_privileged.clone(),
+                is_privileged: role_definition.is_privileged,
             });
 
             for user in users {
                 if let Some(ref mut pim_member_of) = user.pim_member_of {
-                    if pim_member_of
-                        .iter()
-                        .find(|role| match role {
-                            GroupOrRole::Role(DirectoryRole { id, .. }) => {
-                                id == &role_definition.id
-                            }
-                            _ => false,
-                        })
-                        .is_some()
-                    {
+                    if pim_member_of.iter().any(|role| match role {
+                        GroupOrRole::Role(DirectoryRole { id, .. }) => id == &role_definition.id,
+                        _ => false,
+                    }) {
                         continue;
                     }
                     pim_member_of.push(new_role.clone());
@@ -324,16 +315,16 @@ impl<'a> UsersMap<'a> {
             let role_definition_id = &role_schedule.role_definition_id;
             let principal_id = &role_schedule.principal_id;
 
-            let Some(ref role_definition) = role_definitions.value.get(role_definition_id) else {
+            let Some(ref mut user) = self.inner.get_mut(principal_id) else {
+                //warn!(principal_id = principal_id, "Unable to find principal");
+                continue;
+            };
+
+            let Some(role_definition) = role_definitions.value.get(role_definition_id) else {
                 warn!(
                     role_definition_id = role_definition_id,
                     "Unable to find role definition"
                 );
-                continue;
-            };
-
-            let Some(ref mut user) = self.inner.get_mut(principal_id) else {
-                warn!(principal_id = principal_id, "Unable to find principal");
                 continue;
             };
 
@@ -342,18 +333,14 @@ impl<'a> UsersMap<'a> {
                 display_name: role_definition.display_name.clone(),
                 role_template_id: role_definition.id.clone(),
                 members: None,
-                is_privileged: role_definition.is_privileged.clone(),
+                is_privileged: role_definition.is_privileged,
             });
 
             if let Some(ref mut pim_member_of) = user.pim_member_of {
-                if pim_member_of
-                    .iter()
-                    .find(|role| match role {
-                        GroupOrRole::Role(DirectoryRole { id, .. }) => id == &role_definition.id,
-                        _ => false,
-                    })
-                    .is_some()
-                {
+                if pim_member_of.iter().any(|role| match role {
+                    GroupOrRole::Role(DirectoryRole { id, .. }) => id == &role_definition.id,
+                    _ => false,
+                }) {
                     continue;
                 }
                 pim_member_of.push(new_role);

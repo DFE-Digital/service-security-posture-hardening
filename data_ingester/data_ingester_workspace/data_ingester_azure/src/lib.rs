@@ -66,7 +66,7 @@ pub async fn azure_users(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<(
     let subscriptions = azure_rest.azure_subscriptions().await?;
     splunk.send_batch((&subscriptions).to_hec_events()?).await?;
 
-    info!("Getting Azure Subscriptions");
+    info!("Getting Azure Subscription policies");
     let subscription_policies = azure_rest.get_microsoft_subscription_policies().await?;
     splunk
         .send_batch((&subscription_policies).to_hec_events()?)
@@ -105,6 +105,9 @@ pub async fn azure_users(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<(
     let splunk_clone = splunk.clone();
     let process_to_splunk = tokio::spawn(async move {
         while let Some(mut users) = reciever.recv().await {
+            ms_graph
+                .get_transative_memebers_of_for_users(&mut users)
+                .await?;
             users.add_pim_membership(&aad_pim_role_assignment_schedules, &aad_role_definitions);
 
             users
