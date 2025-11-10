@@ -2,14 +2,8 @@ use crate::admin_request_consent_policy::AdminRequestConsentPolicy;
 
 use crate::conditional_access_policies::ConditionalAccessPolicies;
 use crate::groups::Groups;
-use data_ingester_supporting::dns::resolve_txt_record;
-use data_ingester_supporting::keyvault::Secrets;
-use graph_oauth::ClientSecretCredential;
-use graph_rs_sdk::GraphClient;
-use graph_rs_sdk::GraphClientConfiguration;
-use tracing::info;
-
 use crate::msgraph_data::load_m365_toml;
+use crate::role_assignment_schedule::RoleSchedules;
 use crate::roles::RoleDefinitions;
 use crate::users::Users;
 use crate::users::UsersMap;
@@ -17,15 +11,20 @@ use anyhow::{Context, Result};
 use data_ingester_splunk::splunk::try_collect_send;
 use data_ingester_splunk::splunk::ToHecEvents;
 use data_ingester_splunk::splunk::{set_ssphp_run, Splunk};
+use data_ingester_supporting::dns::resolve_txt_record;
+use data_ingester_supporting::keyvault::Secrets;
 use futures::StreamExt;
 use graph_http::api_impl::RequestComponents;
 use graph_http::api_impl::RequestHandler;
+use graph_oauth::ClientSecretCredential;
 use graph_oauth::ConfidentialClientApplication;
 use graph_rs_sdk::header::HeaderMap;
 use graph_rs_sdk::header::HeaderValue;
 use graph_rs_sdk::header::CONTENT_TYPE;
 use graph_rs_sdk::http::Method;
 use graph_rs_sdk::Graph;
+use graph_rs_sdk::GraphClient;
+use graph_rs_sdk::GraphClientConfiguration;
 use graph_rs_sdk::ODataQuery;
 use serde::Deserialize;
 use serde::Serialize;
@@ -36,6 +35,7 @@ use std::iter;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::mpsc::UnboundedSender;
+use tracing::{error, info};
 
 /// A Client for Ms Graph
 #[derive(Clone)]
@@ -126,6 +126,47 @@ impl MsGraph {
         Ok(AdminFormSettings { inner: result })
     }
 
+    pub async fn get_transative_memebers_of_for_users(
+        &self,
+        users: &mut UsersMap<'_>,
+    ) -> Result<()> {
+        let mut tasks = vec![];
+        for user in users.inner.values_mut() {
+            if !user.account_enabled.unwrap_or_default() {
+                continue;
+            }
+
+            let task = async {
+                let url = format!("/v1.0/users/{}/transitiveMemberOf", user.id);
+                let transitive_member_of = match self.get_url(&url).await {
+                    Ok(result) => result,
+                    Err(error) => {
+                        error!(error=?error, url=?url, "Failed to get Group transitiveMemberOf");
+                        return Err(error);
+                    }
+                };
+                user.transitive_member_of = transitive_member_of
+		    .into_iter()
+		    .map(|membership| {
+			match serde_json::from_value(membership.clone()) {
+			    Ok(result) => result,
+			    Err(err) => {
+				error!(error=?err, value=?membership, "Failed to transmute Value to GroupOrRole");
+				panic!("Failed to transmute Value to GroupOrRole\nerror:{:#?}\nvalue:{:#?}", err, membership);
+			    }
+			}
+		    }
+		    ).collect();
+                Ok(())
+            };
+            tasks.push(task);
+        }
+        let stream = futures::stream::iter(tasks).buffer_unordered(10);
+        let _results = stream.collect::<Vec<_>>().await;
+
+        Ok(())
+    }
+
     /// 1.1.9
     /// 1.1.10
     /// https://learn.microsoft.com/en-us/graph/api/resources/groupsetting?view=graph-rest-1.0
@@ -135,11 +176,45 @@ impl MsGraph {
         Ok(GroupSettings { inner: result })
     }
 
-    pub async fn list_role_eligiblity_schedule_instance(
+    pub async fn list_role_eligibility_schedule_instance(
         &self,
     ) -> Result<RoleEligibilityScheduleInstance> {
-        let result = self.get_url("/roleManagement/directory/roleAssignmentScheduleInstances?$expand=activatedUsing,appScope,directoryScope,principal,roleDefinition").await?;
+        let result = self.get_url("/roleManagement/directory/roleEligibilityScheduleInstances?$expand=activatedUsing,appScope,directoryScope,principal,roleDefinition").await?;
         Ok(RoleEligibilityScheduleInstance { inner: result })
+    }
+
+    pub async fn list_role_eligibility_schedules(&self) -> Result<RoleSchedules> {
+        let result = self.get_url("/beta/roleManagement/directory/roleAssignmentScheduleInstances?$expand=activatedUsing,appScope,directoryScope,principal,roleDefinition").await?;
+        let schedules = result
+            .into_iter()
+            .filter_map(|v| {
+		match serde_json::from_value(v) {
+		    Ok(result) => Some(result),
+		    Err(error) => {
+			error!(error=?error, "Failed to transmute role_eligibility_schedules Value into RoleSchedule");
+			None
+		    }
+		}
+	    })
+            .collect();
+        Ok(RoleSchedules { inner: schedules })
+    }
+
+    pub async fn list_role_assignment_schedules(&self) -> Result<RoleSchedules> {
+        let result = self.get_url("/beta/roleManagement/directory/roleAssignmentScheduleInstances?$expand=appScope,directoryScope,principal,roleDefinition").await?;
+        let schedules = result
+            .into_iter()
+            .filter_map(|v| {
+		match serde_json::from_value(v) {
+		    Ok(result) => Some(result),
+		    Err(error) => {
+			error!(error=?error, "Failed to transmute role_assignment_schedules Value into RoleSchedule");
+			None
+		    }
+		}
+	    })
+            .collect();
+        Ok(RoleSchedules { inner: schedules })
     }
 
     /// M365 V2 1.1.17
@@ -820,7 +895,7 @@ pub async fn m365(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
     // M365 1.1.15 V2
     let _ = try_collect_send(
         "MS Graph List Role Eligibility Schedules",
-        ms_graph.list_role_eligiblity_schedule_instance(),
+        ms_graph.list_role_eligibility_schedule_instance(),
         &splunk,
     )
     .await;
@@ -1113,8 +1188,27 @@ pub(crate) mod live_tests {
     #[tokio::test]
     async fn list_role_eligiblity_schedule_instance() -> Result<()> {
         let (splunk, ms_graph) = setup().await?;
-        let result = ms_graph.list_role_eligiblity_schedule_instance().await?;
+        let result = ms_graph.list_role_eligibility_schedule_instance().await?;
         splunk.send_batch((&result).to_hec_events()?).await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn list_role_eligibility_schedules() -> Result<()> {
+        let (splunk, ms_graph) = setup().await?;
+        let result = ms_graph.list_role_eligibility_schedules().await?;
+        dbg!(&result);
+        //splunk.send_batch((&result).to_hec_events()?).await?;
+        assert!(result.inner.len() > 2);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn list_role_assignment_schedules() -> Result<()> {
+        let (splunk, ms_graph) = setup().await?;
+        let result = ms_graph.list_role_assignment_schedules().await?;
+        //splunk.send_batch((&result).to_hec_events()?).await?;
+        assert!(result.inner.len() > 2);
         Ok(())
     }
 

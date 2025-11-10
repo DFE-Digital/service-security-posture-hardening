@@ -4,6 +4,8 @@ use crate::directory_roles::DirectoryRole;
 use crate::directory_roles::DirectoryRoles;
 use crate::groups::Group;
 use crate::groups::Groups;
+use crate::role_assignment_schedule::RoleSchedules;
+use crate::roles::RoleDefinitions;
 use crate::roles::RoleDefinitions as EntraRoleDefinitions;
 use anyhow::Context;
 use anyhow::Result;
@@ -18,6 +20,7 @@ use serde_json::Value;
 use serde_with::skip_serializing_none;
 use std::collections::HashMap;
 use std::ops::Deref;
+use tracing::warn;
 
 // https://learn.microsoft.com/en-us/graph/api/resources/user?view=graph-rest-1.0
 #[skip_serializing_none]
@@ -25,7 +28,7 @@ use std::ops::Deref;
 #[serde(rename_all = "camelCase")]
 pub struct User<'a> {
     is_privileged: Option<bool>,
-    account_enabled: Option<bool>,
+    pub account_enabled: Option<bool>,
     #[serde(skip_serializing_if = "Vec::is_empty")]
     assigned_plans: Vec<AssignedPlan>,
     // business_phones: Option<Vec<String>>,
@@ -48,9 +51,12 @@ pub struct User<'a> {
     user_type: Option<String>,
 
     // Custom attributes
+    #[serde(skip_deserializing)]
     pub azure_roles: Option<UserAzureRoles>,
     #[serde(skip_deserializing)]
     conditional_access_policies: Option<Vec<UserConditionalAccessPolicy<'a>>>,
+    #[serde(skip_deserializing)]
+    pim_member_of: Option<Vec<GroupOrRole>>,
 }
 
 /// Used to represent an AAD users roles in Azure (Cloud) subscriptions
@@ -97,7 +103,7 @@ impl AssignedPlan {
 //     Deleted,
 // }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(tag = "@odata.type")]
 pub(crate) enum GroupOrRole {
     #[serde(rename = "#microsoft.graph.group")]
@@ -127,35 +133,49 @@ impl User<'_> {
             transitive_member_of: None,
             user_principal_name: None,
             user_type: None,
+            pim_member_of: None,
         }
     }
 
     pub fn groups(&self) -> Groups<'_> {
-        self.transitive_member_of
-            .as_ref()
-            .map(|tmo| {
-                tmo.iter()
-                    .filter_map(|dir_object| match dir_object {
-                        GroupOrRole::Group(group) => Some(group),
-                        GroupOrRole::Role(_) => None,
-                    })
-                    .collect::<Groups>()
+        let tmo = self.transitive_member_of.as_ref();
+
+        let tmo_groups = tmo.iter().flat_map(|tmo| {
+            tmo.iter().filter_map(|dir_object| match dir_object {
+                GroupOrRole::Group(group) => Some(group),
+                GroupOrRole::Role(_) => None,
             })
-            .unwrap_or_default()
+        });
+
+        let pmo = self.pim_member_of.as_ref();
+        let pmo_groups = pmo.iter().flat_map(|pmo| {
+            pmo.iter().filter_map(|dir_object| match dir_object {
+                GroupOrRole::Group(group) => Some(group),
+                GroupOrRole::Role(_) => None,
+            })
+        });
+
+        tmo_groups.chain(pmo_groups).collect()
     }
 
     pub fn roles(&self) -> DirectoryRoles<'_> {
-        self.transitive_member_of
-            .as_ref()
-            .map(|tmo| {
-                tmo.iter()
-                    .filter_map(|dir_object| match dir_object {
-                        GroupOrRole::Group(_) => None,
-                        GroupOrRole::Role(role) => Some(role),
-                    })
-                    .collect::<DirectoryRoles>()
+        let tmo = self.transitive_member_of.as_ref();
+        let tmo_roles = tmo.iter().flat_map(|tmo| {
+            tmo.iter().filter_map(|dir_object| match dir_object {
+                GroupOrRole::Group(_) => None,
+                GroupOrRole::Role(role) => Some(role),
             })
-            .unwrap_or_default()
+        });
+
+        let pmo = self.pim_member_of.as_ref();
+        let pmo_roles = pmo.iter().flat_map(|tmo| {
+            tmo.iter().filter_map(|dir_object| match dir_object {
+                GroupOrRole::Group(_) => None,
+                GroupOrRole::Role(role) => Some(role),
+            })
+        });
+
+        tmo_roles.chain(pmo_roles).collect()
     }
 
     pub fn roles_mut(&mut self) -> Vec<&mut DirectoryRole> {
@@ -174,7 +194,7 @@ impl User<'_> {
     pub fn set_is_privileged(&mut self, role_definitions: &EntraRoleDefinitions) {
         let mut is_privileged = false;
 
-        for role in self.roles_mut().iter_mut() {
+        for role in self.roles_mut() {
             match role_definitions.value.get(&role.role_template_id) {
                 Some(role_definition) => {
                     let is_role_privileged =
@@ -236,6 +256,98 @@ impl<'a> UsersMap<'a> {
     #[cfg(test)]
     pub fn extend(&mut self, users: UsersMap<'a>) {
         self.inner.extend(users.inner);
+    }
+
+    pub fn add_pim_membership(
+        &mut self,
+        role_schedules: &RoleSchedules,
+        role_definitions: &RoleDefinitions,
+    ) {
+        for role_schedule in role_schedules.affects_groups() {
+            let role_definition_id = &role_schedule.role_definition_id;
+            let principal_id = &role_schedule.principal_id;
+
+            let Some(role_definition) = role_definitions.value.get(role_definition_id) else {
+                warn!(
+                    role_definition_id = role_definition_id,
+                    "Unable to find role definition"
+                );
+                continue;
+            };
+
+            let users = self.inner.values_mut().filter(|user| {
+                if let Some(transitive_member_of) = &user.transitive_member_of {
+                    transitive_member_of
+                        .iter()
+                        .any(|group_or_role| match group_or_role {
+                            GroupOrRole::Group(Group { id, .. }) => id == principal_id,
+                            _ => false,
+                        })
+                } else {
+                    false
+                }
+            });
+
+            let new_role = GroupOrRole::Role(DirectoryRole {
+                id: role_definition.id.clone(),
+                display_name: role_definition.display_name.clone(),
+                role_template_id: role_definition.id.clone(),
+                members: None,
+                is_privileged: role_definition.is_privileged,
+            });
+
+            for user in users {
+                if let Some(ref mut pim_member_of) = user.pim_member_of {
+                    if pim_member_of.iter().any(|role| match role {
+                        GroupOrRole::Role(DirectoryRole { id, .. }) => id == &role_definition.id,
+                        _ => false,
+                    }) {
+                        continue;
+                    }
+                    pim_member_of.push(new_role.clone());
+                } else {
+                    user.pim_member_of = Some(vec![new_role.clone()]);
+                }
+            }
+        }
+
+        for role_schedule in role_schedules.affects_users() {
+            let role_definition_id = &role_schedule.role_definition_id;
+            let principal_id = &role_schedule.principal_id;
+
+            let Some(ref mut user) = self.inner.get_mut(principal_id) else {
+                //warn!(principal_id = principal_id, "Unable to find principal");
+                continue;
+            };
+
+            let Some(role_definition) = role_definitions.value.get(role_definition_id) else {
+                warn!(
+                    role_definition_id = role_definition_id,
+                    "Unable to find role definition"
+                );
+                continue;
+            };
+
+            let new_role = GroupOrRole::Role(DirectoryRole {
+                id: role_definition.id.clone(),
+                display_name: role_definition.display_name.clone(),
+                role_template_id: role_definition.id.clone(),
+                members: None,
+                is_privileged: role_definition.is_privileged,
+            });
+
+            if let Some(ref mut pim_member_of) = user.pim_member_of {
+                if pim_member_of.iter().any(|role| match role {
+                    GroupOrRole::Role(DirectoryRole { id, .. }) => id == &role_definition.id,
+                    _ => false,
+                }) {
+                    continue;
+                }
+                pim_member_of.push(new_role);
+            } else {
+                user.pim_member_of = Some(vec![new_role]);
+            }
+        }
     }
 
     // TODO Get and Follow Groups and join table for users.
