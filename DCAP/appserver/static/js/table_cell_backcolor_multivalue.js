@@ -17,6 +17,8 @@ require([
                       'cap_state', 
                       'cap_grantControls.builtInControls', 
                       'cap_grantControls.authenticationStrength.requirementsSatisfied',
+                      'cap_excluded_locations_isTrusted',
+                      'cap_included_locations',
                       'methodsRegistered',
                       'codeSecurityFeatures.dependencyScanningInjectionEnabled',
                       'codeSecurityFeatures.codeQLEnabled',
