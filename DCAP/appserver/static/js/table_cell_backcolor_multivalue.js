@@ -10,6 +10,17 @@ require([
         canRender: function (cell) {
             //return true;
             return _(['state',
+                      'cap_id', 
+                      'cap_displayName',
+                      'cap_conditions.applications.includeApplications', 
+                      'cap_conditions.clientAppTypes',
+                      'cap_state', 
+                      'cap_hasUntrustedConditions',
+                      'cap_grantControls.builtInControls', 
+                      'cap_grantControls.authenticationStrength.requirementsSatisfied',
+                      'cap_excluded_locations_isTrusted',
+                      'cap_included_locations',
+                      'methodsRegistered',
                       'codeSecurityFeatures.dependencyScanningInjectionEnabled',
                       'codeSecurityFeatures.codeQLEnabled',
                       'codeSecurityFeatures.codeSecurityEnabled',
