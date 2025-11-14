@@ -243,10 +243,8 @@ impl MsGraph {
         let mut caps = ConditionalAccessPolicies::new();
         while let Some(result) = stream.next().await {
             let response = result?;
-
-            let body = response.into_body();
-
-            caps.inner.extend(body?.inner)
+            let body = response.into_body()?;
+            caps.inner.extend(body.inner);
         }
         Ok(caps)
     }
@@ -1085,7 +1083,8 @@ pub(crate) mod live_tests {
     async fn list_conditional_access_policies() -> Result<()> {
         let (splunk, ms_graph) = setup().await?;
         let caps = ms_graph.list_conditional_access_policies().await?;
-        splunk.send_batch((&caps).to_hec_events()?).await?;
+        let hec_events = (&caps).to_hec_events()?;
+        splunk.send_batch(hec_events).await?;
         Ok(())
     }
 
