@@ -15,6 +15,7 @@ require([
                       'cap_conditions.applications.includeApplications', 
                       'cap_conditions.clientAppTypes',
                       'cap_state', 
+                      'cap_hasUntrustedConditions',
                       'cap_grantControls.builtInControls', 
                       'cap_grantControls.authenticationStrength.requirementsSatisfied',
                       'cap_excluded_locations_isTrusted',
