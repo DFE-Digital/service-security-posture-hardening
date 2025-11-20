@@ -2,11 +2,11 @@
 name: DCAP Production Deploy
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - DCAP/**
+  # push:
+  #   branches:
+  #     - main
+  #   paths:
+  #     - DCAP/**
   workflow_dispatch:
 
 jobs:
