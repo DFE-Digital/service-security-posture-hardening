@@ -20,7 +20,8 @@ jobs:
       - name: checkout
         uses: actions/checkout@v5
         with:
-          repository: DFE-Digital/splunkcloud-app-packager
+          repository: git@github.com:DFE-Digital/ssphp-splunkcloud-app-packager.git
+          ssh-key: ${{ secrets.SPLUNK_PACKAGER_GITHUB_DEPLOY_KEY }}
 
       - name: toolchain
         id: toolchain
