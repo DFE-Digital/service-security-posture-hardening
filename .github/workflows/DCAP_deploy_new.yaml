@@ -64,7 +64,7 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: splunkcloud-app-packager_${{ github.sha }}
-          path: splunkcloud-app-packager
+          # path: splunkcloud-app-packager
 
       - name: Set binary to +x
         run: chmod +x splunkcloud-app-packager
