@@ -74,7 +74,7 @@ jobs:
 
       - name: Run terraform
         env:
-          SPLUNK_USERNAME: ${{ secrets.SPLUNK_USERNAME }}
+          SPLUNK_USER: ${{ secrets.SPLUNK_USERNAME }}
           SPLUNK_PASSWORD: ${{ secrets.SPLUNK_PASSWORD }}
           SPLUNK_ACS_TOKEN: ${{ secrets.SPLUNK_ACS_TOKEN }}
           SPLUNK_ACS_STACK: ${{ secrets.SPLUNK_ACS_STACK }}
