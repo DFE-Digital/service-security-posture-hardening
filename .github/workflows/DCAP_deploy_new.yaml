@@ -42,13 +42,13 @@ jobs:
         run: cargo build --release
 
       - name: SHA256 for release binary
-        run: sha256sum release/splunkcloud-app-packager
+        run: sha256sum target/release/splunkcloud-app-packager
 
       - name: Upload bin
         uses: actions/upload-artifact@v4
         with:
           name: splunkcloud-app-packager_${{ github.sha }}
-          path: release/splunkcloud-app-packager
+          path: target/release/splunkcloud-app-packager
           if-no-files-found: error
           compression-level: 9
 
