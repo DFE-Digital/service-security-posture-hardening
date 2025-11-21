@@ -72,8 +72,9 @@ jobs:
       - name: SHA256 for release binary
         run: sha256sum splunkcloud-app-packager
 
-      - name: Run terraform
+      - name: Run Packager
         env:
+          RUST_LOG: info
           SPLUNK_USER: ${{ secrets.SPLUNK_USERNAME }}
           SPLUNK_PASSWORD: ${{ secrets.SPLUNK_PASSWORD }}
           SPLUNK_ACS_TOKEN: ${{ secrets.SPLUNK_ACS_TOKEN }}
