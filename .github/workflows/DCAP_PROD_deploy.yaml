@@ -1,0 +1,89 @@
+---
+name: DCAP Production Deploy
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - DCAP/**
+  workflow_dispatch:
+
+concurrency: deploy-dcap
+
+jobs:
+  build:
+    name: Build DCAP Packager
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Packager Repo
+        uses: actions/checkout@v5
+        with:
+          repository: DFE-Digital/ssphp-splunkcloud-app-packager
+          ssh-key: ${{ secrets.SPLUNK_PACKAGER_GITHUB_DEPLOY_KEY }}
+
+      - name: Set Rust Toolchain
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: nightly-2025-11-19
+          components: rust-src
+
+      - name: Cache Cargo Dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo
+            ${{ github.workspace }}/target
+          key: cargo_build_cache-rust-target-${{ steps.toolchain.outputs.name}}-${{ hashFiles('Cargo.lock') }}
+
+      - name: Run Cargo Build
+        run: cargo build --release
+
+      - name: Compute SHA256 for Release Binary
+        run: sha256sum target/release/splunkcloud-app-packager > sha256.txt
+
+      - name: Upload Binary and Hash
+        uses: actions/upload-artifact@v4
+        with:
+          name: splunkcloud-app-packager_${{ github.sha }}
+          path: |
+            target/release/splunkcloud-app-packager
+            sha256.txt
+          if-no-files-found: error
+          compression-level: 9
+
+  deploy:
+    name: Deploy DCAP to SplunkCloud
+    needs: [build]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v5
+
+      - name: Download Build Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: splunkcloud-app-packager_${{ github.sha }}
+          path: ./artifact
+
+      - name: Verify Binary Integrity
+        run: |
+          cd artifact
+          sha256sum -c sha256.txt
+
+      - name: Set Binary Executable
+        run: chmod +x artifact/splunkcloud-app-packager
+
+      - name: Compute SHA256 Again (Optional)
+        run: sha256sum artifact/splunkcloud-app-packager
+
+      - name: Run Packager
+        env:
+          RUST_LOG: info
+          SPLUNK_USER: ${{ secrets.SPLUNK_USERNAME }}
+          SPLUNK_PASSWORD: ${{ secrets.SPLUNK_PASSWORD }}
+          SPLUNK_ACS_TOKEN: ${{ secrets.SPLUNK_ACS_TOKEN }}
+          SPLUNK_ACS_STACK: ${{ secrets.SPLUNK_ACS_STACK }}
+        run: ./artifact/splunkcloud-app-packager -a DCAP --environment prod
