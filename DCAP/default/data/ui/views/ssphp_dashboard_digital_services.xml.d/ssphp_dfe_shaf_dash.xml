@@ -1,7 +1,7 @@
 <dashboard version="1.1" theme="light" script="js/table_cell_backcolor_service_overview.js">
 
-<label>DfE Security Posture Continuous Assurance : Service Overview Dashboard</label>
-<description>{{environment}} v1.0.7</description>
+<label>DfE Security Posture Continuous Assurance : SHAF DASH</label>
+<description>_DEV v1.0.2</description>
 
   <init>
     <unset token="tkn_main_ready"></unset>
@@ -12,60 +12,204 @@
     <set token="tkn_margin">20</set>
 
     <set token="tkn_colour_tile">pebble</set>
-<!-- #<set token="tkn_colour_compliant_line">#ECECEC</set># -->
     <set token="tkn_colour_compliant_line">#bebebe</set>
     <set token="tkn_colour_compliant_line_100">#85F415</set>
     <set token="tkn_colour_non_compliant_line">#FF4B4B</set>
-<!-- #<set token="tkn_colour_text">#bebebe</set># -->
     <set token="tkn_colour_text">#000000</set>
+    
+    <set token="form.tkn_rolls_up_to">*</set>
   </init>
 
 
-  <fieldset submitButton="false">
-    <input type="dropdown" token="tkn_portfolio" searchWhenChanged="true">
-      <label>Portfolio</label>
-      <selectFirstChoice>true</selectFirstChoice>
-      <fieldForLabel>portfolio</fieldForLabel>
-      <fieldForValue>portfolio</fieldForValue>
-      <search>
-        <query>
-| inputlookup ssphp_bdmc_fbp.csv where portfolio!="Unallocated"
-
-| table portfolio
-| dedup portfolio
-        </query>
-        <done>
-          <unset token="tkn_main_ready"></unset>
-          <unset token="tkn_rollup_ready"></unset>
-        </done>
-      </search>
-    </input>
-
-  </fieldset>
 
 
-<!-- ########################################################## TOKENS ################################################################ -->
+
+
+
+<!-- ########################################################## DD ROW ################################################################ -->
+
+  <row>
+    <panel>
+      <single>
+        <search>
+          <query>
+| loadjob savedsearch="ssphp_app_account:DCAP_DEV:ssphp_create_dashboard_dataset_service_DEV"
+```| loadjob 1765372181.10639_5AE80E07-9C13-4197-8755-82A7DAFC834D```
+
+| eval ssphp.service.portfolio=trim('ssphp.service.portfolio'),
+       ssphp.service.service_line=trim('ssphp.service.service_line'),
+       ssphp.service.product=trim('ssphp.service.product')
+       
+| fields ssphp.service.portfolio, ssphp.service.service_line, ssphp.service.product, ssphp.service.rolls_up_to, ssphp.service.id, ssphp.assessment.source, ssphp.use_case.category, ssphp.use_case.id, ssphp.use_case.title, ssphp.assessment.display_name, ssphp.score.score, ssphp.score.compliance_status, ssphp.score.ciso_priority```, ssphp.assessment.description```, ssphp.score.color, ssphp.resource.id, ssphp.resource.tenant, ssphp.resource.subscription, ssphp.resource.subscription_name, ssphp.resource.resource_group, ssphp.score.remediation_priority, ssphp.exemption.status, SSPHP_UID 
+
+| search ssphp.service.rolls_up_to!="Unassigned"
+| search ssphp.exemption.status="comply" AND ssphp.service.portfolio!=""
+| search (ssphp.use_case.category="POSTURE" OR 
+         ssphp.use_case.category="KUBERNETES" OR
+         ssphp.use_case.category="REPOS" OR 
+         (ssphp.use_case.category="CODE_SCAN" AND ssphp.assessment.source="*") OR
+         (ssphp.use_case.category="VULNERABILITY" AND ssphp.resource.id="*/virtualmachines/*"))
+| search ssphp.resource.id="***"  AND ssphp.resource.id!=""
+| where 'ssphp.score.ciso_priority'="DfE Mandated"
+
+| stats count as total_controls, sum(eval(if(match('ssphp.score.compliance_status',"^Non-Compliant.*"),1,0))) as non_compliant_mandated_controls by ssphp.service.rolls_up_to, ssphp.resource.id
+| stats count as resources_total, sum(eval(if('non_compliant_mandated_controls'&gt;0,1,0))) as resources_bad by ssphp.service.rolls_up_to
+
+| appendpipe 
+    [| stats sum(*) as *
+     | eval ssphp.service.rolls_up_to="ALL"]
+
+| lookup ssphp.portfolio_shortport.csv ssphp.service.portfolio OUTPUT short_port
+
+| eval resources_good='resources_total'-'resources_bad',
+       compliant_perc=round(('resources_good'*100)/'resources_total'),
+       compliant_abs='resources_good'." / ".'resources_total'
+
+| eval compliant_line_width=round((100-(2*20))*(('compliant_perc')/100)),
+       compliant_line_non_width=(100-(2*20))-'compliant_line_width',
+       compliant_color=if(compliant_perc=100,"#85F415","#bebebe"),
+       ```compliant_perc='compliant_perc'."%",```
+       view="perc",
+       compliant_both=if('view'="abs",'compliant_abs','compliant_perc')
+
+| table view, ssphp.service.rolls_up_to, short_port, compliant_perc, compliant_abs, compliant_both, compliant_color, compliant_line_width, compliant_line_non_width
+| rename ssphp.service.rolls_up_to as owner, compliant_perc as compliant
+| table owner, compliant
+
+| eval owner=if(owner="ALL",'owner',upper(mvindex(split(mvindex(split('owner',"@"),0),"."),0)." ".mvindex(split(mvindex(split('owner',"@"),0),"."),1)))
+
+
+| stats values(compliant) as compliant by owner
+| sort - compliant
+          </query>
+          <earliest>-30m@m</earliest>
+          <latest>now</latest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="colorBy">value</option>
+        <option name="colorMode">block</option>
+<!--         <option name="drilldown">none</option> -->
+        <option name="height">387</option>
+        <option name="numberPrecision">0</option>
+        <option name="rangeColors">["0xa70000","0xcccccc","0x53A051"]</option>
+        <option name="rangeValues">[30,90]</option>
+        <option name="showSparkline">1</option>
+        <option name="showTrendIndicator">1</option>
+        <option name="trellis.enabled">1</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">small</option>
+        <option name="trellis.splitBy">owner</option>
+        <option name="unit">%</option>
+        <option name="trendColorInterpretation">standard</option>
+        <option name="trendDisplayMode">absolute</option>
+        <option name="unitPosition">after</option>
+        <option name="useColors">1</option>
+        <option name="useThousandSeparators">1</option>
+        <drilldown>
+          <set token="tkn_clicked_owner">$trellis.value$</set>
+        </drilldown>
+      </single>
+    </panel>
+  </row>
+  
+  
+
+
+
+
+<!-- ########################################################## DROPDOWN BOX ROW ################################################################ -->
+
+
+  <row>
+    <panel>
+      <input type="dropdown" token="tkn_rolls_up_to" searchWhenChanged="true">
+        <label>DD</label>
+        <selectFirstChoice>true</selectFirstChoice>
+        <fieldForLabel>name</fieldForLabel>
+        <fieldForValue>email</fieldForValue>
+        <search id="base_owners">
+          <query>
+| loadjob savedsearch="ssphp_app_account:DCAP_DEV:ssphp_create_dashboard_dataset_service_DEV"
+```| loadjob 1765372181.10639_5AE80E07-9C13-4197-8755-82A7DAFC834D```
+  
+| search ssphp.service.rolls_up_to!="Unassigned"
+
+| table ssphp.service.rolls_up_to
+| dedup ssphp.service.rolls_up_to
+
+| eval name=upper(mvindex(split(mvindex(split('ssphp.service.rolls_up_to',"@"),0),"."),0)." ".mvindex(split(mvindex(split('ssphp.service.rolls_up_to',"@"),0),"."),1)),
+       email=lower('ssphp.service.rolls_up_to')
+       
+| append [
+  | makeresults
+  | eval name="ALL",
+         email="*"]
+
+| sort name
+          </query>
+          <done>
+            <unset token="tkn_main_ready"></unset>
+            <unset token="tkn_rollup_ready"></unset>
+          </done>
+        </search>
+      </input>
+
+    </panel>
+  </row>
 
   <row depends="$debug$">
     <panel>
       <table>
-        <search>
+        <search base="base_owners">
           <query>
-| makeresults
-| eval short_port=$tkn__portfolio|s$
-| lookup ssphp.portfolio_shortport.csv short_port OUTPUT ssphp.service.portfolio as portfolio
-| table portfolio, short_port
+            | search name=$tkn_clicked_owner|s$ | table *
           </query>
           <done>
-            <set token="form.tkn_portfolio">$result.portfolio$</set>
+            <set token="form.tkn_rolls_up_to">$result.email$</set>
           </done>
         </search>
-        <option name="count">1</option>
       </table>
-    </panel> 
+    </panel>
   </row>
-
-
+  
+  
+  <row depends="$alwaysHideCSS$">
+    <panel>
+      <html>
+        <style>
+          .absolute {
+            text-align: center !important;
+            color: $tkn_colour_text$ !important;
+            font-size: $tkn_font_size_2$% !important;
+            font-weight: bold;
+            text-align: center !important;
+            line-height: 1.5 !important;
+          }
+          .undervalue {
+            text-align: center !important;
+            color: $tkn_colour_text$ !important;
+            font-size: 100% !important;
+            text-align: center !important;
+            line-height: 1.5 !important;
+          }
+          .undervalue2 {
+            text-align: center !important;
+            color: $tkn_colour_text$ !important;
+            font-size: 80% !important;
+            text-align: center !important;
+            line-height: 1.5 !important;
+          }
+          .line{
+            color: $tkn_colour_tile$;
+            height: 4px;
+            margin-bottom: 20px;
+          }
+        </style>
+      </html>
+    </panel>
+  </row>
+  
+  
 
 
 <!-- ######################################################################################################################################### -->
@@ -119,15 +263,16 @@
       <table>
         <search id="base_roll_up">
           <query>
-| loadjob savedsearch="ssphp_app_account:{{app}}{{environment}}:ssphp_create_dashboard_dataset_service{{environment}}"
+| loadjob savedsearch="ssphp_app_account:DCAP_DEV:ssphp_create_dashboard_dataset_service_DEV"
+```| loadjob 1765372181.10639_5AE80E07-9C13-4197-8755-82A7DAFC834D```
 
-| search ssphp.service.portfolio=$tkn_portfolio|s$
+| search ssphp.service.rolls_up_to=$tkn_rolls_up_to|s$
 
 | eval ssphp.service.portfolio=trim('ssphp.service.portfolio'),
        ssphp.service.service_line=trim('ssphp.service.service_line'),
        ssphp.service.product=trim('ssphp.service.product')
        
-| fields ssphp.service.portfolio, ssphp.service.service_line, ssphp.service.product, ssphp.service.id, ssphp.assessment.source, ssphp.use_case.category, ssphp.use_case.id, ssphp.use_case.title, ssphp.assessment.display_name, ssphp.score.score, ssphp.score.compliance_status, ssphp.score.ciso_priority```, ssphp.assessment.description```, ssphp.score.color, ssphp.resource.id, ssphp.resource.tenant, ssphp.resource.subscription, ssphp.resource.subscription_name, ssphp.resource.resource_group, ssphp.score.remediation_priority, ssphp.exemption.status, SSPHP_UID 
+| fields ssphp.service.portfolio, ssphp.service.service_line, ssphp.service.product, ssphp.service.id, ssphp.service.rolls_up_to, ssphp.assessment.source, ssphp.use_case.category, ssphp.use_case.id, ssphp.use_case.title, ssphp.assessment.display_name, ssphp.score.score, ssphp.score.compliance_status, ssphp.score.ciso_priority```, ssphp.assessment.description```, ssphp.score.color, ssphp.resource.id, ssphp.resource.tenant, ssphp.resource.subscription, ssphp.resource.subscription_name, ssphp.resource.resource_group, ssphp.score.remediation_priority, ssphp.exemption.status, SSPHP_UID 
 
 | search ssphp.exemption.status="comply" AND ssphp.service.portfolio!=""
 | search (ssphp.use_case.category="POSTURE" OR 
@@ -138,8 +283,8 @@
 | search ssphp.resource.id="***"  AND ssphp.resource.id!=""
 | where 'ssphp.score.ciso_priority'="DfE Mandated"
 
-| stats count as total_controls, sum(eval(if(match('ssphp.score.compliance_status',"^Non-Compliant.*"),1,0))) as non_compliant_mandated_controls by ssphp.service.portfolio, ssphp.use_case.category, ssphp.resource.id
-| stats count as resources_total, sum(eval(if('non_compliant_mandated_controls'&gt;0,1,0))) as resources_bad by ssphp.service.portfolio, ssphp.use_case.category
+| stats count as total_controls, sum(eval(if(match('ssphp.score.compliance_status',"^Non-Compliant.*"),1,0))) as non_compliant_mandated_controls by ```ssphp.service.rolls_up_to, ```ssphp.use_case.category, ssphp.resource.id
+| stats count as resources_total, sum(eval(if('non_compliant_mandated_controls'&gt;0,1,0))) as resources_bad by ```ssphp.service.rolls_up_to, ```ssphp.use_case.category
 
 | eval resources_good='resources_total'-'resources_bad'
 | eval number_total_resources='resources_total',
@@ -164,7 +309,8 @@
       </table>
     </panel>
 
-  
+
+
 <!-- ###################################################### POSTURE #################################################################### -->
     <panel depends="$debug$">
       <title>posture</title>
@@ -192,15 +338,15 @@
             <eval token="tkn_show_posture">if($result.compliant_both$="-",null(),"true")</eval>            
             <eval token="tkn_show_chk_1">if($result.compliant_both$="-",null(),"true")</eval>
 
-            <eval token="tkn_rollup_ready">if(isnull($result.compliant_both$),null(),"true")</eval>
+            <eval token="tkn_rollup_ready_p">if(isnull($result.compliant_both$),null(),"true")</eval>
           </done>
         </search>
       </table>
     </panel>
 
-    <panel depends="$tkn_rollup_ready$,$tkn_show_posture$">
+    <panel depends="$tkn_rollup_ready_p$">
       <html>
-        <div class="absolute" style="background:$tkn_colour_tile$;">$tkn_posture_compliant_both$</div>
+        <div class="absolute" style="background:$tkn_colour_tile$;">$tkn_posture_perc_passed_resources$</div>
         <div style="display: flex;">
           <div class="line" style="width: $tkn_margin$%; border-bottom: 5px solid $tkn_colour_tile$;"/>
           
@@ -244,15 +390,15 @@
             <eval token="tkn_show_kubernetes">if($result.compliant_both$="-",null(),"true")</eval>         
             <eval token="tkn_show_chk_2">if($result.compliant_both$="-",null(),"true")</eval>
 
-            <eval token="tkn_rollup_ready">if(isnull($result.compliant_both$),null(),"true")</eval>
+            <eval token="tkn_rollup_ready_k">if(isnull($result.compliant_both$),null(),"true")</eval>
           </done>
         </search>
       </table>
     </panel>
 
-    <panel depends="$tkn_rollup_ready$,$tkn_show_kubernetes$">
+    <panel depends="$tkn_rollup_ready_k$">
       <html>
-        <div class="absolute" style="background:$tkn_colour_tile$;">$tkn_k8s_compliant_both$</div>
+        <div class="absolute" style="background:$tkn_colour_tile$;">$tkn_k8s_perc_passed_resources$</div>
         <div style="display: flex;">
           <div class="line" style="width: $tkn_margin$%; border-bottom: 5px solid $tkn_colour_tile$;"/>
           
@@ -297,15 +443,15 @@
             <eval token="tkn_show_repos">if($result.compliant_both$="-",null(),"true")</eval>     
             <eval token="tkn_show_chk_3">if($result.compliant_both$="-",null(),"true")</eval>
 
-            <eval token="tkn_rollup_ready">if(isnull($result.compliant_both$),null(),"true")</eval>
+            <eval token="tkn_rollup_ready_r">if(isnull($result.compliant_both$),null(),"true")</eval>
           </done>
         </search>
       </table>
     </panel>
 
-    <panel depends="$tkn_rollup_ready$,$tkn_show_repos$">
+    <panel depends="$tkn_rollup_ready_r$">
       <html>
-        <div class="absolute" style="background:$tkn_colour_tile$;">$tkn_repos_compliant_both$</div>
+        <div class="absolute" style="background:$tkn_colour_tile$;">$tkn_repos_perc_passed_resources$</div>
         <div style="display: flex;">
           <div class="line" style="width: $tkn_margin$%; border-bottom: 5px solid $tkn_colour_tile$;"/>
           
@@ -350,15 +496,15 @@
             <eval token="tkn_show_codescan">if($result.compliant_both$="-",null(),"true")</eval>     
             <eval token="tkn_show_chk_4">if($result.compliant_both$="-",null(),"true")</eval>
 
-            <eval token="tkn_rollup_ready">if(isnull($result.compliant_both$),null(),"true")</eval>
+            <eval token="tkn_rollup_ready_c">if(isnull($result.compliant_both$),null(),"true")</eval>
           </done>
         </search>
       </table>
     </panel>
 
-    <panel depends="$tkn_rollup_ready$,$tkn_show_codescan$">
+    <panel depends="$tkn_rollup_ready_c$">
       <html>
-        <div class="absolute" style="background:$tkn_colour_tile$;">$tkn_codescan_compliant_both$</div>
+        <div class="absolute" style="background:$tkn_colour_tile$;">$tkn_codescan_perc_passed_resources$</div>
         <div style="display: flex;">
           <div class="line" style="width: $tkn_margin$%; border-bottom: 5px solid $tkn_colour_tile$;"/>
           
@@ -403,15 +549,15 @@
             <eval token="tkn_show_vuln">if($result.compliant_both$="-",null(),"true")</eval>     
             <eval token="tkn_show_chk_5">if($result.compliant_both$="-",null(),"true")</eval>
 
-            <eval token="tkn_rollup_ready">if(isnull($result.compliant_both$),null(),"true")</eval>
+            <eval token="tkn_rollup_ready_v">if(isnull($result.compliant_both$),null(),"true")</eval>
           </done>
         </search>
       </table>
     </panel>
 
-    <panel depends="$tkn_rollup_ready$,$tkn_show_vuln$">
+    <panel depends="$tkn_rollup_ready_v$">
       <html>
-        <div class="absolute" style="background:$tkn_colour_tile$;">$tkn_vulnerability_compliant_both$</div>
+        <div class="absolute" style="background:$tkn_colour_tile$;">$tkn_vulnerability_perc_passed_resources$</div>
         <div style="display: flex;">
           <div class="line" style="width: $tkn_margin$%; border-bottom: 5px solid $tkn_colour_tile$;"/>
           
@@ -640,17 +786,22 @@
           }
         </style>
       </html>
-
-      <table id="table1" depends="$tkn_main_ready$">
+      
+      
+<!--  depends="$tkn_main_ready$" -->
+      <table id="table1">
         <search>
           <query>
-| loadjob savedsearch="ssphp_app_account:{{app}}{{environment}}:ssphp_create_dashboard_dataset_service{{environment}}"
+| loadjob savedsearch="ssphp_app_account:DCAP_DEV:ssphp_create_dashboard_dataset_service_DEV"
+```| loadjob 1765372181.10639_5AE80E07-9C13-4197-8755-82A7DAFC834D```
+
+| search ssphp.service.rolls_up_to=$tkn_rolls_up_to|s$
 
 | eval ssphp.service.portfolio=trim('ssphp.service.portfolio'),
        ssphp.service.service_line=trim('ssphp.service.service_line'),
        ssphp.service.product=trim('ssphp.service.product')
        
-| fields ssphp.service.portfolio, ssphp.service.service_line, ssphp.service.product, ssphp.service.id, ssphp.assessment.source, ssphp.use_case.category, ssphp.use_case.id, ssphp.use_case.title, ssphp.assessment.display_name, ssphp.score.score, ssphp.score.compliance_status, ssphp.score.ciso_priority```, ssphp.assessment.description```, ssphp.score.color, ssphp.resource.id, ssphp.resource.tenant, ssphp.resource.subscription, ssphp.resource.subscription_name, ssphp.resource.resource_group, ssphp.score.remediation_priority, ssphp.exemption.status, SSPHP_UID 
+| fields ssphp.service.portfolio, ssphp.service.service_line, ssphp.service.product, ssphp.service.id, ssphp.service.rolls_up_to, ssphp.assessment.source, ssphp.use_case.category, ssphp.use_case.id, ssphp.use_case.title, ssphp.assessment.display_name, ssphp.score.score, ssphp.score.compliance_status, ssphp.score.ciso_priority```, ssphp.assessment.description```, ssphp.score.color, ssphp.resource.id, ssphp.resource.tenant, ssphp.resource.subscription, ssphp.resource.subscription_name, ssphp.resource.resource_group, ssphp.score.remediation_priority, ssphp.exemption.status, SSPHP_UID 
 
 | search ssphp.exemption.status="comply" AND ssphp.service.portfolio!=""
 | search (ssphp.use_case.category="POSTURE" OR 
@@ -682,16 +833,12 @@
 | fields ssphp.service.portfolio, ssphp.service.service_line, ssphp.service.product, ssphp.service.id, ssphp.use_case.category, number_total_resources, number_passed_resources, perc_passed_resources, abs, compliant_both, compliant_line_width, compliant_line_non_width, compliant_color
 | sort 0  ssphp.service.portfolio, ssphp.service.service_line, ssphp.service.product
 
-| search ssphp.service.portfolio=$tkn_portfolio|s$
-
 | eval {ssphp.use_case.category}='compliant_both',
        {ssphp.use_case.category}_perc='perc_passed_resources'
        
 | fields ssphp.service.portfolio, ssphp.service.service_line, ssphp.service.product, ssphp.service.id, POSTURE*, KUBERNETES*, REPOS*, CODE_SCAN*, VULNERABILITY*
 
 | stats values(*) as * by ssphp.service.portfolio, ssphp.service.service_line, ssphp.service.product, ssphp.service.id
-
-```| search $tkn_current_user_search_filter$```
 
 ```| fillnull value="-" POSTURE, KUBERNETES, REPOS, CODE_SCAN, VULNERABILITY```
 
@@ -977,4 +1124,9 @@
       </panel>
 
   </row>
+
+
+
+
+
 </dashboard>
