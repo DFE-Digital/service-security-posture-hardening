@@ -1,7 +1,7 @@
 <dashboard version="1.1" theme="light" script="js/table_cell_backcolor_service_overview.js">
 
 <label>DfE Security Posture Continuous Assurance : SHAF DASH</label>
-<description>_DEV v1.0.0</description>
+<description>_DEV v1.0.2</description>
 
   <init>
     <unset token="tkn_main_ready"></unset>
@@ -17,7 +17,7 @@
     <set token="tkn_colour_non_compliant_line">#FF4B4B</set>
     <set token="tkn_colour_text">#000000</set>
     
-    <set token="form.tkn_rolls_up_to">MARTIN SIVORN</set>
+    <set token="form.tkn_rolls_up_to">*</set>
   </init>
 
 
@@ -283,8 +283,8 @@
 | search ssphp.resource.id="***"  AND ssphp.resource.id!=""
 | where 'ssphp.score.ciso_priority'="DfE Mandated"
 
-| stats count as total_controls, sum(eval(if(match('ssphp.score.compliance_status',"^Non-Compliant.*"),1,0))) as non_compliant_mandated_controls by ssphp.service.rolls_up_to, ssphp.use_case.category, ssphp.resource.id
-| stats count as resources_total, sum(eval(if('non_compliant_mandated_controls'&gt;0,1,0))) as resources_bad by ssphp.service.rolls_up_to, ssphp.use_case.category
+| stats count as total_controls, sum(eval(if(match('ssphp.score.compliance_status',"^Non-Compliant.*"),1,0))) as non_compliant_mandated_controls by ```ssphp.service.rolls_up_to, ```ssphp.use_case.category, ssphp.resource.id
+| stats count as resources_total, sum(eval(if('non_compliant_mandated_controls'&gt;0,1,0))) as resources_bad by ```ssphp.service.rolls_up_to, ```ssphp.use_case.category
 
 | eval resources_good='resources_total'-'resources_bad'
 | eval number_total_resources='resources_total',
@@ -346,7 +346,7 @@
 
     <panel depends="$tkn_rollup_ready_p$">
       <html>
-        <div class="absolute" style="background:$tkn_colour_tile$;">$tkn_posture_compliant_both$</div>
+        <div class="absolute" style="background:$tkn_colour_tile$;">$tkn_posture_perc_passed_resources$</div>
         <div style="display: flex;">
           <div class="line" style="width: $tkn_margin$%; border-bottom: 5px solid $tkn_colour_tile$;"/>
           
@@ -398,7 +398,7 @@
 
     <panel depends="$tkn_rollup_ready_k$">
       <html>
-        <div class="absolute" style="background:$tkn_colour_tile$;">$tkn_k8s_compliant_both$</div>
+        <div class="absolute" style="background:$tkn_colour_tile$;">$tkn_k8s_perc_passed_resources$</div>
         <div style="display: flex;">
           <div class="line" style="width: $tkn_margin$%; border-bottom: 5px solid $tkn_colour_tile$;"/>
           
@@ -451,7 +451,7 @@
 
     <panel depends="$tkn_rollup_ready_r$">
       <html>
-        <div class="absolute" style="background:$tkn_colour_tile$;">$tkn_repos_compliant_both$</div>
+        <div class="absolute" style="background:$tkn_colour_tile$;">$tkn_repos_perc_passed_resources$</div>
         <div style="display: flex;">
           <div class="line" style="width: $tkn_margin$%; border-bottom: 5px solid $tkn_colour_tile$;"/>
           
@@ -504,7 +504,7 @@
 
     <panel depends="$tkn_rollup_ready_c$">
       <html>
-        <div class="absolute" style="background:$tkn_colour_tile$;">$tkn_codescan_compliant_both$</div>
+        <div class="absolute" style="background:$tkn_colour_tile$;">$tkn_codescan_perc_passed_resources$</div>
         <div style="display: flex;">
           <div class="line" style="width: $tkn_margin$%; border-bottom: 5px solid $tkn_colour_tile$;"/>
           
@@ -557,7 +557,7 @@
 
     <panel depends="$tkn_rollup_ready_v$">
       <html>
-        <div class="absolute" style="background:$tkn_colour_tile$;">$tkn_vulnerability_compliant_both$</div>
+        <div class="absolute" style="background:$tkn_colour_tile$;">$tkn_vulnerability_perc_passed_resources$</div>
         <div style="display: flex;">
           <div class="line" style="width: $tkn_margin$%; border-bottom: 5px solid $tkn_colour_tile$;"/>
           

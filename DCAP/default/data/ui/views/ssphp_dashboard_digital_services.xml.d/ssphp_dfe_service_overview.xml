@@ -1,7 +1,7 @@
 <dashboard version="1.1" theme="light" script="js/table_cell_backcolor_service_overview.js">
 
 <label>DfE Security Posture Continuous Assurance : Service Overview Dashboard</label>
-<description>{{environment}} v1.0.6</description>
+<description>{{environment}} v1.0.7</description>
 
   <init>
     <unset token="tkn_main_ready"></unset>
@@ -691,7 +691,7 @@
 
 | stats values(*) as * by ssphp.service.portfolio, ssphp.service.service_line, ssphp.service.product, ssphp.service.id
 
-| search $tkn_current_user_search_filter$
+```| search $tkn_current_user_search_filter$```
 
 ```| fillnull value="-" POSTURE, KUBERNETES, REPOS, CODE_SCAN, VULNERABILITY```
 
