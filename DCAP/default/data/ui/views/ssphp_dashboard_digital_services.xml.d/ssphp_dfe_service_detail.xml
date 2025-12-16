@@ -2,7 +2,7 @@
 
 
 <label>DfE Security Posture Continuous Assurance : Service Control Detail Dashboard</label>
-<description>{{environment}} v1.0.4</description>
+<description>{{environment}} v1.0.5</description>
   
   <init>
     <unset token="tkn_ready_event"></unset>
@@ -38,7 +38,11 @@
     [| search `ssphp_summary_index{{environment}}` SSPHP_UID=$tkn__uid|s$
       | stats max(SSPHP_RUN) as SSPHP_RUN
       | return SSPHP_RUN]
-    
+
+| rename ssphp.service.iso{} as ssphp.service.iso
+| eval ssphp.service.iso=mvjoin('ssphp.service.iso',"
+")
+
 | fields ssphp.assessment.*, ssphp.benchmark.*, ssphp.use_case.*, ssphp.service.*, ssphp.resource.*, ssphp.score.*, _raw
     </query>
       <done>
