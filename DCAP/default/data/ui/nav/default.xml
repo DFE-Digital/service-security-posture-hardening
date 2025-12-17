@@ -23,6 +23,7 @@
     <a href="ssphp_dashboard_usage">DCAP Dashboard Usage</a>
     <collection label="SLT Dashboards" >
       <a href="ssphp_dfe_shaf_dash">Shaf Dash</a>
+      <a href="ssphp_dfe_service_overview_iso">ISO Dash</a>
       <a href="ssphp_dfe_service_portfolio_overview?slt=true">Portfolio Overview - SLT</a>
       <a href="ssphp_foundational_systems_history_slt">Control Progress - SLT</a>
     </collection>

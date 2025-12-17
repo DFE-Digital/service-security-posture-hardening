@@ -1,0 +1,61 @@
+<dashboard version="1.1" theme="dark" hideFilters="true" script="js/route.js">
+  <label>DCAP HOME</label>
+
+    <row depends="$debug$">
+        <panel>
+            <table id="routing_table">
+                <search>
+                    <query>
+| rest splunk_server=local /services/authentication/current-context
+| rename roles as user_roles
+
+| fields username, user_roles
+| mvexpand user_roles
+
+| join type=outer user_roles
+    [| makeresults format=csv data="user_roles, service, priority
+                                    dfe_ssphp_service_user_m365, m365, 02
+                                    dfe_ssphp_service_user_aad, aad, 03
+                                    dfe_ssphp_service_user_aws, dns, 04
+                                    dfe_ssphp_service_user_azure, azure, 05"]
+| eval service=coalesce('service',"-"),
+       priority=if('service'="-",99,'priority')
+       
+| rex field=user_roles "^dfe_ssphp_service_user_(?&lt;service_no&gt;\d*)$"
+
+| lookup ssphp_bdmc_fbp.csv id as service_no OUTPUT portfolio
+| eventstats values(portfolio) as portfolio
+| eval portfolio=mvindex('portfolio',0)
+
+| eval svc_short=case('portfolio'="Families Group","FAM",
+                      'portfolio'="Institute for Apprenticeships","APPR",
+                      'portfolio'="Operations &amp; Infrastructure Group","OPS",
+                      'portfolio'="Regions Group","REG",
+                      'portfolio'="Schools Group","SCH",
+                      'portfolio'="Skills Group","SKILL",
+                      'portfolio'="Standards and Testing Agency","STD",
+                      'portfolio'="Strategy Group","STRAT",
+                      'portfolio'="Teaching Regulation Agency","TRA",
+                      1==1,"Oops")
+
+| eval priority=if(isnotnull(service_no),10,'priority'),
+       priority=if('user_roles'="dfe_ssphp_service_user_multi",9,'priority'),
+       priority=if('svc_short'="Oops",8,'priority')
+
+| eval link_target=case('svc_short'="Oops","/en-GB/app/{{app}}{{environment}}/ssphp_dfe_service_portfolio_overview",
+                        'user_roles'="dfe_ssphp_service_user_multi","/en-GB/app/{{app}}{{environment}}/ssphp_dfe_service_overview?tkn__portfolio=".'svc_short',
+                        isnotnull(service_no),"/en-GB/app/{{app}}{{environment}}/ssphp_dfe_service_posture?tkn__service=".'service_no',
+                        'user_roles'="dfe_ssphp_service_power","/en-GB/app/{{app}}{{environment}}/ssphp_dfe_service",
+                        'service'="-","/en-GB/app/{{app}}{{environment}}/ssphp_foundational_systems_posture",
+                        1==1,"/en-GB/app/{{app}}{{environment}}/ssphp_foundational_systems_service?form.tkn__service=".'service')
+
+| sort 1 priority
+
+| table link_target
+                    </query>
+                </search>
+            </table>
+        </panel>
+    </row>
+
+</dashboard>
