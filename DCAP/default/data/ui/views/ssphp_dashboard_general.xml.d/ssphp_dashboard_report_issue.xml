@@ -5,7 +5,7 @@
 {% endif %}  
 
 <label>Security Posture Continuous Assurance : Reporting Issues</label>
-<description>{{environment}} v1.0.1</description>
+<description>{{environment}} v1.0.2</description>
 
 
 
@@ -13,10 +13,10 @@
       <panel>
         <html>
 <div style="font-size:175%;color:orange;">How to Report an Issue</div><br></br>
-Go to our DCAP Slack Channel <a href="https://ukgovernmentdfe.slack.com/archives/C086DMDA4DV/p1735566822892519">#secure-by-design-dcap</a>. <br></br>
+Go to our <a href="https://teams.microsoft.com/l/team/19%3A5XgCpUBfokp8cVmUXci8e3W3UogyGoap9f8ozRSEZvs1%40thread.tacv2/conversations?groupId=1c6f24dc-50ea-48e7-abfa-90b992ad1736&amp;tenantId=fad277c9-c60a-4da1-b5f3-b3b8b34a82f9">DCAP Support</a> Teams Channel. <br></br>
 Send us a screenshot and a description of the issue. <br></br>
 We will create a ticket and look at the Issue as soon as possible. <br></br>
-We will communicate any status updates back to you using the Slack Channel.<br></br>
+We will communicate any status updates back to you using the Teams Channel or by email.<br></br>
 Thanks for your help.<br></br>
         </html>
       </panel>
