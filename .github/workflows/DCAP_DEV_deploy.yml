@@ -71,4 +71,4 @@ jobs:
           SPLUNK_PASSWORD: ${{ secrets.SPLUNK_PASSWORD }}
           SPLUNK_ACS_TOKEN: ${{ secrets.SPLUNK_ACS_TOKEN }}
           SPLUNK_ACS_STACK: ${{ secrets.SPLUNK_ACS_STACK }}
-        run: ./splunkcloud-app-packager -a DCAP #--environment prod
+        run: ./splunkcloud-app-packager install-app -a DCAP #--environment prod
