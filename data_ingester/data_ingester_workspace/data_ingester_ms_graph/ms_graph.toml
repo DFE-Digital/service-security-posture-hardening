@@ -152,6 +152,20 @@ secure_scores_beta = { endpoint = "/beta/security/secureScores", permissions_req
   { filename = "CIS_Microsoft_365_Foundations_Benchmark_v2.0.0.pdf", control_id = "6.2" },
 ] }
 
+secure_scores_control_profiles = { endpoint = "/v1.0/security/secureScoreControlProfiles", permissions_required = [
+  "",
+], cis_controls = [
+  { filename = "CIS_Microsoft_365_Foundations_Benchmark_v2.0.0.pdf", control_id = "1.7" },
+  { filename = "CIS_Microsoft_365_Foundations_Benchmark_v2.0.0.pdf", control_id = "6.2" },
+] }
+
+secure_scores_control_profiles_beta = { endpoint = "/beta/security/secureScoreControlProfiles", permissions_required = [
+  "",
+], cis_controls = [
+  { filename = "CIS_Microsoft_365_Foundations_Benchmark_v2.0.0.pdf", control_id = "1.7" },
+  { filename = "CIS_Microsoft_365_Foundations_Benchmark_v2.0.0.pdf", control_id = "6.2" },
+] }
+
 user_registration_details = { endpoint = "/beta/reports/authenticationMethods/userRegistrationDetails", permissions_required = [
   "",
 ], cis_controls = [
