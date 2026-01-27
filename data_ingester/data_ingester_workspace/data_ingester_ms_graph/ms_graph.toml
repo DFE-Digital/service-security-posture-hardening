@@ -138,7 +138,14 @@ device_registration_policy = { endpoint = "/beta/policies/deviceRegistrationPoli
   { filename = "CIS_Microsoft_365_Foundations_Benchmark_v2.0.0.pdf", control_id = "" },
 ] }
 
-secure_scores = { endpoint = "/beta/security/secureScores", permissions_required = [
+secure_scores = { endpoint = "/v1.0/security/secureScores", permissions_required = [
+  "",
+], cis_controls = [
+  { filename = "CIS_Microsoft_365_Foundations_Benchmark_v2.0.0.pdf", control_id = "1.7" },
+  { filename = "CIS_Microsoft_365_Foundations_Benchmark_v2.0.0.pdf", control_id = "6.2" },
+] }
+
+secure_scores_beta = { endpoint = "/beta/security/secureScores", permissions_required = [
   "",
 ], cis_controls = [
   { filename = "CIS_Microsoft_365_Foundations_Benchmark_v2.0.0.pdf", control_id = "1.7" },
