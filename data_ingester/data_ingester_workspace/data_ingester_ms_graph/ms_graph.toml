@@ -178,6 +178,16 @@ organization = { endpoint = "/v1.0/organization", permissions_required = [
   { filename = "CIS_Microsoft_365_Foundations_Benchmark_v2.0.0.pdf", control_id = "1.1.12" },
 ] }
 
+permission_grant_policies = { endpoint = "/v1.0/policies/permissionGrantPolicies", permissions_required = [
+  "",
+], cis_controls = [
+] }
+
+permission_grant_policies_beta = { endpoint = "/beta/policies/permissionGrantPolicies", permissions_required = [
+  "",
+], cis_controls = [
+] }
+
 beta_group_settings = { endpoint = "/beta/settings", permissions_required = [
   "",
 ], cis_controls = [
