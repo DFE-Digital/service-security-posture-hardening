@@ -10,8 +10,11 @@ require([
         canRender: function (cell) {
             //return true;
             return _(['state',
+                      'permissionGrantPolicyIdsAssignedToDefaultUserRole',
                       'cap_id', 
                       'cap_displayName',
+                      'cap_conditions.userRiskLevels',
+                      'cap_grantControls.operator',
                       'cap_conditions.applications.includeApplications', 
                       'cap_conditions.clientAppTypes',
                       'cap_state', 
