@@ -70,6 +70,11 @@ permission_grant_policies = { endpoint = "/v1.0/policies/permissionGrantPolicies
   { filename = "CIS_Microsoft_365_Foundations_Benchmark_v2.0.0.pdf", control_id = "" },
 ] }
 
+permission_grant_policies_beta = { endpoint = "/beta/policies/permissionGrantPolicies", permissions_required = [
+  "",
+], cis_controls = [
+] }
+
 # Azure support recommended using the beta endpoint
 role_assignment_schedule_instances = { endpoint = "/beta/roleManagement/directory/roleAssignmentScheduleInstances?$expand=activatedUsing,appScope,directoryScope,principal,roleDefinition", permissions_required = [
   "",
@@ -176,16 +181,6 @@ organization = { endpoint = "/v1.0/organization", permissions_required = [
   "",
 ], cis_controls = [
   { filename = "CIS_Microsoft_365_Foundations_Benchmark_v2.0.0.pdf", control_id = "1.1.12" },
-] }
-
-permission_grant_policies = { endpoint = "/v1.0/policies/permissionGrantPolicies", permissions_required = [
-  "",
-], cis_controls = [
-] }
-
-permission_grant_policies_beta = { endpoint = "/beta/policies/permissionGrantPolicies", permissions_required = [
-  "",
-], cis_controls = [
 ] }
 
 beta_group_settings = { endpoint = "/beta/settings", permissions_required = [
