@@ -246,7 +246,8 @@ impl MsGraph {
         while let Some(result) = stream.next().await {
             let response = result?;
             let body = response.into_body()?;
-            let _ = body.inner
+            let _ = body
+                .inner
                 .into_iter()
                 .map(|mut cap: ConditionalAccessPolicy| {
                     cap.has_untrusted_conditions = Some(cap.has_other_conditions());
