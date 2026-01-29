@@ -10,6 +10,7 @@ require([
         canRender: function (cell) {
             //return true;
             return _(['state',
+                      'onPremisesSyncEnabled',
                       'permissionGrantPolicyIdsAssignedToDefaultUserRole',
                       'cap_id', 
                       'cap_displayName',
