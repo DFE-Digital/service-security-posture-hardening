@@ -1,3 +1,4 @@
+#![feature(iter_collect_into)]
 pub mod admin_request_consent_policy;
 pub mod conditional_access_policies;
 pub mod directory_roles;
