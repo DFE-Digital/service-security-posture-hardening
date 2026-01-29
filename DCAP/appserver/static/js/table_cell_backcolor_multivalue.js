@@ -11,6 +11,7 @@ require([
             //return true;
             return _(['state',
                       'onPremisesSyncEnabled',
+                      'CustomerLockboxEnabled',
                       'permissionGrantPolicyIdsAssignedToDefaultUserRole',
                       'cap_id', 
                       'cap_displayName',
