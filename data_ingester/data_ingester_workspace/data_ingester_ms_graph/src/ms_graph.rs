@@ -1,6 +1,7 @@
 use crate::admin_request_consent_policy::AdminRequestConsentPolicy;
 
 use crate::conditional_access_policies::ConditionalAccessPolicies;
+use crate::conditional_access_policies::ConditionalAccessPolicy;
 use crate::groups::Groups;
 use crate::msgraph_data::load_m365_toml;
 use crate::role_assignment_schedule::RoleSchedules;
@@ -241,10 +242,17 @@ impl MsGraph {
             .stream::<ConditionalAccessPolicies>()?;
 
         let mut caps = ConditionalAccessPolicies::new();
+
         while let Some(result) = stream.next().await {
             let response = result?;
             let body = response.into_body()?;
-            caps.inner.extend(body.inner);
+            let _ = body.inner
+                .into_iter()
+                .map(|mut cap: ConditionalAccessPolicy| {
+                    cap.has_untrusted_conditions = Some(cap.has_other_conditions());
+                    cap
+                })
+                .collect_into(&mut caps.inner);
         }
         Ok(caps)
     }
