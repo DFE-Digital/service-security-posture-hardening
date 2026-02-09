@@ -19,7 +19,7 @@ graphql_client = "0"
 http = "1"
 http-body-util = "0"
 itertools = "0"
-jsonwebtoken = "9"
+jsonwebtoken = "10"
 octocrab = { version="0"}
 regex = "1"
 secrecy = "0"
