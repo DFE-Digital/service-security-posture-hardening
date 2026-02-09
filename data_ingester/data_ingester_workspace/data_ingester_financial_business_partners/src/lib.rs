@@ -5,7 +5,7 @@ use anyhow::{Context, Result};
 use data_ingester_splunk::splunk::{set_ssphp_run, HecEvent, Splunk, SplunkTrait, ToHecEvents};
 use data_ingester_supporting::keyvault::Secrets;
 use futures::TryStreamExt;
-use rand::Rng;
+use rand::RngExt;
 use serde::Serialize;
 use std::sync::Arc;
 use tiberius::{AuthMethod, Client, Config, Query, QueryItem, Row};
