@@ -54,7 +54,7 @@ pub struct GitHubApp {
 impl GitHubApp {
     /// Create a new Github App secret.
     /// 'private_key' should be a base64 encoded DER RSA key
-    fn new(app_id: String, private_key: String) -> Result<Self> {
+    pub fn new(app_id: String, private_key: String) -> Result<Self> {
         Ok(Self {
             app_id: app_id.parse().context("Parse app ID as u64")?,
             private_key: BASE64_STANDARD
