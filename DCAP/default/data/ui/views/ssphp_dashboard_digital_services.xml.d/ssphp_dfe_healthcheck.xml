@@ -503,6 +503,13 @@ index=ssphp_metrics_data sourcetype=*rust* message=*sent*
 | eval status=if('count'&gt;0,"Unhealthy","Healthy"),
        range=if('status'="Healthy","low","severe")
 | table status, range
+
+
+``` ***************** USE THIS BLOCK TO GENERATE THE LIST OF GUIDS TO COPY PASTE WHEN YOU MAKE THE REMEDIATION *************** 
+| stats values(name) as name
+| mvexpand name
+| eval name="                          'name'=\"".'name'."\",\"X\"," ```
+
           </query>
           <earliest>@d</earliest>
           <latest>now</latest>
