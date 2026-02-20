@@ -297,7 +297,7 @@ pub(crate) trait AzureDevOpsClientMethods: AzureDevOpsClient {
     async fn identities(&self, organization: &str, descriptor: &str) -> Result<AdoResponse> {
         let api_version = "7.2-preview.1";
         let url = format!(
-            "https://vssps.dev.azure.com/{organization}/_apis/identities?api-version={api_version}&descriptors={descriptor}",
+            "https://vssps.dev.azure.com/{organization}/_apis/identities?api-version={api_version}&descriptors={descriptor}&queryMembership=Expanded",
             api_version=api_version
         );
         let ado_metadata = self.ado_metadata_builder()
