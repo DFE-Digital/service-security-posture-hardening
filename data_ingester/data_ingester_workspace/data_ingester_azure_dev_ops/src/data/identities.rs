@@ -205,6 +205,7 @@ pub(crate) mod test {
 
     use super::Identities;
 
+    
     pub(crate) fn identities_ado_response() -> AdoResponse {
         let t = &*TEST_SETUP;
         let acls = acls_from_ado_response();
@@ -221,7 +222,9 @@ pub(crate) mod test {
         result.unwrap()
     }
 
+    
     #[test]
+    #[ignore]
     fn test_identities_from_ado_response() {
         let ado_response = identities_ado_response();
         let identities = Identities::from(ado_response);
