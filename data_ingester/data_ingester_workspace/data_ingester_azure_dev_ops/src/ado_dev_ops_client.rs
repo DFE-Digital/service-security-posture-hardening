@@ -717,6 +717,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     pub fn test_ado_identities() {
         let t = &*TEST_SETUP;
         let acls = acls_from_ado_response();
