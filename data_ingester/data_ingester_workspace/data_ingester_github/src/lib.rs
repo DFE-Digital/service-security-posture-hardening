@@ -663,41 +663,68 @@ impl OctocrabGit {
     ///
     /// Only gets the first page of results
     async fn get_single_page(&self, uri: &str) -> Result<GithubResponses> {
-        let next_link = GithubNextLink::from_str(uri);
+        loop {
+            let next_link = GithubNextLink::from_str(uri);
 
-        let response = self
-            .client
-            ._get(next_link.next().context("no link available")?)
-            .await
-            .with_context(|| format!("Using Octocrab to get url: {}", uri))?;
+            let response = self
+                .client
+                ._get(next_link.next().context("no link available")?)
+                .await
+                .with_context(|| format!("Using Octocrab to get url: {}", uri))?;
 
-        let status = response.status().as_u16();
-        let mut body = response
-            .collect()
-            .await
-            .context("collect body")?
-            .to_bytes()
-            .slice(0..);
+            let status = response.status().as_u16();
+            let mut body = response
+                .collect()
+                .await
+                .context("collect body")?
+                .to_bytes()
+                .slice(0..);
 
-        if body.is_empty() {
-            body = "{}".into();
-        }
-
-        let body = match serde_json::from_slice(&body).context("Deserialize body") {
-            Ok(ok) => ok,
-            Err(err) => {
-                let body_as_string = String::from_utf8_lossy(&body);
-                error!(
-                    "Error deserialising body from Github {} {}: {}",
-                    uri, err, body_as_string
-                );
-                anyhow::bail!(err);
+            if body.is_empty() {
+                body = "{}".into();
             }
-        };
 
-        let responses = vec![GithubResponse::new(body, uri.to_string(), status)];
+            let body_string = std::string::String::from_utf8(body.to_vec())?;
+            if status == 403 && body_string.contains("API rate limit exceeded") {
+                warn!("Rate limited while requesting data from GitHub");
+                self.wait_for_rate_limit()
+                    .await
+                    .context("Waiting for rate limit")?;
+                continue;
+            }
 
-        Ok(responses.into())
+            // TODO: add matching status code for this response type
+            if body_string.contains("We had issues producing the response to your request.") {
+                warn!(
+                    uri = uri,
+                    http_response_staus_code = status,
+                    "Unknown error while requesting data from GitHub"
+                );
+                self.wait_for_rate_limit()
+                    .await
+                    .context("Waiting for rate limit")?;
+                continue;
+            }
+
+            let body = match serde_json::from_slice(&body).context("Deserialize body") {
+                Ok(ok) => ok,
+                Err(err) => {
+                    let body_as_string = String::from_utf8_lossy(&body).to_string();
+                    error!(
+                        http_request_uri = uri,
+                        http_response_status = status,
+                        http_response_body = body_as_string,
+                        "Error deserialising body from Github: {}",
+                        err
+                    );
+                    anyhow::bail!(err)
+                }
+            };
+
+            let responses = vec![GithubResponse::new(body, uri.to_string(), status)];
+
+            return Ok(responses.into());
+        }
     }
 
     /// Get a relative uri from api.github.com and exhaust all next links.
@@ -769,7 +796,7 @@ impl OctocrabGit {
                         "Error deserialising body from Github: {}",
                         err
                     );
-                    anyhow::bail!(err);
+                    anyhow::bail!(err)
                 }
             };
 
