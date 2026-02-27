@@ -640,7 +640,14 @@ impl OctocrabGit {
         ];
         let mut responses = vec![];
         for uri in uris {
-            let collection = self.get_collection(&uri).await?;
+            let collection = match self.get_collection(&uri).await {
+                Ok(collection) => collection,
+                Err(err) => {
+                    error!("Unable to get_collection() for uri{}, err:{}", uri, err);
+                    continue;
+                }
+            };
+
             if collection
                 .responses_iter()
                 .any(|response| response.http_status() == 200)
@@ -727,6 +734,20 @@ impl OctocrabGit {
 
             let body_string = std::string::String::from_utf8(body.to_vec())?;
             if status == 403 && body_string.contains("API rate limit exceeded") {
+                warn!("Rate limited while requesting data from GitHub");
+                self.wait_for_rate_limit()
+                    .await
+                    .context("Waiting for rate limit")?;
+                continue;
+            }
+
+            // TODO: add matching status code for this response type
+            if body_string.contains("We had issues producing the response to your request.") {
+                warn!(
+                    uri = uri,
+                    http_response_staus_code = status,
+                    "Unknown error while requesting data from GitHub"
+                );
                 self.wait_for_rate_limit()
                     .await
                     .context("Waiting for rate limit")?;
@@ -735,13 +756,18 @@ impl OctocrabGit {
 
             next_link = next_next_link;
 
-            let body = match serde_json::from_slice(&body).context("Deserialize body") {
+            let body = match serde_json::from_slice(&body)
+                .context("Deserialize GitHub HTTP response body into GitHubResponses")
+            {
                 Ok(ok) => ok,
                 Err(err) => {
-                    let body_as_string = String::from_utf8_lossy(&body);
+                    let body_as_string = String::from_utf8_lossy(&body).to_string();
                     error!(
-                        "Error deserialising body from Github {} {}: {}",
-                        uri, err, body_as_string
+                        http_request_uri = uri,
+                        http_response_status = status,
+                        http_response_body = body_as_string,
+                        "Error deserialising body from Github: {}",
+                        err
                     );
                     anyhow::bail!(err);
                 }
