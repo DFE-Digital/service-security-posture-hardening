@@ -7,7 +7,7 @@ use data_ingester_splunk::splunk::{
 };
 use data_ingester_supporting::keyvault::{GitHubApp, Secrets};
 use std::sync::Arc;
-use tracing::{error, info};
+use tracing::{error, info, warn};
 
 /// Public entry point
 pub async fn github_octocrab_entrypoint(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
@@ -161,9 +161,13 @@ async fn github_collect_installation_org(
     .await;
 
     for repo in org_repos.repos() {
-        let rate_limits = github_client.client.ratelimit().get().await?;
-        let rate_limits_json = serde_json::to_string(&rate_limits)?;
-        info!(name: "GitHub", org_name, rate_limits_json);
+        if let Ok(rate_limits) = github_client.client.ratelimit().get().await {
+            if let Ok(rate_limits_json) = serde_json::to_string(&rate_limits) {
+                info!(name: "GitHub", org_name, rate_limits_json);
+            }
+        } else {
+            warn!(name: "GitHub", org_name, "unable to get rate limit quotas");
+        }
 
         let repo_name = format!(
             "{}/{}",

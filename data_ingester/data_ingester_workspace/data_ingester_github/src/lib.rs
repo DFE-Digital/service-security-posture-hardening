@@ -586,7 +586,7 @@ impl OctocrabGit {
         let mut artifacts = self
             .repo_artifacts(repo.into())
             .await
-            .expect("Getting Artifacts");
+            .context("Getting Artifacts")?;
 
         artifacts.dedup();
 
