@@ -706,7 +706,6 @@ impl OctocrabGit {
                 continue;
             }
 
-
             let body = match serde_json::from_slice(&body).context("Deserialize body") {
                 Ok(ok) => ok,
                 Err(err) => {
@@ -724,7 +723,7 @@ impl OctocrabGit {
 
             let responses = vec![GithubResponse::new(body, uri.to_string(), status)];
 
-            return Ok(responses.into())
+            return Ok(responses.into());
         }
     }
 
