@@ -733,9 +733,7 @@ impl OctocrabGit {
             }
 
             let body_string = std::string::String::from_utf8(body.to_vec())?;
-            if (status == 403 && body_string.contains("API rate limit exceeded"))
-                || body_string.contains("We had issues producing the response to your request.")
-            {
+            if status == 403 && body_string.contains("API rate limit exceeded") {
                 warn!("Rate limited while requesting data from GitHub");
                 self.wait_for_rate_limit()
                     .await
@@ -743,6 +741,7 @@ impl OctocrabGit {
                 continue;
             }
 
+            // TODO: add matching status code for this response type
             if body_string.contains("We had issues producing the response to your request.") {
                 warn!(
                     uri = uri,
