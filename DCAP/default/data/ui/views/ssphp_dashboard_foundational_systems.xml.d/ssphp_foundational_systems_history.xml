@@ -1,7 +1,7 @@
 <dashboard theme="light" version="1.1" hideFilters="true">
 
 <label>DCAP Control Progress</label>
-<description>{{environment}} 1.1.8</description>
+<description>{{environment}} 1.2.8</description>
   
   <search id="bs_1">
     <query>
@@ -219,6 +219,12 @@ ssphp.source.foundational_system="*"
        Control=replace('Control',"sendi ng","sending"),
        Control=upper(substr('Control',0,1)).substr('Control',2,999),
        "Use Case"=if('Use Case'="DNS","ROUTE53 AWS",'Use Case')
+
+```********** Bit of a kluge added 2026-03-03 by AK and IP to circumvent issues with running of 3 controls with dodgy results for 3 months ******** ```
+| eval "2025-12"=if('Use Case' IN ("M365 001 [CIS 1.1.2]", "M365 001 [CIS 1.1.4]", "M365 001 [CIS 1.1.7]"),100,'2025-12'),
+       "2026-01"=if('Use Case' IN ("M365 001 [CIS 1.1.2]", "M365 001 [CIS 1.1.4]", "M365 001 [CIS 1.1.7]"),100,'2026-01'),
+       "2026-02"=if('Use Case' IN ("M365 001 [CIS 1.1.2]", "M365 001 [CIS 1.1.4]", "M365 001 [CIS 1.1.7]"),100,'2026-02'),
+       "2026-03"=if('Use Case' IN ("M365 001 [CIS 1.1.2]", "M365 001 [CIS 1.1.4]", "M365 001 [CIS 1.1.7]"),100,'2026-03')
           </query>
         </search>
         <option name="count">100</option>
