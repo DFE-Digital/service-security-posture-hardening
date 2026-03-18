@@ -1,0 +1,158 @@
+<dashboard version="1.1" theme="light" script="js/addtags.js, js/table_cell_backcolor_multivalue.js">
+  <label>School Posture Scanner</label>
+  <description>v1.0.7</description>
+
+  <row depends="$debug$">
+    <html>
+      <style>
+         .css_for_green{ 
+         background-color: green !important;
+         color:#000000 !important;
+         font-size: 100% !important;
+         font-weight: bold !important;
+         text-align: center !important;
+         }
+         .css_for_orange{ 
+         background-color: orange !important;
+         color:#000000 !important;
+         font-size: 100% !important;
+         font-weight: bold !important;
+         text-align: center !important;
+         }
+         .css_for_red{
+         background-color: red !important;
+         color:#000000 !important;
+         font-size: 100% !important;
+         font-weight: bold !important;
+         text-align: center !important;
+         }
+         .css_for_black{
+         background-color: black !important;
+         color:#FFFFFF !important;
+         font-size: 100% !important;
+         font-weight: bold !important;
+         text-align: center !important;
+         }
+      </style>
+    </html>    <html>
+      <style>
+        #table3 th:nth-child(1) {
+          width: 250px;
+        }
+        #table3 th:nth-child(2) {
+          width: 150px;
+        }
+        #table3 th:nth-child(3) {
+          width: 150px;
+        }
+        #table3 th:nth-child(4) {
+          width: 150px;
+        }
+        #table3 th:nth-child(5) {
+          width: 150px;
+        }
+        #table3 th:nth-child(6) {
+          width: 150px;
+        }
+        #table3 th:nth-child(7) {
+          width: 150px;
+        }
+      </style>
+    </html>
+  </row>
+
+  <row>
+    <panel>
+      <table id="table3">
+        <search>
+          <query>
+index="ms_schools_test" sourcetype="ssphp_ms_json" source="*.ndjson" host="ms-json" runkey="*" status!="error" earliest=0 latest=now
+| spath runkey
+| eventstats latest(runkey) as runkey_latest by business_unit
+| where runkey='runkey_latest'
+
+| spath severity
+| spath check_category
+| spath check_name
+| spath business_unit
+
+| eval severity_score=case('severity'="critical",5,
+                           'severity'="high",4,
+                           'severity'="medium",3,
+                           'severity'="low",2,
+                           'severity'="info",1)
+| where severity_score&gt;2
+
+| table business_unit, severity, severity_score, check_category, check_name
+
+| eventstats max(severity_score) as max_severity_score by business_unit, check_category
+| stats sum(eval(if('severity_score'='max_severity_score',1,0))) as max_category_count, values(max_severity_score) as max_severity_score by business_unit, check_category
+
+| eval zz_components=if('check_category'="components",'max_category_count',null()),
+       zz_max_components_severity=if('check_category'="components",'max_severity_score',null()),
+       zz_dns=if('check_category'="dns",'max_category_count',null()),
+       zz_max_dns_severity=if('check_category'="dns",'max_severity_score',null()),
+       zz_email_security=if('check_category'="email_security",'max_category_count',null()),
+       zz_max_email_security_severity=if('check_category'="email_security",'max_severity_score',null()),
+       zz_http_headers=if('check_category'="http_headers",'max_category_count',null()),
+       zz_max_http_headers_severity=if('check_category'="http_headers",'max_severity_score',null()),
+       zz_network_exposure=if('check_category'="network_exposure",'max_category_count',null()),
+       zz_max_network_exposure_severity=if('check_category'="network_exposure",'max_severity_score',null()),
+       zz_tls=if('check_category'="tls",'max_category_count',null()),
+       zz_max_tls_severity=if('check_category'="tls",'max_severity_score',null())
+       
+| table business_unit, zz_*
+| rename zz_* as *
+| stats values(*) as * by business_unit
+
+```| eval total_score=(coalesce('components',0)*coalesce('max_components_severity',0)) + 
+                      (coalesce('dns',0)*coalesce('max_dns_severity',0)) +
+                      (coalesce('email_security',0)*coalesce('max_email_security_severity',0)) +
+                      (coalesce('http_headers',0)*coalesce('max_http_headers_severity',0)) +
+                      (coalesce('network_exposure',0)*coalesce('max_network_exposure_severity',0)) +
+                      (coalesce('tls',0)*coalesce('max_tls_severity',0))```
+
+| eval total_blacks=if('max_components_severity'=5,coalesce('components',0),0),
+       total_blacks=if('max_dns_severity'=5,'total_blacks'+coalesce('dns',0),'total_blacks'),
+       total_blacks=if('max_email_security_severity'=5,'total_blacks'+coalesce('email_security',0),'total_blacks'),
+       total_blacks=if('max_http_headers_severity'=5,'total_blacks'+coalesce('http_headers',0),'total_blacks'),
+       total_blacks=if('max_network_exposure_severity'=5,'total_blacks'+coalesce('network_exposure',0),'total_blacks'),
+       total_blacks=if('max_"tls_severity'=5,'total_blacks'+coalesce('"tls',0),'total_blacks')
+| eval total_reds=if('max_components_severity'=4,coalesce('components',0),0),
+       total_reds=if('max_dns_severity'=4,'total_reds'+coalesce('dns',0),'total_reds'),
+       total_reds=if('max_email_security_severity'=4,'total_reds'+coalesce('email_security',0),'total_reds'),
+       total_reds=if('max_http_headers_severity'=4,'total_reds'+coalesce('http_headers',0),'total_reds'),
+       total_reds=if('max_network_exposure_severity'=4,'total_reds'+coalesce('network_exposure',0),'total_reds'),
+       total_reds=if('max_tls_severity'=4,'total_reds'+coalesce('tls',0),'total_reds')
+| eval total_oranges=if('max_components_severity'=3,coalesce('components',0),0),
+       total_oranges=if('max_dns_severity'=3,'total_oranges'+coalesce('dns',0),'total_oranges'),
+       total_oranges=if('max_email_security_severity'=3,'total_oranges'+coalesce('email_security',0),'total_oranges'),
+       total_oranges=if('max_http_headers_severity'=3,'total_oranges'+coalesce('http_headers',0),'total_oranges'),
+       total_oranges=if('max_network_exposure_severity'=3,'total_oranges'+coalesce('network_exposure',0),'total_oranges'),
+       total_oranges=if('max_tls_severity'=3,'total_oranges'+coalesce('tls',0),'total_oranges')
+       
+       
+| eval components='components'."¬".case('max_components_severity'=5,"black", 'max_components_severity'=4,"red", 'max_components_severity'=3,"orange"),
+       dns='dns'."¬".case('max_dns_severity'=5,"black", 'max_dns_severity'=4,"red", 'max_dns_severity'=3,"orange"),
+       email_security='email_security'."¬".case('max_email_security_severity'=5,"black", 'max_email_security_severity'=4,"red", 'max_email_security_severity'=3,"orange"),
+       http_headers='http_headers'."¬".case('max_http_headers_severity'=5,"black", 'max_http_headers_severity'=4,"red", 'max_http_headers_severity'=3,"orange"),
+       network_exposure='network_exposure'."¬".case('max_network_exposure_severity'=5,"black", 'max_network_exposure_severity'=4,"red", 'max_network_exposure_severity'=3,"orange"),
+       tls='tls'."¬".case('max_tls_severity'=5,"black", 'max_tls_severity'=4,"red", 'max_tls_severity'=3,"orange")
+       
+| sort 0 - total_blacks, total_reds, total_oranges
+| table business_unit, components, dns, email_security, http_headers, network_exposure, tls```, total_blacks, total_reds, total_oranges```
+          </query>
+          <earliest>0</earliest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="count">100</option>
+        <option name="dataOverlayMode">none</option>
+        <option name="drilldown">none</option>
+        <option name="percentagesRow">false</option>
+        <option name="rowNumbers">false</option>
+        <option name="totalsRow">false</option>
+        <option name="wrap">true</option>
+      </table>
+    </panel>
+  </row>
+</dashboard>
