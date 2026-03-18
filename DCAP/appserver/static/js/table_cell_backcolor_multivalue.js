@@ -10,6 +10,12 @@ require([
         canRender: function (cell) {
             //return true;
             return _(['state',
+                      'components',
+                      'dns',
+                      'email_security',
+                      'http_headers',
+                      'network_exposure',
+                      'tls',
                       'onPremisesSyncEnabled',
                       'CustomerLockboxEnabled',
                       'permissionGrantPolicyIdsAssignedToDefaultUserRole',
