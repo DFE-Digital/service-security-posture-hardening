@@ -1,9 +1,34 @@
-<dashboard version="1.1" theme="light" script="js/addtags.js, js/table_cell_backcolor_multivalue.js">
+<form version="1.1" theme="light" script="js/addtags.js, js/table_cell_backcolor_multivalue.js">
+  
   <label>School Posture Scanner</label>
-  <description>v1.0.7</description>
-
+  <description>v1.0.8</description>
+  
+  <fieldset submitButton="false">
+    <input type="checkbox" token="tkn_show" searchWhenChanged="true">
+      <label>Show</label>
+      <choice value="critical">Critical</choice>
+      <choice value="high">High</choice>
+      <choice value="medium">Medium</choice>
+      <default>critical,high,medium</default>
+      <initialValue>critical,high,medium</initialValue>
+      <prefix> (</prefix>
+      <suffix>)</suffix>
+      <valuePrefix>severity="</valuePrefix>
+      <valueSuffix>"</valueSuffix>
+      <delimiter> OR </delimiter>
+    </input>
+    
+    <input type="text" token="tkn_search" searchWhenChanged="true">
+      <label>Search</label>
+      <default>*</default>
+      <initialValue>*</initialValue>
+    </input>
+  </fieldset>
+  
+  
   <row depends="$debug$">
-    <html>
+    <panel>
+      <html>
       <style>
          .css_for_green{ 
          background-color: green !important;
@@ -34,7 +59,10 @@
          text-align: center !important;
          }
       </style>
-    </html>    <html>
+    </html>
+    </panel>
+    <panel>
+      <html>
       <style>
         #table3 th:nth-child(1) {
           width: 250px;
@@ -59,8 +87,10 @@
         }
       </style>
     </html>
+    </panel>
   </row>
-
+  
+  
   <row>
     <panel>
       <table id="table3">
@@ -75,6 +105,8 @@ index="ms_schools_test" sourcetype="ssphp_ms_json" source="*.ndjson" host="ms-js
 | spath check_category
 | spath check_name
 | spath business_unit
+
+| search business_unit=$tkn_search|s$ AND $tkn_show$
 
 | eval severity_score=case('severity'="critical",5,
                            'severity'="high",4,
@@ -155,4 +187,4 @@ index="ms_schools_test" sourcetype="ssphp_ms_json" source="*.ndjson" host="ms-js
       </table>
     </panel>
   </row>
-</dashboard>
+</form>
