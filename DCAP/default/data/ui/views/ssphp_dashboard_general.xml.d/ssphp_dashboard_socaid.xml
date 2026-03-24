@@ -1,0 +1,436 @@
+<form version="1.1" theme="light" script="js/table_cell_backcolor_service_overview.js">
+  <label>DfE SOCaid DASH</label>
+  
+  <description>_DEV v1.0.1</description>
+  <fieldset submitButton="false">
+    <input type="radio" token="tkn_dashboard_function" searchWhenChanged="true">
+      <label>What Do You Need To Find?</label>
+      <choice value="r">Repo Ownership</choice>
+      <choice value="g">GitHub Owners</choice>
+      <choice value="x">Owners by Resource Group</choice>
+      <choice value="y">Resource Groups by Owner</choice>
+      <choice value="w">VM Ownership</choice>
+      <default>r</default>
+      <initialValue>r</initialValue>
+      <change>
+        <condition value="r">
+          <set token="tkn_show_r">true</set>
+          <unset token="tkn_show_g"></unset>
+          <unset token="tkn_show_x"></unset>
+          <unset token="tkn_show_y"></unset>
+          <unset token="tkn_show_w"></unset>
+        </condition>
+        <condition value="g">
+          <set token="tkn_show_g">true</set>
+          <unset token="tkn_show_r"></unset>
+          <unset token="tkn_show_x"></unset>
+          <unset token="tkn_show_y"></unset>
+          <unset token="tkn_show_w"></unset>
+        </condition>
+        <condition value="x">
+          <set token="tkn_show_x">true</set>
+          <unset token="tkn_show_r"></unset>
+          <unset token="tkn_show_g"></unset>
+          <unset token="tkn_show_y"></unset>
+          <unset token="tkn_show_w"></unset>
+        </condition>
+        <condition value="y">
+          <set token="tkn_show_y">true</set>
+          <unset token="tkn_show_r"></unset>
+          <unset token="tkn_show_g"></unset>
+          <unset token="tkn_show_x"></unset>
+          <unset token="tkn_show_w"></unset>
+        </condition>
+        <condition value="w">
+          <set token="tkn_show_w">true</set>
+          <unset token="tkn_show_r"></unset>
+          <unset token="tkn_show_g"></unset>
+          <unset token="tkn_show_x"></unset>
+          <unset token="tkn_show_y"></unset>
+        </condition>
+      </change>
+    </input>
+  </fieldset>
+  
+
+<!-- ################### View Ownership Details by Repo ################### --> 
+  <row depends="$tkn_show_r$">
+    <panel>
+      <input type="dropdown" token="tkn_org_repo" searchWhenChanged="true">
+        <label>Select Repository</label>
+        <fieldForLabel>org_repo</fieldForLabel>
+        <fieldForValue>org_repo</fieldForValue>
+        <selectFirstChoice>true</selectFirstChoice>
+        <search>
+          <query>
+| inputlookup ssphp_github_repo_ownership_details.csv
+| eval org_repo='organisation'." | ".'repo_name'
+| dedup org_repo
+| table org_repo
+| sort 0 org_repo
+          </query>
+        </search>
+      </input>
+    </panel>
+  </row>
+  
+  <row depends="$tkn_show_r$">
+    <panel>
+      <table>
+        <search>
+          <query>
+| inputlookup ssphp_github_repo_ownership_details.csv
+
+| eval org_repo='organisation'." | ".'repo_name'
+| search org_repo=$tkn_org_repo|s$
+
+| table organisation, repo_name, description, visibility, dfe_centrally_owned, archived, default_branch, created, last_updated
+          </query>
+        </search>
+        <option name="count">100</option>
+        <option name="dataOverlayMode">none</option>
+        <option name="drilldown">none</option>
+        <option name="percentagesRow">false</option>
+        <option name="rowNumbers">false</option>
+        <option name="totalsRow">false</option>
+        <option name="wrap">true</option>
+      </table>
+    </panel>
+  </row>
+  
+  <row depends="$tkn_show_r$">
+    <panel>
+      <html/>
+    </panel>
+  </row>
+  
+  <row depends="$tkn_show_r$">
+    <panel>
+      <table>
+        <search>
+          <query>
+| inputlookup ssphp_github_repo_ownership_details.csv
+
+| eval org_repo='organisation'." | ".'repo_name'
+| search org_repo=$tkn_org_repo|s$
+
+| eval ssphp.service.contacts.cost_centre_owner_email=coalesce('ssphp.service.contacts.cost_centre_owner_email','ssphp.service.contacts.cost_centre_owner_email{}')
+| fields - ssphp.service.contacts.cost_centre_owner_email{}
+| fields - org_repo, organisation, repo_name, description, visibility, dfe_centrally_owned, archived, default_branch, created, last_updated, *url*, ssphp.service.cost_centre.account_code, ssphp.service.cost_centre.activity_code, ssphp.service.cost_centre.code, ssphp.service.product_clean, ssphp.service.product_key
+| table ssphp.service.portfolio, ssphp.service.service_line, ssphp.service.product, ssphp.service.id, contributors_*, ssphp.service.iso, ssphp.service.rolls_up_to, rolls_up_to_manager, *service.contacts*, *cost_centre*, *
+| rename ssphp.service.* as *
+| transpose
+```| search "row 1"!="null"```
+| rename column as Field, "row 1" as Value
+          </query>
+        </search>
+        <option name="count">100</option>
+        <option name="dataOverlayMode">none</option>
+        <option name="drilldown">none</option>
+        <option name="percentagesRow">false</option>
+        <option name="rowNumbers">false</option>
+        <option name="totalsRow">false</option>
+        <option name="wrap">true</option>
+      </table>
+    </panel>
+  </row>
+  
+  
+  
+
+<!-- ################### View Repo Details by Owner ################### --> 
+  <row depends="$tkn_show_g$">
+    <panel>
+      <input type="dropdown" token="tkn_repo_owner" searchWhenChanged="true">
+        <label>Select Owner</label>
+        <fieldForLabel>owner_list</fieldForLabel>
+        <fieldForValue>owner_list</fieldForValue>
+        <selectFirstChoice>true</selectFirstChoice>
+        <search>
+          <query>
+| inputlookup ssphp_github_repo_ownership_details.csv
+
+| eval org_repo='organisation'." | ".'repo_name'
+| eval ssphp.service.contacts.cost_centre_owner_email=coalesce('ssphp.service.contacts.cost_centre_owner_email','ssphp.service.contacts.cost_centre_owner_email{}')
+| eval ssphp.service.contacts.product_owner_email=split('ssphp.service.contacts.product_owner_email'," ")
+
+| fields organisation, repo_name, description, visibility, dfe_centrally_owned, archived, default_branch, created, last_updated, *
+
+| eval owner_list=mvappend('contributors_dfe_email','rolls_up_to_manager','ssphp.service.rolls_up_to,','ssphp.service.contacts.cost_centre_owner_email','ssphp.service.contacts.financial_business_partner_email','ssphp.service.contacts.hosting_provider_email','ssphp.service.contacts.hosting_support_email','ssphp.service.contacts.product_owner_email','ssphp.service.iso')
+```| search owner_list="Adaobi.IFEACHOR@education.gov.uk Claire.JONES@education.gov.uk"```
+| makemv delim="
+" owner_list
+
+
+| eval owner_list=mvfilter(!match('owner_list',"null"))
+| eval owner_list=mvfilter(!match('owner_list',"Unassigned"))
+
+| stats values(owner_list) as owner_list
+| mvexpand owner_list
+| eval owner_list=lower(owner_list)
+| dedup owner_list
+| sort 0 owner_list
+          </query>
+        </search>
+      </input>
+    </panel>
+  </row>
+  
+  <row depends="$tkn_show_g$">
+    <panel>
+      <title>$tkn_repo_owner$ is involved with $tkn_repo_count$ Repos</title>
+      <table>
+        <search>
+          <query>
+| inputlookup ssphp_github_repo_ownership_details.csv
+
+| eval org_repo='organisation'." | ".'repo_name'
+| eval ssphp.service.contacts.cost_centre_owner_email=coalesce('ssphp.service.contacts.cost_centre_owner_email','ssphp.service.contacts.cost_centre_owner_email{}')
+| eval ssphp.service.contacts.product_owner_email=split('ssphp.service.contacts.product_owner_email'," ")
+
+| fields organisation, repo_name, description, visibility, dfe_centrally_owned, archived, default_branch, created, last_updated, *
+
+| eval owner_list=mvappend('contributors_dfe_email','rolls_up_to_manager','ssphp.service.rolls_up_to,','ssphp.service.contacts.cost_centre_owner_email','ssphp.service.contacts.financial_business_partner_email','ssphp.service.contacts.hosting_provider_email','ssphp.service.contacts.hosting_support_email','ssphp.service.contacts.product_owner_email','ssphp.service.iso')
+```| search owner_list="Adaobi.IFEACHOR@education.gov.uk Claire.JONES@education.gov.uk"```
+| makemv delim="
+" owner_list
+
+
+| eval owner_list=mvfilter(!match('owner_list',"null"))
+| eval owner_list=mvfilter(!match('owner_list',"Unassigned"))
+| eval owner_list=mvdedup('owner_list')
+
+| table organisation, repo_name, description, visibility, dfe_centrally_owned, archived, default_branch, created, last_updated, owner_list
+| search owner_list=$tkn_repo_owner|s$
+| eventstats count
+          </query>
+          <done>
+            <set token="tkn_repo_count">$result.count$</set>
+          </done>
+        </search>
+        <option name="count">100</option>
+        <option name="dataOverlayMode">none</option>
+        <option name="drilldown">none</option>
+        <option name="percentagesRow">false</option>
+        <option name="rowNumbers">false</option>
+        <option name="totalsRow">false</option>
+        <option name="wrap">true</option>
+        <fields>organisation, repo_name, description, visibility, dfe_centrally_owned, archived, default_branch, created, last_updated, owner_list</fields>
+      </table>
+    </panel>
+  </row>
+  
+  
+  
+
+<!-- ################### View Owner Details by Resource Group ################### --> 
+
+  <row depends="$debug$">
+    <panel>
+      <search id="base_rg">
+        <query>
+| inputlookup ssphp_bdmc_resource_groups.csv
+
+| lookup ssphp_bdmc_fbp.csv portfolio, service_line, product OUTPUT id, cost_centre_owner, financial_business_partner_email, hosting_provider_email, product_owner_email
+| lookup ssphp_user_service_defaults.csv ssphp.service.id as id OUTPUT ssphp.service.iso
+
+| table resourceGroup, tenantId, subscriptionId, portfolio, service_line, product, cost_centre_code, id, cost_centre_owner, financial_business_partner_email, hosting_provider_email, product_owner_email, ssphp.service.iso
+        </query>
+      </search>
+    </panel>
+  </row>
+  
+  
+  <row depends="$tkn_show_x$">
+    <panel>
+      <input type="dropdown" token="tkn_rg" searchWhenChanged="true">
+        <label>Select Resource Group</label>
+        <fieldForLabel>resourceGroup</fieldForLabel>
+        <fieldForValue>resourceGroup</fieldForValue>
+        <selectFirstChoice>true</selectFirstChoice>
+        <search base="base_rg">
+          <query>
+| stats values(resourceGroup) as resourceGroup
+
+| mvexpand resourceGroup
+| sort 0 resourceGroup
+          </query>
+        </search>
+      </input>
+    </panel>
+  </row>
+  
+  <row depends="$tkn_show_x$">
+    <panel>
+      <title>Resource Group : $tkn_rg$</title>
+      <table>
+        <search base="base_rg">
+          <query>
+| search resourceGroup=$tkn_rg|s$
+
+| stats values(tenantId) as tenantId,
+        values(subscriptionId) as subscriptionId,
+        values(portfolio) as portfolio,
+        values(service_line) as service_line,
+        values(product) as product
+          </query>
+        </search>
+        <option name="count">100</option>
+        <option name="dataOverlayMode">none</option>
+        <option name="drilldown">none</option>
+        <option name="percentagesRow">false</option>
+        <option name="rowNumbers">false</option>
+        <option name="totalsRow">false</option>
+        <option name="wrap">true</option>
+      </table>
+    </panel>
+  </row>
+  
+  <row depends="$tkn_show_x$">
+    <panel>
+      <table>
+        <search base="base_rg">
+          <query>
+| search resourceGroup=$tkn_rg|s$
+
+| table cost_centre_code, id, cost_centre_owner, financial_business_partner_email, hosting_provider_email, product_owner_email, ssphp.service.iso
+| transpose
+
+| rename column as Fields, "row 1" as Value
+| eval Value=if('Value'="null",null(), 'Value')
+| where isnotnull(Value)
+          </query>
+        </search>
+        <option name="count">100</option>
+        <option name="dataOverlayMode">none</option>
+        <option name="drilldown">none</option>
+        <option name="percentagesRow">false</option>
+        <option name="rowNumbers">false</option>
+        <option name="totalsRow">false</option>
+        <option name="wrap">true</option>
+      </table>
+    </panel>
+  </row>
+  
+  
+  
+
+<!-- ################### View Resource Groups by Owner ################### --> 
+
+<row depends="$tkn_show_y$">
+    <panel>
+      <input type="dropdown" token="tkn_rg_owner" searchWhenChanged="true">
+        <label>Select Resource Group Owner</label>
+        <fieldForLabel>all_owners</fieldForLabel>
+        <fieldForValue>all_owners</fieldForValue>
+        <selectFirstChoice>true</selectFirstChoice>
+        <search base="base_rg">
+          <query>
+| eval owner_list=mvappend(split('financial_business_partner_email'," "),split('hosting_provider_email'," "),split('product_owner_email'," "),split('ssphp.service.iso'," ")),
+       owner_list=mvfilter(!match(owner_list,"null"))
+       
+| stats values(owner_list) as all_owners
+| mvexpand all_owners
+          </query>
+        </search>
+      </input>
+    </panel>
+  </row>
+  
+  <row depends="$tkn_show_y$">
+    <panel>
+      <title>$tkn_rg_count$ Resource Groups for $tkn_rg_owner$</title>
+      <table>
+        <search base="base_rg">
+          <query>
+| eval owner_list=mvappend(split('financial_business_partner_email'," "),split('hosting_provider_email'," "),split('product_owner_email'," "),split('ssphp.service.iso'," ")),
+       owner_list=mvfilter(!match(owner_list,"null"))
+
+| search owner_list=$tkn_rg_owner|s$
+
+| table resourceGroup, tenantId, subscriptionId, portfolio, service_line, product, cost_centre_code, id, cost_centre_owner, financial_business_partner_email, hosting_provider_email, product_owner_email, ssphp.service.iso
+| eventstats count
+          </query>
+          <done>
+            <set token="tkn_rg_count">$result.count$</set>
+          </done>
+        </search>
+        <option name="count">100</option>
+        <option name="dataOverlayMode">none</option>
+        <option name="drilldown">none</option>
+        <option name="percentagesRow">false</option>
+        <option name="rowNumbers">false</option>
+        <option name="totalsRow">false</option>
+        <option name="wrap">true</option>
+        <fields>resourceGroup, tenantId, subscriptionId, portfolio, service_line, product, cost_centre_code, id, cost_centre_owner, financial_business_partner_email, hosting_provider_email, product_owner_email, ssphp.service.iso</fields>
+      </table>
+    </panel>
+  </row>
+  
+  
+  
+
+<!-- ################### VM Ownership ################### --> 
+
+  <row depends="$debug$">
+    <panel>
+      <search id="base_vm">
+        <query>
+| inputlookup ssphp_bdmc.csv where (resource_type="Microsoft.Compute/virtualMachines microsoft.compute/virtualmachines" OR resource_type="microsoft.compute/virtualmachines")
+| eval resource_type="Microsoft.Compute/virtualMachines"
+
+| lookup local=true ssphp_bdmc_fbp.csv product_key OUTPUT account_code, activity_code, cost_centre_code, cost_centre_owner, cost_centre_title, financial_business_partner_email, hosting_provider_email, hosting_support_email, id, portfolio, product, product_clean, product_owner_email, service_line
+
+| fields - product_clean, product_key
+        </query>
+      </search>
+    </panel>
+  </row>
+
+<row depends="$tkn_show_w$">
+    <panel>
+      <input type="dropdown" token="tkn_vm" searchWhenChanged="true">
+        <label>Select Virtual Machine</label>
+        <fieldForLabel>vm_id</fieldForLabel>
+        <fieldForValue>vm_id</fieldForValue>
+        <selectFirstChoice>true</selectFirstChoice>
+        <search base="base_vm">
+          <query>
+| eval vm_id=mvindex(mvreverse(split(resource_id,"/")),0)
+| stats values(vm_id) as vm_id
+| mvexpand vm_id
+          </query>
+        </search>
+      </input>
+    </panel>
+  </row>
+  
+  <row depends="$tkn_show_w$">
+    <panel>
+      <title>Ownership for Virtual Machine $tkn_vm$</title>
+      <table>
+        <search base="base_vm">
+          <query>
+| eval vm_id=mvindex(mvreverse(split(resource_id,"/")),0)
+| search vm_id=$tkn_vm|s$
+| table *
+          </query>
+          <done>
+            <set token="tkn_rg_count">$result.count$</set>
+          </done>
+        </search>
+        <option name="count">100</option>
+        <option name="dataOverlayMode">none</option>
+        <option name="drilldown">none</option>
+        <option name="percentagesRow">false</option>
+        <option name="rowNumbers">false</option>
+        <option name="totalsRow">false</option>
+        <option name="wrap">true</option>
+        <fields>resourceGroup, tenantId, subscriptionId, portfolio, service_line, product, cost_centre_code, id, cost_centre_owner, financial_business_partner_email, hosting_provider_email, product_owner_email, ssphp.service.iso</fields>
+      </table>
+    </panel>
+  </row>
+
+  
+  
+</form>
