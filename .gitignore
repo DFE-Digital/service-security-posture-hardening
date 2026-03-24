@@ -26,3 +26,4 @@ rustc-ice*.txt
 *.zip
 **~$*.xlsx
 outfiles
+venv/
