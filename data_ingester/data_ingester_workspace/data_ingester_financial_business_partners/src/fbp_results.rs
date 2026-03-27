@@ -63,7 +63,7 @@ impl FbpResult {
     }
 
     pub fn products(&self) -> &[String] {
-        self.service_lines.as_slice()
+        self.products.as_slice()
     }
 
     pub fn is_empty(&self) -> bool {
