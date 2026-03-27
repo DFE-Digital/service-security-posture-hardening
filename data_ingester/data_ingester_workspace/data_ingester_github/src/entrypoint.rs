@@ -1,9 +1,9 @@
 //! Entrypoint for running the collection
-use crate::{custom_properties::CustomPropertySetter, OctocrabGit};
+use crate::{OctocrabGit, custom_properties::CustomPropertySetter};
 use anyhow::{Context, Result};
 use data_ingester_financial_business_partners::{fbp_results::FbpResult, validator::Validator};
 use data_ingester_splunk::splunk::{
-    set_ssphp_run, try_collect_send, Splunk, SplunkTrait, ToHecEvents,
+    Splunk, SplunkTrait, ToHecEvents, set_ssphp_run, try_collect_send,
 };
 use data_ingester_supporting::keyvault::{GitHubApp, Secrets};
 use std::sync::Arc;
@@ -417,7 +417,7 @@ async fn update_custom_properties(
     let portfolio_setter = CustomPropertySetter::from_fbp_portfolio(fbp_results.portfolios());
     let service_line_setter =
         CustomPropertySetter::from_fbp_service_line(fbp_results.service_lines());
-    let product_setter = CustomPropertySetter::from_fbp_product();
+    let product_setter = CustomPropertySetter::from_fbp_product(fbp_results.products());
 
     for cps in [portfolio_setter, service_line_setter, product_setter] {
         let _repo_branch_rules = try_collect_send(
@@ -447,9 +447,9 @@ mod live_tests {
     use data_ingester_splunk::splunk::ToHecEvents;
     use data_ingester_supporting::keyvault::get_keyvault_secrets;
 
+    use crate::OctocrabGit;
     use crate::entrypoint::github_octocrab_entrypoint;
     use crate::entrypoint::github_set_custom_properties_entrypoint;
-    use crate::OctocrabGit;
     use data_ingester_financial_business_partners::validator::Validator;
     use data_ingester_splunk::splunk::SplunkTrait;
 
@@ -552,10 +552,12 @@ mod live_tests {
             let custom_properties = installation_client
                 .org_get_custom_property_values(&org_name, custom_property_validator.clone())
                 .await?;
-            assert!(custom_properties
-                .custom_properties
-                .iter()
-                .any(|cp| cp.validation_errors.is_none()));
+            assert!(
+                custom_properties
+                    .custom_properties
+                    .iter()
+                    .any(|cp| cp.validation_errors.is_none())
+            );
         }
 
         Ok(())

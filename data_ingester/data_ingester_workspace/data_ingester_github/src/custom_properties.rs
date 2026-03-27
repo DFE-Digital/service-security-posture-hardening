@@ -5,20 +5,13 @@ use data_ingester_financial_business_partners::validator::{ValidationResult, Val
 use data_ingester_splunk::splunk::ToHecEvents;
 use itertools::{Either, Itertools};
 use serde::{Deserialize, Serialize};
-use tracing::error;
+use tracing::{error, info};
 
 /// https://docs.github.com/en/rest/orgs/custom-properties?apiVersion=2022-11-28#create-or-update-custom-properties-for-an-organization
 #[derive(Debug, Deserialize, Serialize)]
 pub struct CustomPropertySetter {
-    // The name of the property
-    property_name: String,
-
-    // The type of the value for the property
-    // Can be one of: string, single_select, multi_select, true_false
-    value_type: ValueType,
-
-    // Whether the property is required.
-    required: bool,
+    // An ordered list of the allowed values of the property. The property can have up to 200 allowed values.
+    allowed_values: Option<Vec<String>>,
 
     // Default value of the property
     default_value: Option<DefaultValue>,
@@ -26,8 +19,23 @@ pub struct CustomPropertySetter {
     // Short description of the property
     description: Option<String>,
 
-    // An ordered list of the allowed values of the property. The property can have up to 200 allowed values.
-    allowed_values: Option<Vec<String>>,
+    // The name of the property
+    property_name: String,
+
+    // Regex to validate
+    #[serde(skip_serializing_if = "Option::is_none")]
+    regex: Option<String>,
+
+    // ??
+    #[serde(skip_serializing_if = "Option::is_none")]
+    require_explicit_values: Option<bool>,
+
+    // Whether the property is required.
+    required: bool,
+
+    // The type of the value for the property
+    // Can be one of: string, single_select, multi_select, true_false
+    value_type: ValueType,
 
     // Who can edit the values of the property
     values_editable_by: Option<ValuesEditableBy>,
@@ -48,7 +56,7 @@ static SERVICE_LINE_CLEANER_DATA: [(&str, &str); 3] = [
         "H102 Hub Management  - Business Services Log Analytics",
         // NBSP             ^
         "H102 Hub Management - Business Services Log Analytics",
-    )
+    ),
 ];
 
 #[derive(Default)]
@@ -96,6 +104,8 @@ impl CustomPropertySetter {
             description: description.map(|d| d.into()),
             allowed_values: None,
             values_editable_by: None,
+            regex: None,
+            require_explicit_values: None,
         }
     }
 
@@ -124,6 +134,8 @@ impl CustomPropertySetter {
                     .collect(),
             ),
             values_editable_by: Some(ValuesEditableBy::OrgAndRepoActors),
+            regex: None,
+            require_explicit_values: None,
         }
     }
 
@@ -138,9 +150,10 @@ impl CustomPropertySetter {
         )
     }
 
-    pub fn from_fbp_service_line<V: AsRef<[S]>, S: AsRef<str> + std::fmt::Debug>(
+    // Transform and values that contain multibyte UTF8 chars into an ASCII equivelent.
+    pub fn service_line_cleaner<V: AsRef<[S]>, S: AsRef<str> + std::fmt::Debug>(
         allowed_values: V,
-    ) -> Self {
+    ) -> Vec<String> {
         let service_line_cleaner = ServiceLineCleaner::default();
         let (allowed_value_strings, invalid_service_lines): (Vec<String>, Vec<String>) =
             allowed_values
@@ -161,6 +174,13 @@ impl CustomPropertySetter {
 
         invalid_service_lines.iter().for_each(|sl|{
             error!(name="github", failed_value=sl, "Failure while converting 'FBP Service Line' to GitHub CustomProperty allowed_value: {:?}", sl);});
+        allowed_value_strings
+    }
+
+    pub fn from_fbp_service_line<V: AsRef<[S]>, S: AsRef<str> + std::fmt::Debug>(
+        allowed_values: V,
+    ) -> Self {
+        let allowed_value_strings = Self::service_line_cleaner(allowed_values);
 
         CustomPropertySetter::new_single_select(
             "service_line",
@@ -170,15 +190,82 @@ impl CustomPropertySetter {
         )
     }
 
-    pub fn from_fbp_product() -> Self {
+    pub fn from_fbp_product<V: AsRef<[S]>, S: AsRef<str> + std::fmt::Debug>(
+        allowed_values: V,
+    ) -> Self {
         let mut product_setter =
             CustomPropertySetter::new("product", Some("Product"), false, ValueType::String);
         product_setter.values_editable_by = Some(ValuesEditableBy::OrgAndRepoActors);
+
+        let regex = {
+            let allowed_value_strings = Self::service_line_cleaner(allowed_values);
+            let regex = Self::product_names_regex(&allowed_value_strings);
+            match Self::validate_product_regex(&allowed_value_strings, &regex) {
+                Ok(true) => {
+                    info!(regex, "Setting GitHub custom properties Product regex");
+                    Some(regex)
+                }
+                Ok(false) => {
+                    error!(
+                        regex,
+                        "Regex validation failed, not setting validation regex for FBP Products in GitHub custom properties"
+                    );
+                    None
+                }
+                Err(err) => {
+                    let err = format!("{:#?}", err);
+                    error!(
+                        regex,
+                        err,
+                        "Unable to compile regex for FBP validation. Not setting validation regex"
+                    );
+                    None
+                }
+            }
+        };
+        product_setter.regex = regex;
+
         product_setter
     }
 
     pub fn property_name(&self) -> &str {
         &self.property_name
+    }
+
+    /// Build a regex that matches all the given values. Try to escape any chars that might be used as regex control characters.
+    fn product_names_regex<V: AsRef<[S]>, S: AsRef<str> + std::fmt::Debug>(
+        allowed_values: V,
+    ) -> String {
+        let mut names_iter = allowed_values
+            .as_ref()
+            .iter()
+            .map(|name| name.as_ref().replace(r#"\"#, r#"\\"#))
+            .map(|name| name.replace("(", r"\("))
+            .map(|name| name.replace(")", r"\)"))
+            .map(|name| name.replace("[", r"\["))
+            .map(|name| name.replace("]", r"\]"))
+            .map(|name| name.replace(".", r"\."))
+            .map(|name| name.replace("/", r"\/"))
+            .map(|name| name.replace(r#"-"#, r#"\-"#))
+            .map(|name| name.replace(r#" "#, r#"\ "#))
+            .map(|name| name.replace(r#"&"#, r#"\&"#))
+            .map(|name| name.replace(r#"|"#, r#"\|"#))
+            .map(|name| name.replace(r#"$"#, r#"\$"#))
+            .map(|name| name.replace(r#"^"#, r#"\^"#));
+        format!("({})", &names_iter.join("|"))
+    }
+
+    // Check all values can be matched by the regex. Used before setting the regex.
+    fn validate_product_regex<V: AsRef<[S]>, S: AsRef<str> + std::fmt::Debug>(
+        allowed_values: V,
+        regex: &str,
+    ) -> Result<bool, regex::Error> {
+        let regex = regex::Regex::new(&regex)?;
+        let result = allowed_values
+            .as_ref()
+            .iter()
+            .all(|value| regex.is_match(value.as_ref()));
+        Ok(result)
     }
 }
 
@@ -408,12 +495,13 @@ mod test {
             .iter()
             .flat_map(serde_json::to_value)
             .for_each(|po| {
-                assert!(json
-                    .get("allowed_values")
-                    .expect("allowed_values should have items")
-                    .as_array()
-                    .expect("should be array")
-                    .contains(&po))
+                assert!(
+                    json.get("allowed_values")
+                        .expect("allowed_values should have items")
+                        .as_array()
+                        .expect("should be array")
+                        .contains(&po)
+                )
             });
 
         // Remove allowed values due to array ordering Eq
@@ -446,12 +534,13 @@ mod test {
             .iter()
             .flat_map(serde_json::to_value)
             .for_each(|sl| {
-                assert!(json
-                    .get("allowed_values")
-                    .expect("allowed_values should have items")
-                    .as_array()
-                    .expect("should be array")
-                    .contains(&sl))
+                assert!(
+                    json.get("allowed_values")
+                        .expect("allowed_values should have items")
+                        .as_array()
+                        .expect("should be array")
+                        .contains(&sl)
+                )
             });
 
         // Remove allowed values due to array ordering Eq
@@ -463,11 +552,12 @@ mod test {
 
     #[test]
     fn test_product_setter() {
-        let product_setter: CustomPropertySetter = CustomPropertySetter::from_fbp_product();
+        let products = ["foo", "bar", "baz"];
+        let product_setter: CustomPropertySetter =
+            CustomPropertySetter::from_fbp_product(&products);
 
         let json = serde_json::to_value(&product_setter).unwrap();
 
-        //let allowed_values: Vec<&str> = vec![];
         let expected_json = serde_json::to_value(serde_json::json!({
             "property_name": "product",
             "value_type": "string",
@@ -476,8 +566,36 @@ mod test {
             "description": "Product",
             "allowed_values": null,
             "values_editable_by": "org_and_repo_actors",
+            "regex": "(foo|bar|baz)",
         }))
         .unwrap();
         assert_eq!(json, expected_json);
+    }
+
+    #[test]
+    fn product_names_regex_test() {
+        let names = [
+            "foo",
+            "bar",
+            "baz",
+            r"rparen(",
+            r"lparen)",
+            r"rsquare[",
+            r"lsquare]",
+            r"dot.",
+            r"fslash/",
+            r#"bslash\"#,
+            r"hypen-",
+            r"space ",
+            r"amber&",
+            r"pipe|",
+            r"hat^",
+            r"dollar$",
+        ];
+        let template = CustomPropertySetter::product_names_regex(&names);
+        let regex = regex::Regex::new(&template).unwrap();
+        for name in names {
+            assert!(regex.is_match(name));
+        }
     }
 }
