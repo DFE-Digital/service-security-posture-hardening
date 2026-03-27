@@ -33,7 +33,7 @@ pub struct CustomPropertySetter {
     values_editable_by: Option<ValuesEditableBy>,
 }
 
-static SERVICE_LINE_CLEANER_DATA: [(&str, &str); 2] = [
+static SERVICE_LINE_CLEANER_DATA: [(&str, &str); 3] = [
     (
         "Northern Territorial\u{a0}Team & ESF",
         // Non breaking space^
@@ -44,6 +44,11 @@ static SERVICE_LINE_CLEANER_DATA: [(&str, &str); 2] = [
         // EM Dash        ^
         "Digital Delivery - OIG (Protected)",
     ),
+    (
+        "H102 Hub Management  - Business Services Log Analytics",
+        // NBSP             ^
+        "H102 Hub Management - Business Services Log Analytics",
+    )
 ];
 
 #[derive(Default)]
