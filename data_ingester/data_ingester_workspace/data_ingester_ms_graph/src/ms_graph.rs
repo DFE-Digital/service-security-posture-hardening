@@ -80,11 +80,11 @@ impl MsGraph {
     }
 
     pub async fn get_url(&self, url: &str) -> Result<Vec<Value>> {
-        let current_client = graph_http::api_impl::Client::builder()
+        let current_client: graph_http::api_impl::Client = graph_http::api_impl::Client::builder()
             .client_application(self.client_application.clone())
             .retry(Some(20))
             .wait_for_retry_after_headers(true)
-            .build();
+            .into();
 
         let mut header_map = HeaderMap::new();
 
