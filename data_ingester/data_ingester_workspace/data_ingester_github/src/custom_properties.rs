@@ -252,7 +252,7 @@ impl CustomPropertySetter {
             .map(|name| name.replace(r#"|"#, r#"\|"#))
             .map(|name| name.replace(r#"$"#, r#"\$"#))
             .map(|name| name.replace(r#"^"#, r#"\^"#));
-        format!("({})", &names_iter.join("|"))
+        format!("^({})$", &names_iter.join("|"))
     }
 
     // Check all values can be matched by the regex. Used before setting the regex.
@@ -566,7 +566,7 @@ mod test {
             "description": "Product",
             "allowed_values": null,
             "values_editable_by": "org_and_repo_actors",
-            "regex": "(foo|bar|baz)",
+            "regex": "^(foo|bar|baz)$",
         }))
         .unwrap();
         assert_eq!(json, expected_json);
