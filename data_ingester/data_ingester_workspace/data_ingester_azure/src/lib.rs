@@ -162,7 +162,7 @@ pub async fn azure_users(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<(
     .await;
 
     let _ = try_collect_send(
-        "Azure Security SQL Encryption protection",
+        "Azure Security SQL Firewall Rules",
         azure_rest.get_microsoft_sql_encryption_firewall_rules(),
         &splunk,
     )
