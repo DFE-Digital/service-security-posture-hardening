@@ -1,9 +1,9 @@
 //! Entrypoint for running the collection
-use crate::{OctocrabGit, custom_properties::CustomPropertySetter};
+use crate::{custom_properties::CustomPropertySetter, OctocrabGit};
 use anyhow::{Context, Result};
 use data_ingester_financial_business_partners::{fbp_results::FbpResult, validator::Validator};
 use data_ingester_splunk::splunk::{
-    Splunk, SplunkTrait, ToHecEvents, set_ssphp_run, try_collect_send,
+    set_ssphp_run, try_collect_send, Splunk, SplunkTrait, ToHecEvents,
 };
 use data_ingester_supporting::keyvault::{GitHubApp, Secrets};
 use std::sync::Arc;
@@ -447,9 +447,9 @@ mod live_tests {
     use data_ingester_splunk::splunk::ToHecEvents;
     use data_ingester_supporting::keyvault::get_keyvault_secrets;
 
-    use crate::OctocrabGit;
     use crate::entrypoint::github_octocrab_entrypoint;
     use crate::entrypoint::github_set_custom_properties_entrypoint;
+    use crate::OctocrabGit;
     use data_ingester_financial_business_partners::validator::Validator;
     use data_ingester_splunk::splunk::SplunkTrait;
 
@@ -552,12 +552,10 @@ mod live_tests {
             let custom_properties = installation_client
                 .org_get_custom_property_values(&org_name, custom_property_validator.clone())
                 .await?;
-            assert!(
-                custom_properties
-                    .custom_properties
-                    .iter()
-                    .any(|cp| cp.validation_errors.is_none())
-            );
+            assert!(custom_properties
+                .custom_properties
+                .iter()
+                .any(|cp| cp.validation_errors.is_none()));
         }
 
         Ok(())
