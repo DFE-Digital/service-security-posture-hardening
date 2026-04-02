@@ -495,13 +495,12 @@ mod test {
             .iter()
             .flat_map(serde_json::to_value)
             .for_each(|po| {
-                assert!(
-                    json.get("allowed_values")
-                        .expect("allowed_values should have items")
-                        .as_array()
-                        .expect("should be array")
-                        .contains(&po)
-                )
+                assert!(json
+                    .get("allowed_values")
+                    .expect("allowed_values should have items")
+                    .as_array()
+                    .expect("should be array")
+                    .contains(&po))
             });
 
         // Remove allowed values due to array ordering Eq
@@ -534,13 +533,12 @@ mod test {
             .iter()
             .flat_map(serde_json::to_value)
             .for_each(|sl| {
-                assert!(
-                    json.get("allowed_values")
-                        .expect("allowed_values should have items")
-                        .as_array()
-                        .expect("should be array")
-                        .contains(&sl)
-                )
+                assert!(json
+                    .get("allowed_values")
+                    .expect("allowed_values should have items")
+                    .as_array()
+                    .expect("should be array")
+                    .contains(&sl))
             });
 
         // Remove allowed values due to array ordering Eq

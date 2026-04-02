@@ -221,6 +221,44 @@ impl AzureRest {
         Ok(collection)
     }
 
+    pub async fn get_microsoft_sql_encryption_firewall_rules(&self) -> Result<ReturnTypes> {
+        let mut collection = ReturnTypes::default();
+
+        let url_template = "https://management.azure.com/subscriptions/{}/providers/Microsoft.Sql/servers?api-version=2022-05-01-preview";
+        let results = self
+            .rest_request_subscription_iter_no_hec(url_template)
+            .await?;
+
+        for entry in results.iter() {
+            match entry {
+                ReturnType::Collection {
+                    value,
+                    next_link: _,
+                } => {
+                    for server in value.iter() {
+                        if let Some(server_url) = server
+                            .as_object()
+                            .and_then(|o| o.get("id"))
+                            .and_then(|id| id.as_str())
+                        {
+                            let url = format!(
+                                "https://management.azure.com{}/firewallRules?api-version=2023-08-01",                              
+                                server_url);
+                            let result = self.get_rest_request::<ReturnType>(&url).await?;
+                            collection.collection.push(result.into_return_type_wrapper(
+                                url.as_str().to_string(),
+                                crate::SSPHP_RUN_KEY,
+                            ));
+                        }
+                    }
+                }
+                _ => unreachable!(),
+            };
+        }
+
+        Ok(collection)
+    }
+
     pub async fn get_rest_request<T: DeserializeOwned + std::fmt::Debug>(
         &self,
         url: &str,
