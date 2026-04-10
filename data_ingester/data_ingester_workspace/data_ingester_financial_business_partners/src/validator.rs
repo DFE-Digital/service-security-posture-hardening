@@ -22,7 +22,7 @@ impl From<Vec<SsphpListFbpTaxonomy>> for Validator {
                 .entry(fbp.portfolio)
                 .or_insert(HashMap::new())
                 .entry(fbp.service_line)
-                .or_insert(HashSet::from_iter(fbp.product.into_iter()));
+                .or_insert(HashSet::from_iter(fbp.product));
         }
         Validator(validator)
     }

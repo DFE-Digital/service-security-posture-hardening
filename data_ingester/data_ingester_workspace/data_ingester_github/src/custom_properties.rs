@@ -270,7 +270,7 @@ impl CustomPropertySetter {
         Ok(result)
     }
 
-    /// Extract values that can't be removed from an CustomProprety
+    /// Extract values that can't be removed from a CustomProprety
     /// because they are in use and add them back to the setter.
     ///
     ///
@@ -283,7 +283,7 @@ impl CustomPropertySetter {
     ///
     pub fn update_allowed_values_from_422(&mut self, error_value: Value) -> anyhow::Result<()> {
         let error: ErrorMessage = serde_json::from_value(error_value)?;
-        if error.status != 422 {
+        if error.status != "422" {
             anyhow::bail!("Not a 422 status code");
         }
         // Split the error message on the first ":" to skip the name/key of the CustomProperty
@@ -304,7 +304,7 @@ impl CustomPropertySetter {
 #[derive(Debug, Deserialize)]
 struct ErrorMessage {
     message: String,
-    status: u16,
+    status: String,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -638,7 +638,7 @@ mod test {
     #[test]
     fn test_custom_properties_update_from_422() {
         let error_message = json!({
-            "status": 422,
+            "status": "422",
             "message": "Unable to save 'service_line' because you can't delete options that are in use: 'CSC Social Worker Training, Development and Leadership', 'Infrastructure and Platforms', 'Markets, Strategy & Workforce', 'Teacher Services' referenced by 15 Repositories."
         });
 
