@@ -426,7 +426,7 @@ async fn update_custom_properties(
                 org_name,
                 cps.property_name()
             ),
-            github_client.org_create_or_update_custom_property(&org_name, &cps),
+            github_client.org_create_or_update_custom_property(&org_name, cps),
             &splunk,
         )
         .await;

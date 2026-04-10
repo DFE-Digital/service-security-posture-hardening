@@ -4,7 +4,9 @@ use crate::github_response::{GithubResponse, GithubResponses};
 use data_ingester_financial_business_partners::validator::{ValidationResult, Validator};
 use data_ingester_splunk::splunk::ToHecEvents;
 use itertools::{Either, Itertools};
+use regex::Regex;
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use tracing::{error, info};
 
 /// https://docs.github.com/en/rest/orgs/custom-properties?apiVersion=2022-11-28#create-or-update-custom-properties-for-an-organization
@@ -53,7 +55,7 @@ static SERVICE_LINE_CLEANER_DATA: [(&str, &str); 3] = [
         "Digital Delivery - OIG (Protected)",
     ),
     (
-        "H102 Hub Management  - Business Services Log Analytics",
+        "H102 Hub Management - Business Services Log Analytics",
         // NBSP             ^
         "H102 Hub Management - Business Services Log Analytics",
     ),
@@ -260,13 +262,49 @@ impl CustomPropertySetter {
         allowed_values: V,
         regex: &str,
     ) -> Result<bool, regex::Error> {
-        let regex = regex::Regex::new(&regex)?;
+        let regex = regex::Regex::new(regex)?;
         let result = allowed_values
             .as_ref()
             .iter()
             .all(|value| regex.is_match(value.as_ref()));
         Ok(result)
     }
+
+    /// Extract values that can't be removed from an CustomProprety
+    /// because they are in use and add them back to the setter.
+    ///
+    ///
+    /// Given an error message in the form of:
+    ///
+    /// {
+    ///     "message": "Unable to save 'service_line' because you can't delete options that are in use: 'CSC Social Worker Training, Development and Leadership', 'Infrastructure and Platforms', 'Markets, Strategy & Workforce', 'Teacher Services' referenced by 15 Repositories."
+    ///     "status": 422
+    /// }
+    ///
+    pub fn update_allowed_values_from_422(&mut self, error_value: Value) -> anyhow::Result<()> {
+        let error: ErrorMessage = serde_json::from_value(error_value)?;
+        if error.status != 422 {
+            anyhow::bail!("Not a 422 status code");
+        }
+        // Split the error message on the first ":" to skip the name/key of the CustomProperty
+        let hay = error.message.split(":").nth(1).unwrap_or_default();
+
+        // Match anything inside single quotes
+        let rex = Regex::new(r#"'([^']+?)'"#)?;
+
+        if let Some(allowed_values) = self.allowed_values.as_mut() {
+            rex.captures_iter(hay)
+                .filter_map(|capture| capture.get(1).map(|s| s.as_str().to_string()))
+                .for_each(|value| allowed_values.push(value));
+        }
+        Ok(())
+    }
+}
+
+#[derive(Debug, Deserialize)]
+struct ErrorMessage {
+    message: String,
+    status: u16,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -461,6 +499,7 @@ impl From<&GithubResponse> for CustomProperties {
 #[cfg(test)]
 mod test {
     use data_ingester_financial_business_partners::fbp_results::FbpResult;
+    use serde_json::json;
 
     use crate::custom_properties::CustomPropertySetter;
 
@@ -551,8 +590,7 @@ mod test {
     #[test]
     fn test_product_setter() {
         let products = ["foo", "bar", "baz"];
-        let product_setter: CustomPropertySetter =
-            CustomPropertySetter::from_fbp_product(&products);
+        let product_setter: CustomPropertySetter = CustomPropertySetter::from_fbp_product(products);
 
         let json = serde_json::to_value(&product_setter).unwrap();
 
@@ -590,10 +628,35 @@ mod test {
             r"hat^",
             r"dollar$",
         ];
-        let template = CustomPropertySetter::product_names_regex(&names);
+        let template = CustomPropertySetter::product_names_regex(names);
         let regex = regex::Regex::new(&template).unwrap();
         for name in names {
             assert!(regex.is_match(name));
         }
+    }
+
+    #[test]
+    fn test_custom_properties_update_from_422() {
+        let error_message = json!({
+            "status": 422,
+            "message": "Unable to save 'service_line' because you can't delete options that are in use: 'CSC Social Worker Training, Development and Leadership', 'Infrastructure and Platforms', 'Markets, Strategy & Workforce', 'Teacher Services' referenced by 15 Repositories."
+        });
+
+        let fbp = fbp_results();
+        let mut service_line_setter =
+            CustomPropertySetter::from_fbp_service_line(fbp.service_lines());
+
+        service_line_setter
+            .update_allowed_values_from_422(error_message)
+            .unwrap();
+
+        let allowed_values = service_line_setter.allowed_values.as_ref().unwrap();
+
+        assert!(allowed_values
+            .contains(&"CSC Social Worker Training, Development and Leadership".to_string()));
+        assert!(allowed_values.contains(&"Infrastructure and Platforms".to_string()));
+        assert!(allowed_values.contains(&"Markets, Strategy & Workforce".to_string()));
+        assert!(allowed_values.contains(&"Teacher Services".to_string()));
+        assert_eq!(allowed_values.len(), 7);
     }
 }

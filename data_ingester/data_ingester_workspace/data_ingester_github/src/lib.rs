@@ -102,7 +102,7 @@ impl OctocrabGit {
             all_repos.extend(repos);
         }
 
-        all_repos.sort_by(|a, b| a.id.cmp(&b.id));
+        all_repos.sort_by_key(|a| a.id);
         all_repos.dedup_by(|a, b| a.id.eq(&b.id));
 
         Ok(Repos::new(all_repos, org))
@@ -183,52 +183,73 @@ impl OctocrabGit {
     ///
     /// `custom_property` - a `CustomProperterySetter` describing the custom property to set
     ///
+    /// A 422 status indicates we are trying to remove allowed values
+    /// that are in use. When this happens add them back to the list
+    /// of allowed values and retry up to a maximum of 3 times.
     pub(crate) async fn org_create_or_update_custom_property(
         &self,
         org: &str,
-        custom_property: &CustomPropertySetter,
+        custom_property: CustomPropertySetter,
     ) -> Result<GithubResponses> {
         let url = format!(
             "/orgs/{}/properties/schema/{}",
             org,
             custom_property.property_name()
         );
+        let mut custom_property = custom_property;
 
-        let response = self.client._put(&url, Some(custom_property)).await?;
+        let mut github_responses = GithubResponses::new();
 
-        let status = response.status().as_u16();
+        let mut retry_limit = 3;
 
-        let mut body = response
-            .collect()
-            .await
-            .context("collect body")?
-            .to_bytes()
-            .slice(0..);
+        loop {
+            let response = self.client._put(&url, Some(&custom_property)).await?;
 
-        if body.is_empty() {
-            body = "{}".into();
-        }
+            let status = response.status().as_u16();
 
-        let response_body = match serde_json::from_slice::<serde_json::Value>(&body) {
-            Ok(ok) => ok,
-            Err(err) => {
-                let body_string = String::from_utf8(body.to_vec())
-                    .unwrap_or_else(|err| format!("Unable to decode body as UTF8: {}", err));
-                warn!(
-                    "Error decoding create_custom_property response: {}:{} ",
-                    err, body_string
-                );
-                anyhow::bail!(err)
+            let mut body = response
+                .collect()
+                .await
+                .context("collect body")?
+                .to_bytes()
+                .slice(0..);
+
+            if body.is_empty() {
+                body = "{}".into();
             }
-        };
 
-        let github_response = GithubResponse::new(
-            github_response::SingleOrVec::Single(response_body),
-            url,
-            status,
-        );
+            let response_body = match serde_json::from_slice::<serde_json::Value>(&body) {
+                Ok(ok) => ok,
+                Err(err) => {
+                    let body_string = String::from_utf8(body.to_vec())
+                        .unwrap_or_else(|err| format!("Unable to decode body as UTF8: {}", err));
+                    warn!(
+                        "Error decoding create_custom_property response: {}:{} ",
+                        err, body_string
+                    );
+                    anyhow::bail!(err)
+                }
+            };
 
-        let github_responses = GithubResponses::from_response(github_response);
+            let github_response = GithubResponse::new(
+                github_response::SingleOrVec::Single(response_body.clone()),
+                url.clone(),
+                status,
+            );
+
+            github_responses.push(github_response);
+
+            if status == 422 {
+                custom_property.update_allowed_values_from_422(response_body)?;
+                retry_limit -= 1;
+                if retry_limit != 0 {
+                    continue;
+                } else {
+                    break;
+                }
+            }
+            break;
+        }
 
         Ok(github_responses)
     }
