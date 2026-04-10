@@ -60,8 +60,8 @@ pub(crate) async fn azure_dev_ops_pats(
             }
         };
     }
-    map.into_iter()
-        .filter_map(|(_name, builder)| match builder.build() {
+    map.into_values()
+        .filter_map(|builder| match builder.build() {
             Ok(built) => Some(built),
             Err(err) => {
                 error!(name="KeyVault", operation="Building ADO Pat", err=?err);
