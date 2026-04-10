@@ -13,6 +13,11 @@ pub struct GithubResponses {
 }
 
 impl GithubResponses {
+    /// Create an empty set of GitHub Responses
+    pub(crate) fn new() -> Self {
+        Self { inner: Vec::new() }
+    }
+
     pub(crate) fn from_response(github_response: GithubResponse) -> Self {
         Self {
             inner: vec![github_response],
@@ -41,6 +46,10 @@ impl GithubResponses {
         self.inner.extend(iter)
     }
 
+    pub(crate) fn push(&mut self, value: GithubResponse) {
+        self.inner.push(value)
+    }
+
     /// Gets the source for the responses
     pub(crate) fn source(&self) -> String {
         let sources = self
@@ -53,6 +62,12 @@ impl GithubResponses {
             warn!("more than 1 source detected");
         }
         sources.join(",")
+    }
+}
+
+impl Default for GithubResponses {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
