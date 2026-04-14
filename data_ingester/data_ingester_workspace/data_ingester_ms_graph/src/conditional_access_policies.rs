@@ -22,6 +22,7 @@ pub struct ConditionalAccessPolicy {
     created_date_time: Option<String>,
     modified_date_time: Option<String>,
     template_id: Option<String>,
+    deleted_date_time: Option<String>,
 
     pub has_untrusted_conditions: Option<Vec<String>>,
 }
