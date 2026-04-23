@@ -259,6 +259,89 @@ impl AzureRest {
         Ok(collection)
     }
 
+    pub async fn get_microsoft_sql_server_auditing(&self) -> Result<ReturnTypes> {
+        let mut collection = ReturnTypes::default();
+
+        // List SQL servers
+        let url_template = "https://management.azure.com/subscriptions/{}/providers/Microsoft.Sql/servers?api-version=2022-05-01-preview";
+        let servers = self
+            .rest_request_subscription_iter_no_hec(url_template)
+            .await?;
+
+        for entry in servers.iter() {
+            if let ReturnType::Collection { value, .. } = entry {
+                for server in value.iter() {
+                    if let Some(server_id) = server.get("id").and_then(|v| v.as_str()) {
+                        // Query server-level auditing settings
+                        let audit_url = format!(
+                            "https://management.azure.com{}/auditingSettings/default?api-version=2022-05-01-preview",
+                            server_id
+                        );
+
+                        let audit_result = self.get_rest_request::<ReturnType>(&audit_url).await?;
+
+                        collection.collection.push(
+                            audit_result.into_return_type_wrapper(audit_url, crate::SSPHP_RUN_KEY),
+                        );
+                    }
+                }
+            }
+        }
+
+        Ok(collection)
+    }
+
+    pub async fn get_microsoft_sql_database_auditing(&self) -> Result<ReturnTypes> {
+        let mut collection = ReturnTypes::default();
+
+        // List SQL servers
+        let url_template = "https://management.azure.com/subscriptions/{}/providers/Microsoft.Sql/servers?api-version=2022-05-01-preview";
+        let servers = self
+            .rest_request_subscription_iter_no_hec(url_template)
+            .await?;
+
+        for entry in servers.iter() {
+            if let ReturnType::Collection { value, .. } = entry {
+                for server in value.iter() {
+                    let server_id = match server.get("id").and_then(|v| v.as_str()) {
+                        Some(id) => id,
+                        None => continue,
+                    };
+
+                    // List databases for this server
+                    let databases_url = format!(
+                        "https://management.azure.com{}/databases?api-version=2022-05-01-preview",
+                        server_id
+                    );
+
+                    let databases = self.get_rest_request::<ReturnType>(&databases_url).await?;
+
+                    if let ReturnType::Collection { value, .. } = databases {
+                        for db in value.iter() {
+                            if let Some(db_id) = db.get("id").and_then(|v| v.as_str()) {
+                                // Query database-level auditing
+                                let audit_url = format!(
+                                    "https://management.azure.com{}/auditingSettings/default?api-version=2022-05-01-preview",
+                                    db_id
+                                );
+
+                                let audit_result =
+                                    self.get_rest_request::<ReturnType>(&audit_url).await?;
+
+                                collection.collection.push(
+                                    audit_result
+                                        .into_return_type_wrapper(audit_url, crate::SSPHP_RUN_KEY),
+                                );
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        Ok(collection)
+    }
+
     pub async fn get_rest_request<T: DeserializeOwned + std::fmt::Debug>(
         &self,
         url: &str,
