@@ -7,23 +7,23 @@ edition = "2021"
 
 [dependencies]
 anyhow = { version = "1", features=["backtrace"]}
-aws-config = { version = "1", features = ["behavior-version-latest"] }
-aws-credential-types = "1"
-aws-sdk-accessanalyzer = "1"
-aws-sdk-account = "1"
-aws-sdk-cloudtrail = "1"
-aws-sdk-config = "1"
-aws-sdk-ec2 = "1"
-aws-sdk-iam = "1"
-aws-sdk-kms = "1"
-aws-sdk-s3 = "1"
-aws-sdk-s3control = "1"
-aws-sdk-securityhub = "1"
-aws-sdk-organizations = "1"
-aws-sdk-sts = "1"
-aws-sdk-route53 = "1"
-aws-smithy-types = "1"
-csv = "1"
+aws-config = { version = "1", default-features=false, features = ["behavior-version-latest", "rt-tokio", "default-https-client"] }
+aws-credential-types = { version = "1", default-features=false, features = [] }
+aws-sdk-accessanalyzer = { version = "1", default-features=false, features = ["behavior-version-latest", "rt-tokio",] }
+aws-sdk-account = { version = "1", default-features=false, features = ["behavior-version-latest", "rt-tokio", ] }
+aws-sdk-cloudtrail = { version = "1", default-features=false, features = ["behavior-version-latest", "rt-tokio"] }
+aws-sdk-config = { version = "1", default-features=false, features = ["behavior-version-latest", "rt-tokio"] }
+aws-sdk-ec2 = { version = "1", default-features=false, features = ["behavior-version-latest","rt-tokio",] }
+aws-sdk-iam = { version = "1", default-features=false, features = ["behavior-version-latest", "rt-tokio", ] }
+aws-sdk-kms =      { version = "1", default-features=false, features = ["behavior-version-latest", "rt-tokio", ] }
+aws-sdk-s3 = { version = "1", default-features=false, features = ["behavior-version-latest", "sigv4a", "rt-tokio", "default-https-client"] }
+aws-sdk-s3control = { version = "1", default-features=false, features = ["behavior-version-latest",  "rt-tokio",] }
+aws-sdk-securityhub = { version = "1", default-features=false, features = ["behavior-version-latest","rt-tokio",] }
+aws-sdk-organizations = { version = "1", default-features=false, features = ["behavior-version-latest", "rt-tokio",] }
+aws-sdk-sts = { version = "1", default-features=false, features = ["behavior-version-latest", "sigv4a", "rt-tokio", "default-https-client"] }
+aws-sdk-route53 = { version = "1", default-features=false, features = ["behavior-version-latest",  "rt-tokio",] }
+aws-smithy-types = { version = "1", default-features=false, features = [] }
+csv = "*"
 data_ingester_splunk = { path = "../data_ingester_splunk" }
 data_ingester_supporting = { path = "../data_ingester_supporting" }
 serde = { version = "1", features = ["derive"] }

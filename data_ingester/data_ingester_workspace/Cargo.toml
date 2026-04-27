@@ -36,3 +36,8 @@ lto = "off"
 debug = "full"
 lto = "thin"
 incremental = true
+
+[patch.crates-io]
+# tiberius 12.3 depends on tokio-rustls 0.24.1 which has a number of CVEs.
+# Use our patched version until upstream updates their dependencies
+tiberius = { git = "https://github.com/akinnane/tiberius.git"}
