@@ -1,7 +1,7 @@
 <dashboard version="1.1" theme="light" script="js/table_cell_backcolor_service_overview.js">
 
   <label>DfE Security Posture Continuous Assurance : Portfolio Overview Dashboard</label>
-  <description>{{environment}} v1.0.4</description>
+  <description>{{environment}} v1.0.5</description>
 
   <init>
 
@@ -360,6 +360,24 @@
        compliant_both=if('view'="abs",'compliant_abs','compliant_perc')
 
 | table view, ssphp.service.portfolio, short_port, compliant_perc, compliant_abs, compliant_both, compliant_color, compliant_line_width, compliant_line_non_width
+
+```make sure there is an event at the end for every portfolio```
+| eval orig=1
+| append 
+    [| inputlookup ssphp.portfolio_shortport.csv
+| dedup short_port
+| eval view="perc",
+       compliant_perc="-",
+       compliant_abs="-",
+       compliant_both="-/-",
+       compliant_color="#bebebe",
+       compliant_line_width="0",
+       compliant_line_non_width="60",
+       orig=2
+| table view, ssphp.service.portfolio, short_port, compliant_perc, compliant_abs, compliant_both, compliant_color, compliant_line_width, compliant_line_non_width, orig]
+| sort short_port, orig
+| dedup short_port
+| fields - orig
           </query>
         </search>
       </table>
