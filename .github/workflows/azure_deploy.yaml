@@ -314,7 +314,7 @@ jobs:
           compression-level: 9
 
   terraform_deploy:
-    needs: [audit, test, build]
+    needs: [audit, test, build, terraform_validate_red]
 
     runs-on: ubuntu-latest
 
