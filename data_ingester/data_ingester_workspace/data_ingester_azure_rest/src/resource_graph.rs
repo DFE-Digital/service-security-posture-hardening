@@ -189,6 +189,18 @@ async fn make_request(
                         tokio::time::sleep(rate_limit.interval).await;
                         continue;
                     }
+                    QueryErrorErrorCode::GatewayTimeout => {
+                        error!(
+                            name = crate::SSPHP_RUN_KEY,
+                            ssphp_run = get_ssphp_run(crate::SSPHP_RUN_KEY),
+                            error = error.as_value(),
+                            request_body = request_body.as_value(),
+                            "GatewayTimeout error!"
+                        );
+                        request_body.halve_top();
+                        tokio::time::sleep(rate_limit.interval).await;
+                        continue 'request;
+                    }
                     QueryErrorErrorCode::BadRequest => {
                         let details = if let Some(details) = error.error.details.as_ref() {
                             details
@@ -220,11 +232,7 @@ async fn make_request(
                                         request_body = request_body.as_value(),
                                         "ResponsePayloadTooLarge error!"
                                     );
-                                    request_body.options.top = request_body
-                                        .options
-                                        .top
-                                        .map(|top| std::cmp::max(top / 2, 1))
-                                        .or(Some(500));
+                                    request_body.halve_top();
                                     continue 'request;
                                 }
 
@@ -352,6 +360,14 @@ impl ResourceGraphRequest {
     fn add_skip_token(&mut self, skip_token: &str) {
         self.options.skip_token = Some(skip_token.to_string());
     }
+
+    fn halve_top(&mut self) {
+        self.options.top = self
+            .options
+            .top
+            .map(|top| std::cmp::max(top / 2, 1))
+            .or(Some(500));
+    }
 }
 
 #[derive(Valuable, Serialize, Deserialize, Debug, Clone)]
@@ -397,6 +413,31 @@ enum ResourceGraphResponse {
     Query(QueryResponse),
     Error(QueryError),
     Other(Value),
+}
+
+#[test]
+fn test_json_into_resource_graph_response_gateway_timeout() {
+    let error_response = r#"
+{
+  "error": {
+    "code": "GatewayTimeout",
+    "message": "The gateway did not receive a response from 'Microsoft.ResourceGraph' within the specified time period."
+  }
+}"#;
+    let obj: ResourceGraphResponse =
+        serde_json::from_str(error_response).expect("JSON should parse into ResourceGraphResponse");
+    assert!(
+        matches!(
+            obj,
+            ResourceGraphResponse::Error(QueryError {
+                error: QueryErrorError {
+                    code: QueryErrorErrorCode::GatewayTimeout,
+                    ..
+                }
+            })
+        ),
+        "JSON didn't parse into a ResourceGraphResponse::Error(GatewayTimeout)"
+    );
 }
 
 #[test]
@@ -456,6 +497,7 @@ struct QueryErrorInnerError {
 enum QueryErrorErrorCode {
     RateLimiting,
     BadRequest,
+    GatewayTimeout,
     Other(#[valuable(skip)] Value),
 }
 
