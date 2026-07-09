@@ -1,6 +1,6 @@
 use anyhow::Result;
-use hickory_proto::rr::RecordType;
 use hickory_proto::rr::RData;
+use hickory_proto::rr::RecordType;
 use hickory_resolver::config::*;
 use hickory_resolver::net::runtime::TokioRuntimeProvider;
 use hickory_resolver::TokioResolver;

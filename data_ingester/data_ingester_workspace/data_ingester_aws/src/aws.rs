@@ -6,8 +6,8 @@ use std::sync::Arc;
 
 use aws_config::Region;
 use hickory_proto::rr::Name;
-use hickory_proto::rr::RecordType;
 use hickory_proto::rr::RData;
+use hickory_proto::rr::RecordType;
 use hickory_resolver::config::*;
 use hickory_resolver::net::runtime::TokioRuntimeProvider;
 use hickory_resolver::TokioResolver;
@@ -1530,7 +1530,12 @@ impl AwsClient {
                         RData::SOA(soa) => {
                             let soa = format!(
                                 "{} {} {} {} {} {} {}",
-                                soa.mname, soa.rname, soa.serial, soa.refresh, soa.retry, soa.expire,
+                                soa.mname,
+                                soa.rname,
+                                soa.serial,
+                                soa.refresh,
+                                soa.retry,
+                                soa.expire,
                                 soa.minimum,
                             );
 
