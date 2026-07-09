@@ -69,7 +69,7 @@ impl SendingTask {
         url: String,
         hec_acknowledgment: bool,
     ) -> Result<Self> {
-        let url = format!("{}/services/collector", &url);
+        let url = format!("{}/services/collector", url);
         let join = Self::spawn_task(splunk, send_rx, ack_tx, url, hec_acknowledgment)
             .context("Starting Splunk Sending Task")?;
 
@@ -273,7 +273,7 @@ impl AckTask {
         url: String,
         timeout: Option<Duration>,
     ) -> Result<Self> {
-        let url = format!("{}/services/collector/ack", &url);
+        let url = format!("{}/services/collector/ack", url);
         let timeout = if let Some(timeout) = timeout {
             timeout
         } else {

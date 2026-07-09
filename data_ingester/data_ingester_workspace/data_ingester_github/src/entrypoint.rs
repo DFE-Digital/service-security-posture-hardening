@@ -171,8 +171,8 @@ async fn github_collect_installation_org(
 
         let repo_name = format!(
             "{}/{}",
-            &repo.owner.as_ref().expect("checked owner").login,
-            &repo.name
+            repo.owner.as_ref().expect("checked owner").login,
+            repo.name
         );
         info!("Getting GitHub data for: {}", repo_name);
 

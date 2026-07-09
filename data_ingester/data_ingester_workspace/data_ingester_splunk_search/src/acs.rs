@@ -98,7 +98,7 @@ impl Acs {
         let status = response.status();
 
         if !status.is_success() {
-            let headers = format!("{:?}", &response);
+            let headers = format!("{:?}", response);
             let body = response
                 .text()
                 .await
@@ -150,7 +150,7 @@ impl Acs {
             .await
             .context("Sending request for ACS set IP allow list")?;
         if !response.status().is_success() {
-            let headers = format!("{:?}", &response);
+            let headers = format!("{:?}", response);
             let body = response
                 .text()
                 .await
@@ -205,7 +205,7 @@ impl Acs {
             .await
             .context("Sending request for ACS delete IP allow list")?;
         if !response.status().is_success() {
-            let headers = format!("{:?}", &response);
+            let headers = format!("{:?}", response);
             let body = response
                 .text()
                 .await

@@ -4,6 +4,9 @@ name: DCAP _DEV Deploy
 on:
   workflow_dispatch:
 
+env:
+  RUST_VERSION: "nightly"
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -17,9 +20,8 @@ jobs:
 
       - name: toolchain
         id: toolchain
-        uses: dtolnay/rust-toolchain@master
+        uses: dtolnay/rust-toolchain@nightly
         with:
-          toolchain: nightly-2025-11-19
           components: rust-src
 
       - name: Cache build artifacts

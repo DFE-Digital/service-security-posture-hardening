@@ -447,7 +447,7 @@ impl AzureRest {
             if !status.is_success() {
                 let error = format!(
                     "post_rest_request:status:{:?}, body:{:?}",
-                    &status, &response_body
+                    status, response_body
                 );
                 error!(status=?status, request_body=?post_body_json, response_body=?response_body, "Failed making request to Azure Resource Graph");
                 errors.push(anyhow!(error));

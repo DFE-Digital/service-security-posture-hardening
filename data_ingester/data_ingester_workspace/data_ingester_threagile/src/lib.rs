@@ -85,7 +85,7 @@ pub async fn threagile(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()>
         let mut model = model::Model::default();
         model.technical_assets = ta;
 
-        let risks_path = format!("/tmp/{}_results_from_splunk.yaml", &service);
+        let risks_path = format!("/tmp/{}_results_from_splunk.yaml", service);
         info!("Writing risks file: {}", risks_path);
         model
             .write_file(&risks_path)

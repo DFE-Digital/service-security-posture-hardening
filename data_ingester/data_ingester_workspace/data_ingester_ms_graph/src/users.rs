@@ -229,7 +229,7 @@ pub struct UsersMap<'a> {
 
 impl<'a> UsersMap<'a> {
     pub fn process_caps(&mut self, caps: &'a ConditionalAccessPolicies) {
-        for (_, user) in self.inner.iter_mut() {
+        for user in self.inner.values_mut() {
             let mut affected_caps = vec![];
             for cap in caps.inner.iter() {
                 if cap.affects_user(user) {
@@ -241,7 +241,7 @@ impl<'a> UsersMap<'a> {
     }
 
     pub fn set_is_privileged(&mut self, role_definitions: &EntraRoleDefinitions) {
-        for (_, user) in self.inner.iter_mut() {
+        for user in self.inner.values_mut() {
             user.set_is_privileged(role_definitions);
         }
     }
@@ -359,7 +359,7 @@ impl<'a> UsersMap<'a> {
         let admin_roles_regex = Regex::new(r"(?i)(Owner|contributor|admin)")
             .expect("Static regex should always compile");
 
-        for (_, role_assignment) in role_assignments.inner.iter() {
+        for role_assignment in role_assignments.inner.values() {
             match &role_assignment
                 .principal_type()
                 .context("Principal Type not User")?
