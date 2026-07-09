@@ -5,10 +5,11 @@ use std::str::FromStr;
 use std::sync::Arc;
 
 use aws_config::Region;
-use hickory_proto::rr::record_type::RecordType;
+use hickory_proto::rr::Name;
+use hickory_proto::rr::RecordType;
 use hickory_proto::rr::RData;
 use hickory_resolver::config::*;
-use hickory_resolver::Name;
+use hickory_resolver::net::runtime::TokioRuntimeProvider;
 use hickory_resolver::TokioResolver;
 
 use anyhow::{bail, Context, Result};
@@ -408,7 +409,7 @@ impl AwsClient {
             let config = self
                 .config_for_region(&region)
                 .await
-                .context(format!("Failed to get config for: {}", &region))?;
+                .context(format!("Failed to get config for: {}", region))?;
             configs.push(config);
         }
         Ok(configs)
@@ -1406,7 +1407,11 @@ impl AwsClient {
         zones: crate::aws_route53::HostedZones,
     ) -> Result<RecordSets> {
         // Build resolver
-        let resolver = TokioResolver::tokio(ResolverConfig::default(), ResolverOpts::default());
+        let resolver = TokioResolver::builder_with_config(
+            ResolverConfig::default(),
+            TokioRuntimeProvider::default(),
+        )
+        .build()?;
 
         let mut sets = vec![];
 
@@ -1487,7 +1492,7 @@ impl AwsClient {
                     }
                 };
 
-                for record in results.records() {
+                for record in results.answers() {
                     if record.record_type() != record_type {
                         continue;
                     }
@@ -1497,7 +1502,7 @@ impl AwsClient {
                         in_route53: false,
                     });
 
-                    let data = record.data();
+                    let data = &record.data;
 
                     let in_route53 = match data {
                         RData::A(a) => resource_records
@@ -1525,13 +1530,8 @@ impl AwsClient {
                         RData::SOA(soa) => {
                             let soa = format!(
                                 "{} {} {} {} {} {} {}",
-                                soa.mname(),
-                                soa.rname(),
-                                soa.serial(),
-                                soa.refresh(),
-                                soa.retry(),
-                                soa.expire(),
-                                soa.minimum(),
+                                soa.mname, soa.rname, soa.serial, soa.refresh, soa.retry, soa.expire,
+                                soa.minimum,
                             );
 
                             resource_records.iter().any(|value| value.value == soa)
@@ -1625,7 +1625,7 @@ pub(crate) struct Route53LookupErrors {
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct Rdata {
-    value: hickory_proto::rr::resource::Record,
+    value: hickory_proto::rr::Record,
     in_route53: bool,
 }
 

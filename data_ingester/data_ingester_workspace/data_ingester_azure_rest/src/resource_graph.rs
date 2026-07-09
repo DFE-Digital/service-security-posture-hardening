@@ -66,7 +66,7 @@ async fn resource_graph_all(az_client: AzureRest, splunk: &Splunk) -> Result<()>
             );
 
             let mut request_body =
-                ResourceGraphRequest::new(sub_id, &format!("{} | order by name asc", &table));
+                ResourceGraphRequest::new(sub_id, &format!("{} | order by name asc", table));
 
             if *table == "guestconfigurationresources" {
                 request_body.options.top = Some(10);
@@ -256,7 +256,7 @@ async fn make_request(
                                         request_body = request_body.as_value(),
                                         "Disallowed Logical Table"
                                     );
-                                    anyhow::bail!("Disallowed Logical Table: {:?}", &request_body);
+                                    anyhow::bail!("Disallowed Logical Table: {:?}", request_body);
                                 }
 
                                 // Unknown Errors and responses

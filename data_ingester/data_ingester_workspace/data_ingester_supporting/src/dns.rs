@@ -1,18 +1,26 @@
 use anyhow::Result;
-use hickory_proto::rr::record_type::RecordType;
+use hickory_proto::rr::RecordType;
+use hickory_proto::rr::RData;
 use hickory_resolver::config::*;
+use hickory_resolver::net::runtime::TokioRuntimeProvider;
 use hickory_resolver::TokioResolver;
 
 pub async fn resolve_txt_record<T: AsRef<str>>(domain: T) -> Result<Vec<String>> {
-    // Construct a new Resolver with default configuration options
-    let resolver = TokioResolver::tokio(ResolverConfig::default(), ResolverOpts::default());
+    let resolver = TokioResolver::builder_with_config(
+        ResolverConfig::default(),
+        TokioRuntimeProvider::default(),
+    )
+    .build()?;
 
     // Lookup the TXT record associated with a name.
     let response = resolver.lookup(domain.as_ref(), RecordType::TXT).await?;
     let txts = response
+        .answers()
         .iter()
-        .filter_map(|r| r.as_txt())
-        .map(|r| r.to_string())
+        .filter_map(|record| match &record.data {
+            RData::TXT(txt) => Some(txt.to_string()),
+            _ => None,
+        })
         .collect::<Vec<String>>();
 
     Ok(txts)

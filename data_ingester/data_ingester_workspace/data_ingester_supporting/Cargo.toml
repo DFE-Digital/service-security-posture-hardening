@@ -12,8 +12,8 @@ azure_security_keyvault = { version = "0.21", default-features = false,  feature
 base64 = "0"
 futures = "0"
 tokio = { version = "1", features = ["full"] }
-hickory-proto = "0.25.0-alpha.4"
-hickory-resolver = { version = "0.25.0-alpha.4", features = ["dns-over-rustls"] }
+hickory-proto = "0.26"
+hickory-resolver = { version = "0.26", features = ["tokio"] }
 serde = {version = "1", features = ["derive"]}
 tracing = "0"
 

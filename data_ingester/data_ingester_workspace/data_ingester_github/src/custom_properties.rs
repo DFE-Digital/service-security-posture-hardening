@@ -254,7 +254,7 @@ impl CustomPropertySetter {
             .map(|name| name.replace(r#"|"#, r#"\|"#))
             .map(|name| name.replace(r#"$"#, r#"\$"#))
             .map(|name| name.replace(r#"^"#, r#"\^"#));
-        format!("^({})$", &names_iter.join("|"))
+        format!("^({})$", names_iter.join("|"))
     }
 
     // Check all values can be matched by the regex. Used before setting the regex.

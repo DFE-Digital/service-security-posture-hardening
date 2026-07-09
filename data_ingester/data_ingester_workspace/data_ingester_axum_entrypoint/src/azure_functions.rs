@@ -125,7 +125,7 @@ async fn get_health_check(
             let hec_events: Vec<HecEvent> = secret_attributes
                 .iter()
                 .filter_map(|sa| {
-                    let source = format!("{}:{}", &key_vault_name, sa.id);
+                    let source = format!("{}:{}", key_vault_name, sa.id);
                     HecEvent::new_with_ssphp_run(sa, &source, "SSPHP_secret_attributes", ssphp_run)
                         .ok()
                 })

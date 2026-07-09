@@ -410,7 +410,7 @@ impl OctocrabGit {
             }
             let ruleset_id = ruleset
                 .get("id")
-                .with_context(|| format!("Getting `id` from ruleset: {:#?}", &ruleset))?
+                .with_context(|| format!("Getting `id` from ruleset: {:#?}", ruleset))?
                 .as_u64()
                 .context("Getting `id` as u64")?;
 

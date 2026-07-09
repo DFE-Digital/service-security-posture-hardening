@@ -407,7 +407,7 @@ impl MsGraph {
                 domain.txt_records = Some(txt);
             }
 
-            let dmarc_domain = format!("_dmarc.{}", &domain.id);
+            let dmarc_domain = format!("_dmarc.{}", domain.id);
             if let Ok(dmarc) = resolve_txt_record(&dmarc_domain).await {
                 domain.dmarc = Some(dmarc);
             }

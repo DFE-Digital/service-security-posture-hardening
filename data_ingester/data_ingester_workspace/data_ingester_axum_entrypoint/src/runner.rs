@@ -163,12 +163,12 @@ where
                     .finish();
                 stage.next();
                 error!(name=name, stage=%stage, complete=false, error=?e);
-                let error = format!("{} entrypoint failed with error: {:#?}", &name, &e);
+                let error = format!("{} entrypoint failed with error: {:#?}", name, e);
                 (error, false)
             }
         }
     } else {
-        let error = format!("{} entrypoint failed after collector timeout", &name);
+        let error = format!("{} entrypoint failed after collector timeout", name);
         (error, false)
     };
 

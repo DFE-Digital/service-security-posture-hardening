@@ -1009,8 +1009,8 @@ $pfx = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2
             let outlen = std::cmp::min(1000, output.stdout.len());
             let message = format!(
                 "Error while serializing data:\nCommand: {}\nError: {}\nOutput length: {}\nOutput[..{}]: \"{}\"",
-                &cmd,
-                &error,
+                cmd,
+                error,
                 output.stdout.len(),
                 outlen,
                 String::from_utf8_lossy(&output.stdout[..outlen]),
