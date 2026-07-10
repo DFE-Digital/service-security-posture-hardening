@@ -79,9 +79,9 @@ async fn resource_graph_all(az_client: AzureRest, splunk: &Splunk) -> Result<()>
             )
             .await
             {
-                    Ok(response) => response,
-                    Err(err) => {
-                        error!(
+                Ok(response) => response,
+                Err(err) => {
+                    error!(
                             name=crate::SSPHP_RUN_KEY,
                             ssphp_run=get_ssphp_run(crate::SSPHP_RUN_KEY),
                             subscription_id=sub_id,
@@ -89,9 +89,9 @@ async fn resource_graph_all(az_client: AzureRest, splunk: &Splunk) -> Result<()>
                             batch = batch,                            
                             error=?err,
                             "Failed making request for Azure resource graph table");
-                        continue;
-                    }
-                };
+                    continue;
+                }
+            };
 
             response.data.source = Some(format!("{}:{}:{}", sub_id, table, batch));
 
