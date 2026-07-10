@@ -55,6 +55,7 @@ async fn resource_graph_all(az_client: AzureRest, splunk: &Splunk) -> Result<()>
 
         for table in &crate::resource_graph::RESOURCE_GRAPH_TABLES {
             let mut batch = 0;
+            let mut adaptive_top = AdaptiveTop::initial_for_table(table);
 
             info!(
                 name = crate::SSPHP_RUN_KEY,
@@ -62,20 +63,22 @@ async fn resource_graph_all(az_client: AzureRest, splunk: &Splunk) -> Result<()>
                 subscription_id = sub_id,
                 table = table,
                 batch = batch,
+                top = adaptive_top.value(),
                 "Getting table for subscription"
             );
 
             let mut request_body =
                 ResourceGraphRequest::new(sub_id, &format!("{} | order by name asc", table));
 
-            if *table == "guestconfigurationresources" {
-                request_body.options.top = Some(10);
-            } else if *table == "securityresources" {
-                request_body.options.top = Some(500);
-            }
-
-            let mut response =
-                match make_request(&az_client, endpoint, &request_body, &mut rate_limit).await {
+            let mut response = match make_request(
+                &az_client,
+                endpoint,
+                &request_body,
+                &mut rate_limit,
+                &mut adaptive_top,
+            )
+            .await
+            {
                     Ok(response) => response,
                     Err(err) => {
                         error!(
@@ -121,14 +124,21 @@ async fn resource_graph_all(az_client: AzureRest, splunk: &Splunk) -> Result<()>
                     subscription_id = sub_id,
                     table = table,
                     batch = batch,
+                    top = adaptive_top.value(),
                     "Getting additional batches for table for subscription"
                 );
 
                 request_body.add_skip_token(skip_token);
 
-                response = make_request(&az_client, endpoint, &request_body, &mut rate_limit)
-                    .await
-                    .context("Failed making Resource Graph API request")?;
+                response = make_request(
+                    &az_client,
+                    endpoint,
+                    &request_body,
+                    &mut rate_limit,
+                    &mut adaptive_top,
+                )
+                .await
+                .context("Failed making Resource Graph API request")?;
 
                 response.data.source = Some(format!("{}:{}:{}", sub_id, table, batch));
 
@@ -169,9 +179,11 @@ async fn make_request(
     endpoint: &str,
     request_body: &ResourceGraphRequest,
     rate_limit: &mut RateLimit,
+    adaptive_top: &mut AdaptiveTop,
 ) -> Result<QueryResponse> {
     let mut request_body = request_body.clone();
     let response = 'request: loop {
+        adaptive_top.apply_to(&mut request_body);
         rate_limit.wait().await?;
 
         let result = az_client
@@ -181,7 +193,21 @@ async fn make_request(
 
         match result {
             // Happy path
-            ResourceGraphResponse::Query(response) => break response,
+            ResourceGraphResponse::Query(response) => {
+                let requested_top = request_body.options.top.unwrap_or(AdaptiveTop::MAX_TOP);
+                let payload_bytes = response.data.serialized_payload_bytes();
+                adaptive_top.tune_from_response(payload_bytes, response.count, requested_top);
+                info!(
+                    name = crate::SSPHP_RUN_KEY,
+                    ssphp_run = get_ssphp_run(crate::SSPHP_RUN_KEY),
+                    requested_top = requested_top,
+                    next_top = adaptive_top.value(),
+                    records = response.count,
+                    payload_bytes = payload_bytes,
+                    "Adaptive top tuned from response"
+                );
+                break response;
+            }
 
             // Known errors
             ResourceGraphResponse::Error(ref error) => {
@@ -199,7 +225,7 @@ async fn make_request(
                             request_body = request_body.as_value(),
                             "GatewayTimeout error!"
                         );
-                        request_body.halve_top();
+                        adaptive_top.shrink_for_error();
                         tokio::time::sleep(rate_limit.interval).await;
                         continue 'request;
                     }
@@ -211,7 +237,7 @@ async fn make_request(
                             request_body = request_body.as_value(),
                             "InternalServerError from Azure Resource Graph, retrying"
                         );
-                        request_body.halve_top();
+                        adaptive_top.shrink_for_error();
                         tokio::time::sleep(rate_limit.interval).await;
                         continue 'request;
                     }
@@ -246,7 +272,7 @@ async fn make_request(
                                         request_body = request_body.as_value(),
                                         "ResponsePayloadTooLarge error!"
                                     );
-                                    request_body.halve_top();
+                                    adaptive_top.shrink_for_error();
                                     continue 'request;
                                 }
 
@@ -281,7 +307,7 @@ async fn make_request(
                                         request_body = request_body.as_value(),
                                         "UnexpectedQueryExecutionError from Azure Resource Graph, retrying"
                                     );
-                                    request_body.halve_top();
+                                    adaptive_top.shrink_for_error();
                                     tokio::time::sleep(rate_limit.interval).await;
                                     continue 'request;
                                 }
@@ -386,14 +412,6 @@ impl ResourceGraphRequest {
 
     fn add_skip_token(&mut self, skip_token: &str) {
         self.options.skip_token = Some(skip_token.to_string());
-    }
-
-    fn halve_top(&mut self) {
-        self.options.top = self
-            .options
-            .top
-            .map(|top| std::cmp::max(top / 2, 1))
-            .or(Some(500));
     }
 }
 
@@ -584,6 +602,14 @@ pub(crate) struct ResourceGraphData {
     source: Option<String>,
 }
 
+impl ResourceGraphData {
+    fn serialized_payload_bytes(&self) -> usize {
+        serde_json::to_string(&self.inner)
+            .map(|json| json.len())
+            .unwrap_or(0)
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug)]
 pub(crate) struct ResourceGraphDataInner {
     // Pull `type` out to make sure it's the first field in the
@@ -608,6 +634,85 @@ impl ToHecEvents for &ResourceGraphData {
     }
     fn ssphp_run_key(&self) -> &str {
         crate::SSPHP_RUN_KEY
+    }
+}
+
+#[derive(Debug)]
+struct AdaptiveTop {
+    current: usize,
+    last_bytes_per_record: Option<usize>,
+}
+
+impl AdaptiveTop {
+    /// Azure Resource Graph enforces a ~16 MiB response limit.
+    const RESPONSE_BUDGET_BYTES: usize = 12 * 1024 * 1024;
+    /// Conservative per-record ceiling used before any successful page is observed.
+    const WORST_CASE_RECORD_BYTES: usize = 3 * 1024 * 1024;
+    const MAX_TOP: usize = 1000;
+    const MIN_TOP: usize = 1;
+
+    fn initial_for_table(table: &str) -> Self {
+        Self {
+            current: match table {
+                "guestconfigurationresources" => 10,
+                // Large, variable rows — start conservative and let tuning ramp up.
+                "securityresources" => 50,
+                _ => Self::MAX_TOP,
+            },
+            last_bytes_per_record: None,
+        }
+    }
+
+    fn value(&self) -> usize {
+        self.current
+    }
+
+    fn apply_to(&self, request: &mut ResourceGraphRequest) {
+        request.options.top = Some(self.current);
+    }
+
+    fn shrink_for_error(&mut self) {
+        let bytes_per_record = self
+            .last_bytes_per_record
+            .unwrap_or(Self::WORST_CASE_RECORD_BYTES);
+        let safe_top = (Self::RESPONSE_BUDGET_BYTES * 9 / 10 / bytes_per_record)
+            .clamp(Self::MIN_TOP, Self::MAX_TOP);
+
+        if self.current > safe_top {
+            self.current = safe_top;
+        } else {
+            self.current = (self.current / 2).max(Self::MIN_TOP);
+        }
+    }
+
+    fn tune_from_response(
+        &mut self,
+        payload_bytes: usize,
+        records_returned: usize,
+        requested_top: usize,
+    ) {
+        if records_returned == 0 {
+            return;
+        }
+
+        let bytes_per_record = payload_bytes.div_ceil(records_returned).max(1);
+        self.last_bytes_per_record = Some(bytes_per_record);
+
+        let ideal_top =
+            (Self::RESPONSE_BUDGET_BYTES / bytes_per_record).clamp(Self::MIN_TOP, Self::MAX_TOP);
+
+        if records_returned < requested_top {
+            // Final page for this query — keep the current top for any follow-up work.
+            return;
+        }
+
+        if payload_bytes < Self::RESPONSE_BUDGET_BYTES / 2 {
+            self.current = ((self.current * 2 + ideal_top) / 3).clamp(Self::MIN_TOP, Self::MAX_TOP);
+        } else if payload_bytes > Self::RESPONSE_BUDGET_BYTES {
+            self.current = ideal_top.min(self.current);
+        } else {
+            self.current = ((self.current + ideal_top) / 2).clamp(Self::MIN_TOP, Self::MAX_TOP);
+        }
     }
 }
 
@@ -640,6 +745,68 @@ impl RateLimit {
             tokio::time::sleep_until(deadline).await;
         }
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod adaptive_top_tests {
+    use super::AdaptiveTop;
+
+    #[test]
+    fn shrink_without_history_uses_worst_case_record_size() {
+        let mut top = AdaptiveTop::initial_for_table("securityresources");
+        assert_eq!(top.value(), 50);
+
+        top.shrink_for_error();
+
+        // 12 MiB * 0.9 / 3 MiB ≈ 3 records per page
+        assert_eq!(top.value(), 3);
+    }
+
+    #[test]
+    fn shrink_with_observed_record_size_targets_safe_top() {
+        let mut top = AdaptiveTop::initial_for_table("resources");
+        top.tune_from_response(10 * 1024 * 1024, 20, 1000);
+
+        top.shrink_for_error();
+
+        // 12 MiB * 0.9 / 512 KiB ≈ 21 records per page
+        assert_eq!(top.value(), 21);
+    }
+
+    #[test]
+    fn shrink_halves_when_already_below_safe_top() {
+        let mut top = AdaptiveTop::initial_for_table("securityresources");
+        top.tune_from_response(10 * 1024 * 1024, 100, 100);
+
+        top.shrink_for_error();
+
+        assert_eq!(top.value(), 42);
+    }
+
+    #[test]
+    fn tune_grows_when_pages_are_small() {
+        let mut top = AdaptiveTop::initial_for_table("securityresources");
+        top.tune_from_response(1 * 1024 * 1024, 50, 50);
+
+        assert!(top.value() > 50);
+        assert!(top.value() <= AdaptiveTop::MAX_TOP);
+    }
+
+    #[test]
+    fn tune_shrinks_when_page_exceeds_budget() {
+        let mut top = AdaptiveTop::initial_for_table("resources");
+        top.tune_from_response(14 * 1024 * 1024, 1000, 1000);
+
+        assert!(top.value() < 1000);
+    }
+
+    #[test]
+    fn tune_does_not_grow_on_final_partial_page() {
+        let mut top = AdaptiveTop::initial_for_table("securityresources");
+        top.tune_from_response(512 * 1024, 7, 50);
+
+        assert_eq!(top.value(), 50);
     }
 }
 
