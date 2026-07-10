@@ -54,102 +54,27 @@ async fn resource_graph_all(az_client: AzureRest, splunk: &Splunk) -> Result<()>
         let sub_id = sub.subscription_id.as_ref().context("no subscription_id")?;
 
         for table in &crate::resource_graph::RESOURCE_GRAPH_TABLES {
-            let mut batch = 0;
-
-            info!(
-                name = crate::SSPHP_RUN_KEY,
-                ssphp_run = get_ssphp_run(crate::SSPHP_RUN_KEY),
-                subscription_id = sub_id,
-                table = table,
-                batch = batch,
-                "Getting table for subscription"
-            );
-
-            let mut request_body =
-                ResourceGraphRequest::new(sub_id, &format!("{} | order by name asc", table));
-
-            if *table == "guestconfigurationresources" {
-                request_body.options.top = Some(10);
-            }
-
-            let mut response =
-                match make_request(&az_client, endpoint, &request_body, &mut rate_limit).await {
-                    Ok(response) => response,
-                    Err(err) => {
-                        error!(
-                            name=crate::SSPHP_RUN_KEY,
-                            ssphp_run=get_ssphp_run(crate::SSPHP_RUN_KEY),
-                            subscription_id=sub_id,
-                            table=table,
-                            batch = batch,                            
-                            error=?err,
-                            "Failed making request for Azure resource graph table");
-                        continue;
-                    }
+            for (query, partition) in resource_graph_queries(table) {
+                let ctx = QueryContext {
+                    sub_id,
+                    table,
+                    query: &query,
+                    partition,
                 };
-
-            response.data.source = Some(format!("{}:{}:{}", sub_id, table, batch));
-
-            let events = (&response.data)
-                .to_hec_events()
-                .context("Serialize ResourceGraphResponse.data events")?;
-
-            let stats = hec_stats(&events);
-            splunk
-                .send_batch(events)
-                .await
-                .context("Sending events to Splunk")?;
-
-            info!(
-                name = crate::SSPHP_RUN_KEY,
-                ssphp_run = get_ssphp_run(crate::SSPHP_RUN_KEY),
-                subscription_id = sub_id,
-                table = table,
-                batch = batch,
-                stats = &stats.as_value(),
-                "Sent HecEvents to Splunk"
-            );
-
-            while let Some(ref skip_token) = response.skip_token {
-                batch += 1;
-
-                info!(
-                    name = crate::SSPHP_RUN_KEY,
-                    ssphp_run = get_ssphp_run(crate::SSPHP_RUN_KEY),
-                    subscription_id = sub_id,
-                    table = table,
-                    batch = batch,
-                    "Getting additional batches for table for subscription"
-                );
-
-                request_body.add_skip_token(skip_token);
-
-                response = make_request(&az_client, endpoint, &request_body, &mut rate_limit)
-                    .await
-                    .context("Failed making Resource Graph API request")?;
-
-                response.data.source = Some(format!("{}:{}:{}", sub_id, table, batch));
-
-                let events = (&response.data)
-                    .to_hec_events()
-                    .context("Serialize ResourceGraphResponse.data events")?;
-
-                let stats = hec_stats(&events);
-
-                splunk
-                    .send_batch(events)
-                    .await
-                    .context("Sending events to Splunk")?;
-
-                info!(
-                    name = crate::SSPHP_RUN_KEY,
-                    ssphp_run = get_ssphp_run(crate::SSPHP_RUN_KEY),
-                    subscription_id = sub_id,
-                    table = table,
-                    batch = batch,
-                    stats = &stats.as_value(),
-                    "Sent HecEvents to Splunk"
-                );
+                if let Err(err) =
+                    fetch_resource_graph_query(&az_client, splunk, endpoint, &mut rate_limit, &ctx)
+                        .await
+                {
+                    error!(
+                        name = crate::SSPHP_RUN_KEY,
+                        ssphp_run = get_ssphp_run(crate::SSPHP_RUN_KEY),
+                        subscription_id = sub_id,
+                        table = table,
+                        partition = ?partition,
+                        error = ?err,
+                        "Failed fetching Azure resource graph query"
+                    );
+                }
             }
         }
         az_client
@@ -161,25 +86,238 @@ async fn resource_graph_all(az_client: AzureRest, splunk: &Splunk) -> Result<()>
     Ok(())
 }
 
+const SECURITYRESOURCES_PARTITIONS: usize = 8;
+
+fn resource_graph_queries(table: &str) -> Vec<(String, Option<usize>)> {
+    if table == "securityresources" {
+        (0..SECURITYRESOURCES_PARTITIONS)
+            .map(|partition| {
+                (
+                    format!(
+                        "securityresources | where hash(id) % {SECURITYRESOURCES_PARTITIONS} == {partition} | order by id asc"
+                    ),
+                    Some(partition),
+                )
+            })
+            .collect()
+    } else {
+        vec![(format!("{table} | order by id asc"), None)]
+    }
+}
+
+async fn fetch_resource_graph_query(
+    az_client: &AzureRest,
+    splunk: &Splunk,
+    endpoint: &str,
+    rate_limit: &mut RateLimit,
+    ctx: &QueryContext<'_>,
+) -> Result<()> {
+    let mut batch = 0;
+    let mut adaptive_top = AdaptiveTop::initial_for_table(ctx.table);
+    let mut fetched_so_far = 0usize;
+
+    info!(
+        name = crate::SSPHP_RUN_KEY,
+        ssphp_run = get_ssphp_run(crate::SSPHP_RUN_KEY),
+        subscription_id = ctx.sub_id,
+        table = ctx.table,
+        partition = ?ctx.partition,
+        batch = batch,
+        top = adaptive_top.value(),
+        query = ctx.query,
+        "Getting table for subscription"
+    );
+
+    let mut request_body = ResourceGraphRequest::new(ctx.sub_id, ctx.query);
+
+    let mut response = make_request(
+        az_client,
+        endpoint,
+        &request_body,
+        rate_limit,
+        &mut adaptive_top,
+    )
+    .await
+    .context("Failed making initial Resource Graph API request")?;
+
+    let total_records = response.total_records;
+    fetched_so_far += response.count;
+    log_fetch_progress(
+        ctx,
+        FetchProgress {
+            batch,
+            records_this_page: response.count,
+            fetched_so_far,
+            total_records,
+            top: adaptive_top.value(),
+        },
+    );
+
+    response.data.source = Some(source_label(ctx, batch));
+
+    let events = (&response.data)
+        .to_hec_events()
+        .context("Serialize ResourceGraphResponse.data events")?;
+
+    let stats = hec_stats(&events);
+    splunk
+        .send_batch(events)
+        .await
+        .context("Sending events to Splunk")?;
+
+    info!(
+        name = crate::SSPHP_RUN_KEY,
+        ssphp_run = get_ssphp_run(crate::SSPHP_RUN_KEY),
+        subscription_id = ctx.sub_id,
+        table = ctx.table,
+        partition = ?ctx.partition,
+        batch = batch,
+        stats = &stats.as_value(),
+        "Sent HecEvents to Splunk"
+    );
+
+    while let Some(ref skip_token) = response.skip_token {
+        batch += 1;
+
+        info!(
+            name = crate::SSPHP_RUN_KEY,
+            ssphp_run = get_ssphp_run(crate::SSPHP_RUN_KEY),
+            subscription_id = ctx.sub_id,
+            table = ctx.table,
+            partition = ?ctx.partition,
+            batch = batch,
+            top = adaptive_top.value(),
+            "Getting additional batches for table for subscription"
+        );
+
+        request_body.add_skip_token(skip_token);
+
+        response = make_request(
+            az_client,
+            endpoint,
+            &request_body,
+            rate_limit,
+            &mut adaptive_top,
+        )
+        .await
+        .context("Failed making Resource Graph API request")?;
+
+        fetched_so_far += response.count;
+        log_fetch_progress(
+            ctx,
+            FetchProgress {
+                batch,
+                records_this_page: response.count,
+                fetched_so_far,
+                total_records,
+                top: adaptive_top.value(),
+            },
+        );
+
+        response.data.source = Some(source_label(ctx, batch));
+
+        let events = (&response.data)
+            .to_hec_events()
+            .context("Serialize ResourceGraphResponse.data events")?;
+
+        let stats = hec_stats(&events);
+
+        splunk
+            .send_batch(events)
+            .await
+            .context("Sending events to Splunk")?;
+
+        info!(
+            name = crate::SSPHP_RUN_KEY,
+            ssphp_run = get_ssphp_run(crate::SSPHP_RUN_KEY),
+            subscription_id = ctx.sub_id,
+            table = ctx.table,
+            partition = ?ctx.partition,
+            batch = batch,
+            stats = &stats.as_value(),
+            "Sent HecEvents to Splunk"
+        );
+    }
+
+    Ok(())
+}
+
+struct QueryContext<'a> {
+    sub_id: &'a str,
+    table: &'a str,
+    query: &'a str,
+    partition: Option<usize>,
+}
+
+struct FetchProgress {
+    batch: usize,
+    records_this_page: usize,
+    fetched_so_far: usize,
+    total_records: usize,
+    top: usize,
+}
+
+fn source_label(ctx: &QueryContext<'_>, batch: usize) -> String {
+    match ctx.partition {
+        Some(partition) => format!("{}:{}:p{partition}:{batch}", ctx.sub_id, ctx.table),
+        None => format!("{}:{}:{batch}", ctx.sub_id, ctx.table),
+    }
+}
+
+fn log_fetch_progress(ctx: &QueryContext<'_>, progress: FetchProgress) {
+    let progress_pct = (progress.total_records > 0)
+        .then(|| progress.fetched_so_far * 100 / progress.total_records);
+
+    info!(
+        name = crate::SSPHP_RUN_KEY,
+        ssphp_run = get_ssphp_run(crate::SSPHP_RUN_KEY),
+        subscription_id = ctx.sub_id,
+        table = ctx.table,
+        partition = ?ctx.partition,
+        batch = progress.batch,
+        records_this_page = progress.records_this_page,
+        fetched_so_far = progress.fetched_so_far,
+        total_records = progress.total_records,
+        progress_pct = ?progress_pct,
+        top = progress.top,
+        "Resource graph fetch progress"
+    );
+}
+
 //#[async_recursion]
 async fn make_request(
     az_client: &AzureRest,
     endpoint: &str,
     request_body: &ResourceGraphRequest,
     rate_limit: &mut RateLimit,
+    adaptive_top: &mut AdaptiveTop,
 ) -> Result<QueryResponse> {
     let mut request_body = request_body.clone();
     let response = 'request: loop {
+        adaptive_top.apply_to(&mut request_body);
         rate_limit.wait().await?;
 
-        let result = az_client
+        let (result, payload_bytes) = az_client
             .post_rest_request(endpoint, &request_body)
             .await
             .context("Sending Resource Graph Post Request")?;
 
         match result {
             // Happy path
-            ResourceGraphResponse::Query(response) => break response,
+            ResourceGraphResponse::Query(response) => {
+                let requested_top = request_body.options.top.unwrap_or(AdaptiveTop::MAX_TOP);
+                adaptive_top.tune_from_response(payload_bytes, response.count, requested_top);
+                info!(
+                    name = crate::SSPHP_RUN_KEY,
+                    ssphp_run = get_ssphp_run(crate::SSPHP_RUN_KEY),
+                    requested_top = requested_top,
+                    next_top = adaptive_top.value(),
+                    records = response.count,
+                    payload_bytes = payload_bytes,
+                    "Adaptive top tuned from response"
+                );
+                break response;
+            }
 
             // Known errors
             ResourceGraphResponse::Error(ref error) => {
@@ -197,7 +335,19 @@ async fn make_request(
                             request_body = request_body.as_value(),
                             "GatewayTimeout error!"
                         );
-                        request_body.halve_top();
+                        adaptive_top.shrink_for_error();
+                        tokio::time::sleep(rate_limit.interval).await;
+                        continue 'request;
+                    }
+                    QueryErrorErrorCode::InternalServerError => {
+                        error!(
+                            name = crate::SSPHP_RUN_KEY,
+                            ssphp_run = get_ssphp_run(crate::SSPHP_RUN_KEY),
+                            error = error.as_value(),
+                            request_body = request_body.as_value(),
+                            "InternalServerError from Azure Resource Graph, retrying"
+                        );
+                        adaptive_top.shrink_for_error();
                         tokio::time::sleep(rate_limit.interval).await;
                         continue 'request;
                     }
@@ -232,7 +382,7 @@ async fn make_request(
                                         request_body = request_body.as_value(),
                                         "ResponsePayloadTooLarge error!"
                                     );
-                                    request_body.halve_top();
+                                    adaptive_top.shrink_for_error();
                                     continue 'request;
                                 }
 
@@ -257,6 +407,19 @@ async fn make_request(
                                         "Disallowed Logical Table"
                                     );
                                     anyhow::bail!("Disallowed Logical Table: {:?}", request_body);
+                                }
+
+                                QueryErrorErrorDetailsCode::UnexpectedQueryExecutionError => {
+                                    error!(
+                                        name = crate::SSPHP_RUN_KEY,
+                                        ssphp_run = get_ssphp_run(crate::SSPHP_RUN_KEY),
+                                        error = error.as_value(),
+                                        request_body = request_body.as_value(),
+                                        "UnexpectedQueryExecutionError from Azure Resource Graph, retrying"
+                                    );
+                                    adaptive_top.shrink_for_error();
+                                    tokio::time::sleep(rate_limit.interval).await;
+                                    continue 'request;
                                 }
 
                                 // Unknown Errors and responses
@@ -360,14 +523,6 @@ impl ResourceGraphRequest {
     fn add_skip_token(&mut self, skip_token: &str) {
         self.options.skip_token = Some(skip_token.to_string());
     }
-
-    fn halve_top(&mut self) {
-        self.options.top = self
-            .options
-            .top
-            .map(|top| std::cmp::max(top / 2, 1))
-            .or(Some(500));
-    }
 }
 
 #[derive(Valuable, Serialize, Deserialize, Debug, Clone)]
@@ -441,6 +596,37 @@ fn test_json_into_resource_graph_response_gateway_timeout() {
 }
 
 #[test]
+fn test_json_into_resource_graph_response_internal_server_error() {
+    let error_response = r#"
+{
+  "error": {
+    "code": "InternalServerError",
+    "message": "Please provide below info when asking for support: timestamp = 2026-07-10T08:32:11.4933442Z, correlationId = 8dd19e36-e51b-4ae2-ae80-eddd6d840406.",
+    "details": [
+      {
+        "code": "UnexpectedQueryExecutionError",
+        "message": "An unexpected query execution error occurred. Please try again later."
+      }
+    ]
+  }
+}"#;
+    let obj: ResourceGraphResponse =
+        serde_json::from_str(error_response).expect("JSON should parse into ResourceGraphResponse");
+    assert!(
+        matches!(
+            obj,
+            ResourceGraphResponse::Error(QueryError {
+                error: QueryErrorError {
+                    code: QueryErrorErrorCode::InternalServerError,
+                    ..
+                }
+            })
+        ),
+        "JSON didn't parse into a ResourceGraphResponse::Error(InternalServerError)"
+    );
+}
+
+#[test]
 fn test_json_into_resource_graph_response_error() {
     let error_response = r#"
 {
@@ -498,6 +684,7 @@ enum QueryErrorErrorCode {
     RateLimiting,
     BadRequest,
     GatewayTimeout,
+    InternalServerError,
     Other(#[valuable(skip)] Value),
 }
 
@@ -513,6 +700,7 @@ enum QueryErrorErrorDetailsCode {
     RateLimiting,
     ResponsePayloadTooLarge,
     DisallowedLogicalTableName,
+    UnexpectedQueryExecutionError,
     Other(#[valuable(skip)] Value),
 }
 
@@ -551,6 +739,85 @@ impl ToHecEvents for &ResourceGraphData {
     }
 }
 
+#[derive(Debug)]
+struct AdaptiveTop {
+    current: usize,
+    last_bytes_per_record: Option<usize>,
+}
+
+impl AdaptiveTop {
+    /// Azure Resource Graph enforces a ~16 MiB response limit.
+    const RESPONSE_BUDGET_BYTES: usize = 12 * 1024 * 1024;
+    /// Conservative per-record ceiling used before any successful page is observed.
+    const WORST_CASE_RECORD_BYTES: usize = 3 * 1024 * 1024;
+    const MAX_TOP: usize = 1000;
+    const MIN_TOP: usize = 1;
+
+    fn initial_for_table(table: &str) -> Self {
+        Self {
+            current: match table {
+                "guestconfigurationresources" => 10,
+                // Large, variable rows — start conservative and let tuning ramp up.
+                "securityresources" => 50,
+                _ => Self::MAX_TOP,
+            },
+            last_bytes_per_record: None,
+        }
+    }
+
+    fn value(&self) -> usize {
+        self.current
+    }
+
+    fn apply_to(&self, request: &mut ResourceGraphRequest) {
+        request.options.top = Some(self.current);
+    }
+
+    fn shrink_for_error(&mut self) {
+        let bytes_per_record = self
+            .last_bytes_per_record
+            .unwrap_or(Self::WORST_CASE_RECORD_BYTES);
+        let safe_top = (Self::RESPONSE_BUDGET_BYTES * 9 / 10 / bytes_per_record)
+            .clamp(Self::MIN_TOP, Self::MAX_TOP);
+
+        if self.current > safe_top {
+            self.current = safe_top;
+        } else {
+            self.current = (self.current / 2).max(Self::MIN_TOP);
+        }
+    }
+
+    fn tune_from_response(
+        &mut self,
+        payload_bytes: usize,
+        records_returned: usize,
+        requested_top: usize,
+    ) {
+        if records_returned == 0 {
+            return;
+        }
+
+        let bytes_per_record = payload_bytes.div_ceil(records_returned).max(1);
+        self.last_bytes_per_record = Some(bytes_per_record);
+
+        let ideal_top =
+            (Self::RESPONSE_BUDGET_BYTES / bytes_per_record).clamp(Self::MIN_TOP, Self::MAX_TOP);
+
+        if records_returned < requested_top {
+            // Final page for this query — keep the current top for any follow-up work.
+            return;
+        }
+
+        if payload_bytes < Self::RESPONSE_BUDGET_BYTES / 2 {
+            self.current = ((self.current * 2 + ideal_top) / 3).clamp(Self::MIN_TOP, Self::MAX_TOP);
+        } else if payload_bytes > Self::RESPONSE_BUDGET_BYTES {
+            self.current = ideal_top.min(self.current);
+        } else {
+            self.current = ((self.current + ideal_top) / 2).clamp(Self::MIN_TOP, Self::MAX_TOP);
+        }
+    }
+}
+
 #[derive(Debug, Default)]
 struct RateLimit {
     requests: VecDeque<Instant>,
@@ -562,8 +829,8 @@ impl RateLimit {
     fn default() -> Self {
         Self {
             requests: VecDeque::new(),
-            max_requests: 14,
-            interval: Duration::from_millis(5100),
+            max_requests: 15,
+            interval: Duration::from_millis(5000),
         }
     }
 
@@ -580,6 +847,92 @@ impl RateLimit {
             tokio::time::sleep_until(deadline).await;
         }
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod query_tests {
+    use super::{resource_graph_queries, SECURITYRESOURCES_PARTITIONS};
+
+    #[test]
+    fn securityresources_is_partitioned() {
+        let queries = resource_graph_queries("securityresources");
+        assert_eq!(queries.len(), SECURITYRESOURCES_PARTITIONS);
+        for (partition, (query, partition_id)) in queries.iter().enumerate() {
+            assert_eq!(*partition_id, Some(partition));
+            assert!(query.contains("order by id asc"));
+            assert!(query.contains(&format!("== {partition}")));
+        }
+    }
+
+    #[test]
+    fn other_tables_use_id_sort() {
+        let queries = resource_graph_queries("resources");
+        assert_eq!(queries.len(), 1);
+        assert_eq!(queries[0].0, "resources | order by id asc");
+        assert_eq!(queries[0].1, None);
+    }
+}
+
+#[cfg(test)]
+mod adaptive_top_tests {
+    use super::AdaptiveTop;
+
+    #[test]
+    fn shrink_without_history_uses_worst_case_record_size() {
+        let mut top = AdaptiveTop::initial_for_table("securityresources");
+        assert_eq!(top.value(), 50);
+
+        top.shrink_for_error();
+
+        // 12 MiB * 0.9 / 3 MiB ≈ 3 records per page
+        assert_eq!(top.value(), 3);
+    }
+
+    #[test]
+    fn shrink_with_observed_record_size_targets_safe_top() {
+        let mut top = AdaptiveTop::initial_for_table("resources");
+        top.tune_from_response(10 * 1024 * 1024, 20, 1000);
+
+        top.shrink_for_error();
+
+        // 12 MiB * 0.9 / 512 KiB ≈ 21 records per page
+        assert_eq!(top.value(), 21);
+    }
+
+    #[test]
+    fn shrink_halves_when_already_below_safe_top() {
+        let mut top = AdaptiveTop::initial_for_table("securityresources");
+        top.tune_from_response(10 * 1024 * 1024, 100, 100);
+
+        top.shrink_for_error();
+
+        assert_eq!(top.value(), 42);
+    }
+
+    #[test]
+    fn tune_grows_when_pages_are_small() {
+        let mut top = AdaptiveTop::initial_for_table("securityresources");
+        top.tune_from_response(1 * 1024 * 1024, 50, 50);
+
+        assert!(top.value() > 50);
+        assert!(top.value() <= AdaptiveTop::MAX_TOP);
+    }
+
+    #[test]
+    fn tune_shrinks_when_page_exceeds_budget() {
+        let mut top = AdaptiveTop::initial_for_table("resources");
+        top.tune_from_response(14 * 1024 * 1024, 1000, 1000);
+
+        assert!(top.value() < 1000);
+    }
+
+    #[test]
+    fn tune_does_not_grow_on_final_partial_page() {
+        let mut top = AdaptiveTop::initial_for_table("securityresources");
+        top.tune_from_response(512 * 1024, 7, 50);
+
+        assert_eq!(top.value(), 50);
     }
 }
 
