@@ -70,6 +70,8 @@ async fn resource_graph_all(az_client: AzureRest, splunk: &Splunk) -> Result<()>
 
             if *table == "guestconfigurationresources" {
                 request_body.options.top = Some(10);
+            } else if *table == "securityresources" {
+                request_body.options.top = Some(500);
             }
 
             let mut response =
@@ -201,6 +203,18 @@ async fn make_request(
                         tokio::time::sleep(rate_limit.interval).await;
                         continue 'request;
                     }
+                    QueryErrorErrorCode::InternalServerError => {
+                        error!(
+                            name = crate::SSPHP_RUN_KEY,
+                            ssphp_run = get_ssphp_run(crate::SSPHP_RUN_KEY),
+                            error = error.as_value(),
+                            request_body = request_body.as_value(),
+                            "InternalServerError from Azure Resource Graph, retrying"
+                        );
+                        request_body.halve_top();
+                        tokio::time::sleep(rate_limit.interval).await;
+                        continue 'request;
+                    }
                     QueryErrorErrorCode::BadRequest => {
                         let details = if let Some(details) = error.error.details.as_ref() {
                             details
@@ -257,6 +271,19 @@ async fn make_request(
                                         "Disallowed Logical Table"
                                     );
                                     anyhow::bail!("Disallowed Logical Table: {:?}", request_body);
+                                }
+
+                                QueryErrorErrorDetailsCode::UnexpectedQueryExecutionError => {
+                                    error!(
+                                        name = crate::SSPHP_RUN_KEY,
+                                        ssphp_run = get_ssphp_run(crate::SSPHP_RUN_KEY),
+                                        error = error.as_value(),
+                                        request_body = request_body.as_value(),
+                                        "UnexpectedQueryExecutionError from Azure Resource Graph, retrying"
+                                    );
+                                    request_body.halve_top();
+                                    tokio::time::sleep(rate_limit.interval).await;
+                                    continue 'request;
                                 }
 
                                 // Unknown Errors and responses
@@ -441,6 +468,37 @@ fn test_json_into_resource_graph_response_gateway_timeout() {
 }
 
 #[test]
+fn test_json_into_resource_graph_response_internal_server_error() {
+    let error_response = r#"
+{
+  "error": {
+    "code": "InternalServerError",
+    "message": "Please provide below info when asking for support: timestamp = 2026-07-10T08:32:11.4933442Z, correlationId = 8dd19e36-e51b-4ae2-ae80-eddd6d840406.",
+    "details": [
+      {
+        "code": "UnexpectedQueryExecutionError",
+        "message": "An unexpected query execution error occurred. Please try again later."
+      }
+    ]
+  }
+}"#;
+    let obj: ResourceGraphResponse =
+        serde_json::from_str(error_response).expect("JSON should parse into ResourceGraphResponse");
+    assert!(
+        matches!(
+            obj,
+            ResourceGraphResponse::Error(QueryError {
+                error: QueryErrorError {
+                    code: QueryErrorErrorCode::InternalServerError,
+                    ..
+                }
+            })
+        ),
+        "JSON didn't parse into a ResourceGraphResponse::Error(InternalServerError)"
+    );
+}
+
+#[test]
 fn test_json_into_resource_graph_response_error() {
     let error_response = r#"
 {
@@ -498,6 +556,7 @@ enum QueryErrorErrorCode {
     RateLimiting,
     BadRequest,
     GatewayTimeout,
+    InternalServerError,
     Other(#[valuable(skip)] Value),
 }
 
@@ -513,6 +572,7 @@ enum QueryErrorErrorDetailsCode {
     RateLimiting,
     ResponsePayloadTooLarge,
     DisallowedLogicalTableName,
+    UnexpectedQueryExecutionError,
     Other(#[valuable(skip)] Value),
 }
 
