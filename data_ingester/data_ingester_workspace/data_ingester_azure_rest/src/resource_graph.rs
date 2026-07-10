@@ -54,114 +54,27 @@ async fn resource_graph_all(az_client: AzureRest, splunk: &Splunk) -> Result<()>
         let sub_id = sub.subscription_id.as_ref().context("no subscription_id")?;
 
         for table in &crate::resource_graph::RESOURCE_GRAPH_TABLES {
-            let mut batch = 0;
-            let mut adaptive_top = AdaptiveTop::initial_for_table(table);
-
-            info!(
-                name = crate::SSPHP_RUN_KEY,
-                ssphp_run = get_ssphp_run(crate::SSPHP_RUN_KEY),
-                subscription_id = sub_id,
-                table = table,
-                batch = batch,
-                top = adaptive_top.value(),
-                "Getting table for subscription"
-            );
-
-            let mut request_body =
-                ResourceGraphRequest::new(sub_id, &format!("{} | order by name asc", table));
-
-            let mut response = match make_request(
-                &az_client,
-                endpoint,
-                &request_body,
-                &mut rate_limit,
-                &mut adaptive_top,
-            )
-            .await
-            {
-                Ok(response) => response,
-                Err(err) => {
+            for (query, partition) in resource_graph_queries(table) {
+                let ctx = QueryContext {
+                    sub_id,
+                    table,
+                    query: &query,
+                    partition,
+                };
+                if let Err(err) =
+                    fetch_resource_graph_query(&az_client, splunk, endpoint, &mut rate_limit, &ctx)
+                        .await
+                {
                     error!(
-                            name=crate::SSPHP_RUN_KEY,
-                            ssphp_run=get_ssphp_run(crate::SSPHP_RUN_KEY),
-                            subscription_id=sub_id,
-                            table=table,
-                            batch = batch,                            
-                            error=?err,
-                            "Failed making request for Azure resource graph table");
-                    continue;
+                        name = crate::SSPHP_RUN_KEY,
+                        ssphp_run = get_ssphp_run(crate::SSPHP_RUN_KEY),
+                        subscription_id = sub_id,
+                        table = table,
+                        partition = ?partition,
+                        error = ?err,
+                        "Failed fetching Azure resource graph query"
+                    );
                 }
-            };
-
-            response.data.source = Some(format!("{}:{}:{}", sub_id, table, batch));
-
-            let events = (&response.data)
-                .to_hec_events()
-                .context("Serialize ResourceGraphResponse.data events")?;
-
-            let stats = hec_stats(&events);
-            splunk
-                .send_batch(events)
-                .await
-                .context("Sending events to Splunk")?;
-
-            info!(
-                name = crate::SSPHP_RUN_KEY,
-                ssphp_run = get_ssphp_run(crate::SSPHP_RUN_KEY),
-                subscription_id = sub_id,
-                table = table,
-                batch = batch,
-                stats = &stats.as_value(),
-                "Sent HecEvents to Splunk"
-            );
-
-            while let Some(ref skip_token) = response.skip_token {
-                batch += 1;
-
-                info!(
-                    name = crate::SSPHP_RUN_KEY,
-                    ssphp_run = get_ssphp_run(crate::SSPHP_RUN_KEY),
-                    subscription_id = sub_id,
-                    table = table,
-                    batch = batch,
-                    top = adaptive_top.value(),
-                    "Getting additional batches for table for subscription"
-                );
-
-                request_body.add_skip_token(skip_token);
-
-                response = make_request(
-                    &az_client,
-                    endpoint,
-                    &request_body,
-                    &mut rate_limit,
-                    &mut adaptive_top,
-                )
-                .await
-                .context("Failed making Resource Graph API request")?;
-
-                response.data.source = Some(format!("{}:{}:{}", sub_id, table, batch));
-
-                let events = (&response.data)
-                    .to_hec_events()
-                    .context("Serialize ResourceGraphResponse.data events")?;
-
-                let stats = hec_stats(&events);
-
-                splunk
-                    .send_batch(events)
-                    .await
-                    .context("Sending events to Splunk")?;
-
-                info!(
-                    name = crate::SSPHP_RUN_KEY,
-                    ssphp_run = get_ssphp_run(crate::SSPHP_RUN_KEY),
-                    subscription_id = sub_id,
-                    table = table,
-                    batch = batch,
-                    stats = &stats.as_value(),
-                    "Sent HecEvents to Splunk"
-                );
             }
         }
         az_client
@@ -171,6 +84,204 @@ async fn resource_graph_all(az_client: AzureRest, splunk: &Splunk) -> Result<()>
             .context("Clear AZ credential cache")?;
     }
     Ok(())
+}
+
+const SECURITYRESOURCES_PARTITIONS: usize = 8;
+
+fn resource_graph_queries(table: &str) -> Vec<(String, Option<usize>)> {
+    if table == "securityresources" {
+        (0..SECURITYRESOURCES_PARTITIONS)
+            .map(|partition| {
+                (
+                    format!(
+                        "securityresources | where hash(id) % {SECURITYRESOURCES_PARTITIONS} == {partition} | order by id asc"
+                    ),
+                    Some(partition),
+                )
+            })
+            .collect()
+    } else {
+        vec![(format!("{table} | order by id asc"), None)]
+    }
+}
+
+async fn fetch_resource_graph_query(
+    az_client: &AzureRest,
+    splunk: &Splunk,
+    endpoint: &str,
+    rate_limit: &mut RateLimit,
+    ctx: &QueryContext<'_>,
+) -> Result<()> {
+    let mut batch = 0;
+    let mut adaptive_top = AdaptiveTop::initial_for_table(ctx.table);
+    let mut fetched_so_far = 0usize;
+
+    info!(
+        name = crate::SSPHP_RUN_KEY,
+        ssphp_run = get_ssphp_run(crate::SSPHP_RUN_KEY),
+        subscription_id = ctx.sub_id,
+        table = ctx.table,
+        partition = ?ctx.partition,
+        batch = batch,
+        top = adaptive_top.value(),
+        query = ctx.query,
+        "Getting table for subscription"
+    );
+
+    let mut request_body = ResourceGraphRequest::new(ctx.sub_id, ctx.query);
+
+    let mut response = make_request(
+        az_client,
+        endpoint,
+        &request_body,
+        rate_limit,
+        &mut adaptive_top,
+    )
+    .await
+    .context("Failed making initial Resource Graph API request")?;
+
+    let total_records = response.total_records;
+    fetched_so_far += response.count;
+    log_fetch_progress(
+        ctx,
+        FetchProgress {
+            batch,
+            records_this_page: response.count,
+            fetched_so_far,
+            total_records,
+            top: adaptive_top.value(),
+        },
+    );
+
+    response.data.source = Some(source_label(ctx, batch));
+
+    let events = (&response.data)
+        .to_hec_events()
+        .context("Serialize ResourceGraphResponse.data events")?;
+
+    let stats = hec_stats(&events);
+    splunk
+        .send_batch(events)
+        .await
+        .context("Sending events to Splunk")?;
+
+    info!(
+        name = crate::SSPHP_RUN_KEY,
+        ssphp_run = get_ssphp_run(crate::SSPHP_RUN_KEY),
+        subscription_id = ctx.sub_id,
+        table = ctx.table,
+        partition = ?ctx.partition,
+        batch = batch,
+        stats = &stats.as_value(),
+        "Sent HecEvents to Splunk"
+    );
+
+    while let Some(ref skip_token) = response.skip_token {
+        batch += 1;
+
+        info!(
+            name = crate::SSPHP_RUN_KEY,
+            ssphp_run = get_ssphp_run(crate::SSPHP_RUN_KEY),
+            subscription_id = ctx.sub_id,
+            table = ctx.table,
+            partition = ?ctx.partition,
+            batch = batch,
+            top = adaptive_top.value(),
+            "Getting additional batches for table for subscription"
+        );
+
+        request_body.add_skip_token(skip_token);
+
+        response = make_request(
+            az_client,
+            endpoint,
+            &request_body,
+            rate_limit,
+            &mut adaptive_top,
+        )
+        .await
+        .context("Failed making Resource Graph API request")?;
+
+        fetched_so_far += response.count;
+        log_fetch_progress(
+            ctx,
+            FetchProgress {
+                batch,
+                records_this_page: response.count,
+                fetched_so_far,
+                total_records,
+                top: adaptive_top.value(),
+            },
+        );
+
+        response.data.source = Some(source_label(ctx, batch));
+
+        let events = (&response.data)
+            .to_hec_events()
+            .context("Serialize ResourceGraphResponse.data events")?;
+
+        let stats = hec_stats(&events);
+
+        splunk
+            .send_batch(events)
+            .await
+            .context("Sending events to Splunk")?;
+
+        info!(
+            name = crate::SSPHP_RUN_KEY,
+            ssphp_run = get_ssphp_run(crate::SSPHP_RUN_KEY),
+            subscription_id = ctx.sub_id,
+            table = ctx.table,
+            partition = ?ctx.partition,
+            batch = batch,
+            stats = &stats.as_value(),
+            "Sent HecEvents to Splunk"
+        );
+    }
+
+    Ok(())
+}
+
+struct QueryContext<'a> {
+    sub_id: &'a str,
+    table: &'a str,
+    query: &'a str,
+    partition: Option<usize>,
+}
+
+struct FetchProgress {
+    batch: usize,
+    records_this_page: usize,
+    fetched_so_far: usize,
+    total_records: usize,
+    top: usize,
+}
+
+fn source_label(ctx: &QueryContext<'_>, batch: usize) -> String {
+    match ctx.partition {
+        Some(partition) => format!("{}:{}:p{partition}:{batch}", ctx.sub_id, ctx.table),
+        None => format!("{}:{}:{batch}", ctx.sub_id, ctx.table),
+    }
+}
+
+fn log_fetch_progress(ctx: &QueryContext<'_>, progress: FetchProgress) {
+    let progress_pct = (progress.total_records > 0)
+        .then(|| progress.fetched_so_far * 100 / progress.total_records);
+
+    info!(
+        name = crate::SSPHP_RUN_KEY,
+        ssphp_run = get_ssphp_run(crate::SSPHP_RUN_KEY),
+        subscription_id = ctx.sub_id,
+        table = ctx.table,
+        partition = ?ctx.partition,
+        batch = progress.batch,
+        records_this_page = progress.records_this_page,
+        fetched_so_far = progress.fetched_so_far,
+        total_records = progress.total_records,
+        progress_pct = ?progress_pct,
+        top = progress.top,
+        "Resource graph fetch progress"
+    );
 }
 
 //#[async_recursion]
@@ -186,7 +297,7 @@ async fn make_request(
         adaptive_top.apply_to(&mut request_body);
         rate_limit.wait().await?;
 
-        let result = az_client
+        let (result, payload_bytes) = az_client
             .post_rest_request(endpoint, &request_body)
             .await
             .context("Sending Resource Graph Post Request")?;
@@ -195,7 +306,6 @@ async fn make_request(
             // Happy path
             ResourceGraphResponse::Query(response) => {
                 let requested_top = request_body.options.top.unwrap_or(AdaptiveTop::MAX_TOP);
-                let payload_bytes = response.data.serialized_payload_bytes();
                 adaptive_top.tune_from_response(payload_bytes, response.count, requested_top);
                 info!(
                     name = crate::SSPHP_RUN_KEY,
@@ -602,14 +712,6 @@ pub(crate) struct ResourceGraphData {
     source: Option<String>,
 }
 
-impl ResourceGraphData {
-    fn serialized_payload_bytes(&self) -> usize {
-        serde_json::to_string(&self.inner)
-            .map(|json| json.len())
-            .unwrap_or(0)
-    }
-}
-
 #[derive(Serialize, Deserialize, Debug)]
 pub(crate) struct ResourceGraphDataInner {
     // Pull `type` out to make sure it's the first field in the
@@ -727,8 +829,8 @@ impl RateLimit {
     fn default() -> Self {
         Self {
             requests: VecDeque::new(),
-            max_requests: 14,
-            interval: Duration::from_millis(5100),
+            max_requests: 15,
+            interval: Duration::from_millis(5000),
         }
     }
 
@@ -745,6 +847,30 @@ impl RateLimit {
             tokio::time::sleep_until(deadline).await;
         }
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod query_tests {
+    use super::{resource_graph_queries, SECURITYRESOURCES_PARTITIONS};
+
+    #[test]
+    fn securityresources_is_partitioned() {
+        let queries = resource_graph_queries("securityresources");
+        assert_eq!(queries.len(), SECURITYRESOURCES_PARTITIONS);
+        for (partition, (query, partition_id)) in queries.iter().enumerate() {
+            assert_eq!(*partition_id, Some(partition));
+            assert!(query.contains("order by id asc"));
+            assert!(query.contains(&format!("== {partition}")));
+        }
+    }
+
+    #[test]
+    fn other_tables_use_id_sort() {
+        let queries = resource_graph_queries("resources");
+        assert_eq!(queries.len(), 1);
+        assert_eq!(queries[0].0, "resources | order by id asc");
+        assert_eq!(queries[0].1, None);
     }
 }
 

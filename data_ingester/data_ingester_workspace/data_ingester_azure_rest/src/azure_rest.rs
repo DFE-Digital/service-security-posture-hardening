@@ -374,7 +374,7 @@ impl AzureRest {
         &self,
         url: &str,
         body: &B,
-    ) -> Result<T> {
+    ) -> Result<(T, usize)> {
         let post_body_json = match serde_json::to_string(&body) {
             Ok(ok) => ok,
             Err(err) => {
@@ -454,6 +454,7 @@ impl AzureRest {
                 // continue;
             }
 
+            let payload_bytes = response_body.len();
             let rt: T = match serde_json::from_str(&response_body) {
                 Ok(obj) => obj,
                 Err(err) => {
@@ -466,7 +467,7 @@ impl AzureRest {
                     continue;
                 }
             };
-            return Ok(rt);
+            return Ok((rt, payload_bytes));
         }
     }
 
