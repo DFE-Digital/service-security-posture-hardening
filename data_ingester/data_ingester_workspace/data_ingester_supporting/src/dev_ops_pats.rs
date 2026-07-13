@@ -30,7 +30,7 @@ pub(crate) async fn azure_dev_ops_pats(
         let value = match client.get(&secret_id.id).await {
             Ok(value) => value,
             Err(err) => {
-                error!(name="KeyVault", operation="Get Ado secret", secret_id=secret.id, err=?err);
+                error!(name="KeyVault", operation="Get ADO secret", secret_id=secret.id, err=?err);
                 continue;
             }
         };
@@ -116,11 +116,11 @@ pub struct AdoDevOpsPat {
 }
 
 impl AdoDevOpsPat {
-    /// The DevOps organization the PAT can access    
+    /// The DevOps organization the PAT can access
     pub fn organization(&self) -> &str {
         self.organization.value.as_str()
     }
-    /// The actual PAT value    
+    /// The actual PAT value
     pub fn pat(&self) -> &str {
         self.pat.value.as_str()
     }
