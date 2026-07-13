@@ -25,7 +25,7 @@ pub struct SplunkApiClient {
 #[derive(Default, Debug, Clone, PartialEq, Deserialize)]
 pub struct SearchResult<T> {
     // preview: bool,
-    // offest: usize,
+    // offset: usize,
     result: T,
     // #[serde(default)]
     // last_row: bool
@@ -41,9 +41,9 @@ impl SplunkApiClient {
     /// A JWT token for Splunk access. This can be retrieved
     /// from 'Settings -> Token' in the Splunk console
     ///
-    /// Setting an envionment variable called "ACCEPT_INVALID_CERTS"
+    /// Setting an environment variable called "ACCEPT_INVALID_CERTS"
     /// to any value will disable certificate checking. This can be
-    /// used when connecting to green Splunk Docker instances.
+    /// used when connecting to local Splunk Docker instances.
     ///
     pub fn new<'b, T: Into<&'b str>>(
         url_base: &str,
@@ -103,7 +103,7 @@ impl SplunkApiClient {
 
     /// Grant search access via ACS
     ///
-    /// If this client was craeted with the appropriate ACS
+    /// If this client was created with the appropriate ACS
     /// credentials then use that to add our current IP address to the
     /// ACS allow list
     ///
@@ -111,14 +111,14 @@ impl SplunkApiClient {
         if let Some(acs) = self.acs.as_mut() {
             acs.grant_access_for_current_ip()
                 .await
-                .context("Granting access for current IP")?
+                .context("Granting access for current IP")?;
         }
         Ok(())
     }
 
     /// Remove search access via ACS
     ///
-    /// If this client was craeted with the appropriate ACS
+    /// If this client was created with the appropriate ACS
     /// credentials then use that to remove our current IP address
     /// from the ACS allow list
     ///
@@ -131,10 +131,10 @@ impl SplunkApiClient {
         Ok(())
     }
 
-    /// Set a different
+    /// Set the Splunk app used for searches.
     ///
-    /// The standard app is 'search' use this method to set a
-    /// different Splunk app for searches
+    /// The standard app is 'search'. Use this method to set a
+    /// different Splunk app for searches.
     pub fn set_app(mut self, app: &str) -> Self {
         self.app = app.to_string();
         self
@@ -209,8 +209,8 @@ mod test {
     #[tokio::test]
     async fn test_splunk_search() -> Result<()> {
         let client = SplunkApiClient::new(
-            &std::env::var("splunk_rest_host").expect("Envionment variable"),
-            &std::env::var("splunk_rest_token").expect("Envionment variable"),
+            &std::env::var("splunk_rest_host").expect("splunk_rest_host environment variable"),
+            &std::env::var("splunk_rest_token").expect("splunk_rest_token environment variable"),
             None::<&str>,
             None::<&str>,
         )?;
@@ -219,7 +219,6 @@ mod test {
                 "| search index=_* | table _time index source sourcetype",
             )
             .await?;
-        dbg!(results.iter().take(2).collect::<Vec<&TestSplunkResults>>());
         assert!(!results.is_empty());
         Ok(())
     }
