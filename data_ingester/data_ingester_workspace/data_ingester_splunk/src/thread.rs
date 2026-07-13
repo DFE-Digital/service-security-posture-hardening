@@ -12,7 +12,7 @@ pub struct SplunkTask {
 }
 
 impl SplunkTask {
-    /// Start a collector listening for events to send to Splunk    
+    /// Start a collector listening for events to send to Splunk
     pub fn new(splunk: Arc<Splunk>) -> SplunkTask {
         let (tx, rx) = unbounded_channel::<HecEvent>();
         let join_handle = tokio::spawn(async move { Self::process_events(splunk, rx).await });
@@ -61,7 +61,7 @@ impl Drop for SplunkTask {
         let jh = self.join_handle.take().expect("join handle should exist");
         // Get a [tokio::runtime::Handle] to the current tokio runtime
         let handle = tokio::runtime::Handle::current();
-        // Spawn a thead to run the logging to completion blocking the current thread until it completes.
+        // Spawn a thread to run the logging to completion blocking the current thread until it completes.
         // This makes sure events are sent before dropping
         std::thread::spawn(move || handle.block_on(jh))
             .join()
@@ -84,7 +84,7 @@ mod live_tests {
     #[tokio::test(flavor = "multi_thread")]
     async fn test_background_task() -> Result<()> {
         let secrets = get_keyvault_secrets(
-            &std::env::var("KEY_VAULT_NAME").expect("Need KEY_VAULT_NAME enviornment variable"),
+            &std::env::var("KEY_VAULT_NAME").expect("Need KEY_VAULT_NAME environment variable"),
         )
         .await
         .unwrap();

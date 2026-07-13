@@ -339,8 +339,14 @@ pub trait SplunkTrait {
                         permit.send(event);
                     }
                     Err(err) => {
-                        error!(operation="SplunkHec", operation="Reserve HecBatch on self.send_tx failed", error=?err);
-                        panic!("FAIED to reserve space for Splunk Batch on send_tx channel");
+                        error!(
+                            name = "SplunkHec",
+                            operation = "Reserve HecBatch on send_tx",
+                            error = ?err
+                        );
+                        return Err(anyhow!(
+                            "Failed to reserve space for Splunk batch on send_tx channel: {err:?}"
+                        ));
                     }
                 }
             }
@@ -389,7 +395,7 @@ where
     // Calculate stats
     let stats = hec_stats(&hec_events);
 
-    // Send HecEvnts to Splunk
+    // Send HecEvents to Splunk
     match splunk.send_batch(hec_events).await {
         Ok(()) => {
             info!(
