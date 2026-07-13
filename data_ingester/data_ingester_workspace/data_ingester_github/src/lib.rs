@@ -40,7 +40,7 @@ use workflows::{WorkflowRunJobs, WorkflowRuns};
 
 pub static SSPHP_RUN_KEY: &str = "github";
 
-/// NewType for Octocrab provide additonal data source.
+/// NewType for Octocrab providing additional data source.
 #[derive(Debug, Clone)]
 pub struct OctocrabGit {
     pub client: Octocrab,
@@ -58,11 +58,10 @@ impl OctocrabGit {
     pub fn new_from_app(github_app: &GitHubApp) -> Result<Self> {
         let key = jsonwebtoken::EncodingKey::from_rsa_der(&github_app.private_key); // .context("Building jsonwebtoken from gihtub app der key")?;
 
-        // Initalise default crypto provider to prevent runtime error
+        // Initialise default crypto provider to prevent runtime error
         // https://github.com/rustls/rustls/issues/1938
         let _ = rustls::crypto::aws_lc_rs::default_provider().install_default();
 
-        let _ = rustls::crypto::aws_lc_rs::default_provider().install_default();
         let octocrab = Octocrab::builder()
             .app(github_app.app_id.into(), key)
             .build()
@@ -131,7 +130,7 @@ impl OctocrabGit {
         let mut teams = self
             .org_teams(org)
             .await
-            .context("Getting teams for {org_name}")?;
+            .context(format!("Getting teams for {org}"))?;
 
         let mut raw = vec![];
         let mut teams_org = crate::teams::GitHubTeamsOrg::new(org);
@@ -145,16 +144,16 @@ impl OctocrabGit {
                 .as_object()
                 .context("Getting team as HashMap")?
                 .get("id")
-                .context("Getting `name` from team")?
+                .context("Getting `id` from team")?
                 .as_u64()
-                .context("Getting `name` as &str")?;
+                .context("Getting `id` as u64")?;
 
             info!("Getting team members for {org} {team_id}");
 
             let team_members = self
                 .org_team_members(org, team_id)
                 .await
-                .context("Getting team members")?;
+                .context(format!("Getting team members for {org} {team_id}"))?;
 
             teams_org
                 .push_team_members_responses(team_id, &team_members)
@@ -165,7 +164,7 @@ impl OctocrabGit {
             let team_teams = self
                 .org_team_teams(org, team_id)
                 .await
-                .context("Getting team members")?;
+                .context(format!("Getting child teams for {org} {team_id}"))?;
 
             teams_org
                 .push_team_teams_responses(team_id, &team_teams)
@@ -181,7 +180,7 @@ impl OctocrabGit {
     ///
     /// `org` - The GitHub Organisation to query.
     ///
-    /// `custom_property` - a `CustomProperterySetter` describing the custom property to set
+    /// `custom_property` - a `CustomPropertySetter` describing the custom property to set
     ///
     /// A 422 status indicates we are trying to remove allowed values
     /// that are in use. When this happens add them back to the list
@@ -259,7 +258,7 @@ impl OctocrabGit {
         org: &str,
         setter: SetOrgRepoCustomProperties,
     ) -> Result<GithubResponses> {
-        let url = format!("/orgs/{}/properties/values", org,);
+        let url = format!("/orgs/{}/properties/values", org);
 
         let response = self.client._patch(&url, Some(&setter)).await?;
 
@@ -418,7 +417,7 @@ impl OctocrabGit {
             let repo_ruleset = self
                 .repo_ruleset_by_id(repo, ruleset_id)
                 .await
-                .context("Getting team members")?;
+                .context(format!("Getting ruleset {ruleset_id} for {repo}"))?;
 
             ruleset_details.extend(repo_ruleset.into_inner());
         }
@@ -470,7 +469,7 @@ impl OctocrabGit {
         let result = self.get_collection(&uri).await?;
         let mut workflow_runs =
             WorkflowRuns::try_from(&result).context("Convert GitHubResponses to Workflows")?;
-        workflow_runs.filter_to_lastest_runs();
+        workflow_runs.filter_to_latest_runs();
         Ok(workflow_runs)
     }
 
@@ -508,7 +507,7 @@ impl OctocrabGit {
             let uri = format!("/repos/{repo}/contents/{0}", workflow.path);
             let result = self.get_collection(&uri).await?;
             let contents =
-                Contents::try_from(&result).context("Convert GitHubResponses to artifacts")?;
+                Contents::try_from(&result).context("Convert GitHubResponses to Contents")?;
             responses.extend(contents.contents);
         }
 
@@ -535,7 +534,7 @@ impl OctocrabGit {
         self.get_collection(&uri).await
     }
 
-    /// Get thet default code scanning setup for a repo
+    /// Get the default code scanning setup for a repo
     pub(crate) async fn repo_code_scanning_default_setup(
         &self,
         repo: &str,
@@ -664,7 +663,7 @@ impl OctocrabGit {
             let collection = match self.get_collection(&uri).await {
                 Ok(collection) => collection,
                 Err(err) => {
-                    error!("Unable to get_collection() for uri{}, err:{}", uri, err);
+                    error!("Unable to get_collection() for uri {}, err: {}", uri, err);
                     continue;
                 }
             };
@@ -718,7 +717,7 @@ impl OctocrabGit {
             if body_string.contains("We had issues producing the response to your request.") {
                 warn!(
                     uri = uri,
-                    http_response_staus_code = status,
+                    http_response_status_code = status,
                     "Unknown error while requesting data from GitHub"
                 );
                 self.wait_for_rate_limit()
@@ -750,7 +749,7 @@ impl OctocrabGit {
 
     /// Get a relative uri from api.github.com and exhaust all next links.
     ///
-    /// Returns all requests as seperate entries complete with status codes
+    /// Returns all requests as separate entries complete with status codes
     async fn get_collection(&self, uri: &str) -> Result<GithubResponses> {
         let mut next_link = GithubNextLink::from_str(uri);
 
@@ -793,7 +792,7 @@ impl OctocrabGit {
             if body_string.contains("We had issues producing the response to your request.") {
                 warn!(
                     uri = uri,
-                    http_response_staus_code = status,
+                    http_response_status_code = status,
                     "Unknown error while requesting data from GitHub"
                 );
                 self.wait_for_rate_limit()
@@ -852,9 +851,8 @@ impl OctocrabGit {
                 let now = std::time::SystemTime::now()
                     .duration_since(std::time::SystemTime::UNIX_EPOCH)
                     .context("Getting current time")?;
-                let sleep_duration = tokio::time::Duration::from_secs(
-                    rate_limit.resources.core.reset - now.as_secs(),
-                );
+                let sleep_duration =
+                    tokio::time::Duration::from_secs(graphql.reset).saturating_sub(now);
                 warn!(
                     "Sleeping for {} seconds because of GraphQL API rate limit",
                     sleep_duration.as_secs()
@@ -942,7 +940,7 @@ mod test {
 
         async fn setup_app() -> Result<TestClient> {
             let secrets = get_keyvault_secrets(
-                &env::var("KEY_VAULT_NAME").expect("Need KEY_VAULT_NAME enviornment variable"),
+                &env::var("KEY_VAULT_NAME").expect("Need KEY_VAULT_NAME environment variable"),
             )
             .await
             .unwrap();

@@ -117,7 +117,7 @@ async fn github_collect_installation_org(
         .await
         .context(format!("Getting repos for {org_name}"))?;
     info!(
-        "Retreived {} repos for {}",
+        "Retrieved {} repos for {}",
         org_repos.repos().len(),
         org_name
     );
@@ -290,7 +290,7 @@ async fn github_collect_installation_org(
         .await;
 
         let _dependabot_status = try_collect_send(
-            &format!("Deploy keys {repo_name}"),
+            &format!("Dependabot status for {repo_name}"),
             github_client.repo_dependabot_status(&repo_name),
             &splunk,
         )
@@ -420,7 +420,7 @@ async fn update_custom_properties(
     let product_setter = CustomPropertySetter::from_fbp_product(fbp_results.products());
 
     for cps in [portfolio_setter, service_line_setter, product_setter] {
-        let _repo_branch_rules = try_collect_send(
+        let _custom_property = try_collect_send(
             &format!(
                 "Setting GitHub Custom Property for {}/{}",
                 org_name,
@@ -458,7 +458,7 @@ mod live_tests {
     #[tokio::test]
     async fn test_all_github() -> Result<()> {
         let secrets = get_keyvault_secrets(
-            &env::var("KEY_VAULT_NAME").expect("Need KEY_VAULT_NAME enviornment variable"),
+            &env::var("KEY_VAULT_NAME").expect("Need KEY_VAULT_NAME environment variable"),
         )
         .await
         .unwrap();
@@ -471,14 +471,14 @@ mod live_tests {
 
         github_octocrab_entrypoint(Arc::new(secrets), Arc::new(splunk))
             .await
-            .context("Running ocotcrab full test")?;
+            .context("Running octocrab full test")?;
         Ok(())
     }
 
     #[tokio::test]
     async fn test_github_set_custom_properties() -> Result<()> {
         let secrets = get_keyvault_secrets(
-            &env::var("KEY_VAULT_NAME").expect("Need KEY_VAULT_NAME enviornment variable"),
+            &env::var("KEY_VAULT_NAME").expect("Need KEY_VAULT_NAME environment variable"),
         )
         .await
         .unwrap();
@@ -499,7 +499,7 @@ mod live_tests {
 
         github_set_custom_properties_entrypoint(Arc::new(secrets), Arc::new(splunk))
             .await
-            .context("Settings GitHub Custom Properties in test")?;
+            .context("Setting GitHub Custom Properties in test")?;
 
         Ok(())
     }
@@ -507,7 +507,7 @@ mod live_tests {
     #[tokio::test]
     async fn test_validate_custom_properties() -> Result<()> {
         let secrets = get_keyvault_secrets(
-            &env::var("KEY_VAULT_NAME").expect("Need KEY_VAULT_NAME enviornment variable"),
+            &env::var("KEY_VAULT_NAME").expect("Need KEY_VAULT_NAME environment variable"),
         )
         .await
         .unwrap();
