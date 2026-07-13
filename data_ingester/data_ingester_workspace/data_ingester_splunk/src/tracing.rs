@@ -3,6 +3,7 @@ use std::sync::Arc;
 use crate::splunk::{HecEvent, Splunk, SSPHP_RUN_NEW};
 use crate::thread::SplunkTask;
 use anyhow::{Context, Result};
+use tracing::error;
 use tracing_core::subscriber::Subscriber;
 use tracing_core::Event;
 use tracing_serde::AsSerde;
@@ -53,13 +54,18 @@ impl<S: Subscriber> Layer<S> for SplunkLayer {
             .read()
             .map(|hm| *hm.get("default").unwrap_or(&0))
             .unwrap_or_else(|_| 0);
-        let hec_event = HecEvent::new_with_ssphp_run(
+        let hec_event = match HecEvent::new_with_ssphp_run(
             &event.as_serde(),
             self.source.as_str(),
             self.sourcetype.as_str(),
             ssphp_run,
-        )
-        .expect("Serialization should complete");
+        ) {
+            Ok(hec_event) => hec_event,
+            Err(err) => {
+                error!(error = ?err, "Failed to serialize tracing event for Splunk");
+                return;
+            }
+        };
         _ = self.splunk_task.send(hec_event);
     }
 }
@@ -79,7 +85,7 @@ mod test {
     #[tokio::test(flavor = "multi_thread")]
     async fn test_tracing() -> Result<()> {
         let secrets = get_keyvault_secrets(
-            &std::env::var("KEY_VAULT_NAME").expect("Need KEY_VAULT_NAME enviornment variable"),
+            &std::env::var("KEY_VAULT_NAME").expect("Need KEY_VAULT_NAME environment variable"),
         )
         .await
         .unwrap();

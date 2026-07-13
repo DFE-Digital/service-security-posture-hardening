@@ -40,7 +40,7 @@ pub struct Secrets {
     pub ado_pats: Vec<AdoDevOpsPat>,
 }
 
-/// Store a Github App token
+/// Store a GitHub App token
 ///
 /// The key should be stored as base64 encoded DER format
 ///
@@ -52,7 +52,7 @@ pub struct GitHubApp {
 }
 
 impl GitHubApp {
-    /// Create a new Github App secret.
+    /// Create a new GitHub App secret.
     /// 'private_key' should be a base64 encoded DER RSA key
     pub fn new(app_id: String, private_key: String) -> Result<Self> {
         Ok(Self {
@@ -74,7 +74,7 @@ fn get_secret(client: &SecretClient, name: &str) -> JoinHandle<Option<String>> {
         match client_.get(&name_).await {
             Ok(secret) => Some(secret.value.to_string()),
             Err(err) => {
-                warn!("Keyvault: Error getting '{}': {:?}", &name_, err);
+                warn!("KeyVault: error getting '{}': {:?}", &name_, err);
                 None
             }
         }
@@ -89,11 +89,11 @@ pub async fn get_keyvault_secrets(keyvault_name: &str) -> Result<Secrets> {
             .context("Unable to build default Azure Credentials")?,
     );
 
-    info!("KeyVault Secret Client created");
     let keyvault_url = format!("https://{keyvault_name}.vault.azure.net");
     let client = KeyvaultClient::new(&keyvault_url, credential.clone())
         .context("Creating key vault client")?
         .secret_client();
+    info!("KeyVault secret client created");
 
     let splunk_host = get_secret(&client, "splunk-host");
     let splunk_token = get_secret(&client, "splunk-token");
@@ -128,7 +128,7 @@ pub async fn get_keyvault_secrets(keyvault_name: &str) -> Result<Secrets> {
     {
         Some(
             GitHubApp::new(github_app_id_1, github_private_key_1)
-                .context("Building Github App Credentials")?,
+                .context("Building GitHub App credentials")?,
         )
     } else {
         None
@@ -183,16 +183,17 @@ pub async fn get_keyvault_secrets(keyvault_name: &str) -> Result<Secrets> {
 /// Get all secret name & attributes, but not the secret value. Used
 /// for healthcheck reporting on expired secrets.
 pub async fn secret_health_check(keyvault_name: &str) -> Result<Vec<SecretAttributes>> {
+    info!("Getting Default Azure Credentials");
     let credential = Arc::new(
         DefaultAzureCredential::create(TokenCredentialOptions::default())
             .context("Unable to build default Azure Credentials")?,
     );
 
-    info!("KeyVault Secret Client created");
     let keyvault_url = format!("https://{keyvault_name}.vault.azure.net");
     let client = KeyvaultClient::new(&keyvault_url, credential.clone())
         .context("Creating key vault client")?
         .secret_client();
+    info!("KeyVault secret client created");
 
     let list_secret_response = client
         .list_secrets()
@@ -213,9 +214,9 @@ pub async fn secret_health_check(keyvault_name: &str) -> Result<Vec<SecretAttrib
             continue;
         }
 
-        let secret_name = match secret.id.split("/").last() {
+        let secret_name = match secret.id.split('/').next_back() {
             Some(name) => name,
-            _ => {
+            None => {
                 error!(
                     name = "azure_key_vault",
                     secret_id = secret.id,
@@ -225,7 +226,7 @@ pub async fn secret_health_check(keyvault_name: &str) -> Result<Vec<SecretAttrib
             }
         };
         match client
-            .get(dbg!(secret_name))
+            .get(secret_name)
             .await
             .map(|response| (keyvault_name.to_owned(), response).into())
         {

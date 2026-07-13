@@ -8,7 +8,10 @@ fn main() {
         .output()
         .expect("Should be able to get current GIT commit hash");
 
-    let git_hash = String::from_utf8(output.stdout).expect("Git hash should be valid UTF8");
+    let git_hash = String::from_utf8(output.stdout)
+        .expect("Git hash should be valid UTF8")
+        .trim()
+        .to_string();
 
-    println!("cargo:rustc-env=GIT_HASH={}", git_hash);
+    println!("cargo:rustc-env=GIT_HASH={git_hash}");
 }

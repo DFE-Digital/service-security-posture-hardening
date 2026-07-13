@@ -451,7 +451,7 @@ impl AzureRest {
                 );
                 error!(status=?status, request_body=?post_body_json, response_body=?response_body, "Failed making request to Azure Resource Graph");
                 errors.push(anyhow!(error));
-                // continue;
+                continue;
             }
 
             let payload_bytes = response_body.len();
@@ -710,7 +710,7 @@ pub(crate) mod live_tests {
 
     pub(crate) async fn setup() -> Result<(AzureRest, Splunk)> {
         let secrets = get_keyvault_secrets(
-            &env::var("KEY_VAULT_NAME").expect("Need KEY_VAULT_NAME enviornment variable"),
+            &env::var("KEY_VAULT_NAME").expect("Need KEY_VAULT_NAME environment variable"),
         )
         .await
         .unwrap();

@@ -21,7 +21,7 @@ pub(crate) struct HecBatch {
     sent_time: tokio::time::Instant,
 }
 
-/// Data recieved from Splunk after sending an event via HEC with
+/// Data received from Splunk after sending an event via HEC with
 /// indexer acknowledgement
 /// https://docs.splunk.com/Documentation/Splunk/9.3.2/Data/AboutHECIDXAck
 #[derive(Debug, Serialize, Deserialize, Default)]
@@ -220,7 +220,11 @@ impl SendingTask {
                             permit.send(hec_batch);
                         }
                         Err(err) => {
-                            error!(operation="SplunkHec", operation="Reserve HecBatch on ack_task", error=?err)
+                            error!(
+                                name = "SplunkHec",
+                                operation = "Reserve HecBatch on ack_task",
+                                error = ?err
+                            )
                         }
                     }
                 } else {
@@ -529,7 +533,7 @@ mod test {
         let (ack_tx, ack_rx) = channel(1000);
         let hec_acknowledgment = true;
         let client = Splunk::new_request_client("mock_token", hec_acknowledgment)
-            .expect("Splunk Client to build sucessfully");
+            .expect("Splunk client to build successfully");
         let sending_task =
             SendingTask::new(client, send_rx, ack_tx.clone(), url, hec_acknowledgment)
                 .expect("Spawning SendingTask shouldn't fail");
@@ -664,7 +668,7 @@ mod test {
         let (ack_tx, mut ack_rx) = channel(1000);
         let hec_acknowledgment = false;
         let client = Splunk::new_request_client("mock_token", hec_acknowledgment)
-            .expect("Splunk Client to build sucessfully");
+            .expect("Splunk client to build successfully");
 
         let _sending_task =
             SendingTask::new(client, send_rx, ack_tx.clone(), url, hec_acknowledgment)
@@ -784,7 +788,7 @@ mod test {
     }
 
     #[tokio::test]
-    async fn test_ack_task_posts_to_corrrect_url() {
+    async fn test_ack_task_posts_to_correct_url() {
         let (_ack_task, ack_tx, _send_rx, mut mock_server, _tracing_guard) =
             setup_ack_task(None).await;
 
@@ -816,7 +820,7 @@ mod test {
     }
 
     #[tokio::test]
-    async fn test_ack_task_does_not_retransmit_sucessully_indexed_events() {
+    async fn test_ack_task_does_not_retransmit_successfully_indexed_events() {
         let (_ack_task, ack_tx, mut send_rx, mut mock_server, _tracing_guard) =
             setup_ack_task(Some(Duration::from_millis(100))).await;
 
@@ -831,7 +835,7 @@ mod test {
         // Wait for AckTask to make a HTTP request to Mockito
         sleep(Duration::from_millis(200)).await;
 
-        // Check we've haven't recieved a requset to retransmit
+        // Check we haven't received a request to retransmit
         let ack_message = send_rx.try_recv();
         assert!(ack_message.is_err());
     }

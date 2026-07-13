@@ -31,7 +31,7 @@ async fn main() -> Result<()> {
     let args = Args::parse();
 
     let secrets = get_keyvault_secrets(
-        &env::var("KEY_VAULT_NAME").expect("Need KEY_VAULT_NAME enviornment variable"),
+        &env::var("KEY_VAULT_NAME").expect("Need KEY_VAULT_NAME environment variable"),
     )
     .await
     .map(Arc::new)

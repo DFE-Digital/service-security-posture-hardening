@@ -98,8 +98,8 @@ where
                 .get(invocation_index)
                 .lock_state(true);
 
-            let msg = format!("{} lock aquired, starting", name);
-            info!(name= name, stage=%stage, lock_aquired=true);
+            let msg = format!("{} lock acquired, starting", name);
+            info!(name= name, stage=%stage, lock_acquired=true);
             response.logs.push(msg.to_owned());
             lock
         }
@@ -113,7 +113,7 @@ where
                 .finish();
 
             let msg = format!("{} collection is already in progress. NOT starting.", name);
-            error!(name = name, stage=%stage, lock_aquired=false);
+            error!(name = name, stage=%stage, lock_acquired=false);
             response.logs.push(msg.to_owned());
 
             return response;
@@ -175,6 +175,10 @@ where
     drop(lock);
 
     response.logs.push(result);
-    error!(name=name, stage=%stage, complete=complete);
+    if complete {
+        info!(name = name, stage = %stage, complete = complete);
+    } else {
+        error!(name = name, stage = %stage, complete = complete);
+    }
     response
 }

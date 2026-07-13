@@ -80,7 +80,7 @@ pub struct UserAzureRole {
 #[serde(rename_all = "camelCase")]
 struct AssignedPlan {
     assigned_date_time: String,
-    // TODO! ignroe Deleted & other...
+    // TODO: ignore Deleted & other...
     capability_status: String, //AssignedPlanCapabilityStatus,
     service: String,
     service_plan_id: String,

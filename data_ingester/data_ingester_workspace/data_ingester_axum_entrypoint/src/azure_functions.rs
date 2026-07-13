@@ -85,12 +85,12 @@ pub(crate) async fn start_server(tx: Sender<()>) -> Result<()> {
         .context("Binding to socket")?;
     let axum_serve = axum::serve(listener, app);
     tx.send(())
-        .expect("Caller should be listening for Warp start event");
-    axum_serve.await.context("Axum Serv")?;
+        .expect("Caller should be listening for Axum start event");
+    axum_serve.await.context("Axum serve")?;
     Ok(())
 }
 
-/// Health check
+/// Root handler — returns build info and request headers
 async fn get_root(headers: HeaderMap) -> Json<AzureInvokeResponse> {
     trace!("root request");
     Json(AzureInvokeResponse {
@@ -341,7 +341,7 @@ async fn post_powershell(
     )
 }
 
-/// Collect Splunk test data
+/// Collect Qualys QVS data
 #[axum::debug_handler]
 async fn post_qualys_qvs(
     headers: HeaderMap,
@@ -364,7 +364,7 @@ async fn post_qualys_qvs(
     )
 }
 
-/// Run Threagile against assets from Splunk
+/// Collect SonarCloud data
 #[axum::debug_handler]
 async fn post_sonar_cloud(
     headers: HeaderMap,

@@ -119,8 +119,8 @@ impl Acs {
         let ip_allow_list = match ip_allow_list {
             IpAllowListResponse::Valid(ip_allow_list) => ip_allow_list,
             IpAllowListResponse::Invalid(invalid) => {
-                error!(invalid_response=?invalid, "Error while Decoding ACS response");
-                anyhow::bail!("Error while Decoding ACS response: {}", invalid);
+                error!(invalid_response=?invalid, "Error decoding ACS response");
+                anyhow::bail!("Error decoding ACS response: {}", invalid);
             }
         };
 
@@ -211,7 +211,7 @@ impl Acs {
                 .await
                 .context("Failed to get failed response body")?;
             anyhow::bail!(
-                "Failed to delete '{}' to ACS search-api ip allow list\n{:?}\n{:?}",
+                "Failed to delete '{}' from ACS search-api ip allow list\n{:?}\n{:?}",
                 cidr,
                 headers,
                 body
@@ -237,7 +237,7 @@ impl Acs {
             .context("Getting body from ifconfig.me")?;
         if ipify.ip != ifconfig_me {
             let message = format!(
-                "Deteceted IPs don't match ipify:{} ipconfig.me:{}",
+                "Detected IPs don't match ipify:{} ifconfig.me:{}",
                 ipify.ip, ifconfig_me
             );
             anyhow::bail!(message);
@@ -296,8 +296,8 @@ impl Acs {
 
         self.add_search_api_ip_allow_list(
             self.current_cidr
-                .as_ref()
-                .expect("just set self.current_ip"),
+                .as_deref()
+                .context("current CIDR should be set")?,
         )
         .await
         .context("Add 'current_ip' to search_api IP allow list")?;
@@ -334,7 +334,7 @@ mod test {
 
     #[tokio::test]
     async fn test_client_new() -> Result<()> {
-        let _ = Acs::new("foo", "tokenbar");
+        let _acs = Acs::new("foo", "tokenbar")?;
         Ok(())
     }
 

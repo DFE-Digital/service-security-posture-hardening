@@ -56,7 +56,7 @@ impl TryFrom<&GithubResponses> for Workflows {
 
     fn try_from(value: &GithubResponses) -> std::prelude::v1::Result<Self, Self::Error> {
         if value.is_empty() {
-            anyhow::bail!("No artifacts in Github Response");
+            anyhow::bail!("No workflows in Github Response");
         }
 
         let workflows = value
@@ -74,7 +74,7 @@ impl TryFrom<&GithubResponses> for Workflows {
     }
 }
 
-/// Convert a `&GitHubResponse` into `Artifacts`
+/// Convert a `&GitHubResponse` into `Workflows`
 impl TryFrom<&GithubResponse> for Workflows {
     type Error = anyhow::Error;
     fn try_from(value: &GithubResponse) -> Result<Self, Self::Error> {
@@ -107,7 +107,7 @@ impl WorkflowRuns {
     /// Filter workflow runs the runs with the biggest `run_number` by `workflow_id`
     /// This helps reduce the number of workflowrunjobs we have to collect.
     ///
-    pub(crate) fn filter_to_lastest_runs(&mut self) {
+    pub(crate) fn filter_to_latest_runs(&mut self) {
         let mut latest: HashMap<i64, i64> = HashMap::new();
 
         for run in self.workflow_runs.iter() {
@@ -161,7 +161,7 @@ impl TryFrom<&GithubResponses> for WorkflowRuns {
 
     fn try_from(value: &GithubResponses) -> std::prelude::v1::Result<Self, Self::Error> {
         if value.is_empty() {
-            anyhow::bail!("No artifacts in Github Response");
+            anyhow::bail!("No workflow runs in Github Response");
         }
 
         let workflow_runs = value
@@ -179,7 +179,7 @@ impl TryFrom<&GithubResponses> for WorkflowRuns {
     }
 }
 
-/// Convert a `&GitHubResponse` into `Artifacts`
+/// Convert a `&GitHubResponse` into `WorkflowRuns`
 impl TryFrom<&GithubResponse> for WorkflowRuns {
     type Error = anyhow::Error;
     fn try_from(value: &GithubResponse) -> Result<Self, Self::Error> {
@@ -273,7 +273,7 @@ impl TryFrom<&GithubResponses> for WorkflowRunJobs {
 
     fn try_from(value: &GithubResponses) -> std::prelude::v1::Result<Self, Self::Error> {
         if value.is_empty() {
-            anyhow::bail!("No artifacts in Github Response");
+            anyhow::bail!("No workflow run jobs in Github Response");
         }
 
         let jobs = value
@@ -293,7 +293,7 @@ impl TryFrom<&GithubResponses> for WorkflowRunJobs {
     }
 }
 
-/// Convert a `&GitHubResponse` into `Artifacts`
+/// Convert a `&GitHubResponse` into `WorkflowRunJobs`
 impl TryFrom<&GithubResponse> for WorkflowRunJobs {
     type Error = anyhow::Error;
     fn try_from(value: &GithubResponse) -> Result<Self, Self::Error> {

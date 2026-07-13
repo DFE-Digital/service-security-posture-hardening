@@ -34,7 +34,7 @@ pub(crate) struct AppState {
     /// Lock for azure_resource_graph to stop concurrent executions
     pub(crate) azure_resource_graph_lock: Arc<Mutex<()>>,
 
-    /// Lock for azure_resource_graph to stop concurrent executions
+    /// Lock for azure_dev_ops to stop concurrent executions
     pub(crate) azure_dev_ops_lock: Arc<Mutex<()>>,
 
     /// Lock for Financial Business Partners
@@ -54,7 +54,7 @@ pub(crate) struct AppState {
     /// Is powershell installed in our function?
     pub(crate) powershell_installed: Arc<Mutex<bool>>,
 
-    /// Lock for splunk_test to stop concurrent executions
+    /// Lock for sonar_cloud to stop concurrent executions
     pub(crate) sonar_cloud: Arc<Mutex<()>>,
 
     /// Lock for qualys_qvs to stop concurrent executions
@@ -65,7 +65,7 @@ pub(crate) struct AppState {
     pub(crate) stats: Arc<RwLock<Stats>>,
 }
 
-/// Records stats for requsets made to this execution
+/// Records stats for requests made to this execution
 #[derive(Serialize, Debug, Valuable)]
 pub(crate) struct Stats {
     start_up_time: u64,
@@ -153,7 +153,7 @@ impl Invocation {
         self
     }
 
-    /// Any errors during exectuction
+    /// Any errors during execution
     pub(crate) fn errors<T: Into<String>>(&mut self, errors: T) -> &mut Self {
         self.errors = Some(errors.into());
         self
@@ -187,6 +187,7 @@ pub(crate) struct AppStateHealthCheck<'a> {
     aws_lock: ArcMutexState,
     azure_lock: ArcMutexState,
     azure_resource_graph_lock: ArcMutexState,
+    azure_dev_ops_lock: ArcMutexState,
     financial_business_partners_lock: ArcMutexState,
     github_lock: ArcMutexState,
     github_custom_properties_lock: ArcMutexState,
@@ -257,6 +258,7 @@ impl<'a, 'b> From<(&'b Arc<AppState>, &'a Stats)> for AppStateHealthCheck<'a> {
             aws_lock: (&value.aws_lock).into(),
             azure_lock: (&value.azure_lock).into(),
             azure_resource_graph_lock: (&value.azure_resource_graph_lock).into(),
+            azure_dev_ops_lock: (&value.azure_dev_ops_lock).into(),
             financial_business_partners_lock: (&value.financial_business_partners_lock).into(),
             github_lock: (&value.github_lock).into(),
             github_custom_properties_lock: (&value.github_custom_properties_lock).into(),

@@ -35,7 +35,7 @@ pub async fn azure_resource_graph(secrets: Arc<Secrets>, splunk: Arc<Splunk>) ->
         secrets
             .azure_tenant_id
             .as_ref()
-            .context("Expect client_tenant_id secret")?,
+            .context("Expect azure_tenant_id secret")?,
     )
     .await
     .context("Can't build rest client")?;
@@ -644,7 +644,7 @@ fn test_json_into_resource_graph_response_error() {
     // let obj: QueryError =
     //     serde_json::from_str(&error_response).expect("JSON should parse into QueryError");
     let obj: ResourceGraphResponse =
-        serde_json::from_str(error_response).expect("JSON should parse into ResoureGraphResponse");
+        serde_json::from_str(error_response).expect("JSON should parse into ResourceGraphResponse");
     assert!(
         matches!(obj, ResourceGraphResponse::Error(_)),
         "JSON didn't parse into a ResourceGraphResponse::Error"

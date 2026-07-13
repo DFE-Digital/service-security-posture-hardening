@@ -54,8 +54,8 @@ pub struct Timer {
     pub(crate) is_past_due: bool,
     #[serde(rename = "Schedule")]
     pub(crate) schedule: Schedule,
-    #[serde(rename = "ScheduleStats")]
-    pub(crate) schedule_stats: Option<()>,
+    #[serde(rename = "ScheduleStatus")]
+    pub(crate) schedule_status: Option<()>,
 }
 
 #[derive(Debug, Deserialize, Default, Serialize, Valuable)]
