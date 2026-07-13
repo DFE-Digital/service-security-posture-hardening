@@ -26,7 +26,7 @@ pub async fn azure_users(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<(
         secrets
             .azure_client_secret
             .as_ref()
-            .context("Expect azure_secret_id secret")?,
+            .context("Expect azure_client_secret secret")?,
         secrets
             .azure_tenant_id
             .as_ref()
@@ -42,7 +42,7 @@ pub async fn azure_users(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<(
         secrets
             .azure_client_secret
             .as_ref()
-            .context("Expect azure_secret_id secret")?,
+            .context("Expect azure_client_secret secret")?,
         secrets
             .azure_tenant_id
             .as_ref()
@@ -52,7 +52,7 @@ pub async fn azure_users(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<(
 
     info!("Azure logged in");
 
-    let (sender, mut reciever) = tokio::sync::mpsc::unbounded_channel::<UsersMap>();
+    let (sender, mut receiver) = tokio::sync::mpsc::unbounded_channel::<UsersMap>();
 
     info!("Getting Azure users");
 
@@ -104,9 +104,9 @@ pub async fn azure_users(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<(
 
     let splunk_clone = splunk.clone();
     let process_to_splunk = tokio::spawn(async move {
-        while let Some(mut users) = reciever.recv().await {
+        while let Some(mut users) = receiver.recv().await {
             ms_graph
-                .get_transative_memebers_of_for_users(&mut users)
+                .get_transitive_members_of_for_users(&mut users)
                 .await?;
             users.add_pim_membership(&aad_pim_role_assignment_schedules, &aad_role_definitions);
 

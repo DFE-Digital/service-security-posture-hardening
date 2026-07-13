@@ -127,7 +127,7 @@ impl MsGraph {
         Ok(AdminFormSettings { inner: result })
     }
 
-    pub async fn get_transative_memebers_of_for_users(
+    pub async fn get_transitive_members_of_for_users(
         &self,
         users: &mut UsersMap<'_>,
     ) -> Result<()> {
@@ -147,17 +147,17 @@ impl MsGraph {
                     }
                 };
                 user.transitive_member_of = transitive_member_of
-		    .into_iter()
-		    .map(|membership| {
-			match serde_json::from_value(membership.clone()) {
-			    Ok(result) => result,
-			    Err(err) => {
-				error!(error=?err, value=?membership, "Failed to transmute Value to GroupOrRole");
-				panic!("Failed to transmute Value to GroupOrRole\nerror:{:#?}\nvalue:{:#?}", err, membership);
-			    }
-			}
-		    }
-		    ).collect();
+                    .into_iter()
+                    .filter_map(|membership| {
+                        match serde_json::from_value(membership.clone()) {
+                            Ok(result) => Some(result),
+                            Err(err) => {
+                                error!(error=?err, value=?membership, "Failed to deserialize Value to GroupOrRole");
+                                None
+                            }
+                        }
+                    })
+                    .collect();
                 Ok(())
             };
             tasks.push(task);
@@ -185,18 +185,18 @@ impl MsGraph {
     }
 
     pub async fn list_role_eligibility_schedules(&self) -> Result<RoleSchedules> {
-        let result = self.get_url("/beta/roleManagement/directory/roleAssignmentScheduleInstances?$expand=activatedUsing,appScope,directoryScope,principal,roleDefinition").await?;
+        let result = self.get_url("/beta/roleManagement/directory/roleEligibilityScheduleInstances?$expand=activatedUsing,appScope,directoryScope,principal,roleDefinition").await?;
         let schedules = result
             .into_iter()
             .filter_map(|v| {
-		match serde_json::from_value(v) {
-		    Ok(result) => Some(result),
-		    Err(error) => {
-			error!(error=?error, "Failed to transmute role_eligibility_schedules Value into RoleSchedule");
-			None
-		    }
-		}
-	    })
+                match serde_json::from_value(v) {
+                    Ok(result) => Some(result),
+                    Err(error) => {
+                        error!(error=?error, "Failed to deserialize role_eligibility_schedules Value into RoleSchedule");
+                        None
+                    }
+                }
+            })
             .collect();
         Ok(RoleSchedules { inner: schedules })
     }
@@ -206,14 +206,14 @@ impl MsGraph {
         let schedules = result
             .into_iter()
             .filter_map(|v| {
-		match serde_json::from_value(v) {
-		    Ok(result) => Some(result),
-		    Err(error) => {
-			error!(error=?error, "Failed to transmute role_assignment_schedules Value into RoleSchedule");
-			None
-		    }
-		}
-	    })
+                match serde_json::from_value(v) {
+                    Ok(result) => Some(result),
+                    Err(error) => {
+                        error!(error=?error, "Failed to deserialize role_assignment_schedules Value into RoleSchedule");
+                        None
+                    }
+                }
+            })
             .collect();
         Ok(RoleSchedules { inner: schedules })
     }
@@ -1039,7 +1039,7 @@ pub(crate) mod live_tests {
     async fn get_users_channel() -> Result<()> {
         let (splunk, ms_graph) = setup().await?;
 
-        let (sender, mut reciever) = tokio::sync::mpsc::unbounded_channel::<UsersMap>();
+        let (sender, mut receiver) = tokio::sync::mpsc::unbounded_channel::<UsersMap>();
 
         let ms_graph_clone = ms_graph.clone();
         let list_users = tokio::spawn(async move {
@@ -1048,7 +1048,7 @@ pub(crate) mod live_tests {
         });
 
         let mut users_map = UsersMap::default();
-        while let Some(users) = reciever.recv().await {
+        while let Some(users) = receiver.recv().await {
             users_map.extend(users);
         }
         let _ = list_users.await?;
@@ -1194,7 +1194,7 @@ pub(crate) mod live_tests {
     }
 
     #[tokio::test]
-    async fn list_role_eligiblity_schedule_instance() -> Result<()> {
+    async fn list_role_eligibility_schedule_instance() -> Result<()> {
         let (splunk, ms_graph) = setup().await?;
         let result = ms_graph.list_role_eligibility_schedule_instance().await?;
         splunk.send_batch((&result).to_hec_events()?).await?;
@@ -1205,8 +1205,6 @@ pub(crate) mod live_tests {
     async fn list_role_eligibility_schedules() -> Result<()> {
         let (splunk, ms_graph) = setup().await?;
         let result = ms_graph.list_role_eligibility_schedules().await?;
-        dbg!(&result);
-        //splunk.send_batch((&result).to_hec_events()?).await?;
         assert!(result.inner.len() > 2);
         Ok(())
     }
