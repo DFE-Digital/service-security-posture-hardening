@@ -159,7 +159,7 @@ pub(crate) mod test {
 "#;
 
     #[allow(dead_code)]
-    pub(crate) fn repopsitory_test_fixture() -> Repositories {
+    pub(crate) fn repository_test_fixture() -> Repositories {
         let ado_response: AdoResponse = serde_json::from_str(REPOSITORIES_JSON).unwrap();
         let repositories: Repositories = Repositories::from(ado_response);
         repositories

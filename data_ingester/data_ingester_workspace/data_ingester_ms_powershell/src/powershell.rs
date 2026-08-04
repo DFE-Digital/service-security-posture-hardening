@@ -317,7 +317,7 @@ impl ToHecEvents for &AdminAuditLogConfig {
     }
 }
 
-/// TODO Casuses deserialization errors. Need to limit the fields to the ones used.
+/// TODO Causes deserialization errors. Need to limit the fields to the ones used.
 pub async fn run_powershell_get_owa_mailbox_policy(secrets: &Secrets) -> Result<OwaMailboxPolicy> {
     let command = "Get-OwaMailboxPolicy";
     let result = run_exchange_online_powershell(secrets, command).await?;
@@ -419,7 +419,7 @@ impl ToHecEvents for &SafeAttachmentPolicy {
     }
 }
 
-pub async fn run_powershell_get_atp_policy_for_o365(secrets: &Secrets) -> Result<AtpPolciyForO365> {
+pub async fn run_powershell_get_atp_policy_for_o365(secrets: &Secrets) -> Result<AtpPolicyForO365> {
     let command = "Get-AtpPolicyForO365";
     let result = run_exchange_online_powershell(secrets, command).await?;
     Ok(result)
@@ -427,9 +427,9 @@ pub async fn run_powershell_get_atp_policy_for_o365(secrets: &Secrets) -> Result
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct AtpPolciyForO365(serde_json::Value);
+pub struct AtpPolicyForO365(serde_json::Value);
 
-impl ToHecEvents for &AtpPolciyForO365 {
+impl ToHecEvents for &AtpPolicyForO365 {
     type Item = Self;
     fn source(&self) -> &'static str {
         "powershell:ExchangeOnline:Get-AtpPolicyForO365"

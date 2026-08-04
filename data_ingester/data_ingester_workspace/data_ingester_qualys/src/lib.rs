@@ -70,7 +70,7 @@ impl Qualys {
     ///
     /// cves:
     ///
-    /// A list of CVE IDs to requset the data for e.g
+    /// A list of CVE IDs to request the data for e.g
     /// &["CVE-2021-36765"]
     pub async fn get_qvs(&mut self, cves: &[String]) -> Result<Qvs> {
         info!("Getting QVS data for {} CVEs", cves.len());

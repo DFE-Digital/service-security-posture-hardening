@@ -112,7 +112,7 @@ mod live_tests {
     #[tokio::test]
     async fn test_fbp_results_get_results_from_splunk() -> anyhow::Result<()> {
         let secrets = get_keyvault_secrets(
-            &env::var("KEY_VAULT_NAME").expect("Need KEY_VAULT_NAME enviornment variable"),
+            &env::var("KEY_VAULT_NAME").expect("Need KEY_VAULT_NAME environment variable"),
         )
         .await
         .unwrap();

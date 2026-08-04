@@ -153,7 +153,6 @@ mod test {
                         ("cvssVersion", json!("v2")),
                     ];
                     for (field, value) in expected_data.iter() {
-                        dbg!(field, value);
                         assert_eq!(qv.get(field).expect("Field should exist"), value);
                     }
                 }
@@ -169,7 +168,6 @@ mod test {
                         ("exploitMaturity", json!(vec!["poc"])),
                     ];
                     for (field, value) in expected_data.iter() {
-                        dbg!(field, value);
                         assert_eq!(qv.get(field).expect("Field should exist"), value);
                     }
                 }

@@ -108,9 +108,13 @@ pub async fn threagile(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()>
         info!(
             "Threagile status: {:?}\nstdout: {}\nstderr: {}",
             threagile_output.status,
-            String::from_utf8(threagile_output.stdout.clone())?,
-            String::from_utf8(threagile_output.stderr.clone())?,
+            String::from_utf8(threagile_output.stdout)?,
+            String::from_utf8(threagile_output.stderr)?,
         );
+
+        if !threagile_output.status.success() {
+            anyhow::bail!("Threagile analyze-model failed for service {service}");
+        }
 
         info!("Reading risks.json");
         let risks = risks::RisksJson::from_file("/tmp/risks.json", &service)?;

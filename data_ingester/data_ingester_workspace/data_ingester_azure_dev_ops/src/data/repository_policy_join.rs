@@ -139,5 +139,5 @@ pub(crate) struct RepoPolicyJoin {
 
 // #[cfg(test)]
 // mod test {
-//     use crate::data::repositories::test::repopsitory_test_fixture;
+//     use crate::data::repositories::test::repository_test_fixture;
 // }

@@ -159,7 +159,7 @@ fn test_setup_setup() -> TestSetup<AzureDevOpsTestClient, SplunkTester> {
     let (ado, splunk) = runtime.block_on(async {
         #[cfg(feature = "live_tests")]
         let secrets = get_keyvault_secrets(
-            &std::env::var("KEY_VAULT_NAME").expect("Need KEY_VAULT_NAME enviornment variable"),
+            &std::env::var("KEY_VAULT_NAME").expect("Need KEY_VAULT_NAME environment variable"),
         )
         .await
         .unwrap();
