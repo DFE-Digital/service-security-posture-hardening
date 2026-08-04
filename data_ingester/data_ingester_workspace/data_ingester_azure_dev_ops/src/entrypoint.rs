@@ -43,12 +43,8 @@ pub async fn entrypoint(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()
                 .await
                 .context("Building AzureDevOpsClient")?;
 
-            let _collection_result = collect_organization(
-                ado,
-                splunk.clone(),
-                &organization.organization_name,
-            )
-            .await;
+            let _collection_result =
+                collect_organization(ado, splunk.clone(), &organization.organization_name).await;
         }
     }
 
