@@ -913,7 +913,7 @@ mod adaptive_top_tests {
     #[test]
     fn tune_grows_when_pages_are_small() {
         let mut top = AdaptiveTop::initial_for_table("securityresources");
-        top.tune_from_response(1 * 1024 * 1024, 50, 50);
+        top.tune_from_response(1024 * 1024, 50, 50);
 
         assert!(top.value() > 50);
         assert!(top.value() <= AdaptiveTop::MAX_TOP);

@@ -1813,6 +1813,7 @@ dependencies = [
  "data_ingester_github",
  "data_ingester_ms_graph",
  "data_ingester_ms_powershell",
+ "data_ingester_power_pages",
  "data_ingester_qualys",
  "data_ingester_sonar_cloud",
  "data_ingester_splunk",
@@ -1979,6 +1980,23 @@ dependencies = [
  "serde_json",
  "tokio",
  "tracing",
+]
+
+[[package]]
+name = "data_ingester_power_pages"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "data_ingester_splunk",
+ "data_ingester_supporting",
+ "itertools",
+ "mockito",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
 ]
 
 [[package]]

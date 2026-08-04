@@ -62,6 +62,9 @@ pub(crate) struct AppState {
 
     /// Lock for threagile to stop concurrent executions
     pub(crate) threagile_lock: Arc<Mutex<()>>,
+
+    /// Lock for power_pages to stop concurrent executions
+    pub(crate) power_pages_lock: Arc<Mutex<()>>,
     pub(crate) stats: Arc<RwLock<Stats>>,
 }
 
@@ -197,6 +200,7 @@ pub(crate) struct AppStateHealthCheck<'a> {
     qualys_qvs_lock: ArcMutexState,
     sonar_cloud: ArcMutexState,
     threagile_lock: ArcMutexState,
+    power_pages_lock: ArcMutexState,
     execution_stats: &'a Stats,
 }
 
@@ -268,6 +272,7 @@ impl<'a, 'b> From<(&'b Arc<AppState>, &'a Stats)> for AppStateHealthCheck<'a> {
             sonar_cloud: (&value.sonar_cloud).into(),
             qualys_qvs_lock: (&value.qualys_qvs_lock).into(),
             threagile_lock: (&value.threagile_lock).into(),
+            power_pages_lock: (&value.power_pages_lock).into(),
             execution_stats: stats,
         }
     }
@@ -296,6 +301,7 @@ impl AppState {
             sonar_cloud: Arc::new(Mutex::new(())),
             stats: Arc::new(RwLock::new(Stats::new())),
             threagile_lock: Arc::new(Mutex::new(())),
+            power_pages_lock: Arc::new(Mutex::new(())),
         })
     }
 

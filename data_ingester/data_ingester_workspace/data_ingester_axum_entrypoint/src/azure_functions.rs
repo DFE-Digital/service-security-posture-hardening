@@ -71,6 +71,7 @@ pub(crate) async fn start_server(tx: Sender<()>) -> Result<()> {
         .route("/qualys_qvs", post(post_qualys_qvs))
         .route("/sonar_cloud", post(post_sonar_cloud))
         .route("/threagile", post(post_threagile))
+        .route("/power_pages", post(post_power_pages))
         .with_state(Arc::new(app_state));
 
     let port_key = "FUNCTIONS_CUSTOMHANDLER_PORT";
@@ -403,6 +404,29 @@ async fn post_threagile(
             state.threagile_lock.clone(),
             state,
             data_ingester_threagile::threagile,
+            headers,
+            payload.unwrap_or(None),
+        )
+        .await,
+    )
+}
+
+/// Collect Power Pages security and configuration data from Power Platform API
+#[axum::debug_handler]
+async fn post_power_pages(
+    headers: HeaderMap,
+    State(state): State<Arc<AppState>>,
+    payload: std::result::Result<
+        Option<Json<AzureInvokeRequest>>,
+        axum::extract::rejection::JsonRejection,
+    >,
+) -> Json<AzureInvokeResponse> {
+    Json(
+        function_runner(
+            data_ingester_power_pages::SSPHP_RUN_KEY,
+            state.power_pages_lock.clone(),
+            state,
+            data_ingester_power_pages::entrypoint,
             headers,
             payload.unwrap_or(None),
         )
