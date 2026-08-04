@@ -1,0 +1,25 @@
+[package]
+name = "data_ingester_power_pages"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow = { version = "1", features = ["backtrace"] }
+data_ingester_splunk = { path = "../data_ingester_splunk" }
+data_ingester_supporting = { path = "../data_ingester_supporting" }
+itertools = "0"
+reqwest = { version = "0", features = ["rustls-tls", "json"], default-features = false }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["full"] }
+tracing = "0"
+
+[dev-dependencies]
+mockito = "1.6.1"
+tracing-subscriber = { version = "0", features = ["env-filter"] }
+
+[lints]
+workspace = true
+
+[features]
+live_tests = []

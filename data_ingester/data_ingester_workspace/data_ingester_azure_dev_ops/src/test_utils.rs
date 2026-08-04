@@ -108,7 +108,7 @@ impl AzureDevOpsClient for AzureDevOpsTestClient {
                 //     json
                 // };
 
-                let error = format!("Unable to read file {storage_key}: {}", &err);
+                let error = format!("Unable to read file {storage_key}: {err}");
                 panic!("{}", error);
             }
 

@@ -371,16 +371,26 @@ where
     info!(name = &name, "Getting {}", &name);
     tokio::task::yield_now().await;
 
-    // Run future
-    let future_result = future.await;
-
     // Did future complete?
+    let future_result = match future.await {
+        Ok(result_t) => Ok(result_t),
+        Err(err) => {
+            error!(name = name, err = ?err, "Failed to run future");
+            let diagnostic = serde_json::json!({
+                "collection_name": name,
+                "error": format!("{err:?}"),
+                "ssphp_collection_outcome": "transport_error",
+            });
+            if let Ok(event) = HecEvent::new(&diagnostic, name, "data_ingester_rust") {
+                let _ = splunk.send_batch(vec![event]).await;
+            }
+            return Err(err);
+        }
+    };
+
     let result_t = match &future_result {
         Ok(ref result_t) => result_t,
-        Err(err) => {
-            error!(name=name, err=?err, "Failed to run future");
-            return future_result;
-        }
+        Err(_) => unreachable!(),
     };
 
     // Convert future's T into Vec<HecEvents>

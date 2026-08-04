@@ -15,6 +15,7 @@ data_ingester_financial_business_partners = { path = "../data_ingester_financial
 data_ingester_github = { path = "../data_ingester_github" }
 data_ingester_ms_graph = { path = "../data_ingester_ms_graph" }
 data_ingester_ms_powershell = { path = "../data_ingester_ms_powershell" }
+data_ingester_power_pages = { path = "../data_ingester_power_pages" }
 data_ingester_qualys = { path = "../data_ingester_qualys" }
 data_ingester_splunk = { path = "../data_ingester_splunk" }
 data_ingester_splunk_search = { path = "../data_ingester_splunk_search" }
