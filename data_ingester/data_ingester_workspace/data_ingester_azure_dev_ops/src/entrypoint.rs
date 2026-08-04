@@ -45,7 +45,7 @@ pub async fn entrypoint(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()
 
             let _collection_result = collect_organization(
                 ado,
-                splunk.clone(), //"CatsCakes").await;
+                splunk.clone(),
                 &organization.organization_name,
             )
             .await;
@@ -66,7 +66,7 @@ pub async fn entrypoint(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()
 
     for (org_name, task) in tasks {
         task.await
-            .context("Tokio task has completed successfully")?
+            .context("ADO collection task failed to join")?
             .with_context(|| format!("Running ADO collection for {}", org_name))?;
     }
 

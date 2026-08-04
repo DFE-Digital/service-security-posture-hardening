@@ -492,8 +492,6 @@ mod tests {
         let t = &*TEST_SETUP;
         let result: Result<()> = t.runtime.block_on(async {
             let audit_streams = t.ado.audit_streams(&t.organization).await?;
-            dbg!(&audit_streams);
-            // assert!(false);
             assert!(!audit_streams.value.is_empty());
             assert_eq!(audit_streams.count, audit_streams.value.len());
             send_to_splunk(&t.splunk, audit_streams).await?;

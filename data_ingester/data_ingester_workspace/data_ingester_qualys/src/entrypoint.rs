@@ -23,7 +23,7 @@ pub async fn qualys_qvs(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()
         .await
         .context("Opening Splunk access via ACS")?;
 
-    let search = "| savedsearch  ssphp_get_list_qualys_cve";
+    let search = "| savedsearch ssphp_get_list_qualys_cve";
 
     info!("Running splunk search '{}'", search);
     let search_results = search_client

@@ -109,7 +109,7 @@ pub async fn powershell(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()
     .await;
 
     let _ = try_collect_send(
-        "Exchange Orgainization Config",
+        "Exchange Organization Config",
         run_powershell_get_organization_config(&secrets),
         &splunk,
     )
@@ -179,14 +179,14 @@ pub async fn powershell(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()
     .await;
 
     let _ = try_collect_send(
-        "Exchange ATP Polciy for O365",
+        "Exchange ATP Policy for O365",
         run_powershell_get_atp_policy_for_o365(&secrets),
         &splunk,
     )
     .await;
 
     let _ = try_collect_send(
-        "Exchange DLP Complaince Policy",
+        "Exchange DLP Compliance Policy",
         run_powershell_get_dlp_compliance_policy(&secrets),
         &splunk,
     )

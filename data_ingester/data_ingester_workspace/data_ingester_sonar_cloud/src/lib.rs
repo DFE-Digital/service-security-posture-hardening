@@ -50,7 +50,7 @@ impl Sonar {
             .default_headers(Sonar::headers(bearer).context("Building SonarCloud headers")?)
             .build()
             .context("Building SonarCloud reqwest client")?;
-        info!("Qualys client: {:?}", client);
+        info!("SonarCloud client: {:?}", client);
         Ok(Self { client })
     }
 
@@ -165,7 +165,7 @@ mod test {
     impl TestClient {
         async fn new() -> Result<TestClient> {
             let secrets = get_keyvault_secrets(
-                &env::var("KEY_VAULT_NAME").expect("Need KEY_VAULT_NAME enviornment variable"),
+                &env::var("KEY_VAULT_NAME").expect("Need KEY_VAULT_NAME environment variable"),
             )
             .await?;
 

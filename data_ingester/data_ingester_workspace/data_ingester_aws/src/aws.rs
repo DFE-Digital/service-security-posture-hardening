@@ -1554,7 +1554,7 @@ impl AwsClient {
                     this_set
                         .dns_answers
                         .last_mut()
-                        .expect("Just pushed this element element")
+                        .expect("Just pushed this element")
                         .in_route53 = in_route53;
                 }
             }

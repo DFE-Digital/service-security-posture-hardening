@@ -301,7 +301,7 @@ mod live_tests {
     #[tokio::test]
     async fn test_entrypoint() -> anyhow::Result<()> {
         let secrets = get_keyvault_secrets(
-            &env::var("KEY_VAULT_NAME").expect("Need KEY_VAULT_NAME enviornment variable"),
+            &env::var("KEY_VAULT_NAME").expect("Need KEY_VAULT_NAME environment variable"),
         )
         .await
         .unwrap();
@@ -323,7 +323,7 @@ mod live_tests {
     #[ignore]
     async fn write_contact_details() -> Result<()> {
         let secrets = get_keyvault_secrets(
-            &env::var("KEY_VAULT_NAME").expect("Need KEY_VAULT_NAME enviornment variable"),
+            &env::var("KEY_VAULT_NAME").expect("Need KEY_VAULT_NAME environment variable"),
         )
         .await
         .unwrap();

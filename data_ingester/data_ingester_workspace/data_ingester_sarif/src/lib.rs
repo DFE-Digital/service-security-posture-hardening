@@ -16,7 +16,7 @@ pub struct Sarif {
     inner: serde_sarif::sarif::Sarif,
 }
 
-/// Wraper for Sarif including Hec metadata
+/// Wrapper for Sarif including Hec metadata
 #[derive(Debug, Deserialize, Serialize)]
 pub struct SarifHec {
     inner: serde_sarif::sarif::Sarif,
@@ -117,7 +117,7 @@ impl ToHecEvents for SarifHec {
 
                 let sarif_hec_event = for_hec
                     .to_hec_events()
-                    .context("Convert SarifHecEvent to HevEvents")?;
+                    .context("Convert SarifHecEvent to HecEvents")?;
 
                 hec_events.extend(sarif_hec_event);
             }
@@ -280,7 +280,7 @@ mod tests {
         for sarif in sarifs {
             let sarif_hec = sarif.to_sarif_hec("sourcetest", "sourcetypetest", "ssphp_run_keytest");
             let _hec_events = sarif_hec.to_hec_events()?;
-            dbg!(_hec_events);
+            assert!(!_hec_events.is_empty());
         }
         Ok(())
     }

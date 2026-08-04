@@ -24,7 +24,7 @@ pub struct State {
 }
 
 impl State {
-    /// Load a Terraform state file form a Path
+    /// Load a Terraform state file from a Path
     pub fn from_path_str<P: AsRef<Path>>(path: P) -> Result<Self> {
         let state_json =
             fs::read_to_string(path).expect("Something went wrong reading the state file");
@@ -45,7 +45,7 @@ impl State {
 }
 
 /// Filter Terraform resources
-/// Filters are additive, the retured Resources must pass all supplied filters
+/// Filters are additive, the returned Resources must pass all supplied filters
 /// Multiple filters can be applied to the resources
 #[derive(Debug)]
 pub struct ResourcesFilter<'a, 'b> {
@@ -196,7 +196,6 @@ mod tests {
         let state = State::from_path_str(state_path())?;
         let github_resources = state.resources().by_type("github_user").filter();
         assert!(!github_resources.is_empty());
-        dbg!(&github_resources);
         github_resources.iter().for_each(|resource| {
             assert!(resource.r#type.contains("github_user"));
         });
