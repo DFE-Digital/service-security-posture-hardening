@@ -1,7 +1,7 @@
 use data_ingester_splunk::splunk::ToHecEvents;
+use serde::ser::Serializer;
 use serde::Deserialize;
 use serde::Serialize;
-use serde::ser::Serializer;
 use std::collections::HashMap;
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]

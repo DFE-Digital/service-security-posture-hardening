@@ -31,8 +31,8 @@ resource "azurerm_linux_function_app" "SSPHP_rust" {
   }
 
   site_config {
-    minimum_tls_version        = "1.2"
-    vnet_route_all_enabled     = var.vnet != null
+    minimum_tls_version    = "1.2"
+    vnet_route_all_enabled = var.vnet != null
     cors {
       allowed_origins     = ["https://portal.azure.com", ]
       support_credentials = true
