@@ -49,9 +49,14 @@ module "data_ingester" {
   key_vault_name       = local.key_vault_name
   key_vault_object_ids = local.key_vault_object_ids
   tags                 = local.tags
-  # vnet = {
-  #   name                = "s194d01-core-vn-01",
-  #   subnet_name         = "s194d01-core-sn-01",
-  #   resource_group_name = "s194d01-core"
-  # }
+  vnet = {
+    name                = "s194d01-core-vn-01",
+    subnet_name         = "s194d01-core-sn-01",
+    resource_group_name = "s194d01-core"
+  }
+}
+
+output "egress_ip" {
+  description = "See module.data_ingester.egress_ip"
+  value       = module.data_ingester.egress_ip
 }

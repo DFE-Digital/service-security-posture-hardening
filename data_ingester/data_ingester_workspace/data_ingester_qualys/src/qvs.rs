@@ -1,12 +1,7 @@
 use data_ingester_splunk::splunk::ToHecEvents;
-use serde::ser::SerializeMap;
+use serde::ser::Serializer;
 use serde::Deserialize;
 use serde::Serialize;
-// Serde are using the patch version to make __private$$ different on every release.
-// Replace 228 with the current serde version.
-// https://github.com/serde-rs/serde/pull/2980/commits/cbe98a98883a1d6e292a4feeb1e12e1ea7feccdd
-use serde::__private228::ser::FlatMapSerializer;
-use serde::ser::Serializer;
 use std::collections::HashMap;
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -47,16 +42,64 @@ pub struct Cve {
     contributing_factors: ContributingFactors,
 }
 
-/// Flatten `base` and `contributing_factors` only when Serializing
+/// Flatten `base` and `contributing_factors` only when Serializing.
+/// We delegate to `CveFlat` — a serialize-only DTO whose fields sit at the top
+/// level — so we can rely on stable serde APIs instead of reaching into
+/// `serde::__private`.
 impl Serialize for Cve {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
-        let mut state = serializer.serialize_map(Some(2))?;
-        Serialize::serialize(&&self.base, FlatMapSerializer(&mut state))?;
-        Serialize::serialize(&&self.contributing_factors, FlatMapSerializer(&mut state))?;
-        SerializeMap::end(state)
+        CveFlat::from(self).serialize(serializer)
+    }
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct CveFlat<'a> {
+    id: &'a str,
+    id_type: &'a str,
+    qvs: &'a str,
+    qvs_last_changed_date: usize,
+    nvd_published_date: usize,
+    cvss: &'a str,
+    cvss_version: &'a str,
+    #[serde(skip_serializing_if = "slice_is_empty")]
+    exploit_maturity: &'a [String],
+    #[serde(skip_serializing_if = "slice_is_empty")]
+    threat_actors: &'a [String],
+    #[serde(skip_serializing_if = "slice_is_empty")]
+    trending: &'a [String],
+    #[serde(skip_serializing_if = "slice_is_empty")]
+    malware_name: &'a [String],
+    #[serde(skip_serializing_if = "slice_is_empty")]
+    malware_hash: &'a [String],
+    #[serde(skip_serializing_if = "slice_is_empty")]
+    epss: &'a [String],
+}
+
+fn slice_is_empty<T>(v: &&[T]) -> bool {
+    v.is_empty()
+}
+
+impl<'a> From<&'a Cve> for CveFlat<'a> {
+    fn from(cve: &'a Cve) -> Self {
+        Self {
+            id: &cve.base.id,
+            id_type: &cve.base.id_type,
+            qvs: &cve.base.qvs,
+            qvs_last_changed_date: cve.base.qvs_last_changed_date,
+            nvd_published_date: cve.base.nvd_published_date,
+            cvss: &cve.contributing_factors.cvss,
+            cvss_version: &cve.contributing_factors.cvss_version,
+            exploit_maturity: &cve.contributing_factors.exploit_maturity,
+            threat_actors: &cve.contributing_factors.threat_actors,
+            trending: &cve.contributing_factors.trending,
+            malware_name: &cve.contributing_factors.malware_name,
+            malware_hash: &cve.contributing_factors.malware_hash,
+            epss: &cve.contributing_factors.epss,
+        }
     }
 }
 

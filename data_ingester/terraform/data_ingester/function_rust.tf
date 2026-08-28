@@ -24,13 +24,15 @@ resource "azurerm_linux_function_app" "SSPHP_rust" {
   enabled                    = true
   builtin_logging_enabled    = false
   https_only                 = true
+  virtual_network_subnet_id  = var.vnet == null ? null : data.azurerm_subnet.integration[0].id
 
   identity {
     type = "SystemAssigned"
   }
 
   site_config {
-    minimum_tls_version        = "1.2"
+    minimum_tls_version    = "1.2"
+    vnet_route_all_enabled = var.vnet != null
     cors {
       allowed_origins     = ["https://portal.azure.com", ]
       support_credentials = true
