@@ -17,6 +17,7 @@ tiberius = {version="*", default-features=false, features=["tds73", "rustls", "s
 tokio-util = { version="*", features=["full", "compat"] }
 futures= "*"
 rand = "*"
+tokio-rustls = { version = "0.26", features = ["aws_lc_rs"] }
 
 
 [lints]
@@ -24,4 +25,3 @@ workspace = true
 
 [features]
 live_tests = []
-

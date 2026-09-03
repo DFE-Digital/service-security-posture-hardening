@@ -23,6 +23,7 @@ data_ingester_sonar_cloud = { path = "../data_ingester_sonar_cloud" }
 data_ingester_supporting = { path = "../data_ingester_supporting" }
 data_ingester_threagile = { path = "../data_ingester_threagile" }
 memory-stats = "1"
+tokio-rustls = { version = "0.26", features = ["aws_lc_rs"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tokio = { version = "1", features = ["full"] }

@@ -14,7 +14,15 @@ use tokio_util::compat::TokioAsyncWriteCompatExt;
 
 pub static SSPHP_RUN_KEY: &str = "financial_business_partners";
 
+fn install_rustls_provider() {
+    if tokio_rustls::rustls::crypto::CryptoProvider::get_default().is_none() {
+        let _ = tokio_rustls::rustls::crypto::aws_lc_rs::default_provider().install_default();
+    }
+}
+
 async fn get_contact_details(secrets: Arc<Secrets>) -> Result<Vec<ContactDetails>> {
+    install_rustls_provider();
+
     let host = secrets
         .mssql_host
         .as_ref()
@@ -286,6 +294,22 @@ impl ToHecEvents for &ContactDetails {
 
     fn ssphp_run_key(&self) -> &str {
         crate::SSPHP_RUN_KEY
+    }
+}
+
+#[cfg(test)]
+mod tls_tests {
+    #[test]
+    fn tiberius_tls_builder_has_a_crypto_provider() {
+        super::install_rustls_provider();
+        let result = std::panic::catch_unwind(|| {
+            let _builder = tokio_rustls::rustls::ClientConfig::builder();
+        });
+
+        assert!(
+            result.is_ok(),
+            "Rustls must have a process-level crypto provider before Tiberius connects"
+        );
     }
 }
 
