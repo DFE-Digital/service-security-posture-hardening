@@ -34,9 +34,21 @@ variable "vnet" {
 }
 
 variable "egress_via_nat_gateway" {
-  description = "When true, provision a dedicated NAT Gateway + Standard Static Public IP and attach it to the integration subnet so the function app has a tenant-exclusive outbound IP. Leave false (default) to egress via the integration subnet's existing routing (e.g. a platform-owned NVA/firewall). Only takes effect when `var.vnet` is set. Note: if the integration subnet already has a UDR forcing 0.0.0.0/0 to a virtual appliance, that UDR wins over any subnet-attached NAT Gateway, so setting this to true in that case would provision an unused resource."
+  description = "When true, provision a dedicated VNet, delegated Function App integration subnet, NAT Gateway, and Standard Static Public IP for internet egress."
   type        = bool
   default     = false
+}
+
+variable "egress_vnet_address_space" {
+  description = "Address space for the dedicated egress VNet. It must not overlap with connected networks."
+  type        = list(string)
+  default     = ["10.250.0.0/16"]
+}
+
+variable "egress_subnet_address_prefixes" {
+  description = "Address prefixes for the delegated Function App integration subnet."
+  type        = list(string)
+  default     = ["10.250.0.0/24"]
 }
 
 variable "random_postfix" {

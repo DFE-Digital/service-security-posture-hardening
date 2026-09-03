@@ -54,6 +54,7 @@ module "data_ingester" {
     subnet_name         = "s194d01-core-sn-01",
     resource_group_name = "s194d01-core"
   }
+  egress_via_nat_gateway = true
 }
 
 output "egress_ip" {
