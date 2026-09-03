@@ -12,6 +12,12 @@ use tracing_subscriber::{layer::SubscriberExt, EnvFilter, Registry};
 #[tokio::main(flavor = "multi_thread")]
 #[instrument]
 async fn main() -> Result<()> {
+    // Tiberius and the HTTP clients can use rustls before the GitHub client is
+    // constructed, so select the crypto provider at process startup.
+    if tokio_rustls::rustls::crypto::CryptoProvider::get_default().is_none() {
+        let _ = tokio_rustls::rustls::crypto::aws_lc_rs::default_provider().install_default();
+    }
+
     println!("Starting tracing ...");
     let tracing_guard = start_local_tracing().context("Starting tracing")?;
 

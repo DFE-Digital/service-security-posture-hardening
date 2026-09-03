@@ -1833,6 +1833,7 @@ dependencies = [
  "serde",
  "serde_json",
  "tokio",
+ "tokio-rustls",
  "tracing",
  "tracing-subscriber",
  "valuable",
@@ -1913,6 +1914,7 @@ dependencies = [
  "serde_json",
  "tiberius",
  "tokio",
+ "tokio-rustls",
  "tokio-util",
  "tracing",
 ]
