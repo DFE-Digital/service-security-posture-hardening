@@ -24,7 +24,7 @@ resource "azurerm_linux_function_app" "SSPHP_rust" {
   enabled                    = true
   builtin_logging_enabled    = false
   https_only                 = true
-  virtual_network_subnet_id  = var.vnet == null ? null : data.azurerm_subnet.integration[0].id
+  virtual_network_subnet_id  = local.integration_subnet_id
 
   identity {
     type = "SystemAssigned"
