@@ -45,15 +45,10 @@ module "data_ingester" {
   source         = "../data_ingester"
   resource_group = local.resource_group
   #  sku_name_python      = local.sku_name_python
-  sku_name_rust        = local.sku_name_rust
-  key_vault_name       = local.key_vault_name
-  key_vault_object_ids = local.key_vault_object_ids
-  tags                 = local.tags
-  vnet = {
-    name                = "s194d01-core-vn-01",
-    subnet_name         = "s194d01-core-sn-01",
-    resource_group_name = "s194d01-core"
-  }
+  sku_name_rust          = local.sku_name_rust
+  key_vault_name         = local.key_vault_name
+  key_vault_object_ids   = local.key_vault_object_ids
+  tags                   = local.tags
   egress_via_nat_gateway = true
 }
 
