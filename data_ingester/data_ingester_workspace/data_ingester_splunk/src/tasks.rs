@@ -62,6 +62,11 @@ pub(crate) struct SendingTask {
 }
 
 impl SendingTask {
+    #[cfg(test)]
+    pub(crate) fn abort_for_test(&self) {
+        self.join.abort();
+    }
+
     pub(crate) fn new(
         splunk: Client,
         send_rx: Receiver<HecEvent>,
@@ -582,6 +587,30 @@ mod test {
         send_hec_event(send_tx).await;
 
         mock.assert();
+    }
+
+    #[tokio::test]
+    async fn test_sending_task_returns_the_terminal_send_error() {
+        let (sending_task, send_tx, _ack_rx, mut mock_server, _tracing_guard) =
+            setup_send_task().await;
+
+        let _mock = mock_server
+            .mock("POST", "/services/collector")
+            .with_status(500)
+            .create();
+
+        send_tx
+            .send(fake_event())
+            .await
+            .expect("Sending on channel shouldn't fail");
+        drop(send_tx);
+
+        let result = sending_task.join.await.expect("Sending task should finish");
+        let error = result.expect_err("A failed HEC request should stop the task");
+        assert!(
+            format!("{error:?}").contains("Server Error when sending HEC to Splunk"),
+            "unexpected terminal error: {error:?}"
+        );
     }
 
     #[tokio::test]
