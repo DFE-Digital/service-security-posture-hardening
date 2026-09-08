@@ -13,7 +13,7 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 use tokio::sync::mpsc::{channel, Sender};
-use tracing::{error, info};
+use tracing::{debug, error, info};
 use uuid::Uuid;
 
 use crate::tasks::AckTask;
@@ -339,14 +339,13 @@ pub trait SplunkTrait {
                         permit.send(event);
                     }
                     Err(err) => {
-                        error!(
+                        debug!(
                             name = "SplunkHec",
                             operation = "Reserve HecBatch on send_tx",
-                            error = ?err
+                            error = ?err,
+                            "Splunk sending task is no longer accepting events"
                         );
-                        return Err(anyhow!(
-                            "Failed to reserve space for Splunk batch on send_tx channel: {err:?}"
-                        ));
+                        return Err(anyhow!("Splunk sending task stopped"));
                     }
                 }
             }
@@ -471,7 +470,7 @@ struct TryCollectSendSourceStat {
 
 #[cfg(test)]
 pub(crate) mod test {
-    use crate::splunk::{Splunk, SplunkTrait};
+    use crate::splunk::{HecEvent, Splunk, SplunkTrait};
     #[tokio::test]
     async fn splunk_headers_with_hec_ack_should_set_request_channel_header() {
         let hec_acknowledgment = true;
@@ -484,6 +483,23 @@ pub(crate) mod test {
         let hec_acknowledgment = false;
         let headers = Splunk::headers("token", hec_acknowledgment).unwrap();
         assert!(!headers.contains_key("X-Splunk-Request-Channel"));
+    }
+
+    #[tokio::test]
+    async fn send_batch_reports_when_sending_task_has_stopped() {
+        let splunk = Splunk::new("localhost:1", "token", false).unwrap();
+        splunk.sending_task.abort_for_test();
+        tokio::task::yield_now().await;
+
+        let event = HecEvent::new(
+            &serde_json::json!({"event": "event"}),
+            "source",
+            "sourcetype",
+        )
+        .unwrap();
+        let error = splunk.send_batch([event]).await.unwrap_err();
+
+        assert_eq!(error.to_string(), "Splunk sending task stopped");
     }
 }
 
