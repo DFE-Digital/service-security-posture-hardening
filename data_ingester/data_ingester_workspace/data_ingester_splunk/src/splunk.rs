@@ -13,7 +13,7 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 use tokio::sync::mpsc::{channel, Sender};
-use tracing::{error, info};
+use tracing::{debug, error, info};
 use uuid::Uuid;
 
 use crate::tasks::AckTask;
@@ -339,14 +339,13 @@ pub trait SplunkTrait {
                         permit.send(event);
                     }
                     Err(err) => {
-                        error!(
+                        debug!(
                             name = "SplunkHec",
                             operation = "Reserve HecBatch on send_tx",
-                            error = ?err
+                            error = ?err,
+                            "Splunk sending task is no longer accepting events"
                         );
-                        return Err(anyhow!(
-                            "Failed to reserve space for Splunk batch on send_tx channel: {err:?}"
-                        ));
+                        return Err(anyhow!("Splunk sending task stopped"));
                     }
                 }
             }

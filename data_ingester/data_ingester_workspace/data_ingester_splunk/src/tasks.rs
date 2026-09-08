@@ -247,13 +247,18 @@ impl SendingTask {
         url: String,
         hec_acknowledgment: bool,
     ) -> Result<JoinHandle<Result<()>>> {
-        let join_handle = tokio::spawn(Self::sending_task(
-            splunk,
-            send_rx,
-            ack_tx,
-            url,
-            hec_acknowledgment,
-        ));
+        let join_handle = tokio::spawn(async move {
+            let result = Self::sending_task(splunk, send_rx, ack_tx, url, hec_acknowledgment).await;
+            if let Err(err) = &result {
+                error!(
+                    name = "SplunkHec",
+                    operation = "SendingTaskStopped",
+                    error = ?err,
+                    "Splunk sender stopped; subsequent queue errors are secondary"
+                );
+            }
+            result
+        });
         Ok(join_handle)
     }
 }
