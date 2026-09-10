@@ -18,6 +18,18 @@ variable "key_vault_name" {
   type        = string
 }
 
+variable "manage_key_vault" {
+  description = "When true, create and manage the Key Vault and certificate. When false, use an existing Key Vault."
+  type        = bool
+  default     = true
+}
+
+variable "shared_key_vault_resource_group" {
+  description = "Resource group containing the existing Key Vault when manage_key_vault is false."
+  type        = string
+  default     = null
+}
+
 variable "key_vault_object_ids" {
   description = "Additional IDs to add into the keyvault access policies"
   type        = list(string)
