@@ -1,4 +1,4 @@
-use anyhow::{Context, Result};
+use anyhow::{bail, Context, Result};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use serde_json::Value;
 use std::iter;
@@ -10,7 +10,7 @@ use data_ingester_supporting::keyvault::Secrets;
 use std::io::Cursor;
 
 async fn fetch_url(url: &str, file_name: &str) -> Result<()> {
-    let response = reqwest::get(url).await?;
+    let response = reqwest::get(url).await?.error_for_status()?;
     let mut file = std::fs::File::create(file_name)?;
     let mut content = Cursor::new(response.bytes().await?);
     let _ = std::io::copy(&mut content, &mut file)?;
@@ -18,37 +18,80 @@ async fn fetch_url(url: &str, file_name: &str) -> Result<()> {
 }
 
 pub async fn install_powershell() -> Result<()> {
-    info!("Downloading Powershell .deb");
+    const POWERSHELL_VERSION: &str = "7.6.6";
+    const PACKAGE_PATH: &str = "/tmp/powershell_7.6.6-1.deb_amd64.deb";
+    const PACKAGE_URL: &str =
+        "https://github.com/PowerShell/PowerShell/releases/download/v7.6.6/powershell_7.6.6-1.deb_amd64.deb";
 
-    fetch_url("https://github.com/PowerShell/PowerShell/releases/download/v7.4.5/powershell_7.4.5-1.deb_amd64.deb", "/tmp/powershell_7.3.7-1.deb_amd64.deb").await?;
-
-    info!("Installing Powershelll .deb");
-    let _output = Command::new("dpkg")
-        .args(["-i", "/tmp/powershell_7.3.7-1.deb_amd64.deb"])
-        .output()
+    if !powershell_is_available().await {
+        info!(version = POWERSHELL_VERSION, "Downloading Powershell");
+        fetch_url(PACKAGE_URL, PACKAGE_PATH).await?;
+        run_checked(
+            "dpkg",
+            ["-i", PACKAGE_PATH],
+            "Installing PowerShell package",
+        )
         .await?;
+    }
 
-    info!("Installing Powershelll ExchangeOnlineManagement");
-    let _output = Command::new("pwsh")
-        .args([
+    run_checked(
+        "pwsh",
+        [
+            "-NoLogo",
+            "-NoProfile",
             "-Command",
-            r#"
-Install-Module -Confirm:$False -Force -Name ExchangeOnlineManagement;
-"#,
+            "Install-Module -Confirm:$False -Force -Name ExchangeOnlineManagement",
+        ],
+        "Installing ExchangeOnlineManagement PowerShell module",
+    )
+    .await?;
+
+    run_checked(
+        "pwsh",
+        [
+            "-NoLogo",
+            "-NoProfile",
+            "-Command",
+            "Install-Module -Confirm:$False -Force -Name MicrosoftTeams",
+        ],
+        "Installing MicrosoftTeams PowerShell module",
+    )
+    .await?;
+
+    Ok(())
+}
+
+async fn powershell_is_available() -> bool {
+    Command::new("pwsh")
+        .args([
+            "-NoLogo",
+            "-NoProfile",
+            "-Command",
+            "$PSVersionTable.PSVersion",
         ])
         .output()
-        .await?;
+        .await
+        .is_ok_and(|output| output.status.success())
+}
 
-    info!("Installing Powershelll MicrosoftTeams");
-    let _output = Command::new("pwsh")
-        .args([
-            "-Command",
-            r#"
-Install-Module -Confirm:$False -Force -Name MicrosoftTeams;
-"#,
-        ])
+async fn run_checked<const N: usize>(
+    program: &str,
+    args: [&str; N],
+    operation: &str,
+) -> Result<()> {
+    let output = Command::new(program)
+        .args(args)
         .output()
-        .await?;
+        .await
+        .with_context(|| format!("{operation}: unable to start {program}"))?;
+
+    if !output.status.success() {
+        bail!(
+            "{operation} failed with status {}: {}",
+            output.status,
+            String::from_utf8_lossy(&output.stderr).trim()
+        );
+    }
 
     Ok(())
 }
