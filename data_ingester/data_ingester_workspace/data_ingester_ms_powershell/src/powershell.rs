@@ -453,7 +453,7 @@ mod mailbox_stream_tests {
 }
 
 pub(crate) fn parse_mailbox_json_line(line: &str) -> Result<Value> {
-    Ok(serde_json::from_str(line).context("Parsing mailbox JSON line")?)
+    serde_json::from_str(line).context("Parsing mailbox JSON line")
 }
 
 impl ToHecEvents for &Mailboxes {
