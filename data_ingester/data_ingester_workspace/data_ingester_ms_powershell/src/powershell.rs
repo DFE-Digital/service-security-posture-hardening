@@ -395,6 +395,26 @@ pub async fn run_powershell_get_mailbox(secrets: &Secrets) -> Result<Mailboxes> 
     Ok(result)
 }
 
+/// Build the Exchange Online command used by the streaming mailbox collector.
+///
+/// Each mailbox is emitted as one compact JSON line so the caller never has to
+/// deserialize the complete mailbox collection at once.
+pub fn mailbox_stream_command(secrets: &Secrets) -> Result<String> {
+    Ok(format!(
+        r#"Import-Module ExchangeOnlineManagement;
+Connect-ExchangeOnline -ShowBanner:$false -Certificate $pfx -AppId "{}" -Organization "{}" | Out-Null;
+Get-Mailbox -ResultSize Unlimited | ForEach-Object {{ $_ | ConvertTo-Json -Compress -Depth 50 }}"#,
+        secrets
+            .azure_client_id
+            .as_ref()
+            .context("Expect azure_client_id secret")?,
+        secrets
+            .azure_client_organization
+            .as_ref()
+            .context("Expect azure_client_organization secret")?,
+    ))
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[serde(untagged)]
@@ -409,6 +429,31 @@ pub struct Mailbox {
     id: String,
     audit_enabled: bool,
     recipient_type_details: String,
+}
+
+#[cfg(test)]
+mod mailbox_stream_tests {
+    use super::parse_mailbox_json_line;
+
+    #[test]
+    fn parses_full_mailbox_json_without_dropping_fields() {
+        let mailbox = parse_mailbox_json_line(
+            r#"{"Id":"1","DisplayName":"Finance","Nested":{"Enabled":true}}"#,
+        )
+        .expect("mailbox should parse");
+
+        assert_eq!(mailbox["DisplayName"], "Finance");
+        assert_eq!(mailbox["Nested"]["Enabled"], true);
+    }
+
+    #[test]
+    fn rejects_malformed_mailbox_json() {
+        assert!(parse_mailbox_json_line(r#"{"Id":"1""#).is_err());
+    }
+}
+
+pub(crate) fn parse_mailbox_json_line(line: &str) -> Result<Value> {
+    Ok(serde_json::from_str(line).context("Parsing mailbox JSON line")?)
 }
 
 impl ToHecEvents for &Mailboxes {
