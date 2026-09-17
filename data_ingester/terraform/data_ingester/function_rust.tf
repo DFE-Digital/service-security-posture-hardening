@@ -49,6 +49,7 @@ resource "azurerm_linux_function_app" "SSPHP_rust" {
     KEY_VAULT_NAME              = var.key_vault_name
     RUST_BACKTRACE              = "1"
     RUST_LOG                    = "info"
+    MAILBOX_BATCH_SIZE          = "100"
     FUNCTIONS_EXTENSION_VERSION = "~4"
     # linuxFxVersion Value taken from this command
     # az functionapp list-runtimes --os linux --query "[].{stack:join(' ', [runtime, version]), LinuxFxVersion:linux_fx_version, SupportedFunctionsVersions:to_string(supported_functions_versions[])}" --output table

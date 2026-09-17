@@ -1,11 +1,13 @@
-use anyhow::Result;
+use anyhow::{Context, Result};
+use std::env;
+use std::process::Stdio;
 use std::sync::Arc;
-use tracing::info;
+use tokio::io::{AsyncBufReadExt, AsyncReadExt, BufReader};
+use tracing::{error, info};
 
 use data_ingester_splunk::splunk::set_ssphp_run;
 
-use data_ingester_splunk::splunk::try_collect_send;
-use data_ingester_splunk::splunk::Splunk;
+use data_ingester_splunk::splunk::{try_collect_send, Splunk, SplunkTrait};
 use data_ingester_supporting::keyvault::Secrets;
 
 use crate::powershell::run_powershell_exchange_login_test;
@@ -21,7 +23,6 @@ use crate::powershell::run_powershell_get_email_tenant_settings;
 use crate::powershell::run_powershell_get_eop_protection_policy_rule;
 use crate::powershell::run_powershell_get_hosted_content_filter_policy;
 use crate::powershell::run_powershell_get_hosted_outbound_spam_filter_policy;
-use crate::powershell::run_powershell_get_mailbox;
 use crate::powershell::run_powershell_get_malware_filter_policy;
 use crate::powershell::run_powershell_get_management_role_assignment;
 use crate::powershell::run_powershell_get_organization_config;
@@ -33,6 +34,103 @@ use crate::powershell::run_powershell_get_sharing_policy;
 use crate::powershell::run_powershell_get_spoof_intelligence_insight;
 use crate::powershell::run_powershell_get_transport_rule;
 use crate::powershell::run_powershell_get_user_vip;
+use crate::powershell::{mailbox_stream_command, parse_mailbox_json_line};
+
+const DEFAULT_MAILBOX_BATCH_SIZE: usize = 100;
+const MAILBOX_SOURCE: &str = "powershell:ExchangeOnline:Get-Mailbox";
+const MAILBOX_SOURCETYPE: &str = "m365:mailbox";
+
+fn mailbox_batch_size() -> Result<usize> {
+    let value =
+        env::var("MAILBOX_BATCH_SIZE").unwrap_or_else(|_| DEFAULT_MAILBOX_BATCH_SIZE.to_string());
+    let size = value
+        .parse::<usize>()
+        .with_context(|| format!("Invalid MAILBOX_BATCH_SIZE value: {value}"))?;
+    if size == 0 {
+        anyhow::bail!("MAILBOX_BATCH_SIZE must be greater than zero");
+    }
+    Ok(size)
+}
+
+async fn collect_mailboxes(secrets: &Secrets, splunk: &Splunk) -> Result<()> {
+    let batch_size = mailbox_batch_size()?;
+    let command = format!(
+        r#" [Byte[]]$pfxBytes = [Convert]::FromBase64String('{}');
+$pfx = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2 -ArgumentList (,$pfxBytes);
+{}"#,
+        secrets
+            .azure_client_certificate
+            .as_ref()
+            .context("Expect azure_client_certificate secret")?,
+        mailbox_stream_command(secrets)?,
+    );
+    let mut child = tokio::process::Command::new("pwsh")
+        .args(["-Command", &command])
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .context("Starting PowerShell mailbox collector")?;
+    let stdout = child
+        .stdout
+        .take()
+        .context("PowerShell stdout unavailable")?;
+    let stderr = child
+        .stderr
+        .take()
+        .context("PowerShell stderr unavailable")?;
+    let stderr_task = tokio::spawn(async move {
+        let mut bytes = Vec::new();
+        let _bytes_read = BufReader::new(stderr).read_to_end(&mut bytes).await?;
+        Ok::<_, std::io::Error>(bytes)
+    });
+
+    let mut lines = BufReader::new(stdout).lines();
+    let mut batch = Vec::with_capacity(batch_size);
+    let mut mailbox_count = 0usize;
+    let mut malformed_count = 0usize;
+    let ssphp_run = data_ingester_splunk::splunk::get_ssphp_run(crate::SSPHP_RUN_KEY);
+
+    while let Some(line) = lines.next_line().await? {
+        if line.trim().is_empty() {
+            continue;
+        }
+        let mailbox = match parse_mailbox_json_line(&line) {
+            Ok(mailbox) => mailbox,
+            Err(err) => {
+                malformed_count += 1;
+                error!(line = mailbox_count + malformed_count, error = ?err, "Skipping malformed mailbox JSON line");
+                continue;
+            }
+        };
+        batch.push(data_ingester_splunk::splunk::HecEvent::new_with_ssphp_run(
+            &mailbox,
+            MAILBOX_SOURCE,
+            MAILBOX_SOURCETYPE,
+            ssphp_run,
+        )?);
+        mailbox_count += 1;
+        if batch.len() == batch_size {
+            splunk.send_batch(std::mem::take(&mut batch)).await?;
+        }
+    }
+
+    if !batch.is_empty() {
+        splunk.send_batch(batch).await?;
+    }
+    let status = child.wait().await?;
+    let stderr = stderr_task.await??;
+    if !status.success() {
+        anyhow::bail!(
+            "PowerShell mailbox collector failed with {status}: {}",
+            String::from_utf8_lossy(&stderr)
+        );
+    }
+    info!(
+        mailbox_count,
+        malformed_count, "Mailbox collection complete"
+    );
+    Ok(())
+}
 
 pub async fn powershell(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
     let _ = set_ssphp_run(crate::SSPHP_RUN_KEY)?;
@@ -81,12 +179,9 @@ pub async fn powershell(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()
     .await;
 
     // Azure 365 V2.0 5.3
-    let _ = try_collect_send(
-        "Exchange Get Mailboxes",
-        run_powershell_get_mailbox(&secrets),
-        &splunk,
-    )
-    .await;
+    if let Err(err) = collect_mailboxes(&secrets, &splunk).await {
+        error!(error = ?err, "Exchange mailbox collection failed");
+    }
 
     let _ = try_collect_send(
         "Exchange Get VIP Users",
