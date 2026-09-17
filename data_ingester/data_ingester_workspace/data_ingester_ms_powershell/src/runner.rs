@@ -21,6 +21,7 @@ use crate::powershell::run_powershell_get_email_tenant_settings;
 use crate::powershell::run_powershell_get_eop_protection_policy_rule;
 use crate::powershell::run_powershell_get_hosted_content_filter_policy;
 use crate::powershell::run_powershell_get_hosted_outbound_spam_filter_policy;
+use crate::powershell::run_powershell_get_mailbox;
 use crate::powershell::run_powershell_get_malware_filter_policy;
 use crate::powershell::run_powershell_get_management_role_assignment;
 use crate::powershell::run_powershell_get_organization_config;
@@ -80,12 +81,12 @@ pub async fn powershell(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()
     .await;
 
     // Azure 365 V2.0 5.3
-    // let _ = try_collect_send(
-    //     "Exchange Get Mailboxes",
-    //     run_powershell_get_mailbox(&secrets),
-    //     &splunk,
-    // )
-    // .await;
+    let _ = try_collect_send(
+        "Exchange Get Mailboxes",
+        run_powershell_get_mailbox(&secrets),
+        &splunk,
+    )
+    .await;
 
     let _ = try_collect_send(
         "Exchange Get VIP Users",
