@@ -22,11 +22,11 @@ members = [
     ]
 
 [workspace.lints.clippy]
-unwrap-used = "warn"
+unwrap_used = "warn"
 
 [workspace.lints.rust]
 # single_use_lifetimes = "warn"
-unused_import-braces = "warn"
+unused_import_braces = "warn"
 unused_results = "warn"
 
 [profile.dev]

@@ -1,6 +1,7 @@
 data "azurerm_client_config" "current" {}
 
 resource "azurerm_key_vault" "SSPHP" {
+  count                           = var.manage_key_vault ? 1 : 0
   name                            = var.key_vault_name
   location                        = azurerm_resource_group.tfstate.location
   resource_group_name             = azurerm_resource_group.tfstate.name
@@ -15,68 +16,68 @@ resource "azurerm_key_vault" "SSPHP" {
     prevent_destroy = true
   }
 
-  dynamic "access_policy" {
-    for_each = toset(var.key_vault_object_ids)
-    content {
-      tenant_id = data.azurerm_client_config.current.tenant_id
-      object_id = access_policy.value
+}
 
-      key_permissions = [
-        "Get",
-        "List"
-      ]
+data "azurerm_key_vault" "shared" {
+  count               = var.manage_key_vault ? 0 : 1
+  name                = var.key_vault_name
+  resource_group_name = var.shared_key_vault_resource_group
+}
 
-      secret_permissions = [
-        "Get",
-        "List",
-        "Set",
-      ]
+locals {
+  key_vault_id = var.manage_key_vault ? azurerm_key_vault.SSPHP[0].id : data.azurerm_key_vault.shared[0].id
+}
 
-      storage_permissions = [
-        "Get",
-        "List",
-        "Set",
-      ]
+resource "azurerm_key_vault_access_policy" "platform" {
+  for_each = var.manage_key_vault ? toset(var.key_vault_object_ids) : toset([])
 
-      certificate_permissions = [
-        "Get",
-        "List",
-        "Create",
-        "Delete",
-      ]
-    }
-  }
+  key_vault_id = local.key_vault_id
+  tenant_id    = data.azurerm_client_config.current.tenant_id
+  object_id    = each.value
 
-  access_policy {
-    tenant_id = azurerm_linux_function_app.SSPHP_rust.identity[0].tenant_id
-    object_id = azurerm_linux_function_app.SSPHP_rust.identity[0].principal_id
+  key_permissions = ["Get", "List"]
+  secret_permissions = [
+    "Get",
+    "List",
+    "Set",
+  ]
+  storage_permissions = [
+    "Get",
+    "List",
+    "Set",
+  ]
+  certificate_permissions = [
+    "Get",
+    "List",
+    "Create",
+    "Delete",
+  ]
+}
 
-    key_permissions = [
-      "Get",
-      "List"
-    ]
+resource "azurerm_key_vault_access_policy" "function" {
+  key_vault_id = local.key_vault_id
+  tenant_id    = azurerm_linux_function_app.SSPHP_rust.identity[0].tenant_id
+  object_id    = azurerm_linux_function_app.SSPHP_rust.identity[0].principal_id
 
-    secret_permissions = [
-      "Get",
-      "List",
-    ]
-
-    storage_permissions = [
-      "Get",
-      "List",
-    ]
-
-    certificate_permissions = [
-      "Get",
-      "List",
-    ]
-  }
+  key_permissions = ["Get", "List"]
+  secret_permissions = [
+    "Get",
+    "List",
+  ]
+  storage_permissions = [
+    "Get",
+    "List",
+  ]
+  certificate_permissions = [
+    "Get",
+    "List",
+  ]
 }
 
 resource "azurerm_key_vault_certificate" "example" {
-
+  count        = var.manage_key_vault ? 1 : 0
   name         = "ad-client-certificate"
-  key_vault_id = azurerm_key_vault.SSPHP.id
+  key_vault_id = local.key_vault_id
 
   certificate_policy {
     issuer_parameters {

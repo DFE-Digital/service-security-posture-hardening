@@ -16,8 +16,8 @@ use data_ingester_supporting::keyvault::secret_health_check;
 use std::env;
 use std::sync::Arc;
 use tokio::sync::oneshot::Sender;
-use tracing::info;
 use tracing::trace;
+use tracing::{error, info};
 use valuable::Valuable;
 
 /// Start the Axum server
@@ -320,13 +320,22 @@ async fn post_powershell(
     >,
 ) -> Json<AzureInvokeResponse> {
     let name = data_ingester_ms_powershell::SSPHP_RUN_KEY;
-    if state.powershell_lock.try_lock().is_ok() && !*state.powershell_installed.lock().await {
-        info!(name = name, "Installing Powershell");
-
-        data_ingester_ms_powershell::powershell::install_powershell()
-            .await
-            .expect("Powershell should install cleanly in the Azure Function instance");
-        *state.powershell_installed.lock().await = true;
+    if !*state.powershell_installed.lock().await {
+        let _install_lock = state.powershell_lock.lock().await;
+        if !*state.powershell_installed.lock().await {
+            info!(name = name, "Installing Powershell");
+            if let Err(error) = data_ingester_ms_powershell::powershell::install_powershell().await
+            {
+                error!(name = name, error = ?error, "PowerShell installation failed");
+                return Json(AzureInvokeResponse {
+                    outputs: None,
+                    logs: vec![format!("PowerShell installation failed: {error:#}")],
+                    return_value: None,
+                });
+            } else {
+                *state.powershell_installed.lock().await = true;
+            }
+        }
     }
 
     Json(
