@@ -1,8 +1,5 @@
-use crate::admin_request_consent_policy::AdminRequestConsentPolicy;
-
 use crate::conditional_access_policies::ConditionalAccessPolicies;
 use crate::conditional_access_policies::ConditionalAccessPolicy;
-use crate::groups::Groups;
 use crate::msgraph_data::load_m365_toml;
 use crate::role_assignment_schedule::RoleSchedules;
 use crate::roles::RoleDefinitions;
@@ -32,7 +29,6 @@ use serde::Serialize;
 use serde_json::Value;
 use std::env;
 use std::fmt::Debug;
-use std::iter;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::mpsc::UnboundedSender;
@@ -79,6 +75,10 @@ impl MsGraph {
         })
     }
 
+    /// `url` must start with the API version segment, `/v1.0/...` or `/beta/...`.
+    /// The base URL's path is joined per RFC 3986, so a leading `/` replaces it
+    /// entirely and the version is lost; Graph then reads the first path segment
+    /// as the version and returns an error document rather than data.
     pub async fn get_url(&self, url: &str) -> Result<Vec<Value>> {
         let current_client: graph_http::api_impl::Client = graph_http::api_impl::Client::builder()
             .client_application(self.client_application.clone())
@@ -117,14 +117,6 @@ impl MsGraph {
             }
         }
         Ok(collection)
-    }
-
-    /// 2.10
-    /// MSGraph Permission: OrgSettings-Forms.Read.All
-    /// https://graph.microsoft.com/beta/admin/forms
-    pub async fn get_admin_form_settings(&self) -> Result<AdminFormSettings> {
-        let result = self.get_url("/beta/admin/forms").await?;
-        Ok(AdminFormSettings { inner: result })
     }
 
     pub async fn get_transitive_members_of_for_users(
@@ -168,22 +160,6 @@ impl MsGraph {
         Ok(())
     }
 
-    /// 1.1.9
-    /// 1.1.10
-    /// https://learn.microsoft.com/en-us/graph/api/resources/groupsetting?view=graph-rest-1.0
-    /// The /beta version of this resource is named directorySetting.
-    pub async fn list_group_settings(&self) -> Result<GroupSettings> {
-        let result = self.get_url("/groupSettings").await?;
-        Ok(GroupSettings { inner: result })
-    }
-
-    pub async fn list_role_eligibility_schedule_instance(
-        &self,
-    ) -> Result<RoleEligibilityScheduleInstance> {
-        let result = self.get_url("/roleManagement/directory/roleEligibilityScheduleInstances?$expand=activatedUsing,appScope,directoryScope,principal,roleDefinition").await?;
-        Ok(RoleEligibilityScheduleInstance { inner: result })
-    }
-
     pub async fn list_role_eligibility_schedules(&self) -> Result<RoleSchedules> {
         let result = self.get_url("/beta/roleManagement/directory/roleEligibilityScheduleInstances?$expand=activatedUsing,appScope,directoryScope,principal,roleDefinition").await?;
         let schedules = result
@@ -216,12 +192,6 @@ impl MsGraph {
             })
             .collect();
         Ok(RoleSchedules { inner: schedules })
-    }
-
-    /// M365 V2 1.1.17
-    pub async fn list_legacy_policies(&self) -> Result<LegacyPolicies> {
-        let result = self.get_url("/legacy/policies").await?;
-        Ok(LegacyPolicies { inner: result })
     }
 
     // /// M365 V2 1.1.18
@@ -258,27 +228,6 @@ impl MsGraph {
         Ok(caps)
     }
 
-    /// Azure 1.2.1
-    /// https://learn.microsoft.com/en-us/graph/api/conditionalaccessroot-list-namedlocations?view=graph-rest-1.0&tabs=http
-    pub async fn list_named_locations(&self) -> Result<NamedLocations> {
-        let mut stream = self
-            .client
-            .identity()
-            .list_named_locations()
-            .paging()
-            .stream::<NamedLocations>()?;
-
-        let mut collection = NamedLocations::default();
-        while let Some(result) = stream.next().await {
-            let response = result?;
-
-            let body = response.into_body();
-
-            collection.inner.extend(body?.inner)
-        }
-        Ok(collection)
-    }
-
     pub async fn list_role_definitions(&self) -> Result<RoleDefinitions> {
         let mut stream = self
             .beta_client
@@ -296,24 +245,6 @@ impl MsGraph {
             roles.value.extend(body.value)
         }
         Ok(roles)
-    }
-
-    pub async fn list_groups(&self) -> Result<Groups<'_>> {
-        let mut stream = self
-            .client
-            .groups()
-            .list_group()
-            .paging()
-            .stream::<Groups>()?;
-
-        let mut groups = Groups::default();
-
-        while let Some(result) = stream.next().await {
-            let body = result?.into_body()?;
-            groups.inner.extend(body.inner);
-        }
-
-        Ok(groups)
     }
 
     pub async fn list_users_channel(&self, sender: UnboundedSender<UsersMap<'_>>) -> Result<()> {
@@ -377,28 +308,6 @@ impl MsGraph {
         Ok(())
     }
 
-    pub async fn get_admin_request_consent_policy(&self) -> Result<AdminRequestConsentPolicy> {
-        let response = self
-            .client
-            .policies()
-            .get_admin_consent_request_policy()
-            .send()
-            .await?;
-        let body = response.json::<AdminRequestConsentPolicy>().await?;
-        Ok(body)
-    }
-
-    pub async fn get_authentication_methods_policy(&self) -> Result<AuthenticationMethodsPolicy> {
-        let response = self
-            .client
-            .policies()
-            .get_authentication_methods_policy()
-            .send()
-            .await?;
-        let body = response.json().await?;
-        Ok(body)
-    }
-
     pub async fn get_domains(&self) -> Result<Domains> {
         let response = self.client.domains().list_domain().send().await?;
         let mut body: Domains = response.json().await?;
@@ -415,44 +324,6 @@ impl MsGraph {
         Ok(body)
     }
 
-    pub async fn get_authorization_policy(&self) -> Result<AuthorizationPolicy> {
-        let response = self
-            .beta_client
-            .policies()
-            .get_authorization_policy()
-            .send()
-            .await?;
-        let body = response.json().await?;
-        Ok(body)
-    }
-
-    /// MS Graph Permission Policy.Read.PermissionGrant
-    pub async fn list_permission_grant_policy(&self) -> Result<PermissionGrantPolicy> {
-        let response = self
-            .client
-            .policies()
-            .list_permission_grant_policies()
-            .send()
-            .await?;
-        let body = response.json().await?;
-        Ok(body)
-    }
-
-    // M365 1.1.1
-    // Azure 1.1.1
-    pub async fn get_identity_security_defaults_enforcement_policy(
-        &self,
-    ) -> Result<IdentitySecurityDefaultsEnforcementPolicy> {
-        let response = self
-            .client
-            .policies()
-            .get_identity_security_defaults_enforcement_policy()
-            .send()
-            .await?;
-        let body = response.json().await?;
-        Ok(body)
-    }
-
     #[allow(dead_code)]
     pub async fn list_token_lifetime_policies(&self) -> Result<Value> {
         let response = self
@@ -465,145 +336,6 @@ impl MsGraph {
         Ok(body)
     }
 
-    /// 5.1.1
-    /// Permission: AccessReview.Read.All
-    pub async fn get_access_reviews(&self) -> Result<AccessReviewDefinitions> {
-        let response = self
-            .client
-            .identity_governance()
-            .access_reviews()
-            .definitions()
-            .list_definitions()
-            .send()
-            .await?;
-        let body = response.json().await?;
-        Ok(body)
-    }
-
-    /// 1.22
-    pub async fn get_device_registration_policy(&self) -> Result<DeviceRegistrationPolicy> {
-        let result = self.get_url("/policies/deviceRegistrationPolicy").await?;
-        Ok(DeviceRegistrationPolicy { inner: result })
-    }
-}
-
-#[derive(Debug, Serialize, Deserialize, Default)]
-pub struct LegacyPolicies {
-    #[serde(rename = "value")]
-    inner: Vec<serde_json::Value>,
-}
-
-impl ToHecEvents for &LegacyPolicies {
-    type Item = Value;
-    fn source(&self) -> &str {
-        "msgraph"
-    }
-
-    fn sourcetype(&self) -> &str {
-        "msgraph:legacy_policy"
-    }
-
-    fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
-        Box::new(self.inner.iter())
-    }
-    fn ssphp_run_key(&self) -> &str {
-        "m365"
-    }
-}
-
-#[derive(Debug, Serialize, Deserialize, Default)]
-pub struct DeviceRegistrationPolicy {
-    inner: Vec<Value>,
-}
-
-impl ToHecEvents for &DeviceRegistrationPolicy {
-    type Item = Value;
-    fn source(&self) -> &str {
-        "msgraph"
-    }
-
-    fn sourcetype(&self) -> &str {
-        "msgraph:device_registration_policy"
-    }
-
-    fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
-        Box::new(self.inner.iter())
-    }
-    fn ssphp_run_key(&self) -> &str {
-        "m365"
-    }
-}
-
-#[derive(Debug, Serialize, Deserialize, Default)]
-pub struct NamedLocations {
-    #[serde(rename = "value")]
-    inner: Vec<serde_json::Value>,
-}
-
-impl ToHecEvents for &NamedLocations {
-    type Item = Value;
-    fn source(&self) -> &str {
-        "msgraph"
-    }
-
-    fn sourcetype(&self) -> &str {
-        "identity/named_locations"
-    }
-
-    fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
-        Box::new(self.inner.iter())
-    }
-    fn ssphp_run_key(&self) -> &str {
-        "m365"
-    }
-}
-
-#[derive(Debug, Serialize, Deserialize, Default)]
-pub struct AccessReviewDefinitions {
-    #[serde(rename = "value")]
-    inner: Vec<serde_json::Value>,
-}
-
-impl ToHecEvents for &AccessReviewDefinitions {
-    type Item = Value;
-    fn source(&self) -> &str {
-        "msgraph"
-    }
-
-    fn sourcetype(&self) -> &str {
-        "m365:access_review_definitions"
-    }
-
-    fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
-        Box::new(self.inner.iter())
-    }
-    fn ssphp_run_key(&self) -> &str {
-        "m365"
-    }
-}
-
-#[derive(Debug, Serialize, Deserialize, Default)]
-pub struct AdminFormSettings {
-    #[serde(rename = "settings")]
-    inner: Vec<serde_json::Value>,
-}
-
-impl ToHecEvents for &AdminFormSettings {
-    type Item = Value;
-    fn source(&self) -> &str {
-        "msgraph"
-    }
-
-    fn sourcetype(&self) -> &str {
-        "m365:admin_form_settings"
-    }
-
-    fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
-        Box::new(self.inner.iter())
-    }
-    fn ssphp_run_key(&self) -> &str {
-        "m365"
-    }
 }
 
 // #[derive(Debug, Serialize, Deserialize, Default)]
@@ -626,102 +358,6 @@ impl ToHecEvents for &AdminFormSettings {
 //         Box::new(self.inner.iter())
 //     }
 // }
-
-#[derive(Debug, Serialize, Deserialize, Default)]
-pub struct AuthorizationPolicy {
-    #[serde(rename = "@odata.context")]
-    pub odata_context: String,
-    #[serde(flatten)]
-    value: serde_json::Value,
-}
-
-impl ToHecEvents for &AuthorizationPolicy {
-    type Item = Self;
-    fn source(&self) -> &str {
-        "msgraph"
-    }
-
-    fn sourcetype(&self) -> &str {
-        "m365:authorization_policy"
-    }
-
-    fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
-        Box::new(iter::once(self))
-    }
-    fn ssphp_run_key(&self) -> &str {
-        "m365"
-    }
-}
-
-#[derive(Debug, Serialize, Deserialize, Default)]
-pub struct RoleEligibilityScheduleInstance {
-    #[serde(rename = "value")]
-    inner: Vec<serde_json::Value>,
-}
-
-impl ToHecEvents for &RoleEligibilityScheduleInstance {
-    type Item = Value;
-    fn source(&self) -> &str {
-        "msgraph"
-    }
-
-    fn sourcetype(&self) -> &str {
-        "m365:role_eligibility_schedule_instance"
-    }
-
-    fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
-        Box::new(self.inner.iter())
-    }
-
-    fn ssphp_run_key(&self) -> &str {
-        "m365"
-    }
-}
-
-#[derive(Debug, Serialize, Deserialize, Default)]
-pub struct GroupSettings {
-    #[serde(rename = "value")]
-    inner: Vec<serde_json::Value>,
-}
-
-impl ToHecEvents for &GroupSettings {
-    type Item = Value;
-    fn source(&self) -> &str {
-        "msgraph"
-    }
-
-    fn sourcetype(&self) -> &str {
-        "m365:group_settings"
-    }
-
-    fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
-        Box::new(self.inner.iter())
-    }
-    fn ssphp_run_key(&self) -> &str {
-        "m365"
-    }
-}
-
-#[derive(Debug, Serialize, Deserialize, Default)]
-pub struct AuthenticationMethodsPolicy(serde_json::Value);
-
-impl ToHecEvents for &AuthenticationMethodsPolicy {
-    type Item = Self;
-    fn source(&self) -> &str {
-        "msgraph"
-    }
-
-    fn sourcetype(&self) -> &str {
-        "m365:authentication_methods_policy"
-    }
-
-    fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
-        Box::new(iter::once(self))
-    }
-    fn ssphp_run_key(&self) -> &str {
-        "m365"
-    }
-}
 
 /// CIS Azure 365 Azure 1.4
 /// CIS Azure 365 Azure 4.8
@@ -770,53 +406,6 @@ impl ToHecEvents for &Domains {
     fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
         Box::new(self.inner.iter())
     }
-    fn ssphp_run_key(&self) -> &str {
-        "m365"
-    }
-}
-
-#[derive(Debug, Serialize, Deserialize, Default)]
-pub struct PermissionGrantPolicy {
-    #[serde(rename = "value")]
-    inner: Vec<serde_json::Value>,
-}
-
-impl ToHecEvents for &PermissionGrantPolicy {
-    type Item = Value;
-    fn source(&self) -> &'static str {
-        "msgraph"
-    }
-
-    fn sourcetype(&self) -> &'static str {
-        "m365:permission_grant_policy"
-    }
-
-    fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
-        Box::new(self.inner.iter())
-    }
-
-    fn ssphp_run_key(&self) -> &str {
-        "m365"
-    }
-}
-
-#[derive(Debug, Serialize, Deserialize, Default)]
-pub struct IdentitySecurityDefaultsEnforcementPolicy(serde_json::Value);
-
-impl ToHecEvents for &IdentitySecurityDefaultsEnforcementPolicy {
-    type Item = Self;
-    fn source(&self) -> &'static str {
-        "msgraph"
-    }
-
-    fn sourcetype(&self) -> &'static str {
-        "m365:identitySecurityDefaultsEnforcementPolicy"
-    }
-
-    fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
-        Box::new(iter::once(self))
-    }
-
     fn ssphp_run_key(&self) -> &str {
         "m365"
     }
@@ -891,102 +480,7 @@ pub async fn m365(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
         .process_sources(&ms_graph, &splunk, crate::SSPHP_RUN_KEY)
         .await?;
 
-    // M365 1.1.17 V2
-    let _ = try_collect_send(
-        "MS Graph List Role Eligibility Schedules",
-        ms_graph.list_legacy_policies(),
-        &splunk,
-    )
-    .await;
-
-    // M365 1.1.15 V2
-    let _ = try_collect_send(
-        "MS Graph List Role Eligibility Schedules",
-        ms_graph.list_role_eligibility_schedule_instance(),
-        &splunk,
-    )
-    .await;
-
-    // Azure Foundations 1.22 V2
-    let _ = try_collect_send(
-        "MS Graph Device Registration Policy",
-        ms_graph.get_device_registration_policy(),
-        &splunk,
-    )
-    .await;
-
-    // 5.1.1
-    let _ = try_collect_send(
-        "MS Graph Access Reviews",
-        ms_graph.get_access_reviews(),
-        &splunk,
-    )
-    .await;
-
-    // 1.1.9
-    // 1.1.10
-    let _ = try_collect_send(
-        "MS Graph Admin form settings",
-        ms_graph.get_admin_form_settings(),
-        &splunk,
-    )
-    .await;
-
-    // 1.1.9
-    // 1.1.10
-    let _ = try_collect_send(
-        "MS Graph Group Settings",
-        ms_graph.list_group_settings(),
-        &splunk,
-    )
-    .await;
-
-    // 1.2.1
-    let _ = try_collect_send(
-        "MS Graph Named Locations",
-        ms_graph.list_named_locations(),
-        &splunk,
-    )
-    .await;
-
-    let _ = try_collect_send(
-        "MS Graph Authentication Methods Policy",
-        ms_graph.get_authentication_methods_policy(),
-        &splunk,
-    )
-    .await;
-
-    let _ = try_collect_send(
-        "MS Graph Authorization Policy",
-        ms_graph.get_authorization_policy(),
-        &splunk,
-    )
-    .await;
-
-    let _ = try_collect_send(
-        "MS Graph Admin RequestConsent Policy",
-        ms_graph.get_admin_request_consent_policy(),
-        &splunk,
-    )
-    .await;
-
     let _ = try_collect_send("MS Graph Domains", ms_graph.get_domains(), &splunk).await;
-
-    let _ = try_collect_send(
-        "MS Graph Permission Grant Policy",
-        ms_graph.list_permission_grant_policy(),
-        &splunk,
-    )
-    .await;
-
-    let _ = try_collect_send(
-        "Exchange Get Security Default Policy",
-        ms_graph.get_identity_security_defaults_enforcement_policy(),
-        &splunk,
-    )
-    .await;
-
-    let _ = try_collect_send("MS Graph Groups", ms_graph.list_groups(), &splunk).await;
 
     info!("M365 Collection Complete");
 
@@ -1059,36 +553,6 @@ pub(crate) mod live_tests {
     }
 
     #[tokio::test]
-    async fn get_admin_request_consent_policy() -> Result<()> {
-        let (splunk, ms_graph) = setup().await?;
-        let admin_request_consent_policy = ms_graph.get_admin_request_consent_policy().await?;
-        splunk
-            .send_batch((&admin_request_consent_policy).to_hec_events()?)
-            .await?;
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn get_authorization_policy() -> Result<()> {
-        let (splunk, ms_graph) = setup().await?;
-        let get_authorization_policy = ms_graph.get_authorization_policy().await?;
-        splunk
-            .send_batch((&get_authorization_policy).to_hec_events()?)
-            .await?;
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn authentication_methods_policy() -> Result<()> {
-        let (splunk, ms_graph) = setup().await?;
-        let authentication_methods_policy = ms_graph.get_authentication_methods_policy().await?;
-        splunk
-            .send_batch((&authentication_methods_policy).to_hec_events()?)
-            .await?;
-        Ok(())
-    }
-
-    #[tokio::test]
     async fn list_conditional_access_policies() -> Result<()> {
         let (splunk, ms_graph) = setup().await?;
         let caps = ms_graph.list_conditional_access_policies().await?;
@@ -1105,68 +569,6 @@ pub(crate) mod live_tests {
         Ok(())
     }
 
-    #[tokio::test]
-    async fn list_groups() -> Result<()> {
-        let (splunk, ms_graph) = setup().await?;
-        let groups = ms_graph.list_groups().await?;
-        splunk.send_batch((&groups).to_hec_events()?).await?;
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn get_permission_grant_policy() -> Result<()> {
-        let (splunk, ms_graph) = setup().await?;
-        let permission_grant_policy = ms_graph.list_permission_grant_policy().await?;
-        splunk
-            .send_batch((&permission_grant_policy).to_hec_events()?)
-            .await?;
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn get_identity_security_defaults_enforcement_policy() -> Result<()> {
-        let (splunk, ms_graph) = setup().await?;
-        let security_defaults = ms_graph
-            .get_identity_security_defaults_enforcement_policy()
-            .await?;
-        splunk
-            .send_batch((&security_defaults).to_hec_events()?)
-            .await?;
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn list_group_settings() -> Result<()> {
-        let (splunk, ms_graph) = setup().await?;
-        let result = ms_graph.list_group_settings().await?;
-        splunk.send_batch((&result).to_hec_events()?).await?;
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn get_admin_forms() -> Result<()> {
-        let (splunk, ms_graph) = setup().await?;
-        let result = ms_graph.get_admin_form_settings().await?;
-        splunk.send_batch((&result).to_hec_events()?).await?;
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn get_access_reviews() -> Result<()> {
-        let (splunk, ms_graph) = setup().await?;
-        let result = ms_graph.get_access_reviews().await?;
-        splunk.send_batch((&result).to_hec_events()?).await?;
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn list_named_locations() -> Result<()> {
-        let (splunk, ms_graph) = setup().await?;
-        let result = ms_graph.list_named_locations().await?;
-        splunk.send_batch((&result).to_hec_events()?).await?;
-        Ok(())
-    }
-
     // #[ignore]
     // #[tokio::test]
     // async fn list_token_lifetime_policies() -> Result<()> {
@@ -1176,30 +578,6 @@ pub(crate) mod live_tests {
     //     splunk.send_batch((&hec).to_hec_events()?).await?;
     //     Ok(())
     // }
-
-    #[tokio::test]
-    async fn list_permission_grant_policies() -> Result<()> {
-        let (splunk, ms_graph) = setup().await?;
-        let result = ms_graph.list_permission_grant_policy().await?;
-        splunk.send_batch((&result).to_hec_events()?).await?;
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn get_device_registration_policy() -> Result<()> {
-        let (splunk, ms_graph) = setup().await?;
-        let result = ms_graph.get_device_registration_policy().await?;
-        splunk.send_batch((&result).to_hec_events()?).await?;
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn list_role_eligibility_schedule_instance() -> Result<()> {
-        let (splunk, ms_graph) = setup().await?;
-        let result = ms_graph.list_role_eligibility_schedule_instance().await?;
-        splunk.send_batch((&result).to_hec_events()?).await?;
-        Ok(())
-    }
 
     #[tokio::test]
     async fn list_role_eligibility_schedules() -> Result<()> {
@@ -1215,14 +593,6 @@ pub(crate) mod live_tests {
         let result = ms_graph.list_role_assignment_schedules().await?;
         //splunk.send_batch((&result).to_hec_events()?).await?;
         assert!(result.inner.len() > 2);
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn list_legacy_policies() -> Result<()> {
-        let (splunk, ms_graph) = setup().await?;
-        let result = ms_graph.list_legacy_policies().await?;
-        splunk.send_batch((&result).to_hec_events()?).await?;
         Ok(())
     }
 

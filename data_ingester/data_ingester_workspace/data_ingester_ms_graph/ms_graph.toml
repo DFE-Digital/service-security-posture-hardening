@@ -42,21 +42,24 @@ named_locations = { endpoint = "/v1.0/identity/conditionalAccess/namedLocations"
   { filename = "CIS_Microsoft_Azure_Foundations_Benchmark_v2.0.0.pdf", control_id = "1.2.1" },
 ] }
 
-admin_consent_request_policy = { endpoint = "/v1.0/policies/adminConsentRequestPolicy", permissions_required = [
+# sourcetype is pinned because DCAP searches it by name: ssphp_use_case_m365_002_cis_2-1
+admin_consent_request_policy = { endpoint = "/v1.0/policies/adminConsentRequestPolicy", source = "msgraph", sourcetype = "m365:admin_consent_policy", permissions_required = [
   "",
 ], cis_controls = [
   { filename = "CIS_Microsoft_365_Foundations_Benchmark_v2.0.0.pdf", control_id = "" },
   { filename = "CIS_Microsoft_365_Foundations_Benchmark_v2.0.0.pdf", control_ = "" },
 ] }
 
-authentication_methods_policy = { endpoint = "/v1.0/policies/authenticationMethodsPolicy", permissions_required = [
+# sourcetype is pinned because DCAP searches it by name: ssphp_use_case_m365_001_cis_1-1-5
+authentication_methods_policy = { endpoint = "/v1.0/policies/authenticationMethodsPolicy", source = "msgraph", sourcetype = "m365:authentication_methods_policy", permissions_required = [
   "",
 ], cis_controls = [
   { filename = "CIS_Microsoft_365_Foundations_Benchmark_v2.0.0.pdf", control_id = "" },
   { filename = "CIS_Microsoft_365_Foundations_Benchmark_v2.0.0.pdf", control_id = "" },
 ] }
 
-identity_security_defaults = { endpoint = "/v1.0/policies/identitySecurityDefaultsEnforcementPolicy", permissions_required = [
+# sourcetype is pinned because DCAP searches it by name: ssphp_use_case_m365_001_cis_1-1-1, ssphp_use_case_azure_001_cis_1-1-1
+identity_security_defaults = { endpoint = "/v1.0/policies/identitySecurityDefaultsEnforcementPolicy", source = "msgraph", sourcetype = "m365:identitySecurityDefaultsEnforcementPolicy", permissions_required = [
   "",
 ], cis_controls = [
   { filename = "CIS_Microsoft_365_Foundations_Benchmark_v2.0.0.pdf", control_id = "" },
