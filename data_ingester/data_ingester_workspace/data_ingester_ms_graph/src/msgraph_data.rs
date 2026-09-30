@@ -136,6 +136,25 @@ mod test {
         assert!(!sources.is_empty());
         Ok(())
     }
+
+    /// `get_url` joins the endpoint onto the client's base URL, so a path with a
+    /// leading slash replaces the base path and any endpoint without `/v1.0` or
+    /// `/beta` loses its API version. Graph then reads the first path segment as
+    /// the version and returns an error document, which is indexed as data.
+    #[test]
+    fn test_endpoints_carry_an_api_version() -> Result<()> {
+        let sources = load_m365_toml()?;
+        for group in sources.0.values() {
+            for (name, source) in group {
+                assert!(
+                    source.endpoint.starts_with("/v1.0/") || source.endpoint.starts_with("/beta/"),
+                    "{name}: endpoint has no API version segment: {}",
+                    source.endpoint
+                );
+            }
+        }
+        Ok(())
+    }
 }
 
 #[cfg(feature = "live_tests")]
