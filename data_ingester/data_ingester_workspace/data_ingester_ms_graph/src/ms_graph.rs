@@ -79,6 +79,10 @@ impl MsGraph {
         })
     }
 
+    /// `url` must start with the API version segment, `/v1.0/...` or `/beta/...`.
+    /// The base URL's path is joined per RFC 3986, so a leading `/` replaces it
+    /// entirely and the version is lost; Graph then reads the first path segment
+    /// as the version and returns an error document rather than data.
     pub async fn get_url(&self, url: &str) -> Result<Vec<Value>> {
         let current_client: graph_http::api_impl::Client = graph_http::api_impl::Client::builder()
             .client_application(self.client_application.clone())
@@ -173,14 +177,14 @@ impl MsGraph {
     /// https://learn.microsoft.com/en-us/graph/api/resources/groupsetting?view=graph-rest-1.0
     /// The /beta version of this resource is named directorySetting.
     pub async fn list_group_settings(&self) -> Result<GroupSettings> {
-        let result = self.get_url("/groupSettings").await?;
+        let result = self.get_url("/v1.0/groupSettings").await?;
         Ok(GroupSettings { inner: result })
     }
 
     pub async fn list_role_eligibility_schedule_instance(
         &self,
     ) -> Result<RoleEligibilityScheduleInstance> {
-        let result = self.get_url("/roleManagement/directory/roleEligibilityScheduleInstances?$expand=activatedUsing,appScope,directoryScope,principal,roleDefinition").await?;
+        let result = self.get_url("/beta/roleManagement/directory/roleEligibilityScheduleInstances?$expand=appScope,directoryScope,principal,roleDefinition").await?;
         Ok(RoleEligibilityScheduleInstance { inner: result })
     }
 
@@ -220,7 +224,7 @@ impl MsGraph {
 
     /// M365 V2 1.1.17
     pub async fn list_legacy_policies(&self) -> Result<LegacyPolicies> {
-        let result = self.get_url("/legacy/policies").await?;
+        let result = self.get_url("/beta/legacy/policies").await?;
         Ok(LegacyPolicies { inner: result })
     }
 
@@ -482,7 +486,7 @@ impl MsGraph {
 
     /// 1.22
     pub async fn get_device_registration_policy(&self) -> Result<DeviceRegistrationPolicy> {
-        let result = self.get_url("/policies/deviceRegistrationPolicy").await?;
+        let result = self.get_url("/beta/policies/deviceRegistrationPolicy").await?;
         Ok(DeviceRegistrationPolicy { inner: result })
     }
 }
