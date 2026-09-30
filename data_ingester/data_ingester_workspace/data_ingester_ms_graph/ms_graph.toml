@@ -50,6 +50,13 @@ admin_consent_request_policy = { endpoint = "/v1.0/policies/adminConsentRequestP
   { filename = "CIS_Microsoft_365_Foundations_Benchmark_v2.0.0.pdf", control_ = "" },
 ] }
 
+# Whether an external person can create an account in the tenant without being
+# invited. authorizationPolicy.allowInvitesFrom governs the invitation route;
+# this governs the self-service one.
+authentication_flows_policy = { endpoint = "/v1.0/policies/authenticationFlowsPolicy", permissions_required = [
+  "Policy.Read.All",
+] }
+
 # sourcetype is pinned because DCAP searches it by name: ssphp_use_case_m365_001_cis_1-1-5
 authentication_methods_policy = { endpoint = "/v1.0/policies/authenticationMethodsPolicy", source = "msgraph", sourcetype = "m365:authentication_methods_policy", permissions_required = [
   "",
@@ -115,6 +122,21 @@ admin_forms = { endpoint = "/beta/admin/forms", permissions_required = [
   "",
 ], cis_controls = [
   { filename = "CIS_Microsoft_365_Foundations_Benchmark_v2.0.0.pdf", control_id = "2.10" },
+] }
+
+# What must be satisfied before a directory role can be used: the approval, MFA,
+# justification and authentication-context rules, and the maximum activation,
+# assignment and eligibility durations. The roleAssignment/roleEligibility entries
+# above say who holds a role; this says on what terms.
+#
+# The $filter is required by this endpoint rather than optional — without it the
+# call fails. Microsoft's own documentation is inconsistent about the scopeType
+# value: one example filters 'Directory' and one 'DirectoryRole', for the same
+# tenant and the same role. The wrong value does not error, it returns an empty
+# collection, so check the first run returns a record per directory role rather
+# than nothing.
+role_management_policy_assignments = { endpoint = "/v1.0/policies/roleManagementPolicyAssignments?$filter=scopeId eq '/' and scopeType eq 'DirectoryRole'&$expand=policy($expand=rules)", permissions_required = [
+  "RoleManagementPolicy.Read.Directory",
 ] }
 
 role_definitions = { endpoint = "/beta/roleManagement/directory/roleDefinitions", permissions_required = [
