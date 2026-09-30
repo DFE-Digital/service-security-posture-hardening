@@ -3,7 +3,6 @@ use serde::Serialize;
 use serde_with::skip_serializing_none;
 use std::borrow::Cow;
 
-
 // https://learn.microsoft.com/en-us/graph/api/resources/group?view=graph-rest-1.0
 #[skip_serializing_none]
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -43,7 +42,6 @@ pub struct Group {
     // "theme": Null,
     pub(crate) visibility: Option<String>,
 }
-
 
 #[derive(Debug, Serialize, Deserialize, Default, Clone)]
 pub struct Groups<'a> {

@@ -335,7 +335,6 @@ impl MsGraph {
         let body = response.json().await?;
         Ok(body)
     }
-
 }
 
 // #[derive(Debug, Serialize, Deserialize, Default)]
