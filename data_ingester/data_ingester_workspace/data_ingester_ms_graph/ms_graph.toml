@@ -27,6 +27,39 @@ groups = { endpoint = "/v1.0/groups", permissions_required = [
   { filename = "CIS_Microsoft_365_Foundations_Benchmark_v2.0.0.pdf", control_id = "" },
 ] }
 
+# Resolves the applications a Conditional Access policy includes or excludes.
+#
+# JOIN ON appId, NOT id. A CA policy names applications by their client id in
+# conditions.applications.includeApplications and excludeApplications. On a
+# servicePrincipal that is `appId`; `id` is the directory object id and will not
+# match. The special values "All", "None", "Office365" and "MicrosoftAdminPortals"
+# appear in place of a GUID and resolve to nothing here, by design.
+#
+# The $select is deliberate, not laziness. A full servicePrincipal carries
+# appRoles and oauth2PermissionScopes, which for a large application runs to tens
+# of thousands of characters. Splunk stops extracting JSON fields after
+# [kv] maxchars, 10,240 by default, so an oversized record arrives whole and
+# yields no fields at all — measured on the user feed as 23.8% of records. Extend
+# this list once the feed is proven, a few properties at a time: one property
+# Graph does not recognise fails the whole call with BadRequest.
+#
+# Deliberately not collected, ask if wanted: appRoles, oauth2PermissionScopes,
+# keyCredentials, passwordCredentials, replyUrls, owners.
+service_principals = { endpoint = "/v1.0/servicePrincipals?$select=id,appId,displayName,servicePrincipalType,accountEnabled,appOwnerOrganizationId,signInAudience,appRoleAssignmentRequired,publisherName,tags", permissions_required = [
+  "Application.Read.All",
+] }
+
+# This tenant's own app registrations. An application is the definition; the
+# servicePrincipal above is its instance in a tenant. A CA policy references the
+# servicePrincipal side, so this is for questions about what we have registered
+# rather than for resolving policy references.
+#
+# Same $select discipline as above. Deliberately not collected, ask if wanted:
+# requiredResourceAccess, api, web, keyCredentials, passwordCredentials, owners.
+applications = { endpoint = "/v1.0/applications?$select=id,appId,displayName,signInAudience,createdDateTime,publisherDomain,identifierUris,tags", permissions_required = [
+  "Application.Read.All",
+] }
+
 conditional_access_polices = { endpoint = "/v1.0/identity/conditionalAccess/policies", permissions_required = [
   "",
 ], cis_controls = [
@@ -48,6 +81,15 @@ admin_consent_request_policy = { endpoint = "/v1.0/policies/adminConsentRequestP
 ], cis_controls = [
   { filename = "CIS_Microsoft_365_Foundations_Benchmark_v2.0.0.pdf", control_id = "" },
   { filename = "CIS_Microsoft_365_Foundations_Benchmark_v2.0.0.pdf", control_ = "" },
+] }
+
+# Resolves grantControls.authenticationStrength.id in a Conditional Access policy
+# into what that strength actually demands: allowedCombinations lists the accepted
+# method combinations, requirementsSatisfied says whether it counts as MFA, and
+# policyType separates builtIn from custom. Returns both built-in and custom
+# policies. Small: three built-ins plus whatever has been defined here.
+authentication_strength_policies = { endpoint = "/v1.0/policies/authenticationStrengthPolicies", permissions_required = [
+  "Policy.Read.AuthenticationMethod",
 ] }
 
 # Whether an external person can create an account in the tenant without being
