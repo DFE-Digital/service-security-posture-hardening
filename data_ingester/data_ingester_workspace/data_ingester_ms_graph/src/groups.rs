@@ -1,10 +1,7 @@
-// use crate::splunk::ToHecEvents;
 use serde::Deserialize;
 use serde::Serialize;
 use serde_with::skip_serializing_none;
 use std::borrow::Cow;
-
-use data_ingester_splunk::splunk::ToHecEvents;
 
 // https://learn.microsoft.com/en-us/graph/api/resources/group?view=graph-rest-1.0
 #[skip_serializing_none]
@@ -44,25 +41,6 @@ pub struct Group {
     // "serviceProvisioningErrors": Array [],
     // "theme": Null,
     pub(crate) visibility: Option<String>,
-}
-
-impl<'a> ToHecEvents for &Groups<'a> {
-    type Item = Cow<'a, Group>;
-    fn source(&self) -> &str {
-        "msgraph"
-    }
-
-    fn sourcetype(&self) -> &str {
-        "SSPHP.AAD.group"
-    }
-
-    fn collection<'i>(&'i self) -> Box<dyn Iterator<Item = &'i Self::Item> + 'i> {
-        Box::new(self.inner.iter())
-    }
-
-    fn ssphp_run_key(&self) -> &str {
-        "m365"
-    }
 }
 
 #[derive(Debug, Serialize, Deserialize, Default, Clone)]
