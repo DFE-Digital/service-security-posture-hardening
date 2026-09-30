@@ -23,40 +23,54 @@ use std::ops::Deref;
 use tracing::warn;
 
 // https://learn.microsoft.com/en-us/graph/api/resources/user?view=graph-rest-1.0
+//
+// FIELD ORDER IS LOAD-BEARING. serde serialises in declaration order, and Splunk's
+// search-time JSON extraction stops after `[kv] maxchars` — 10,240 characters by
+// default. Any field past that point is never extracted, so the event is present and
+// keyword-searchable but invisible to every field-based search.
+//
+// Measured 2026-09-30 with `assignedPlans` serialising first: 10,150 of 42,594 user
+// records, 23.8%, yielded no fields at all. Identifiers first, then the unbounded
+// collections, keeps every field a search filters on inside the first few hundred bytes.
+// Do not reorder these into alphabetical or any other order.
 #[skip_serializing_none]
 #[derive(Debug, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct User<'a> {
-    is_privileged: Option<bool>,
-    pub account_enabled: Option<bool>,
-    #[serde(skip_serializing_if = "Vec::is_empty")]
-    assigned_plans: Vec<AssignedPlan>,
-    // business_phones: Option<Vec<String>>,
-    description: Option<String>,
-    pub(crate) display_name: Option<String>,
-    given_name: Option<String>,
+    // Identifiers and scalars: always within the extraction window.
     pub(crate) id: String,
-    //job_title: Option<String>,
+    pub(crate) display_name: Option<String>,
+    user_principal_name: Option<String>,
+    pub account_enabled: Option<bool>,
+    is_privileged: Option<bool>,
+    user_type: Option<String>,
     mail: Option<String>,
-    //mobile_phone: Option<String>,
-    //office_location: Option<String>,
+    given_name: Option<String>,
+    surname: Option<String>,
+    description: Option<String>,
     on_premises_sam_account_name: Option<String>,
     pub(crate) on_premises_sync_enabled: Option<bool>,
-    //preferred_language: Option<String>,
-    surname: Option<String>,
-    pub(crate) transitive_member_of: Option<Vec<GroupOrRole>>,
-    user_principal_name: Option<String>,
     // Requires scope: AuditLog.Read.All
     sign_in_activity: Option<Value>,
-    user_type: Option<String>,
 
-    // Custom attributes
+    // Not selected from Graph:
+    // business_phones: Option<Vec<String>>,
+    // job_title: Option<String>,
+    // mobile_phone: Option<String>,
+    // office_location: Option<String>,
+    // preferred_language: Option<String>,
+
+    // Unbounded collections: these are what push a record past the extraction limit,
+    // so they serialise last, least-used first.
     #[serde(skip_deserializing)]
     pub azure_roles: Option<UserAzureRoles>,
     #[serde(skip_deserializing)]
-    conditional_access_policies: Option<Vec<UserConditionalAccessPolicy<'a>>>,
-    #[serde(skip_deserializing)]
     pim_member_of: Option<Vec<GroupOrRole>>,
+    #[serde(skip_deserializing)]
+    conditional_access_policies: Option<Vec<UserConditionalAccessPolicy<'a>>>,
+    pub(crate) transitive_member_of: Option<Vec<GroupOrRole>>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    assigned_plans: Vec<AssignedPlan>,
 }
 
 /// Used to represent an AAD users roles in Azure (Cloud) subscriptions
