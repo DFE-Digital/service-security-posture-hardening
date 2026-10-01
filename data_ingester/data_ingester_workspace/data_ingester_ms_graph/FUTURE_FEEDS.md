@@ -36,3 +36,22 @@ Access policy references; `id` is the directory object id and will not match.
 Note for `keyCredentials` on service principals specifically: Graph does not return the `key`
 value when listing, and selecting it carries a documented throttling limit of 150 requests per
 minute per tenant.
+
+---
+
+## `/policies/` children we do not collect
+
+We collect nine of the `policyRoot` children. These six we do not. Each is one `ms_graph.toml`
+entry, and `Policy.Read.All` — already granted — covers them.
+
+| Endpoint | Answers |
+|---|---|
+| `/v1.0/policies/crossTenantAccessPolicy` | per-partner B2B settings: inbound and outbound access, and whether MFA satisfied in the partner tenant is trusted here |
+| `/v1.0/policies/appManagementPolicies` | restrictions on app and service principal credentials, such as banning password secrets or capping certificate lifetime |
+| `/v1.0/policies/homeRealmDiscoveryPolicies` | which applications bypass the Entra sign-in page and go straight to a federated identity provider |
+| `/v1.0/policies/tokenIssuancePolicies` | SAML token signing behaviour for individual applications |
+| `/v1.0/policies/claimsMappingPolicies` | custom claims issued in tokens for individual applications |
+| `/v1.0/policies/featureRolloutPolicies` | who is opted into a staged rollout, for example passwordless or a change of cloud authentication method |
+
+Descriptions are of the Graph resources, not of anything measured here — nothing in this list is
+collected, so none of it has been seen in this tenant.
