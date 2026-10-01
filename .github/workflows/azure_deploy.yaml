@@ -10,6 +10,8 @@ on:
       - '!data_ingester/terraform/infrastructure_for_test/**'
   workflow_dispatch:
 
+concurrency: deploy-data-ingester
+
 env:
   RUST_VERSION: "nightly"
 
