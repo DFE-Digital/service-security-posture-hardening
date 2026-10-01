@@ -41,7 +41,6 @@ AWS,ssphp_use_case_dns_dfe_2-0,ssphp_metrics_data,groups,ssphp:aws:json,
 AWS,ssphp_use_case_dns_dfe_3-0,aws_cloudtrail,,,
 AWS,ssphp_use_case_dns_dfe_5-0,ssphp_metrics_data,hosted_zones_from_dns,ssphp:aws:json,
 AZURE,ssphp_use_case_azure_001_cis_1-1-1,ssphp_metrics_data,,m365:identitySecurityDefaultsEnforcementPolicy,
-AZURE,ssphp_use_case_azure_001_cis_1-1-4,ssphp_metrics_data,,m365:control_score,controlName=~aad_sign_in_freq_session_timeout~
 AZURE,ssphp_use_case_azure_001_cis_1-2-1,ssphp_metrics_data,/v1.0/identity/conditionalAccess/namedLocations,ssphp:ms_graph:json,
 AZURE,ssphp_use_case_azure_001_cis_1-2-2,ssphp_metrics_data,/v1.0/identity/conditionalAccess/policies,ssphp:ms_graph:json,
 AZURE,ssphp_use_case_azure_001_cis_1-2-4,ssphp_metrics_data,/v1.0/identity/conditionalAccess/policies,ssphp:ms_graph:json,
@@ -156,9 +155,9 @@ M365,ssphp_use_case_m365_001_cis_1-1-8,ssphp_metrics_data,/beta/reports/authenti
 M365,ssphp_use_case_m365_001_cis_1-1-9,ssphp_metrics_data,/v1.0/groupSettings,ssphp:ms_graph:json,
 M365,ssphp_use_case_m365_001_cis_1-1-10,ssphp_metrics_data,/v1.0/groupSettings,ssphp:ms_graph:json,
 M365,ssphp_use_case_m365_001_cis_1-1-11,ssphp_metrics_data,/v1.0/identity/conditionalAccess/policies,ssphp:ms_graph:json,
-M365,ssphp_use_case_m365_001_cis_1-1-12,ssphp_metrics_data,,m365:control_score,controlName=~PasswordHashSync~
+M365,ssphp_use_case_m365_001_cis_1-1-12,ssphp_metrics_data,/v1.0/organization,ssphp:ms_graph:json,
 M365,ssphp_use_case_m365_001_cis_1-1-13,ssphp_metrics_data,/v1.0/identity/conditionalAccess/policies,ssphp:ms_graph:json,
-M365,ssphp_use_case_m365_001_cis_1-1-14,ssphp_metrics_data,,m365:control_score,controlName=~UserRiskPolicy~
+M365,ssphp_use_case_m365_001_cis_1-1-14,ssphp_metrics_data,,SSPHP.AAD.conditional_access_policy,
 M365,ssphp_use_case_m365_001_cis_1-1-15,ssphp_metrics_data,/*/roleManagement/directory/roleAssignmentScheduleInstances*,ssphp:ms_graph:json,
 M365,ssphp_use_case_m365_001_cis_1-1-16,ssphp_metrics_data,/v1.0/groups,ssphp:ms_graph:json,
 M365,ssphp_use_case_m365_001_cis_1-1-17,ssphp_metrics_data,/beta/legacy/policies,ssphp:ms_graph:json,type=~B2BManagementPolicy~
@@ -169,14 +168,14 @@ M365,ssphp_use_case_m365_001_cis_1-5,ssphp_metrics_data,,SSPHP.AAD.user,isPrivil
 M365,ssphp_use_case_m365_001_cis_1-7,ssphp_metrics_data,/v1.0/identity/conditionalAccess/policies,ssphp:ms_graph:json,
 M365,ssphp_use_case_m365_001_cis_1-7,ssphp_metrics_data,,ssphp:ms_graph:json,type=~ActivityBasedTimeoutPolicy~
 M365,ssphp_use_case_m365_002_cis_2-1,ssphp_metrics_data,,m365:admin_consent_policy,
-M365,ssphp_use_case_m365_002_cis_2-2,ssphp_metrics_data,,m365:control_score,controlName=~IntegratedApps~
+M365,ssphp_use_case_m365_002_cis_2-2,ssphp_metrics_data,/beta/policies/authorizationPolicy,ssphp:ms_graph:json,
 M365,ssphp_use_case_m365_002_cis_2-3,ssphp_metrics_data,,m365:sharing_policy,
 M365,ssphp_use_case_m365_002_cis_2-4,ssphp_metrics_data,,m365:safe_links_policy,
 M365,ssphp_use_case_m365_002_cis_2-5,ssphp_metrics_data,,m365:atp_policy_for_o365,
 M365,ssphp_use_case_m365_001_cis_2-7,ssphp_metrics_data,/beta/policies/authorizationPolicy,ssphp:ms_graph:json,
 M365,ssphp_use_case_m365_002_cis_2-8,ssphp_metrics_data,,m365:get_management_role_assignment,
 M365,ssphp_use_case_m365_001_cis_2-10,ssphp_metrics_data,/beta/admin/forms,ssphp:ms_graph:json,
-M365,ssphp_use_case_m365_003_cis_3-1,ssphp_metrics_data,,m365:control_score,controlName=~CustomerLockboxEnabled~
+M365,ssphp_use_case_m365_003_cis_3-1,ssphp_metrics_data,,m365:organization_config,
 M365,ssphp_use_case_m365_003_cis_3-3,ssphp_metrics_data,,m365:get_cs_teams_tenant_federation_configuration,
 M365,ssphp_use_case_m365_003_cis_3-4,ssphp_metrics_data,,m365:dlp_compliance_policy,
 M365,ssphp_use_case_m365_003_cis_3-5,ssphp_metrics_data,,m365:dlp_compliance_policy,
@@ -205,8 +204,8 @@ M365,ssphp_use_case_m365_005_cis_5-1-1,ssphp_metrics_data,/v1.0/identityGovernan
 M365,ssphp_use_case_m365_005_cis_5-1-2,ssphp_metrics_data,/v1.0/identityGovernance/accessReviews/definitions,ssphp:ms_graph:json,
 M365,ssphp_use_case_m365_005_cis_5-2,ssphp_metrics_data,,m365:admin_audit_log_config,
 M365,ssphp_use_case_m365_005_cis_5-3,ssphp_metrics_data,,m365:organization_config,
-M365,ssphp_use_case_m365_006_cis_6-1,ssphp_metrics_data,,m365:control_score,controlName=~spo_external_sharing_managed~
-M365,ssphp_use_case_m365_006_cis_6-2,ssphp_metrics_data,,m365:control_score,controlName=~spo_block_onedrive_sync_unmanaged_devices~
+M365,ssphp_use_case_m365_006_cis_6-1,ssphp_metrics_data,/v1.0/security/secureScores,ssphp:ms_graph:json,controlName=~spo_external_sharing_managed~
+M365,ssphp_use_case_m365_006_cis_6-2,ssphp_metrics_data,/v1.0/security/secureScores,ssphp:ms_graph:json,controlName=~spo_block_onedrive_sync_unmanaged_devices~
 M365,ssphp_use_case_m365_006_cis_6-4,ssphp_metrics_data,,m365:owa_mailbox_policy,
 M365,ssphp_use_case_m365_006_cis_6-5,ssphp_metrics_data,,m365:owa_mailbox_policy,
 AAD,ssphp_use_case_aad_dfe_1-0,ssphp_metrics_data,,SSPHP.AAD.user,
