@@ -60,6 +60,36 @@ applications = { endpoint = "/v1.0/applications?$select=id,appId,displayName,sig
   "Application.Read.All",
 ] }
 
+# Entra ID Protection: who is currently flagged as risky. A current-state list, one
+# record per risky user with riskLevel, riskState, riskDetail and
+# riskLastUpdatedDateTime, so a daily snapshot is the right shape for it.
+#
+# Needs Entra ID P1 or P2. IdentityRiskyUser.Read.All is the only application
+# permission for this endpoint; there is no higher-privileged alternative.
+risky_users = { endpoint = "/v1.0/identityProtection/riskyUsers", permissions_required = [
+  "IdentityRiskyUser.Read.All",
+] }
+
+# Entra ID Protection: the individual risk detections. $top=500 because the default
+# page size is 20 and 500 is the documented maximum.
+#
+# READ THIS BEFORE BUILDING ON IT. Unlike everything else in this file, these are
+# events rather than state, and the collector has no notion of "since the last run".
+# Every run re-fetches the whole retained set, so the same detection arrives once per
+# run and the volume in Splunk grows as runs x retained detections, not as detections.
+# Deduplicate on `id` in any search. The endpoint does support $filter on
+# detectedDateTime, which would fix this properly, but a toml endpoint is a static
+# string and cannot carry a moving date — that needs collector support.
+#
+# Measure the volume on the first run before anything depends on it: if the retained
+# set is large, the duplication is the thing to deal with first.
+#
+# Needs Entra ID P1 or P2. IdentityRiskEvent.Read.All is the only application
+# permission for this endpoint; there is no higher-privileged alternative.
+risk_detections = { endpoint = "/v1.0/identityProtection/riskDetections?$top=500", permissions_required = [
+  "IdentityRiskEvent.Read.All",
+] }
+
 conditional_access_polices = { endpoint = "/v1.0/identity/conditionalAccess/policies", permissions_required = [
   "",
 ], cis_controls = [
