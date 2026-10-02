@@ -64,9 +64,16 @@ applications = { endpoint = "/v1.0/applications?$select=id,appId,displayName,sig
 # record per risky user with riskLevel, riskState, riskDetail and
 # riskLastUpdatedDateTime, so a daily snapshot is the right shape for it.
 #
+# $top=500 is the documented maximum page size. Added 2026-10-02 after the first run
+# returned a TooManyRequests error document alongside its 821 records: without $top
+# the feed pages at the Graph default, and risk_detections, which already had $top,
+# was not throttled in the same run. The reference states no default page size for
+# this endpoint, so the number of requests saved is not known, only that 821 records
+# now take two.
+#
 # Needs Entra ID P1 or P2. IdentityRiskyUser.Read.All is the only application
 # permission for this endpoint; there is no higher-privileged alternative.
-risky_users = { endpoint = "/v1.0/identityProtection/riskyUsers", permissions_required = [
+risky_users = { endpoint = "/v1.0/identityProtection/riskyUsers?$top=500", permissions_required = [
   "IdentityRiskyUser.Read.All",
 ] }
 
