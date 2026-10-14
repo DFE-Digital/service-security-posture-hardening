@@ -185,7 +185,7 @@ async fn post_azure(
             data_ingester_azure::SSPHP_RUN_KEY,
             state.azure_lock.clone(),
             state,
-            data_ingester_azure::azure_users,
+            data_ingester_azure::azure_iam,
             headers,
             payload.unwrap_or(None),
         )

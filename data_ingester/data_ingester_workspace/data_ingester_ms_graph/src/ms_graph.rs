@@ -3,6 +3,8 @@ use crate::conditional_access_policies::ConditionalAccessPolicy;
 use crate::msgraph_data::load_m365_toml;
 use crate::role_assignment_schedule::RoleSchedules;
 use crate::roles::RoleDefinitions;
+use crate::service_principals::ServicePrincipals;
+use crate::service_principals::ServicePrincipalsMap;
 use crate::users::Users;
 use crate::users::UsersMap;
 use anyhow::{Context, Result};
@@ -139,6 +141,74 @@ impl MsGraph {
                     }
                 };
                 user.transitive_member_of = transitive_member_of
+                    .into_iter()
+                    .filter_map(|membership| {
+                        match serde_json::from_value(membership.clone()) {
+                            Ok(result) => Some(result),
+                            Err(err) => {
+                                error!(error=?err, value=?membership, "Failed to deserialize Value to GroupOrRole");
+                                None
+                            }
+                        }
+                    })
+                    .collect();
+                Ok(())
+            };
+            tasks.push(task);
+        }
+        let stream = futures::stream::iter(tasks).buffer_unordered(10);
+        let _results = stream.collect::<Vec<_>>().await;
+
+        Ok(())
+    }
+
+    /// The service principal equivalent of `get_transitive_members_of_for_users`.
+    ///
+    /// WHY A PER-PRINCIPAL CALL AND NOT `$expand`. The collection-level call below does carry
+    /// `$expand=transitiveMemberOf`, exactly as the user stream does, and for the same reason it
+    /// is not enough on its own: GRAPH CAPS EXPANDED COLLECTIONS, so a principal with more
+    /// memberships than the cap comes back truncated and silently looks less privileged than it
+    /// is. That is why the user path does both, and this one has to as well. Confirmed by Alex,
+    /// 2026-10-14.
+    ///
+    /// COST, stated rather than buried: one call per enabled service principal, about 14,000 in
+    /// this tenant against the roughly 20,000 the user path already makes, at the same
+    /// concurrency of 10. The alternative considered was a group-side fetch -
+    /// `/v1.0/groups/{id}/transitiveMembers` for the ~40 role-assignable groups, 40 calls for the
+    /// same answer - which is far cheaper but needs machinery that does not exist, where this
+    /// mirrors code that is already proven in production.
+    ///
+    /// Disabled principals are skipped, the same rule the user path applies, so the enabled
+    /// filter happens at collection time rather than in every search downstream.
+    ///
+    /// Errors are logged per principal and NOT propagated, matching the user path: one service
+    /// principal that cannot be read must not abandon the other 14,000. A principal whose call
+    /// failed keeps `transitive_member_of` unset, which reads as "no memberships known" rather
+    /// than "no memberships" - the distinction matters when this is used to build a privileged
+    /// population, so an unset value must never be treated as an empty one.
+    pub async fn get_transitive_members_of_for_service_principals(
+        &self,
+        service_principals: &mut ServicePrincipalsMap,
+    ) -> Result<()> {
+        let mut tasks = vec![];
+        for service_principal in service_principals.inner.values_mut() {
+            if !service_principal.account_enabled.unwrap_or_default() {
+                continue;
+            }
+
+            let task = async {
+                let url = format!(
+                    "/v1.0/servicePrincipals/{}/transitiveMemberOf",
+                    service_principal.id
+                );
+                let transitive_member_of = match self.get_url(&url).await {
+                    Ok(result) => result,
+                    Err(error) => {
+                        error!(error=?error, url=?url, "Failed to get ServicePrincipal transitiveMemberOf");
+                        return Err(error);
+                    }
+                };
+                service_principal.transitive_member_of = transitive_member_of
                     .into_iter()
                     .filter_map(|membership| {
                         match serde_json::from_value(membership.clone()) {
@@ -303,6 +373,78 @@ impl MsGraph {
             sender
                 .send(users_map)
                 .expect("Unable to send Users to channel");
+        }
+
+        Ok(())
+    }
+
+    /// The service principal equivalent of `list_users_channel`.
+    ///
+    /// Streams service principals into a channel in pages of 999 so the consumer can enrich one
+    /// batch while the next is still being fetched, which is what the user path does.
+    ///
+    /// THE `$select` IS DELIBERATE, NOT LAZINESS, and is the same list the `service_principals`
+    /// entry in ms_graph.toml uses. A full servicePrincipal carries `appRoles` and
+    /// `oauth2PermissionScopes`, which for a large application run to tens of thousands of
+    /// characters; Splunk stops extracting JSON fields after `[kv] maxchars`, 10,240 by default,
+    /// so an oversized record arrives whole and yields NO fields at all - measured on the user
+    /// feed as 23.8% of records. Extend this list a few properties at a time once the feed is
+    /// proven: ONE PROPERTY GRAPH DOES NOT RECOGNISE FAILS THE WHOLE CALL with BadRequest.
+    ///
+    /// `transitiveMemberOf` is both selected and expanded here, as on the user stream, but it is
+    /// NOT sufficient on its own - Graph caps expanded collections, so
+    /// `get_transitive_members_of_for_service_principals` has to run over the result as well.
+    pub async fn list_service_principals_channel(
+        &self,
+        sender: UnboundedSender<ServicePrincipalsMap>,
+    ) -> Result<()> {
+        let mut stream = self
+            .beta_client
+            .service_principals()
+            .list_service_principal()
+            .select(&[
+                "accountEnabled",
+                "appId",
+                "appOwnerOrganizationId",
+                "appRoleAssignmentRequired",
+                "displayName",
+                "id",
+                "publisherName",
+                "servicePrincipalType",
+                "signInAudience",
+                "tags",
+                "transitiveMemberOf",
+            ])
+            .expand(&["transitiveMemberOf"])
+            .top("999")
+            .paging()
+            .stream::<ServicePrincipals>()?;
+
+        let mut total_service_principals = 0;
+        let mut batch = 1;
+
+        while let Some(result) = stream.next().await {
+            let response = result?;
+
+            let service_principals = response.into_body()?;
+
+            total_service_principals += service_principals.value.len();
+
+            info!(
+                "Getting service principals batch {}, total service principals: {}",
+                batch, total_service_principals
+            );
+            batch += 1;
+
+            let mut service_principals_map = ServicePrincipalsMap::default();
+
+            service_principals_map
+                .extend_from_service_principals(service_principals)
+                .context("unable to extend service principals")?;
+
+            sender
+                .send(service_principals_map)
+                .expect("Unable to send ServicePrincipals to channel");
         }
 
         Ok(())
