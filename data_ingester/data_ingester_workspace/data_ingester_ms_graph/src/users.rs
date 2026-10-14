@@ -192,17 +192,47 @@ impl User<'_> {
         tmo_roles.chain(pmo_roles).collect()
     }
 
+    /// Every directory role on this principal, mutably - from BOTH membership collections.
+    ///
+    /// IT MUST READ `pim_member_of` AS WELL AS `transitive_member_of`, and until 2026-10-14 it
+    /// read only the latter while its immutable twin `roles()` read both. `set_is_privileged` is
+    /// the caller, so the consequence was that `isPrivileged` could not see:
+    ///
+    ///   - any PIM-ELIGIBLE directory role, and
+    ///   - any directory role held THROUGH A ROLE-ASSIGNABLE GROUP
+    ///
+    /// because `pim_member_of` is the only place either is recorded. Graph's `transitiveMemberOf`
+    /// returns the GROUP a principal belongs to, not the role that group holds, which is the
+    /// whole reason `add_pim_membership` walks group->role from the PIM schedules.
+    ///
+    /// MEASURED SYMPTOM, 2026-10-14: of the 10 principals eligible for Global Administrator, only
+    /// 3 carried `isPrivileged=true` - and 22 accounts were flagged estate-wide against roughly
+    /// 177 that actually hold Entra privilege. Anything downstream treating that flag as the
+    /// privileged population was under-counting by about eight to one.
+    ///
+    /// The two fields are disjoint, so holding a mutable borrow of each at once is legal.
     pub fn roles_mut(&mut self) -> Vec<&mut DirectoryRole> {
-        if let Some(tmo) = self.transitive_member_of.as_mut() {
-            tmo.iter_mut()
-                .filter_map(|dir_object| match dir_object {
-                    GroupOrRole::Group(_) => None,
-                    GroupOrRole::Role(role) => Some(role),
-                })
-                .collect::<Vec<&mut DirectoryRole>>()
-        } else {
-            Vec::new()
-        }
+        let transitive_roles = self
+            .transitive_member_of
+            .as_mut()
+            .map(|tmo| tmo.iter_mut())
+            .into_iter()
+            .flatten();
+
+        let pim_roles = self
+            .pim_member_of
+            .as_mut()
+            .map(|pmo| pmo.iter_mut())
+            .into_iter()
+            .flatten();
+
+        transitive_roles
+            .chain(pim_roles)
+            .filter_map(|dir_object| match dir_object {
+                GroupOrRole::Group(_) => None,
+                GroupOrRole::Role(role) => Some(role),
+            })
+            .collect::<Vec<&mut DirectoryRole>>()
     }
 
     pub fn set_is_privileged(&mut self, role_definitions: &EntraRoleDefinitions) {
@@ -470,5 +500,127 @@ impl<'a> Deref for Users<'a> {
 
     fn deref(&self) -> &Self::Target {
         &self.value[..]
+    }
+}
+
+#[cfg(test)]
+mod set_is_privileged_tests {
+    use super::*;
+    use crate::roles::RoleDefinitions as EntraRoleDefinitions;
+
+    /// A role definition set that marks `privileged-role-id` as privileged and
+    /// `ordinary-role-id` as not.
+    fn role_definitions() -> EntraRoleDefinitions {
+        serde_json::from_value(serde_json::json!({
+            "value": [
+                {
+                    "id": "privileged-role-id",
+                    "displayName": "Global Administrator",
+                    "isPrivileged": true
+                },
+                {
+                    "id": "ordinary-role-id",
+                    "displayName": "Message Center Reader",
+                    "isPrivileged": false
+                }
+            ]
+        }))
+        .expect("role definitions should deserialize")
+    }
+
+    fn role(role_definition_id: &str) -> GroupOrRole {
+        GroupOrRole::Role(DirectoryRole {
+            id: role_definition_id.to_owned(),
+            display_name: None,
+            role_template_id: role_definition_id.to_owned(),
+            members: None,
+            is_privileged: None,
+        })
+    }
+
+    /// REGRESSION TEST for the defect fixed on 2026-10-14.
+    ///
+    /// `roles_mut()` read only `transitive_member_of`, so a privileged role recorded in
+    /// `pim_member_of` was invisible to `set_is_privileged`. `pim_member_of` is the ONLY place a
+    /// PIM-eligible role, or a role held through a role-assignable group, is recorded - Graph's
+    /// `transitiveMemberOf` returns the group, not the role the group holds.
+    ///
+    /// Measured symptom before the fix: 3 of 10 principals eligible for Global Administrator
+    /// carried `isPrivileged = true`.
+    #[test]
+    fn privileged_role_in_pim_member_of_is_seen() {
+        let mut user = User::new("user-1".to_owned(), "User One".to_owned());
+        user.pim_member_of = Some(vec![role("privileged-role-id")]);
+
+        user.set_is_privileged(&role_definitions());
+
+        assert_eq!(
+            user.is_privileged,
+            Some(true),
+            "a privileged role held only through PIM or a group must set isPrivileged"
+        );
+    }
+
+    /// The route that already worked must keep working.
+    #[test]
+    fn privileged_role_in_transitive_member_of_is_seen() {
+        let mut user = User::new("user-2".to_owned(), "User Two".to_owned());
+        user.transitive_member_of = Some(vec![role("privileged-role-id")]);
+
+        user.set_is_privileged(&role_definitions());
+
+        assert_eq!(user.is_privileged, Some(true));
+    }
+
+    /// Both collections are read, not one or the other.
+    #[test]
+    fn both_collections_are_read() {
+        let mut user = User::new("user-3".to_owned(), "User Three".to_owned());
+        user.transitive_member_of = Some(vec![role("ordinary-role-id")]);
+        user.pim_member_of = Some(vec![role("privileged-role-id")]);
+
+        user.set_is_privileged(&role_definitions());
+
+        assert_eq!(user.is_privileged, Some(true));
+        assert_eq!(
+            user.roles_mut().len(),
+            2,
+            "roles_mut must return roles from both collections"
+        );
+    }
+
+    /// A principal holding only unprivileged roles is not flagged.
+    #[test]
+    fn unprivileged_roles_do_not_set_the_flag() {
+        let mut user = User::new("user-4".to_owned(), "User Four".to_owned());
+        user.transitive_member_of = Some(vec![role("ordinary-role-id")]);
+        user.pim_member_of = Some(vec![role("ordinary-role-id")]);
+
+        user.set_is_privileged(&role_definitions());
+
+        assert_eq!(user.is_privileged, Some(false));
+    }
+
+    /// A principal with no memberships at all is not flagged, and does not panic.
+    #[test]
+    fn no_memberships_is_not_privileged() {
+        let mut user = User::new("user-5".to_owned(), "User Five".to_owned());
+
+        user.set_is_privileged(&role_definitions());
+
+        assert_eq!(user.is_privileged, Some(false));
+        assert!(user.roles_mut().is_empty());
+    }
+
+    /// A role this tenant has no definition for cannot be judged, so it must not flag the
+    /// principal - `set_is_privileged` skips it rather than assuming either way.
+    #[test]
+    fn unknown_role_definition_does_not_set_the_flag() {
+        let mut user = User::new("user-6".to_owned(), "User Six".to_owned());
+        user.pim_member_of = Some(vec![role("a-role-we-have-no-definition-for")]);
+
+        user.set_is_privileged(&role_definitions());
+
+        assert_eq!(user.is_privileged, Some(false));
     }
 }
