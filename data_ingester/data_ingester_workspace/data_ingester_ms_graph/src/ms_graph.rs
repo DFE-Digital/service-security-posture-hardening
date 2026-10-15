@@ -230,38 +230,31 @@ impl MsGraph {
         Ok(())
     }
 
+    /// PIM ELIGIBILITY: the roles a principal may activate, not the ones it holds. These are the
+    /// rows that carry the 38 role-assignable groups, so a principal's privilege-through-a-group
+    /// depends entirely on them arriving.
+    ///
+    /// Deserialising is delegated to `RoleSchedules::from_values`, which PARTITIONS and logs every
+    /// rejected row in full. Both feeds used to do it inline with a `filter_map` that dropped
+    /// failures, which is how this feed was lost in silence for as long as it has been collected.
     pub async fn list_role_eligibility_schedules(&self) -> Result<RoleSchedules> {
         let result = self.get_url("/beta/roleManagement/directory/roleEligibilityScheduleInstances?$expand=activatedUsing,appScope,directoryScope,principal,roleDefinition").await?;
-        let schedules = result
-            .into_iter()
-            .filter_map(|v| {
-                match serde_json::from_value(v) {
-                    Ok(result) => Some(result),
-                    Err(error) => {
-                        error!(error=?error, "Failed to deserialize role_eligibility_schedules Value into RoleSchedule");
-                        None
-                    }
-                }
-            })
-            .collect();
-        Ok(RoleSchedules { inner: schedules })
+        Ok(RoleSchedules::from_values(
+            "roleEligibilityScheduleInstances",
+            result,
+        ))
     }
 
+    /// PIM ASSIGNMENTS: the roles a principal actually holds, standing or activated.
+    ///
+    /// Same partitioning and logging as the eligibility feed above, and deliberately through the
+    /// same function so the two cannot drift apart again.
     pub async fn list_role_assignment_schedules(&self) -> Result<RoleSchedules> {
         let result = self.get_url("/beta/roleManagement/directory/roleAssignmentScheduleInstances?$expand=appScope,directoryScope,principal,roleDefinition").await?;
-        let schedules = result
-            .into_iter()
-            .filter_map(|v| {
-                match serde_json::from_value(v) {
-                    Ok(result) => Some(result),
-                    Err(error) => {
-                        error!(error=?error, "Failed to deserialize role_assignment_schedules Value into RoleSchedule");
-                        None
-                    }
-                }
-            })
-            .collect();
-        Ok(RoleSchedules { inner: schedules })
+        Ok(RoleSchedules::from_values(
+            "roleAssignmentScheduleInstances",
+            result,
+        ))
     }
 
     // /// M365 V2 1.1.18
