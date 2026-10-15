@@ -27,7 +27,6 @@ use data_ingester_sarif::{Sarif, SarifHecs};
 use data_ingester_supporting::keyvault::GitHubApp;
 use github_response::GithubNextLink;
 use graphql_client::GraphQLQuery;
-use graphql_client::Response;
 use http_body_util::BodyExt;
 use octocrab::models::{ArtifactId, InstallationId};
 use octocrab::params::actions::ArchiveFormat;
@@ -877,22 +876,26 @@ impl OctocrabGit {
         let mut org_members = OrgMembers::default();
         while next_page {
             let query = OrgMemberQuery::build_query(variables.clone());
-            let response: Response<org_member_query::ResponseData> =
+            // `Octocrab::graphql` already unwraps the GraphQL response envelope:
+            // it returns the deserialized `data` field on success, or an
+            // `Err(Error::Graphql { .. })` if the response contained `errors`.
+            // So the type parameter here must be the query's `ResponseData`,
+            // not `graphql_client::Response<ResponseData>`.
+            let response_data: org_member_query::ResponseData =
                 self.client.graphql(&query).await?;
-            let organisation = &response
-                .data
-                .as_ref()
-                .context("data")?
-                .organization
-                .as_ref()
-                .context("org")?;
+            let organisation = response_data.organization.as_ref().with_context(|| {
+                format!(
+                    "No organization in org members GraphQL response for org '{}'",
+                    org_name
+                )
+            })?;
             let members_page_info = &organisation.members_with_role.page_info;
             next_page = members_page_info.has_next_page;
             variables
                 .members_after
                 .clone_from(&members_page_info.end_cursor);
             org_members
-                .extend(response)
+                .extend(response_data)
                 .context("add response to members")?;
         }
         Ok(org_members)
@@ -1123,7 +1126,104 @@ mod test {
     #[tokio::test]
     async fn test_github_graphql() -> Result<()> {
         let client = TestClient::new().await;
-        let _result = client.client.graphql_org_members_query("403ind").await?;
+        let org_members = client
+            .client
+            .graphql_org_members_query(&client.org_name)
+            .await
+            .context("Collecting Org Members")?;
+
+        assert!(
+            !org_members.is_empty(),
+            "Expected at least one Org Member to be collected for {}",
+            client.org_name
+        );
+
+        let events = (&org_members)
+            .to_hec_events()
+            .context("Serialize Org Members events")?;
+        client
+            .splunk
+            .send_batch(events)
+            .await
+            .context("Sending Org Members to Splunk")?;
+        // `send_batch` only queues events onto a channel for a background
+        // task to deliver; give that task time to actually POST to Splunk
+        // before the test (and its Tokio runtime) exits.
+        tokio::time::sleep(std::time::Duration::from_secs(5)).await;
+        Ok(())
+    }
+
+    /// Collect Org Members for the known "DFE-Digital" installation
+    /// specifically, to confirm the GraphQL collection works end to
+    /// end against a real Organization (rather than whichever
+    /// installation [`TestClient`] happens to pick first).
+    #[tokio::test]
+    async fn test_github_graphql_org_members_dfe_digital() -> Result<()> {
+        let secrets = get_keyvault_secrets(
+            &env::var("KEY_VAULT_NAME").expect("Need KEY_VAULT_NAME environment variable"),
+        )
+        .await?;
+
+        let splunk = Splunk::new(
+            secrets.splunk_host.as_ref().context("No value")?,
+            secrets.splunk_token.as_ref().context("No value")?,
+            true,
+        )?;
+
+        let github_app = secrets
+            .github_app
+            .as_ref()
+            .expect("Github App should be configured");
+        let client = OctocrabGit::new_from_app(github_app).context("Build OctocrabGit")?;
+
+        let installations = client
+            .client
+            .apps()
+            .installations()
+            .send()
+            .await
+            .context("Getting installations for github app")?;
+
+        let org_name = "DFE-Digital";
+        let mut found = false;
+        for installation in installations {
+            if installation.account.r#type != "Organization" {
+                continue;
+            }
+            if installation.account.login != org_name {
+                continue;
+            }
+            found = true;
+
+            let installation_client = client
+                .for_installation_id(installation.id)
+                .await
+                .context("build octocrabgit client")?;
+
+            let org_members = installation_client
+                .graphql_org_members_query(org_name)
+                .await
+                .context("Collecting Org Members")?;
+
+            assert!(
+                !org_members.is_empty(),
+                "Expected at least one Org Member to be collected for {}",
+                org_name
+            );
+
+            let events = (&org_members)
+                .to_hec_events()
+                .context("Serialize Org Members events")?;
+            splunk
+                .send_batch(events)
+                .await
+                .context("Sending Org Members to Splunk")?;
+        }
+        assert!(found, "No installation found for {}", org_name);
+        // `send_batch` only queues events onto a channel for a background
+        // task to deliver; give that task time to actually POST to Splunk
+        // before the test (and its Tokio runtime) exits.
+        tokio::time::sleep(std::time::Duration::from_secs(5)).await;
         Ok(())
     }
 

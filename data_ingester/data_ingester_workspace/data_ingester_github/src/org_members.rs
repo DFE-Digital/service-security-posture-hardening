@@ -1,6 +1,6 @@
 use anyhow::{Context, Result};
 use data_ingester_splunk::splunk::ToHecEvents;
-use graphql_client::{GraphQLQuery, Response};
+use graphql_client::GraphQLQuery;
 use serde::Serialize;
 
 /// Containing for OrgMembers
@@ -9,13 +9,16 @@ pub(crate) struct OrgMembers(Vec<OrgMember>);
 
 impl OrgMembers {
     /// Extend the members from a [org_member_query::ResponseData]
-    pub(crate) fn extend(
-        &mut self,
-        response: Response<org_member_query::ResponseData>,
-    ) -> Result<()> {
+    pub(crate) fn extend(&mut self, response: org_member_query::ResponseData) -> Result<()> {
         let members: OrgMembers = response.try_into().context("Convert to OrgMembers")?;
         self.0.extend(members.0);
         Ok(())
+    }
+
+    /// Whether any Org members were collected
+    #[cfg(all(test, feature = "live_tests"))]
+    pub(crate) fn is_empty(&self) -> bool {
+        self.0.is_empty()
     }
 }
 
@@ -49,12 +52,11 @@ pub(crate) struct OrgMember {
 }
 
 /// Convert a [org_member_query::ResponseData] to [OrgMembers]
-impl TryFrom<Response<org_member_query::ResponseData>> for OrgMembers {
+impl TryFrom<org_member_query::ResponseData> for OrgMembers {
     type Error = anyhow::Error;
-    fn try_from(value: Response<org_member_query::ResponseData>) -> Result<Self> {
+    fn try_from(value: org_member_query::ResponseData) -> Result<Self> {
         let organization = value
-            .data
-            .and_then(|data| data.organization)
+            .organization
             .context("OrgQueryOrganization should be present")?;
         let organization_login = organization.login.as_str();
         let members_with_roles = organization

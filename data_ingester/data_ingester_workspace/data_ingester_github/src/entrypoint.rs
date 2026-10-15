@@ -33,6 +33,85 @@ pub async fn github_octocrab_entrypoint(secrets: Arc<Secrets>, splunk: Arc<Splun
     Ok(())
 }
 
+/// Run just the Org Members collection for every Organization
+/// installation of the GitHub App.
+///
+/// Useful for re-running Org Members collection on its own without
+/// triggering a full GitHub collection run.
+pub async fn github_members_entrypoint(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
+    let _ = set_ssphp_run(crate::SSPHP_RUN_KEY)?;
+
+    info!("Starting GitHub Org Members collection");
+
+    info!("GIT_HASH: {}", env!("GIT_HASH"));
+
+    let github_app = secrets
+        .github_app
+        .as_ref()
+        .context("No Github App configured")?;
+
+    let client = OctocrabGit::new_from_app(github_app).context("Build OctocrabGit")?;
+
+    info!("Getting installations");
+    let installations = client
+        .client
+        .apps()
+        .installations()
+        .send()
+        .await
+        .context("Getting installations for github app")?;
+
+    let mut tasks = vec![];
+
+    for installation in installations {
+        info!("Installation ID: {}", installation.id);
+        if installation.account.r#type != "Organization" {
+            continue;
+        }
+        let installation_client = client
+            .for_installation_id(installation.id)
+            .await
+            .context("build octocrabgit client")?;
+        let org_name = installation.account.login.to_string();
+        info!("Installation org name: {}", &org_name);
+        tasks.push((
+            org_name.clone(),
+            tokio::spawn(github_collect_installation_org_members(
+                installation_client,
+                org_name,
+                splunk.clone(),
+            )),
+        ));
+    }
+
+    for (org_name, task) in tasks {
+        task.await
+            .context("Tokio task has completed successfully")?
+            .with_context(|| format!("Running GitHub Org Members collection for {}", org_name))?;
+    }
+
+    Ok(())
+}
+
+/// Collect just the Org Members for a single Organization installation
+/// and send the results to Splunk.
+async fn github_collect_installation_org_members(
+    github_client: OctocrabGit,
+    org_name: String,
+    splunk: Arc<Splunk>,
+) -> Result<()> {
+    github_client.wait_for_rate_limit().await?;
+
+    let _org_members = try_collect_send(
+        &format!("Org Members for {org_name}"),
+        github_client.graphql_org_members_query(&org_name),
+        &splunk,
+    )
+    .await;
+
+    Ok(())
+}
+
 /// Collect the data for a GitHub app.
 ///
 /// Will iterate through all available Organization installations,
