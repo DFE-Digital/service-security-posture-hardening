@@ -36,6 +36,28 @@ use std::time::Duration;
 use tokio::sync::mpsc::UnboundedSender;
 use tracing::{error, info};
 
+/// Recognise a Graph OData error body that the paging stream handed back as if it were data.
+///
+/// Graph reports a failed request as `{"error":{"code":..,"message":..}}` and NOTHING else, so the
+/// test is deliberately narrow: exactly one value, an object carrying `error`, and no `value` key
+/// of its own. A legitimate payload that merely happens to contain a field called `error`
+/// alongside its data is not mistaken for a failure.
+fn graph_odata_error(values: &[Value]) -> Option<String> {
+    let [only] = values else {
+        return None;
+    };
+    if only.get("value").is_some() {
+        return None;
+    }
+    let error = only.get("error")?.as_object()?;
+    let code = error
+        .get("code")
+        .and_then(Value::as_str)
+        .unwrap_or("unknown");
+    let message = error.get("message").and_then(Value::as_str).unwrap_or("");
+    Some(format!("{code}: {message}"))
+}
+
 /// A Client for Ms Graph
 #[derive(Clone)]
 pub struct MsGraph {
@@ -118,6 +140,22 @@ impl MsGraph {
                 MsGraphGetResponse::Single(value) => collection.push(value),
             }
         }
+
+        // A FAILED REQUEST MUST NOT LOOK LIKE AN EMPTY FEED. The paging stream hands a Graph
+        // OData error body back as an ordinary single value, so a 400 arrived here as a one-row
+        // "collection" and every caller treated it as data. That is how the role eligibility feed
+        // returned nothing for as long as it existed while looking merely empty - see the comment
+        // on `list_role_eligibility_schedules`. Refusing it here rather than in one caller means
+        // no other endpoint can fail the same quiet way.
+        if let Some(error) = graph_odata_error(&collection) {
+            error!(
+                url = url,
+                error = error.as_str(),
+                "GRAPH_REQUEST_FAILED: Graph returned an error body instead of data"
+            );
+            anyhow::bail!("Graph returned an error for {url}: {error}");
+        }
+
         Ok(collection)
     }
 
@@ -238,7 +276,24 @@ impl MsGraph {
     /// rejected row in full. Both feeds used to do it inline with a `filter_map` that dropped
     /// failures, which is how this feed was lost in silence for as long as it has been collected.
     pub async fn list_role_eligibility_schedules(&self) -> Result<RoleSchedules> {
-        let result = self.get_url("/beta/roleManagement/directory/roleEligibilityScheduleInstances?$expand=activatedUsing,appScope,directoryScope,principal,roleDefinition").await?;
+        // NO `activatedUsing` IN THIS EXPAND. It exists on unifiedRoleAssignmentScheduleInstance
+        // and NOT on unifiedRoleEligibilityScheduleInstance, so asking for it made Graph reject
+        // the whole request with HTTP 400:
+        //
+        //   Parsing OData Select and Expand failed: Could not find a property named
+        //   'activatedUsing' on type 'microsoft.graph.unifiedRoleEligibilityScheduleInstance'.
+        //
+        // This call therefore returned NOTHING for as long as it has existed, and because
+        // `get_url` handed the error body back as if it were a one-row collection, it looked like
+        // a feed that was simply empty. The consequence reached all the way to the detections: no
+        // principal was ever recorded as holding a directory role through a group, because the 38
+        // role-assignable groups live in this feed. Found 2026-10-15 from the rejected-row logging
+        // in `RoleSchedules::from_values`, which printed the raw 400 body on its first run.
+        //
+        // The expand below matches the `role_eligibility_schedule_instances` entry in
+        // ms_graph.toml, which has always been correct - which is why Splunk held 54 rows from the
+        // generic collector while this call returned none.
+        let result = self.get_url("/beta/roleManagement/directory/roleEligibilityScheduleInstances?$expand=appScope,directoryScope,principal,roleDefinition").await?;
         Ok(RoleSchedules::from_values(
             "roleEligibilityScheduleInstances",
             result,
@@ -619,6 +674,76 @@ pub async fn m365(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
     info!("M365 Collection Complete");
 
     Ok(())
+}
+
+#[cfg(test)]
+mod graph_odata_error_tests {
+    use super::graph_odata_error;
+    use serde_json::json;
+
+    /// THE EXACT BODY that made the role eligibility feed look empty, captured from the live run
+    /// on 2026-10-15. Before this, it was pushed into the collection as a single row and every
+    /// caller read it as data.
+    #[test]
+    fn the_real_badrequest_body_is_recognised() {
+        let body = json!({
+            "error": {
+                "code": "BadRequest",
+                "innerError": {
+                    "client-request-id": "cb59e572-8c00-4c97-9cef-128df8e5180f",
+                    "date": "2026-10-15T11:29:45",
+                    "request-id": "cb59e572-8c00-4c97-9cef-128df8e5180f"
+                },
+                "message": "Parsing OData Select and Expand failed: Could not find a property named 'activatedUsing' on type 'microsoft.graph.unifiedRoleEligibilityScheduleInstance'."
+            }
+        });
+
+        let detected = graph_odata_error(&[body]).expect("a Graph error body must be recognised");
+
+        assert!(detected.starts_with("BadRequest: "), "{detected}");
+        assert!(detected.contains("activatedUsing"), "{detected}");
+    }
+
+    /// Real data must never be mistaken for a failure.
+    #[test]
+    fn ordinary_rows_are_not_an_error() {
+        let rows = vec![
+            json!({ "id": "a", "displayName": "One" }),
+            json!({ "id": "b", "displayName": "Two" }),
+        ];
+        assert!(graph_odata_error(&rows).is_none());
+    }
+
+    /// A single ordinary row is not an error either - the test is the `error` key, not the count.
+    #[test]
+    fn a_single_ordinary_row_is_not_an_error() {
+        assert!(graph_odata_error(&[json!({ "id": "a" })]).is_none());
+    }
+
+    /// An empty collection is a genuinely empty feed, not a failure.
+    #[test]
+    fn an_empty_collection_is_not_an_error() {
+        assert!(graph_odata_error(&[]).is_none());
+    }
+
+    /// A payload that carries its own data alongside a field called `error` is data. The test is
+    /// deliberately narrow so a legitimate record is never refused.
+    #[test]
+    fn a_payload_with_both_value_and_error_is_data() {
+        let body = json!({
+            "value": [{ "id": "a" }],
+            "error": { "code": "Partial", "message": "some rows were skipped" }
+        });
+        assert!(graph_odata_error(&[body]).is_none());
+    }
+
+    /// An error body missing code or message is still an error, reported with what is there.
+    #[test]
+    fn a_sparse_error_body_is_still_recognised() {
+        let detected =
+            graph_odata_error(&[json!({ "error": { "code": "Throttled" } })]).expect("recognised");
+        assert_eq!(detected, "Throttled: ");
+    }
 }
 
 #[cfg(feature = "live_tests")]
