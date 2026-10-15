@@ -355,6 +355,52 @@ mod tests {
         assert!(schedules.inner.is_empty());
     }
 
+    /// Parse a file of REAL Graph payloads and fail if any row is rejected.
+    ///
+    /// This is how the struct gets checked against what Graph actually sends, without a full
+    /// collection run and without committing tenant data. Export the rows from Splunk:
+    ///
+    /// ```text
+    /// index=ssphp_metrics_data sourcetype=ssphp:ms_graph:json
+    ///   source="/beta/roleManagement/directory/role*ScheduleInstances*"
+    /// | table _raw
+    /// ```
+    ///
+    /// then point the test at them, one JSON object per line:
+    ///
+    /// ```text
+    /// ROLE_SCHEDULE_FIXTURE=/path/to/rows.jsonl cargo test -p data_ingester_ms_graph fixture
+    /// ```
+    ///
+    /// It SKIPS when the variable is unset, so CI is unaffected. Real object ids and group
+    /// descriptions do not belong in the repo, which is why this takes a path rather than
+    /// embedding a fixture.
+    #[test]
+    fn real_payloads_from_a_fixture_all_parse() {
+        let Ok(path) = std::env::var("ROLE_SCHEDULE_FIXTURE") else {
+            return;
+        };
+
+        let text = std::fs::read_to_string(&path).expect("fixture file should be readable");
+        let values: Vec<Value> = text
+            .lines()
+            .filter(|line| !line.trim().is_empty())
+            .map(|line| serde_json::from_str(line).expect("each line should be one JSON object"))
+            .collect();
+
+        let total = values.len();
+        assert!(total > 0, "fixture should contain at least one row");
+
+        let schedules = RoleSchedules::from_values("fixture", values);
+
+        assert_eq!(
+            schedules.inner.len(),
+            total,
+            "{} of {total} real payloads were rejected - the rejected rows are logged under {REJECTED_MARKER}",
+            total - schedules.inner.len()
+        );
+    }
+
     /// The grep marker is fixed, because log extraction depends on it.
     #[test]
     fn the_rejection_marker_is_stable() {
