@@ -62,6 +62,7 @@ pub(crate) async fn start_server(tx: Sender<()>) -> Result<()> {
             "/github_custom_properties",
             post(post_github_custom_properties),
         )
+        .route("/github_members", post(post_github_members))
         .route("/m365", post(post_m365))
         .route(
             "/financial_business_partners",
@@ -254,6 +255,29 @@ async fn post_github(
             state.github_lock.clone(),
             state,
             data_ingester_github::entrypoint::github_octocrab_entrypoint,
+            headers,
+            payload.unwrap_or(None),
+        )
+        .await,
+    )
+}
+
+/// Collect GitHub Org Members only, for all GitHub App installations
+#[axum::debug_handler]
+async fn post_github_members(
+    headers: HeaderMap,
+    State(state): State<Arc<AppState>>,
+    payload: std::result::Result<
+        Option<Json<AzureInvokeRequest>>,
+        axum::extract::rejection::JsonRejection,
+    >,
+) -> Json<AzureInvokeResponse> {
+    Json(
+        function_runner(
+            data_ingester_github::SSPHP_RUN_KEY,
+            state.github_members_lock.clone(),
+            state,
+            data_ingester_github::entrypoint::github_members_entrypoint,
             headers,
             payload.unwrap_or(None),
         )
