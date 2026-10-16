@@ -881,8 +881,7 @@ impl OctocrabGit {
             // `Err(Error::Graphql { .. })` if the response contained `errors`.
             // So the type parameter here must be the query's `ResponseData`,
             // not `graphql_client::Response<ResponseData>`.
-            let response_data: org_member_query::ResponseData =
-                self.client.graphql(&query).await?;
+            let response_data: org_member_query::ResponseData = self.client.graphql(&query).await?;
             let organisation = response_data.organization.as_ref().with_context(|| {
                 format!(
                     "No organization in org members GraphQL response for org '{}'",
