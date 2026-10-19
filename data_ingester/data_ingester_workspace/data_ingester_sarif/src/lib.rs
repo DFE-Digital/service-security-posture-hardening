@@ -35,6 +35,7 @@ impl Sarif {
         let mut sarifs = Vec::with_capacity(zip.len());
         let zip_file_names: Vec<String> = zip
             .file_names()
+            .filter_map(|filename| filename.ok())
             .filter(|filename| filename.contains(".sarif"))
             .map(|name| name.to_string())
             .collect();

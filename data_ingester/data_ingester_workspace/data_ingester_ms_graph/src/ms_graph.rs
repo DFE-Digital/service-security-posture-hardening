@@ -19,6 +19,7 @@ use graph_http::api_impl::RequestHandler;
 use graph_oauth::ClientSecretCredential;
 use graph_oauth::ConfidentialClientApplication;
 use graph_rs_sdk::header::HeaderMap;
+use graph_rs_sdk::header::HeaderName;
 use graph_rs_sdk::header::HeaderValue;
 use graph_rs_sdk::header::CONTENT_TYPE;
 use graph_rs_sdk::http::Method;
@@ -56,6 +57,14 @@ fn graph_odata_error(values: &[Value]) -> Option<String> {
         .unwrap_or("unknown");
     let message = error.get("message").and_then(Value::as_str).unwrap_or("");
     Some(format!("{code}: {message}"))
+}
+
+/// Whether `get_url` should ask Graph to spell out evolvable enum members, such as
+/// `riskRemediation` in `grantControls.builtInControls`, as their literal string
+/// instead of `unknownFutureValue`. Scoped to the Conditional Access policies
+/// endpoint so other callers of `get_url` keep their existing response shape.
+fn wants_unknown_enum_members_header(url: &str) -> bool {
+    url.contains("/identity/conditionalAccess/policies")
 }
 
 /// A Client for Ms Graph
@@ -115,6 +124,16 @@ impl MsGraph {
         _ = header_map
             .entry(CONTENT_TYPE)
             .or_insert(HeaderValue::from_static("application/json"));
+
+        // Conditional Access grantControls.builtInControls is an evolvable enum: Graph
+        // only returns newer members such as `riskRemediation` as the literal string
+        // when this header is sent, otherwise they arrive as `unknownFutureValue` and
+        // compliance checks relying on the literal value silently fail.
+        if wants_unknown_enum_members_header(url) {
+            _ = header_map
+                .entry(HeaderName::from_static("prefer"))
+                .or_insert(HeaderValue::from_static("include-unknown-enum-members"));
+        }
 
         let full_url = self.client.url().join(url)?;
 
@@ -322,26 +341,20 @@ impl MsGraph {
     // }
 
     pub async fn list_conditional_access_policies(&self) -> Result<ConditionalAccessPolicies> {
-        let mut stream = self
-            .client
-            .identity()
-            .list_policies()
-            .paging()
-            .stream::<ConditionalAccessPolicies>()?;
+        // Routed through `get_url` rather than the `.identity().list_policies()` fluent
+        // builder so the `Prefer: include-unknown-enum-members` header (added in
+        // `get_url` for this endpoint) is sent, ensuring evolvable enum members like
+        // `riskRemediation` come back as their literal string instead of
+        // `unknownFutureValue`.
+        let values = self
+            .get_url("/v1.0/identity/conditionalAccess/policies")
+            .await?;
 
         let mut caps = ConditionalAccessPolicies::new();
-
-        while let Some(result) = stream.next().await {
-            let response = result?;
-            let body = response.into_body()?;
-            let _ = body
-                .inner
-                .into_iter()
-                .map(|mut cap: ConditionalAccessPolicy| {
-                    cap.has_untrusted_conditions = Some(cap.has_other_conditions());
-                    cap
-                })
-                .collect_into(&mut caps.inner);
+        for value in values {
+            let mut cap: ConditionalAccessPolicy = serde_json::from_value(value)?;
+            cap.has_untrusted_conditions = Some(cap.has_other_conditions());
+            caps.inner.push(cap);
         }
         Ok(caps)
     }
@@ -674,6 +687,86 @@ pub async fn m365(secrets: Arc<Secrets>, splunk: Arc<Splunk>) -> Result<()> {
     info!("M365 Collection Complete");
 
     Ok(())
+}
+
+#[cfg(test)]
+mod wants_unknown_enum_members_header_tests {
+    use super::wants_unknown_enum_members_header;
+
+    #[test]
+    fn conditional_access_policies_v1_gets_the_header() {
+        assert!(wants_unknown_enum_members_header(
+            "/v1.0/identity/conditionalAccess/policies"
+        ));
+    }
+
+    #[test]
+    fn conditional_access_policies_beta_gets_the_header() {
+        assert!(wants_unknown_enum_members_header(
+            "/beta/identity/conditionalAccess/policies"
+        ));
+    }
+
+    #[test]
+    fn other_conditional_access_endpoints_do_not_get_the_header() {
+        assert!(!wants_unknown_enum_members_header(
+            "/v1.0/identity/conditionalAccess/namedLocations"
+        ));
+    }
+
+    #[test]
+    fn unrelated_endpoints_do_not_get_the_header() {
+        assert!(!wants_unknown_enum_members_header("/v1.0/users"));
+    }
+}
+
+/// `riskRemediation` only arrives as its literal string when Graph is asked for it
+/// (see `wants_unknown_enum_members_header`); this confirms that once Graph does
+/// return it, `list_conditional_access_policies`'s per-value deserialization step
+/// (`serde_json::from_value::<ConditionalAccessPolicy>`) accepts it, since
+/// `ConditionalAccessPolicy` derives `deny_unknown_fields`.
+#[cfg(test)]
+mod conditional_access_policy_deserialize_tests {
+    use crate::conditional_access_policies::ConditionalAccessPolicy;
+    use serde_json::json;
+
+    #[test]
+    fn a_policy_with_risk_remediation_grant_control_deserializes() {
+        let value = json!({
+            "id": "11111111-1111-1111-1111-111111111111",
+            "displayName": "User risk policy",
+            "state": "enabled",
+            "conditions": {
+                "applications": {
+                    "excludeApplications": [],
+                    "includeApplications": ["All"],
+                    "includeUserActions": [],
+                    "includeAuthenticationContextClassReferences": []
+                },
+                "clientAppTypes": ["all"],
+                "servicePrincipalRiskLevels": [],
+                "signInRiskLevels": [],
+                "userRiskLevels": ["high"],
+                "users": {
+                    "excludeGroups": [],
+                    "excludeRoles": [],
+                    "excludeUsers": [],
+                    "includeGroups": [],
+                    "includeRoles": [],
+                    "includeUsers": ["All"]
+                }
+            },
+            "grantControls": {
+                "operator": "AND",
+                "builtInControls": ["riskRemediation"],
+                "authenticationStrength": { "requirementsSatisfied": "mfa" }
+            },
+        });
+
+        let policy: ConditionalAccessPolicy =
+            serde_json::from_value(value).expect("riskRemediation policy should deserialize");
+        assert_eq!(policy.id, "11111111-1111-1111-1111-111111111111");
+    }
 }
 
 #[cfg(test)]

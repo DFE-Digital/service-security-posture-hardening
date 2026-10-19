@@ -1,4 +1,3 @@
-#![feature(iter_collect_into)]
 pub mod conditional_access_policies;
 pub mod directory_roles;
 pub mod groups;
