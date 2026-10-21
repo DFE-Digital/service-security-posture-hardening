@@ -73,4 +73,12 @@ jobs:
           SPLUNK_PASSWORD: ${{ secrets.SPLUNK_PASSWORD }}
           SPLUNK_ACS_TOKEN: ${{ secrets.SPLUNK_ACS_TOKEN }}
           SPLUNK_ACS_STACK: ${{ secrets.SPLUNK_ACS_STACK }}
+          # ONE ad-hoc cluster member by host id, installed with scope=local. The only ACS form
+          # that installs since 2026-09-30 (Splunk SR 701521955); the stack-wide form fails with
+          # "Failed to decrypt the token or your token has expired". DCAP is wanted on the ad-hoc
+          # cluster only, and the stack token was minted there. If a deploy fails with 400
+          # "invalid search head or search head cluster", autoscaling has replaced the member:
+          # run `| rest splunk_server=local /services/server/info` on dfe.splunkcloud.com and
+          # update the secret with the new serverName id.
+          SPLUNK_ACS_TARGET: ${{ secrets.SPLUNK_ACS_TARGET }}
         run: ./splunkcloud-app-packager install-app -a DCAP #--environment prod
