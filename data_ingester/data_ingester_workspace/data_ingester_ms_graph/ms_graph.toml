@@ -60,6 +60,47 @@ applications = { endpoint = "/v1.0/applications?$select=id,appId,displayName,sig
   "Application.Read.All",
 ] }
 
+# WHO HOLDS MICROSOFT GRAPH APPLICATION PERMISSIONS.
+#
+# Read from the RESOURCE side, not the holder side. An application's own permissions sit
+# on /servicePrincipals/{id}/appRoleAssignments, which is one call per principal and
+# about 14,000 of them. `appRoleAssignedTo` on the API's own service principal is the
+# same data from the other end: every principal granted an app role ON Microsoft Graph,
+# in one paged collection.
+#
+# NOT `$expand=appRoleAssignments` ON THE /servicePrincipals COLLECTION. Graph caps
+# expanded collections and truncates silently - that is why
+# `get_transitive_members_of_for_service_principals` exists even though the collection
+# call already expands transitiveMemberOf. A principal with many permissions would come
+# back looking LESS privileged than it is, which is the one failure a feed used to build
+# a privileged population cannot tolerate.
+#
+# ALTERNATE KEY ADDRESSING. servicePrincipals(appId='...') selects by client id, because
+# the object id of Graph's service principal differs per tenant while the appId
+# 00000003-0000-0000-c000-000000000000 is the same in every tenant.
+#
+# ONE ENTRY PER RESOURCE API. This covers Microsoft Graph. Exchange Online, SharePoint
+# and the rest would each need another entry of the same shape; Graph is the one that
+# conveys directory privilege.
+graph_app_role_assignments = { endpoint = "/v1.0/servicePrincipals(appId='00000003-0000-0000-c000-000000000000')/appRoleAssignedTo", source = "msgraph:graph_app_role_assignment", sourcetype = "m365:graph_app_role_assignment", permissions_required = [
+  "Application.Read.All",
+] }
+
+# WHAT EACH PERMISSION GUID MEANS. An appRoleAssignment names its permission by
+# `appRoleId` alone, so without this feed the assignments above are unreadable GUIDs.
+#
+# EXPLODED, and this is the only feed that is. Graph's `appRoles` is a single array of
+# several hundred role definitions in ONE record, far past Splunk's [kv] maxchars of
+# 10,240 - and an oversized record yields NO extracted fields at all, measured on the
+# user feed at 23.8% of records. That is exactly why appRoles is excluded from the
+# service_principals $select above. One event per role keeps every event extractable.
+#
+# SELF-MAINTAINING. Microsoft adds Graph permissions regularly; this reads the current
+# set on every run rather than freezing a copy that then rots.
+graph_app_roles = { endpoint = "/v1.0/servicePrincipals(appId='00000003-0000-0000-c000-000000000000')?$select=id,appId,displayName,appRoles", explode = "appRoles", source = "msgraph:graph_app_role", sourcetype = "m365:graph_app_role", permissions_required = [
+  "Application.Read.All",
+] }
+
 # Entra ID Protection: who is currently flagged as risky. A current-state list, one
 # record per risky user with riskLevel, riskState, riskDetail and
 # riskLastUpdatedDateTime, so a daily snapshot is the right shape for it.
@@ -195,6 +236,35 @@ token_lifetime_policies = { endpoint = "/v1.0/policies/tokenLifetimePolicies", p
 ], cis_controls = [
   { filename = "CIS_Microsoft_365_Foundations_Benchmark_v2.0.0.pdf", control_id = "" },
   { filename = "CIS_Microsoft_365_Foundations_Benchmark_v2.0.0.pdf", control_id = "" },
+] }
+
+# CROSS-TENANT ACCESS: the container. Carries allowedCloudEndpoints and the policy
+# displayName and nothing per-partner. Thin on its own, and here because it states which
+# clouds are in scope before the default and partner records below mean anything.
+cross_tenant_access_policy = { endpoint = "/v1.0/policies/crossTenantAccessPolicy", permissions_required = [
+  "Policy.Read.All",
+] }
+
+# THE TERMS ON WHICH WE TRUST EVERY EXTERNAL TENANT, unless a partner record below
+# overrides them. `inboundTrust` is the part that matters: whether we accept another
+# tenant's multi-factor, its compliant-device claim or its hybrid-joined-device claim IN
+# PLACE OF OUR OWN. Accepting theirs means our own conditional access can be satisfied
+# by a control we do not operate.
+#
+# Returns a SINGLE OBJECT rather than a collection. get_url handles both.
+cross_tenant_access_policy_default = { endpoint = "/v1.0/policies/crossTenantAccessPolicy/default", permissions_required = [
+  "Policy.Read.All",
+] }
+
+# PER-PARTNER OVERRIDES of the default above, one record per external tenant that has an
+# explicit configuration.
+#
+# AN EMPTY COLLECTION IS A REAL ANSWER rather than a broken feed: it means no partner is
+# configured individually, so the default record is what is in force everywhere. Now
+# that a Graph error document is refused instead of indexed, no events and no logged
+# error does mean "nothing configured".
+cross_tenant_access_policy_partners = { endpoint = "/v1.0/policies/crossTenantAccessPolicy/partners", permissions_required = [
+  "Policy.Read.All",
 ] }
 
 admin_forms = { endpoint = "/beta/admin/forms", permissions_required = [
