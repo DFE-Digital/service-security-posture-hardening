@@ -268,7 +268,20 @@ cross_tenant_access_policy_default = { endpoint = "/v1.0/policies/crossTenantAcc
 # configured individually, so the default record is what is in force everywhere. Now
 # that a Graph error document is refused instead of indexed, no events and no logged
 # error does mean "nothing configured".
-cross_tenant_access_policy_partners = { endpoint = "/v1.0/policies/crossTenantAccessPolicy/partners", permissions_required = [
+#
+# identitySynchronization IS EXPANDED because it is a trust term like the others: it says
+# whether a partner may PROVISION USERS INTO our directory, which is a wider grant than
+# anything in inboundTrust. It is a navigation property and is null unless expanded, so
+# without this the feed would answer "on what terms do we trust them" with that term
+# missing. A partner with no synchronisation configured expands to null, which is the
+# answer rather than an absence.
+#
+# AND YES, $expand IS USED HERE while the app role assignment feed above deliberately
+# avoids it. The hazard there is Graph CAPPING AN EXPANDED COLLECTION and truncating a
+# member list silently. identitySynchronization is a SINGLE OBJECT per partner, and
+# partners is itself a handful of records, so there is no member list that can be
+# quietly cut short. Do not read this as licence to expand a collection.
+cross_tenant_access_policy_partners = { endpoint = "/v1.0/policies/crossTenantAccessPolicy/partners?$expand=identitySynchronization", permissions_required = [
   "Policy.Read.All",
 ] }
 
