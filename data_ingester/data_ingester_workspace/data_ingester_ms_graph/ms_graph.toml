@@ -82,6 +82,11 @@ applications = { endpoint = "/v1.0/applications?$select=id,appId,displayName,sig
 # ONE ENTRY PER RESOURCE API. This covers Microsoft Graph. Exchange Online, SharePoint
 # and the rest would each need another entry of the same shape; Graph is the one that
 # conveys directory privilege.
+#
+# EVENTUALLY CONSISTENT. Microsoft documents replication delays on this relationship for
+# assignments granted or removed recently, so a permission granted today may not appear
+# until a later run. Treat a principal's absence as "not seen yet" rather than "holds
+# nothing" - the same distinction the transitiveMemberOf code makes for an unset value.
 graph_app_role_assignments = { endpoint = "/v1.0/servicePrincipals(appId='00000003-0000-0000-c000-000000000000')/appRoleAssignedTo", source = "msgraph:graph_app_role_assignment", sourcetype = "m365:graph_app_role_assignment", permissions_required = [
   "Application.Read.All",
 ] }
