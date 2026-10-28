@@ -75,6 +75,30 @@ fn bail_on_odata_error(url: &str, values: &[Value]) -> Result<()> {
     Ok(())
 }
 
+/// Folds one page of a Graph response into the accumulating collection, refusing an error body.
+///
+/// AN ERROR ON A LATER PAGE IS STILL AN ERROR. `graph_odata_error` fires only on a ONE-VALUE
+/// result - deliberately, so that a legitimate row carrying a field called `error` is not
+/// mistaken for a failure - which means a request that returned a page of data and THEN failed
+/// used to get through it: the caller received a SHORT LIST with an error document appended and
+/// no error at all, which is indistinguishable from a complete list. For a feed whose whole
+/// purpose is completeness that is the worst available outcome. Checking each single body as the
+/// stream yields it catches the failure on whatever page it happens.
+///
+/// SEPARATED FROM `get_url`'s PAGING LOOP so that exactly that sequence - a page of data, then an
+/// error - can be tested without a tenant. Left inline it could not be, and a check nothing
+/// exercises is a check that can be deleted by accident.
+fn accumulate_page(url: &str, collection: &mut Vec<Value>, body: MsGraphGetResponse) -> Result<()> {
+    match body {
+        MsGraphGetResponse::Collection { value } => collection.extend(value),
+        MsGraphGetResponse::Single(value) => {
+            bail_on_odata_error(url, std::slice::from_ref(&value))?;
+            collection.push(value);
+        }
+    }
+    Ok(())
+}
+
 /// Whether `get_url` should ask Graph to spell out evolvable enum members, such as
 /// `riskRemediation` in `grantControls.builtInControls`, as their literal string
 /// instead of `unknownFutureValue`. Scoped to the Conditional Access policies
@@ -170,22 +194,7 @@ impl MsGraph {
             let response = result?;
             let body = response.into_body()?;
 
-            match body {
-                MsGraphGetResponse::Collection { value } => collection.extend(value),
-                MsGraphGetResponse::Single(value) => {
-                    // AN ERROR ON A LATER PAGE IS STILL AN ERROR. The accumulated check below
-                    // fires only on a one-value result - deliberately, so that a legitimate row
-                    // carrying a field called `error` is not mistaken for a failure - which means
-                    // a request that returned a page of data and THEN failed got through it: the
-                    // caller received a SHORT LIST with an error document appended and no error
-                    // at all. That is indistinguishable from a complete list, and for a feed
-                    // whose whole purpose is completeness it is the worst possible outcome.
-                    // Checking each single body as the stream yields it catches the failure on
-                    // whatever page it happens.
-                    bail_on_odata_error(url, std::slice::from_ref(&value))?;
-                    collection.push(value)
-                }
-            }
+            accumulate_page(url, &mut collection, body)?;
         }
 
         // A FAILED REQUEST MUST NOT LOOK LIKE AN EMPTY FEED. The paging stream hands a Graph
@@ -792,8 +801,74 @@ mod conditional_access_policy_deserialize_tests {
 
 #[cfg(test)]
 mod graph_odata_error_tests {
-    use super::graph_odata_error;
-    use serde_json::json;
+    use super::{accumulate_page, graph_odata_error, MsGraphGetResponse};
+    use serde_json::{json, Value};
+
+    const URL: &str = "/v1.0/groups/group-id/owners";
+
+    fn page_of_data(rows: usize) -> MsGraphGetResponse {
+        MsGraphGetResponse::Collection {
+            value: (0..rows).map(|n| json!({ "id": n })).collect(),
+        }
+    }
+
+    fn error_body() -> Value {
+        json!({ "error": { "code": "Throttled", "message": "slow down" } })
+    }
+
+    /// A SUCCESSFUL FIRST PAGE FOLLOWED BY AN ERROR must fail the request rather than return the
+    /// first page as if it were everything. This is the sequence the accumulated check cannot
+    /// see, and the one that matters: a short list that reports no error is indistinguishable
+    /// from a complete one.
+    #[test]
+    fn a_page_of_data_then_an_error_page_is_rejected() {
+        let mut collection = Vec::new();
+
+        accumulate_page(URL, &mut collection, page_of_data(20)).expect("a page of data is data");
+        assert_eq!(collection.len(), 20);
+
+        let outcome = accumulate_page(
+            URL,
+            &mut collection,
+            MsGraphGetResponse::Single(error_body()),
+        );
+
+        assert!(
+            outcome.is_err(),
+            "an error body on a later page must fail the request, not be appended to the data"
+        );
+        assert_eq!(
+            collection.len(),
+            20,
+            "the error document must not be added to the collection"
+        );
+
+        let mut as_accumulated = collection.clone();
+        as_accumulated.push(error_body());
+        assert!(
+            graph_odata_error(&as_accumulated).is_none(),
+            "and the accumulated check alone would NOT have caught it - which is why the check \
+             runs per page"
+        );
+    }
+
+    /// An ordinary single body arriving after a page of data is still data. The per-page check
+    /// must not turn a legitimate mixed response into a failure.
+    #[test]
+    fn a_page_of_data_then_an_ordinary_single_is_accepted() {
+        let mut collection = Vec::new();
+
+        accumulate_page(URL, &mut collection, page_of_data(3)).expect("data");
+        accumulate_page(
+            URL,
+            &mut collection,
+            MsGraphGetResponse::Single(json!({ "id": "last" })),
+        )
+        .expect("an ordinary single body is data");
+
+        assert_eq!(collection.len(), 4);
+        assert_eq!(collection[3]["id"], json!("last"));
+    }
 
     /// THE EXACT BODY that made the role eligibility feed look empty, captured from the live run
     /// on 2026-10-15. Before this, it was pushed into the collection as a single row and every
