@@ -106,6 +106,69 @@ graph_app_roles = { endpoint = "/v1.0/servicePrincipals(appId='00000003-0000-000
   "Application.Read.All",
 ] }
 
+# WHICH DOMAINS THIS TENANT TRUSTS TO AUTHENTICATE. `authenticationType` is Managed or
+# Federated, and a domain flipping from Managed to Federated hands whoever holds the
+# federation signing material the ability to mint assertions for any account in it.
+# Measured 2026-10-28: 4 domains, all Managed, the whole response 140 characters.
+domains = { endpoint = "/v1.0/domains?$select=id,authenticationType,isVerified,isDefault,isInitial", source = "msgraph:domain", sourcetype = "m365:graph_domain", permissions_required = [
+  "Domain.Read.All",
+] }
+
+# OWNERSHIP IS PRIVILEGE, and it appears in no role and no group membership. An owner of
+# an application or service principal can add credentials to it; an owner of a group can
+# add themselves to it, and if the group conveys a role they have taken that role.
+#
+# THE NESTED $select IS LOAD-BEARING. Without it Graph returns a FULL user object per
+# owner, about 2,850 characters each, and a group with twelve owners is one 34,817
+# character record. Splunk's [kv] maxchars is 10,240 and an oversized record yields NO
+# extracted fields at all, so 27 of 100 groups sampled would have arrived unreadable.
+# Measured 2026-10-28 with the nested $select: max 2,725 for groups, 1,226 for
+# applications, 570 for service principals, and nothing over the limit. This is why
+# these three do not need `explode` the way graph_app_roles does.
+#
+# NOT TRUNCATED. Graph caps expanded collections silently, but the cap is 20 and the
+# most owners on any object sampled was 12, mean 2.5, with none at the cap.
+application_owners = { endpoint = "/v1.0/applications?$select=id,displayName,appId&$expand=owners($select=id,userPrincipalName,displayName)", source = "msgraph:application_owner", sourcetype = "m365:graph_application_owner", permissions_required = [
+  "Application.Read.All",
+  "Directory.Read.All",
+] }
+
+service_principal_owners = { endpoint = "/v1.0/servicePrincipals?$select=id,displayName,appId&$expand=owners($select=id,userPrincipalName,displayName)", source = "msgraph:service_principal_owner", sourcetype = "m365:graph_service_principal_owner", permissions_required = [
+  "Application.Read.All",
+  "Directory.Read.All",
+] }
+
+group_owners = { endpoint = "/v1.0/groups?$select=id,displayName&$expand=owners($select=id,userPrincipalName,displayName)", source = "msgraph:group_owner", sourcetype = "m365:graph_group_owner", permissions_required = [
+  "Group.Read.All",
+  "Directory.Read.All",
+] }
+
+# SOFT DELETE OR HARD DELETE. A deleted directory object sits in a 30-day recycle bin
+# and can be restored; a hard delete removes it immediately and cannot be undone. The
+# audit log records both as a deletion, so only the recycle bin distinguishes them, and
+# the difference matters because one is reversible and the other is destruction.
+#
+# The collection is TYPED, so each object type is its own endpoint rather than one call.
+# Measured 2026-10-28: users 32 records at max 421 characters, applications 9 at 2,458,
+# service principals 100+ at 2,525. Groups and devices returned zero, which is itself a
+# finding - 541 group deletions in 90 days by 185 people against 979 hard deletes, so
+# groups here are being destroyed rather than recycled.
+deleted_items_users = { endpoint = "/v1.0/directory/deletedItems/microsoft.graph.user", source = "msgraph:deleted_item_user", sourcetype = "m365:graph_deleted_item_user", permissions_required = [
+  "Directory.Read.All",
+] }
+
+deleted_items_groups = { endpoint = "/v1.0/directory/deletedItems/microsoft.graph.group", source = "msgraph:deleted_item_group", sourcetype = "m365:graph_deleted_item_group", permissions_required = [
+  "Directory.Read.All",
+] }
+
+deleted_items_applications = { endpoint = "/v1.0/directory/deletedItems/microsoft.graph.application", source = "msgraph:deleted_item_application", sourcetype = "m365:graph_deleted_item_application", permissions_required = [
+  "Application.Read.All",
+] }
+
+deleted_items_service_principals = { endpoint = "/v1.0/directory/deletedItems/microsoft.graph.servicePrincipal", source = "msgraph:deleted_item_service_principal", sourcetype = "m365:graph_deleted_item_service_principal", permissions_required = [
+  "Application.Read.All",
+] }
+
 # Entra ID Protection: who is currently flagged as risky. A current-state list, one
 # record per risky user with riskLevel, riskState, riskDetail and
 # riskLastUpdatedDateTime, so a daily snapshot is the right shape for it.

@@ -301,6 +301,34 @@ mod test {
         assert_eq!(events[0]["id"], json!("parent-id"));
     }
 
+    /// The owners feeds MUST keep their nested `$select`. Without it Graph returns a full
+    /// user object per owner - about 2,850 characters each - and a group with twelve owners
+    /// is one 34,817 character record. Splunk stops extracting past `[kv] maxchars`, 10,240,
+    /// and an oversized record yields NO fields at all, so 27 of 100 groups sampled on
+    /// 2026-10-28 would have arrived unreadable. With the nested `$select` the worst case is
+    /// 2,725. This pins that, because the endpoint still looks correct without it.
+    #[test]
+    fn the_owners_feeds_select_inside_the_expand() -> Result<()> {
+        let sources = load_m365_toml()?;
+        let mut checked = 0;
+        for group in sources.0.values() {
+            for (name, source) in group {
+                if !name.ends_with("_owners") {
+                    continue;
+                }
+                checked += 1;
+                assert!(
+                    source.endpoint.contains("$expand=owners($select="),
+                    "{name}: owners must be expanded with a nested $select or the records \
+                     exceed Splunk maxchars: {}",
+                    source.endpoint
+                );
+            }
+        }
+        assert_eq!(checked, 3, "expected three owners feeds");
+        Ok(())
+    }
+
     /// Exploding CHANGES THE SHAPE of a feed, so retrofitting it onto a feed something already
     /// searches would break that search. This pins the opt-in list: adding a feed here is a
     /// deliberate act, and the only record that needs it is the Graph app role definitions, whose
