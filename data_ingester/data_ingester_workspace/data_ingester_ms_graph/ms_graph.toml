@@ -118,27 +118,55 @@ domains = { endpoint = "/v1.0/domains?$select=id,authenticationType,isVerified,i
 # an application or service principal can add credentials to it; an owner of a group can
 # add themselves to it, and if the group conveys a role they have taken that role.
 #
-# THE NESTED $select IS LOAD-BEARING. Without it Graph returns a FULL user object per
-# owner, about 2,850 characters each, and a group with twelve owners is one 34,817
-# character record. Splunk's [kv] maxchars is 10,240 and an oversized record yields NO
-# extracted fields at all, so 27 of 100 groups sampled would have arrived unreadable.
-# Measured 2026-10-28 with the nested $select: max 2,725 for groups, 1,226 for
-# applications, 570 for service principals, and nothing over the limit. This is why
-# these three do not need `explode` the way graph_app_roles does.
+# THREE DOCUMENTED LIMITS APPLY TO `$expand` ON A DIRECTORY RELATIONSHIP, and every one
+# of them fails quietly. Microsoft's known-issues list states that it "Returns a maximum
+# of 20 objects", that there is "No support for `@odata.nextLink`", and that there is "No
+# support for nesting other query parameters such as `$filter` and `$select` inside an
+# `$expand` query" - and the same list ends "Query parameters specified in a request
+# might fail silently. This can be true for unsupported query parameters and for
+# unsupported combinations of query parameters." So the overflow cannot be paged, nothing
+# in a response says a list was cut, and the nested $select below is relied on but not
+# guaranteed. The three mitigations are named against the three limits:
 #
-# NOT TRUNCATED. Graph caps expanded collections silently, but the cap is 20 and the
-# most owners on any object sampled was 12, mean 2.5, with none at the cap.
-application_owners = { endpoint = "/v1.0/applications?$select=id,displayName,appId&$expand=owners($select=id,userPrincipalName,displayName)", source = "msgraph:application_owner", sourcetype = "m365:graph_application_owner", permissions_required = [
+# 1. THE NESTED $select KEEPS THE RECORDS SMALL. Without it Graph returns a FULL user
+#    object per owner, about 2,850 characters each, and a group with twelve owners is one
+#    34,817 character record. Splunk's [kv] maxchars is 10,240 and an oversized record
+#    yields NO extracted fields at all, so 27 of 100 groups sampled would have arrived
+#    unreadable. Measured 2026-10-28 with it: max 2,725 for groups, 1,226 for
+#    applications, 570 for service principals, nothing over the limit.
+#
+# 2. `explode` MAKES THAT SAFE RATHER THAN LUCKY, because limit three says the $select
+#    may stop being honoured without saying so. One event per owner means the largest
+#    possible event is a single owner - about 2,850 characters even as a full user object
+#    - so the feed stays readable either way. The $select stays because it cuts the bytes
+#    on the wire twelvefold; `explode` is here so that losing it is a cost, not an outage.
+#
+# 3. `refetch_at_cap` MAKES THE 20 CAP SURVIVABLE. A relationship's own endpoint,
+#    /v1.0/groups/{id}/owners, is an ordinary paged collection with no cap, so an object
+#    whose expanded list arrives at 20 is re-read there in full. It selects the same
+#    fields as the expand so a completed list has the same shape as an uncapped one. It
+#    costs one request per such object and nothing otherwise: measured 2026-10-28 the
+#    most owners on any object was 12, mean 2.5, none at the cap, so today it makes no
+#    requests at all. A refetch that fails marks the record `owners_incomplete`, which
+#    rides onto every exploded event, because a short list nothing flags is the whole
+#    failure being avoided here.
+#
+# THE EVENT SHAPE THESE THREE PRODUCE is one event per owner: the owner's own `id`,
+# `userPrincipalName` and `displayName`, and the object they own under `parent_id` and
+# `parent_displayName` - the owner wins the colliding keys because the owner is the
+# subject of the event. Read `parent_id` for "who owns this", `id` for "what do they
+# own". The sourcetype says which kind of object the parent is.
+application_owners = { endpoint = "/v1.0/applications?$select=id,displayName,appId&$expand=owners($select=id,userPrincipalName,displayName)", explode = "owners", refetch_at_cap = "/v1.0/applications/{id}/owners?$select=id,userPrincipalName,displayName", source = "msgraph:application_owner", sourcetype = "m365:graph_application_owner", permissions_required = [
   "Application.Read.All",
   "Directory.Read.All",
 ] }
 
-service_principal_owners = { endpoint = "/v1.0/servicePrincipals?$select=id,displayName,appId&$expand=owners($select=id,userPrincipalName,displayName)", source = "msgraph:service_principal_owner", sourcetype = "m365:graph_service_principal_owner", permissions_required = [
+service_principal_owners = { endpoint = "/v1.0/servicePrincipals?$select=id,displayName,appId&$expand=owners($select=id,userPrincipalName,displayName)", explode = "owners", refetch_at_cap = "/v1.0/servicePrincipals/{id}/owners?$select=id,userPrincipalName,displayName", source = "msgraph:service_principal_owner", sourcetype = "m365:graph_service_principal_owner", permissions_required = [
   "Application.Read.All",
   "Directory.Read.All",
 ] }
 
-group_owners = { endpoint = "/v1.0/groups?$select=id,displayName&$expand=owners($select=id,userPrincipalName,displayName)", source = "msgraph:group_owner", sourcetype = "m365:graph_group_owner", permissions_required = [
+group_owners = { endpoint = "/v1.0/groups?$select=id,displayName&$expand=owners($select=id,userPrincipalName,displayName)", explode = "owners", refetch_at_cap = "/v1.0/groups/{id}/owners?$select=id,userPrincipalName,displayName", source = "msgraph:group_owner", sourcetype = "m365:graph_group_owner", permissions_required = [
   "Group.Read.All",
   "Directory.Read.All",
 ] }

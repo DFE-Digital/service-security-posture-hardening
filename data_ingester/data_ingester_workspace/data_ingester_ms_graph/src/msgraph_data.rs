@@ -4,6 +4,7 @@ use std::sync::Arc;
 use crate::ms_graph::MsGraph;
 use anyhow::Result;
 use data_ingester_splunk::splunk::{to_hec_events, Splunk, SplunkTrait};
+use futures::StreamExt;
 use serde::Deserialize;
 use serde_json::Value;
 use tracing::{error, info};
@@ -53,15 +54,28 @@ impl MsGraphData {
         info!("Getting {}", &log_name);
         match ms_graph.get_url(&ms_graph_source.endpoint).await {
             Ok(ref result) => {
+                // A feed declaring `refetch_at_cap` has any expanded collection that arrived at
+                // Graph's cap replaced with the complete list from the relationship's own
+                // endpoint. A feed that does not declare it, and a record below the cap, cost
+                // nothing here.
+                let completed = match (ms_graph_source.explode(), ms_graph_source.refetch_at_cap())
+                {
+                    (Some(property), Some(url_template)) => Some(
+                        refetch_capped_collections(result, property, url_template, ms_graph).await,
+                    ),
+                    _ => None,
+                };
+                let records: &[Value] = completed.as_deref().unwrap_or(result);
+
                 // A feed naming a property in `explode` is split into one event per element of
-                // that property. Every other feed has `None` here and sends `result` unchanged.
+                // that property. Every other feed has `None` here and sends `records` unchanged.
                 let exploded = ms_graph_source.explode().map(|property| {
-                    result
+                    records
                         .iter()
                         .flat_map(|value| explode_value(value, property))
                         .collect::<Vec<Value>>()
                 });
-                let to_send: &[Value] = exploded.as_deref().unwrap_or(result);
+                let to_send: &[Value] = exploded.as_deref().unwrap_or(records);
                 let hec_events = match to_hec_events(
                     to_send,
                     ms_graph_source.source(),
@@ -105,10 +119,18 @@ pub struct MsGraphSource {
     sourcetype: Option<String>,
     /// Splits each returned record into one event per element of this property.
     ///
-    /// Set it only where a single record is too large for Splunk to extract - see
+    /// Set it where a single record is too large for Splunk to extract, or where it could
+    /// become so if Graph stops honouring a query parameter it does not guarantee - see
     /// `explode_value` for why that happens and what it costs. Left unset, which is every
     /// other feed, the records are sent exactly as Graph returned them.
     explode: Option<String>,
+    /// Replaces an expanded collection that arrived at Graph's cap with the complete list
+    /// from the relationship's own endpoint, which is not capped. `{id}` is substituted with
+    /// the record's `id`.
+    ///
+    /// Requires `explode` to name the property. See `refetch_capped_collections` for why the
+    /// cap cannot simply be paged.
+    refetch_at_cap: Option<String>,
     #[allow(dead_code)]
     cis_controls: Option<Vec<CisControl>>,
     #[allow(dead_code)]
@@ -141,6 +163,115 @@ impl MsGraphSource {
     fn explode(&self) -> Option<&str> {
         self.explode.as_deref()
     }
+    fn refetch_at_cap(&self) -> Option<&str> {
+        self.refetch_at_cap.as_deref()
+    }
+}
+
+/// Graph's documented cap on an expanded collection of directory objects.
+///
+/// Microsoft's known-issues list is explicit about every half of the problem: `$expand` on a
+/// relationship of a directory object "Returns a maximum of 20 objects", there is "No support
+/// for `@odata.nextLink`", and `$count` cannot be combined with it. So the overflow cannot be
+/// paged and NOTHING IN THE RESPONSE SAYS THE LIST WAS CUT - the count reaching the cap is the
+/// only signal there is. The one exception is `/users?$expand=registeredDevices`, which returns
+/// up to 100 objects; no feed here uses it.
+const EXPANSION_CAP: usize = 20;
+
+/// Prefix under which `explode_value` keeps a parent scalar whose name the element also uses.
+const PARENT_PREFIX: &str = "parent_";
+
+/// The URL that would complete a record's capped collection, or `None` if it is not capped.
+///
+/// Split out from the request so the trigger can be tested without a tenant. A list at or over
+/// the cap is assumed incomplete because the cap is the only signal Graph gives; a list below it
+/// is complete and must not cost a request.
+fn capped_refetch_url(record: &Value, property: &str, url_template: &str) -> Option<String> {
+    let at_cap = record
+        .get(property)
+        .and_then(Value::as_array)
+        .is_some_and(|items| items.len() >= EXPANSION_CAP);
+    if !at_cap {
+        return None;
+    }
+    let id = record.get("id").and_then(Value::as_str)?;
+    Some(url_template.replace("{id}", id))
+}
+
+/// Replaces every capped collection in `records` with the complete list from the relationship's
+/// own endpoint.
+///
+/// WHY THIS EXISTS. `$expand` is one request for the whole tenant and is what keeps these feeds
+/// cheap, but it truncates at `EXPANSION_CAP` and says nothing about having done so. For
+/// ownership that is not cosmetic: an owner of an application can add credentials to it and an
+/// owner of a group can add themselves to it, so a list cut at twenty reads as less privilege
+/// than exists. A relationship's own endpoint - `/v1.0/groups/{id}/owners` - is an ordinary
+/// paged collection with no cap, so it is the complete answer; it just costs a request per
+/// object. This is the same shape as `get_transitive_members_of_for_users`, which expands at the
+/// collection level AND re-reads per principal for exactly this reason.
+///
+/// WHAT IT COSTS. Nothing until a collection actually reaches the cap. The sweep stays one
+/// request per feed and only the records at the cap are re-read, at a concurrency of 10 to match
+/// the per-principal paths. Measured 2026-10-28 the most owners on any object in this tenant was
+/// 12, mean 2.5, with none at the cap, so today this makes no requests at all.
+///
+/// A FAILED REFETCH IS MARKED, NOT HIDDEN. The record keeps the capped list and gains
+/// `{property}_incomplete = true`, which `explode_value` carries onto every event it produces.
+/// A short list that nothing flags is the failure this function exists to prevent, and a refetch
+/// that failed leaves precisely that - so it has to say so rather than pass for complete. One
+/// object that cannot be read never abandons the feed.
+async fn refetch_capped_collections(
+    records: &[Value],
+    property: &str,
+    url_template: &str,
+    ms_graph: &MsGraph,
+) -> Vec<Value> {
+    let tasks: Vec<_> = records
+        .iter()
+        .enumerate()
+        .filter_map(|(index, record)| {
+            let url = capped_refetch_url(record, property, url_template)?;
+            Some(async move {
+                info!(
+                    url = url.as_str(),
+                    "Expanded collection arrived at Graph's cap, re-reading it in full"
+                );
+                (index, ms_graph.get_url(&url).await)
+            })
+        })
+        .collect();
+
+    let mut out = records.to_vec();
+    if tasks.is_empty() {
+        return out;
+    }
+
+    let mut stream = futures::stream::iter(tasks).buffer_unordered(10);
+    while let Some((index, result)) = stream.next().await {
+        let Some(record) = out[index].as_object_mut() else {
+            continue;
+        };
+        match result {
+            Ok(complete) => {
+                info!(
+                    property = property,
+                    count = complete.len(),
+                    "Completed a capped collection"
+                );
+                _ = record.insert(property.to_owned(), Value::Array(complete));
+            }
+            Err(error) => {
+                error!(
+                    error = ?error,
+                    property = property,
+                    "Failed to complete a capped collection, marking the record incomplete"
+                );
+                _ = record.insert(format!("{property}_incomplete"), Value::Bool(true));
+            }
+        }
+    }
+
+    out
 }
 
 /// Splits one returned record into one event per element of an array property.
@@ -157,6 +288,13 @@ impl MsGraphSource {
 /// `id`, `appId` and `displayName`. The parent's other arrays and nested objects are deliberately
 /// NOT copied: they are what made the record oversized in the first place. An element that is not
 /// an object is wrapped under the property name so it is still a well-formed event.
+///
+/// A COLLIDING PARENT SCALAR IS KEPT UNDER `parent_`, NOT DROPPED. The element owns its own key -
+/// an exploded `appRole`'s `id` is the role's id, which is what a search for it expects - but the
+/// parent's value is the only thing naming what the element belongs to, so losing it loses the
+/// relationship. Both an owner and the object it owns carry `id` and `displayName`, so without
+/// this an exploded owner event says who the owner is and nothing whatever about what they own,
+/// which is the entire point of the feed.
 ///
 /// WHAT IT WILL NOT DO IS LOSE A RECORD. A record whose named property is absent, null, not an
 /// array, or an empty array is passed through unchanged rather than dropped, so a feed that opts in
@@ -189,7 +327,12 @@ fn explode_value(parent: &Value, property: &str) -> Vec<Value> {
                 }
             };
             for (key, value) in &parent_scalars {
-                _ = event.entry(key.clone()).or_insert(value.clone());
+                let key = if event.contains_key(key) {
+                    format!("{PARENT_PREFIX}{key}")
+                } else {
+                    key.clone()
+                };
+                _ = event.entry(key).or_insert(value.clone());
             }
             Value::Object(event)
         })
@@ -199,7 +342,7 @@ fn explode_value(parent: &Value, property: &str) -> Vec<Value> {
 #[cfg(test)]
 mod test {
 
-    use crate::msgraph_data::{explode_value, load_m365_toml};
+    use crate::msgraph_data::{capped_refetch_url, explode_value, load_m365_toml, EXPANSION_CAP};
     use anyhow::Result;
     use serde_json::json;
 
@@ -272,6 +415,12 @@ mod test {
 
         assert_eq!(events.len(), 1);
         assert_eq!(events[0]["id"], json!("role-id"));
+        assert_eq!(
+            events[0]["parent_id"],
+            json!("parent-id"),
+            "a colliding parent scalar must be kept under parent_, not dropped: without it an \
+             exploded owner names the owner and nothing about the object they own"
+        );
     }
 
     /// A record is never dropped: absent, null, not an array and empty all pass through whole.
@@ -331,10 +480,11 @@ mod test {
 
     /// Exploding CHANGES THE SHAPE of a feed, so retrofitting it onto a feed something already
     /// searches would break that search. This pins the opt-in list: adding a feed here is a
-    /// deliberate act, and the only record that needs it is the Graph app role definitions, whose
-    /// single oversized record Splunk cannot extract at all.
+    /// deliberate act. Graph's app role definitions need it because the single record cannot be
+    /// extracted at all; the three owners feeds need it so that a record can never exceed
+    /// maxchars even if Graph stops honouring the nested `$select` it does not guarantee.
     #[test]
-    fn only_the_graph_app_roles_feed_explodes() -> Result<()> {
+    fn only_the_intended_feeds_explode() -> Result<()> {
         let sources = load_m365_toml()?;
         let mut exploding: Vec<&str> = sources
             .0
@@ -344,8 +494,154 @@ mod test {
             .map(|(name, _)| name.as_str())
             .collect();
         exploding.sort_unstable();
-        assert_eq!(exploding, vec!["graph_app_roles"]);
+        assert_eq!(
+            exploding,
+            vec![
+                "application_owners",
+                "graph_app_roles",
+                "group_owners",
+                "service_principal_owners",
+            ]
+        );
         Ok(())
+    }
+
+    /// THE SHAPE THE DETECTIONS WILL READ, pinned on a record in the form Graph actually
+    /// returns one. An owner and the object it owns both carry `id` and `displayName`, so the
+    /// owner takes those keys and the owned object keeps its own under `parent_`. A search for
+    /// "who owns this group" reads `parent_id`; a search for "what does this person own" reads
+    /// `id` and `userPrincipalName`. Getting this wrong silently produces a feed that names
+    /// owners and not what they own, which is indistinguishable from working.
+    #[test]
+    fn an_exploded_owner_names_both_the_owner_and_the_object_owned() {
+        let group = json!({
+            "id": "group-object-id",
+            "displayName": "Infrastructure Admins",
+            "owners": [
+                { "id": "owner-1", "userPrincipalName": "a@example.gov.uk", "displayName": "A" },
+                { "id": "owner-2", "userPrincipalName": "b@example.gov.uk", "displayName": "B" },
+            ],
+        });
+
+        let events = explode_value(&group, "owners");
+
+        assert_eq!(events.len(), 2, "one event per owner");
+        assert_eq!(events[0]["id"], json!("owner-1"), "the owner takes `id`");
+        assert_eq!(events[0]["userPrincipalName"], json!("a@example.gov.uk"));
+        assert_eq!(events[0]["displayName"], json!("A"));
+        assert_eq!(
+            events[0]["parent_id"],
+            json!("group-object-id"),
+            "the object owned must still be identifiable without a join back"
+        );
+        assert_eq!(
+            events[0]["parent_displayName"],
+            json!("Infrastructure Admins")
+        );
+        assert_eq!(events[1]["id"], json!("owner-2"));
+        assert_eq!(events[1]["parent_id"], json!("group-object-id"));
+        assert!(
+            events[0].get("owners").is_none(),
+            "the exploded property must not be carried as well"
+        );
+    }
+
+    /// A refetch that failed leaves a list cut at the cap, and the marker is the only thing
+    /// separating that from a complete list of twenty. It has to reach every event, because the
+    /// events are what gets searched - the record they came from is not.
+    #[test]
+    fn the_incomplete_marker_reaches_every_exploded_event() {
+        let group = json!({
+            "id": "group-object-id",
+            "owners_incomplete": true,
+            "owners": [
+                { "id": "owner-1" },
+                { "id": "owner-2" },
+            ],
+        });
+
+        let events = explode_value(&group, "owners");
+
+        assert_eq!(events.len(), 2);
+        for event in &events {
+            assert_eq!(
+                event["owners_incomplete"],
+                json!(true),
+                "every event from a record whose refetch failed must say so"
+            );
+        }
+    }
+
+    /// `$expand` on a directory relationship returns at most twenty objects, publishes no
+    /// `@odata.nextLink` to page the rest and gives no count, so a cut list is indistinguishable
+    /// from a complete one. The only way to be sure is to re-read the relationship's own
+    /// endpoint, which is not capped - so every feed that expands one must declare how.
+    #[test]
+    fn the_owners_feeds_can_complete_a_capped_collection() -> Result<()> {
+        let sources = load_m365_toml()?;
+        let mut checked = 0;
+        for group in sources.0.values() {
+            for (name, source) in group {
+                if !name.ends_with("_owners") {
+                    continue;
+                }
+                checked += 1;
+                assert_eq!(
+                    source.explode.as_deref(),
+                    Some("owners"),
+                    "{name}: must explode owners so no single record can exceed maxchars"
+                );
+                let refetch = source.refetch_at_cap.as_deref().unwrap_or_else(|| {
+                    panic!("{name}: must declare refetch_at_cap or a capped list ships short")
+                });
+                assert!(
+                    refetch.contains("{id}"),
+                    "{name}: refetch_at_cap must name the object: {refetch}"
+                );
+                assert!(
+                    refetch.contains("/owners?$select=id,userPrincipalName,displayName"),
+                    "{name}: refetch_at_cap must read owners and select the same fields as the \
+                     expand, or a completed list has a different shape to a capped one: {refetch}"
+                );
+            }
+        }
+        assert_eq!(checked, 3, "expected three owners feeds");
+        Ok(())
+    }
+
+    /// The count reaching the cap is the ONLY signal Graph gives, so that is the trigger: at or
+    /// over the cap is assumed incomplete, below it is complete and must cost nothing. Pinned as
+    /// a pure function because the alternative is a tenant with twenty owners on something.
+    #[test]
+    fn a_collection_is_refetched_only_at_the_cap() {
+        let template = "/v1.0/groups/{id}/owners?$select=id,userPrincipalName,displayName";
+        let owners = |count: usize| {
+            json!({
+                "id": "group-id",
+                "owners": (0..count).map(|n| json!({"id": n.to_string()})).collect::<Vec<_>>(),
+            })
+        };
+
+        assert_eq!(
+            capped_refetch_url(&owners(EXPANSION_CAP), "owners", template).as_deref(),
+            Some("/v1.0/groups/group-id/owners?$select=id,userPrincipalName,displayName"),
+            "a list at the cap must be re-read in full"
+        );
+        assert_eq!(
+            capped_refetch_url(&owners(EXPANSION_CAP - 1), "owners", template),
+            None,
+            "a list below the cap is complete and must not cost a request"
+        );
+        assert_eq!(
+            capped_refetch_url(&json!({ "id": "group-id" }), "owners", template),
+            None,
+            "a record with no expanded collection is not capped"
+        );
+        assert_eq!(
+            capped_refetch_url(&owners(EXPANSION_CAP + 1), "owners", template).as_deref(),
+            Some("/v1.0/groups/group-id/owners?$select=id,userPrincipalName,displayName"),
+            "if Graph ever returns more than the documented cap, still re-read it"
+        );
     }
 }
 
