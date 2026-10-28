@@ -141,15 +141,33 @@ domains = { endpoint = "/v1.0/domains?$select=id,authenticationType,isVerified,i
 #    - so the feed stays readable either way. The $select stays because it cuts the bytes
 #    on the wire twelvefold; `explode` is here so that losing it is a cost, not an outage.
 #
-# 3. `refetch_at_cap` MAKES THE 20 CAP SURVIVABLE. A relationship's own endpoint,
-#    /v1.0/groups/{id}/owners, is an ordinary paged collection with no cap, so an object
-#    whose expanded list arrives at 20 is re-read there in full. It selects the same
-#    fields as the expand so a completed list has the same shape as an uncapped one. It
-#    costs one request per such object and nothing otherwise: measured 2026-10-28 the
-#    most owners on any object was 12, mean 2.5, none at the cap, so today it makes no
-#    requests at all. A refetch that fails marks the record `owners_incomplete`, which
-#    rides onto every exploded event, because a short list nothing flags is the whole
-#    failure being avoided here.
+# 3. `refetch_at_cap` MAKES THE 20 CAP SURVIVABLE. A relationship's own endpoint is an
+#    ordinary paged collection with no cap, so an object whose expanded list arrives at
+#    20 is re-read there in full. It selects the same fields as the expand so a completed
+#    list has the same shape as an uncapped one. It costs one request per such object and
+#    nothing otherwise: measured 2026-10-28 the most owners on any object was 12, mean
+#    2.5, none at the cap, so today it makes no requests at all. A refetch that fails
+#    marks the record `owners_incomplete`, which rides onto every exploded event, because
+#    a short list nothing flags is the whole failure being avoided here.
+#
+# THE GROUP REFETCH IS /beta AND MUST STAY THAT WAY. Microsoft's own note on
+# group-list-owners says "Currently, service principals are not listed as group owners
+# due to the staged rollout of service principals to the Microsoft Graph v1.0 endpoint",
+# and v1.0 documents its response as a collection of USER objects. Measured against this
+# tenant on 2026-10-28, on all six of the one hundred groups sampled that have a service
+# principal owner: $expand returned the service principal, /v1.0/groups/{id}/owners
+# returned ONLY the users, and /beta/groups/{id}/owners matched $expand exactly. So
+# re-reading a capped group on v1.0 would DELETE every service principal owner and mark
+# the result complete - strictly worse than not re-reading it, and silent. A service
+# principal owning a role-assignable group is precisely the ownership path this feed
+# exists to see.
+#
+# The /v1.0 OData casts - owners/microsoft.graph.user and owners/microsoft.graph.
+# servicePrincipal - were tested too and do return both types, but they cost two requests
+# and drop @odata.type, which the expand and /beta both carry and which is the only thing
+# telling a user owner from a service principal owner. Applications and service
+# principals have no such defect: measured on the same day, /v1.0 returned their service
+# principal owners correctly, so those two stay on v1.0.
 #
 # THE EVENT SHAPE THESE THREE PRODUCE is one event per owner: the owner's own `id`,
 # `userPrincipalName` and `displayName`, and the object they own under `parent_id` and
@@ -166,7 +184,7 @@ service_principal_owners = { endpoint = "/v1.0/servicePrincipals?$select=id,disp
   "Directory.Read.All",
 ] }
 
-group_owners = { endpoint = "/v1.0/groups?$select=id,displayName&$expand=owners($select=id,userPrincipalName,displayName)", explode = "owners", refetch_at_cap = "/v1.0/groups/{id}/owners?$select=id,userPrincipalName,displayName", source = "msgraph:group_owner", sourcetype = "m365:graph_group_owner", permissions_required = [
+group_owners = { endpoint = "/v1.0/groups?$select=id,displayName&$expand=owners($select=id,userPrincipalName,displayName)", explode = "owners", refetch_at_cap = "/beta/groups/{id}/owners?$select=id,userPrincipalName,displayName", source = "msgraph:group_owner", sourcetype = "m365:graph_group_owner", permissions_required = [
   "Group.Read.All",
   "Directory.Read.All",
 ] }

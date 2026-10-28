@@ -61,7 +61,13 @@ impl MsGraphData {
                 let completed = match (ms_graph_source.explode(), ms_graph_source.refetch_at_cap())
                 {
                     (Some(property), Some(url_template)) => Some(
-                        refetch_capped_collections(result, property, url_template, ms_graph).await,
+                        refetch_capped_collections(
+                            result,
+                            property,
+                            url_template,
+                            |url| async move { ms_graph.get_url(&url).await },
+                        )
+                        .await,
                     ),
                     _ => None,
                 };
@@ -220,23 +226,34 @@ fn capped_refetch_url(record: &Value, property: &str, url_template: &str) -> Opt
 /// A short list that nothing flags is the failure this function exists to prevent, and a refetch
 /// that failed leaves precisely that - so it has to say so rather than pass for complete. One
 /// object that cannot be read never abandons the feed.
-async fn refetch_capped_collections(
+/// `fetch` is injected rather than taken as a `&MsGraph` so that both branches below - the
+/// replacement and the failure marker - can be tested without a tenant. They are the branches
+/// that decide whether ownership data is complete, and they are reached only when something
+/// already has twenty owners, so they would otherwise first run in production on the day they
+/// matter.
+async fn refetch_capped_collections<F, Fut>(
     records: &[Value],
     property: &str,
     url_template: &str,
-    ms_graph: &MsGraph,
-) -> Vec<Value> {
+    fetch: F,
+) -> Vec<Value>
+where
+    F: Fn(String) -> Fut,
+    Fut: std::future::Future<Output = Result<Vec<Value>>>,
+{
     let tasks: Vec<_> = records
         .iter()
         .enumerate()
         .filter_map(|(index, record)| {
             let url = capped_refetch_url(record, property, url_template)?;
+            let fetch = &fetch;
             Some(async move {
                 info!(
                     url = url.as_str(),
                     "Expanded collection arrived at Graph's cap, re-reading it in full"
                 );
-                (index, ms_graph.get_url(&url).await)
+                let result = fetch(url).await;
+                (index, result)
             })
         })
         .collect();
@@ -342,9 +359,13 @@ fn explode_value(parent: &Value, property: &str) -> Vec<Value> {
 #[cfg(test)]
 mod test {
 
-    use crate::msgraph_data::{capped_refetch_url, explode_value, load_m365_toml, EXPANSION_CAP};
-    use anyhow::Result;
+    use crate::msgraph_data::{
+        capped_refetch_url, explode_value, load_m365_toml, refetch_capped_collections,
+        EXPANSION_CAP,
+    };
+    use anyhow::{anyhow, Result};
     use serde_json::json;
+    use serde_json::Value;
 
     #[test]
     fn test_toml_load() -> Result<()> {
@@ -606,6 +627,179 @@ mod test {
             }
         }
         assert_eq!(checked, 3, "expected three owners feeds");
+        Ok(())
+    }
+
+    /// Builds a record with `count` owners, as `$expand` returns one.
+    fn group_with_owners(count: usize) -> Value {
+        json!({
+            "id": "group-id",
+            "displayName": "Infrastructure Admins",
+            "owners": (0..count)
+                .map(|n| json!({ "@odata.type": "#microsoft.graph.user", "id": n.to_string() }))
+                .collect::<Vec<_>>(),
+        })
+    }
+
+    /// A REFETCH THAT FAILED MUST NOT PASS FOR COMPLETE. The capped twenty are kept, because a
+    /// short list is better than none, and the record is marked so every event says so. Driving
+    /// the real function here rather than planting the marker by hand: deleting the insertion
+    /// now fails this test, which it did not before.
+    #[tokio::test]
+    async fn a_failed_refetch_keeps_the_capped_list_and_flags_it_through_explosion() {
+        let records = vec![group_with_owners(EXPANSION_CAP)];
+
+        let completed = refetch_capped_collections(
+            &records,
+            "owners",
+            "/beta/groups/{id}/owners",
+            |_url| async { Err(anyhow!("Graph returned an error")) },
+        )
+        .await;
+
+        assert_eq!(
+            completed[0]["owners"]
+                .as_array()
+                .expect("still an array")
+                .len(),
+            EXPANSION_CAP,
+            "the capped list is kept, not discarded"
+        );
+        assert_eq!(completed[0]["owners_incomplete"], json!(true));
+
+        let events = explode_value(&completed[0], "owners");
+        assert_eq!(events.len(), EXPANSION_CAP);
+        for event in &events {
+            assert_eq!(
+                event["owners_incomplete"],
+                json!(true),
+                "every event from a failed refetch must carry the flag"
+            );
+        }
+    }
+
+    /// A SUCCESSFUL REFETCH REPLACES THE CAPPED LIST ON THE RIGHT RECORD AND ONLY THAT ONE.
+    /// Two records, one at the cap and one below it: the capped one is completed, the other is
+    /// untouched and costs no request. Neither is marked incomplete.
+    #[tokio::test]
+    async fn a_successful_refetch_replaces_only_the_capped_record() {
+        let mut below = group_with_owners(3);
+        below["id"] = json!("other-group-id");
+        let records = vec![group_with_owners(EXPANSION_CAP), below];
+
+        let requested = std::sync::Mutex::new(Vec::<String>::new());
+        let completed =
+            refetch_capped_collections(&records, "owners", "/beta/groups/{id}/owners", |url| {
+                requested.lock().expect("lock").push(url);
+                async {
+                    Ok((0..31)
+                        .map(|n| {
+                            json!({
+                                "@odata.type": "#microsoft.graph.servicePrincipal",
+                                "id": format!("complete-{n}"),
+                            })
+                        })
+                        .collect())
+                }
+            })
+            .await;
+
+        assert_eq!(
+            requested.lock().expect("lock").as_slice(),
+            ["/beta/groups/group-id/owners".to_owned()],
+            "only the record at the cap is re-read"
+        );
+        assert_eq!(
+            completed[0]["owners"].as_array().expect("array").len(),
+            31,
+            "the capped list is replaced by the complete one"
+        );
+        assert_eq!(completed[0]["owners"][0]["id"], json!("complete-0"));
+        assert!(
+            completed[0].get("owners_incomplete").is_none(),
+            "a completed list must not be flagged"
+        );
+        assert_eq!(
+            completed[1]["owners"].as_array().expect("array").len(),
+            3,
+            "the record below the cap is untouched"
+        );
+        assert_eq!(completed[1]["id"], json!("other-group-id"));
+    }
+
+    /// OWNERS ARE A MIXED COLLECTION: a user owner and a service principal owner, and the
+    /// difference is the whole point - a service principal owning a privileged group is an
+    /// ownership path with no interactive sign-in behind it. `@odata.type` is what separates
+    /// them and it survives both the nested `$select` and the refetch, so it must survive
+    /// explosion too. A service principal has no `userPrincipalName`, which must not break the
+    /// event.
+    #[test]
+    fn an_exploded_mixed_owner_list_keeps_the_type_of_each_owner() {
+        let group = json!({
+            "id": "group-object-id",
+            "displayName": "Infrastructure Admins",
+            "owners": [
+                {
+                    "@odata.type": "#microsoft.graph.user",
+                    "id": "user-owner",
+                    "userPrincipalName": "a@example.gov.uk",
+                    "displayName": "A",
+                },
+                {
+                    "@odata.type": "#microsoft.graph.servicePrincipal",
+                    "id": "sp-owner",
+                    "displayName": "Some App",
+                },
+            ],
+        });
+
+        let events = explode_value(&group, "owners");
+
+        assert_eq!(events.len(), 2);
+        assert_eq!(events[0]["@odata.type"], json!("#microsoft.graph.user"));
+        assert_eq!(events[0]["userPrincipalName"], json!("a@example.gov.uk"));
+        assert_eq!(
+            events[1]["@odata.type"],
+            json!("#microsoft.graph.servicePrincipal"),
+            "a service principal owner must be distinguishable from a user owner"
+        );
+        assert!(
+            events[1].get("userPrincipalName").is_none(),
+            "a service principal has no UPN and that must not invent one"
+        );
+        for event in &events {
+            assert_eq!(event["parent_id"], json!("group-object-id"));
+        }
+    }
+
+    /// THE GROUP REFETCH MUST STAY ON /beta. Measured 2026-10-28 on all six sampled groups
+    /// with a service principal owner: /v1.0/groups/{id}/owners returned only the users, while
+    /// /beta matched `$expand` exactly. Re-reading a capped group on v1.0 would therefore
+    /// DELETE every service principal owner and mark the result complete. Applications and
+    /// service principals have no such defect and stay on v1.0. Tidying this to v1.0 for
+    /// consistency would silently lose ownership, so it is pinned here with the reason.
+    #[test]
+    fn the_group_refetch_is_beta_because_v1_omits_service_principal_owners() -> Result<()> {
+        let sources = load_m365_toml()?;
+        let mut checked = 0;
+        for group in sources.0.values() {
+            for (name, source) in group {
+                let Some(refetch) = source.refetch_at_cap.as_deref() else {
+                    continue;
+                };
+                checked += 1;
+                let expected = if name == "group_owners" {
+                    "/beta/"
+                } else {
+                    "/v1.0/"
+                };
+                assert!(
+                    refetch.starts_with(expected),
+                    "{name}: refetch_at_cap must start {expected}: {refetch}"
+                );
+            }
+        }
+        assert_eq!(checked, 3, "expected three feeds with a cap refetch");
         Ok(())
     }
 

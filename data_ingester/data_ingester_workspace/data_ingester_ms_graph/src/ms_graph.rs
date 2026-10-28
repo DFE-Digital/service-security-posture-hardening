@@ -59,6 +59,22 @@ fn graph_odata_error(values: &[Value]) -> Option<String> {
     Some(format!("{code}: {message}"))
 }
 
+/// Refuses a Graph OData error body that arrived where data was expected.
+///
+/// Factored out because it has to run TWICE: once per single-value body as the paging stream
+/// yields it, and once over the accumulated result. See `get_url` for why one is not enough.
+fn bail_on_odata_error(url: &str, values: &[Value]) -> Result<()> {
+    if let Some(error) = graph_odata_error(values) {
+        error!(
+            url = url,
+            error = error.as_str(),
+            "GRAPH_REQUEST_FAILED: Graph returned an error body instead of data"
+        );
+        anyhow::bail!("Graph returned an error for {url}: {error}");
+    }
+    Ok(())
+}
+
 /// Whether `get_url` should ask Graph to spell out evolvable enum members, such as
 /// `riskRemediation` in `grantControls.builtInControls`, as their literal string
 /// instead of `unknownFutureValue`. Scoped to the Conditional Access policies
@@ -156,7 +172,19 @@ impl MsGraph {
 
             match body {
                 MsGraphGetResponse::Collection { value } => collection.extend(value),
-                MsGraphGetResponse::Single(value) => collection.push(value),
+                MsGraphGetResponse::Single(value) => {
+                    // AN ERROR ON A LATER PAGE IS STILL AN ERROR. The accumulated check below
+                    // fires only on a one-value result - deliberately, so that a legitimate row
+                    // carrying a field called `error` is not mistaken for a failure - which means
+                    // a request that returned a page of data and THEN failed got through it: the
+                    // caller received a SHORT LIST with an error document appended and no error
+                    // at all. That is indistinguishable from a complete list, and for a feed
+                    // whose whole purpose is completeness it is the worst possible outcome.
+                    // Checking each single body as the stream yields it catches the failure on
+                    // whatever page it happens.
+                    bail_on_odata_error(url, std::slice::from_ref(&value))?;
+                    collection.push(value)
+                }
             }
         }
 
@@ -166,14 +194,7 @@ impl MsGraph {
         // returned nothing for as long as it existed while looking merely empty - see the comment
         // on `list_role_eligibility_schedules`. Refusing it here rather than in one caller means
         // no other endpoint can fail the same quiet way.
-        if let Some(error) = graph_odata_error(&collection) {
-            error!(
-                url = url,
-                error = error.as_str(),
-                "GRAPH_REQUEST_FAILED: Graph returned an error body instead of data"
-            );
-            anyhow::bail!("Graph returned an error for {url}: {error}");
-        }
+        bail_on_odata_error(url, &collection)?;
 
         Ok(collection)
     }
@@ -828,6 +849,29 @@ mod graph_odata_error_tests {
             "error": { "code": "Partial", "message": "some rows were skipped" }
         });
         assert!(graph_odata_error(&[body]).is_none());
+    }
+
+    /// AN ERROR ON A LATER PAGE. The accumulated check is deliberately narrow - exactly one
+    /// value - so a page of data followed by an error body slips past it: twenty-one values, no
+    /// error detected, and the caller sees a short list that looks complete. `get_url` now
+    /// checks each single body as the stream yields it; this pins that the narrow check alone
+    /// would NOT have caught it.
+    #[test]
+    fn an_error_after_a_page_of_data_escapes_the_accumulated_check() {
+        use serde_json::Value;
+        let error = json!({ "error": { "code": "Throttled", "message": "slow down" } });
+        let mut accumulated: Vec<Value> = (0..20).map(|n| json!({ "id": n })).collect();
+        accumulated.push(error.clone());
+
+        assert!(
+            graph_odata_error(&accumulated).is_none(),
+            "the accumulated check cannot see an error alongside data - which is why get_url \
+             checks each page as it arrives"
+        );
+        assert!(
+            graph_odata_error(std::slice::from_ref(&error)).is_some(),
+            "the same body IS recognised when checked on its own, as get_url now does"
+        );
     }
 
     /// An error body missing code or message is still an error, reported with what is there.
