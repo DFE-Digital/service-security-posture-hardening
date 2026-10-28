@@ -187,6 +187,14 @@ const EXPANSION_CAP: usize = 20;
 /// Prefix under which `explode_value` keeps a parent scalar whose name the element also uses.
 const PARENT_PREFIX: &str = "parent_";
 
+/// How many members a record's collection currently holds.
+fn capped_len(record: &serde_json::Map<String, Value>, property: &str) -> usize {
+    record
+        .get(property)
+        .and_then(Value::as_array)
+        .map_or(0, Vec::len)
+}
+
 /// The URL that would complete a record's capped collection, or `None` if it is not capped.
 ///
 /// Split out from the request so the trigger can be tested without a tenant. A list at or over
@@ -269,6 +277,21 @@ where
             continue;
         };
         match result {
+            // A COMPLETE LIST CANNOT BE SHORTER THAN THE CAPPED ONE IT REPLACES. The capped
+            // list already held at least `EXPANSION_CAP` members, so a re-read returning fewer
+            // is not a completion - it is a deleted object, a permission that returns limited
+            // information, or an endpoint that does not answer the way this one is assumed to.
+            // Writing it anyway would DISCARD known members and call the result complete, which
+            // is the failure this function exists to prevent, so it is refused and marked
+            // exactly like a failed request.
+            Ok(complete) if complete.len() < capped_len(record, property) => {
+                error!(
+                    property = property,
+                    returned = complete.len(),
+                    "Refetch returned fewer members than the capped list, marking incomplete"
+                );
+                _ = record.insert(format!("{property}_incomplete"), Value::Bool(true));
+            }
             Ok(complete) => {
                 info!(
                     property = property,
@@ -306,54 +329,85 @@ where
 /// NOT copied: they are what made the record oversized in the first place. An element that is not
 /// an object is wrapped under the property name so it is still a well-formed event.
 ///
-/// A COLLIDING PARENT SCALAR IS KEPT UNDER `parent_`, NOT DROPPED. The element owns its own key -
-/// an exploded `appRole`'s `id` is the role's id, which is what a search for it expects - but the
-/// parent's value is the only thing naming what the element belongs to, so losing it loses the
-/// relationship. Both an owner and the object it owns carry `id` and `displayName`, so without
-/// this an exploded owner event says who the owner is and nothing whatever about what they own,
-/// which is the entire point of the feed.
+/// THE PARENT'S SCALARS ARE ALWAYS PREFIXED `parent_`, on every event, whether or not the element
+/// uses the same key. The element owns its own names - an exploded `appRole`'s `id` is the role's
+/// id, and an exploded owner's `id` is the owner's - and the parent is always one level up. The
+/// alternative, prefixing only on collision, made a key mean different things on different feeds
+/// and, worse, on different records of the SAME feed: an object with owners produced events whose
+/// `id` was an owner, and an object with none produced a record whose `id` was the object, so a
+/// search could read the owned object back as its own owner. `parent_id` now identifies the
+/// parent on every event this function emits, with no exceptions to remember.
 ///
 /// WHAT IT WILL NOT DO IS LOSE A RECORD. A record whose named property is absent, null, not an
 /// array, or an empty array is passed through unchanged rather than dropped, so a feed that opts in
 /// cannot go quietly empty if Graph stops returning the property or renames it.
 fn explode_value(parent: &Value, property: &str) -> Vec<Value> {
-    let Some(items) = parent.get(property).and_then(Value::as_array) else {
-        return vec![parent.clone()];
-    };
-    if items.is_empty() {
-        return vec![parent.clone()];
-    }
+    let carried = carried_from_parent(parent, property);
 
-    let parent_scalars: Vec<(String, Value)> = parent
+    match parent.get(property).and_then(Value::as_array) {
+        Some(items) if !items.is_empty() => items
+            .iter()
+            .map(|item| {
+                let mut event = match item {
+                    Value::Object(map) => map.clone(),
+                    other => {
+                        let mut map = serde_json::Map::new();
+                        _ = map.insert(property.to_owned(), other.clone());
+                        map
+                    }
+                };
+                for (key, value) in &carried {
+                    _ = event.entry(key.clone()).or_insert(value.clone());
+                }
+                Value::Object(event)
+            })
+            .collect(),
+        // An EMPTY collection, which Graph returns as `[]` rather than omitting the key. The
+        // record is kept, because "this object has no owners" is worth knowing, but it carries
+        // NO element keys at all - so it cannot be read as a member of the collection, and a
+        // search for an owner can never return the owned object as if it owned itself.
+        Some(_) => vec![marker_event(carried, &format!("{property}_none"))],
+        // Absent, null, or not an array. Graph always returns the key for a collection it was
+        // asked to expand, so this means the shape changed upstream - a renamed property, or a
+        // response that is not what the endpoint promises. The record is kept and SAYS SO,
+        // rather than vanishing, because a feed that goes quietly empty is the failure this
+        // whole module keeps guarding against.
+        None => vec![marker_event(carried, &format!("{property}_unexpected"))],
+    }
+}
+
+/// The parent's scalars as they appear on every event this parent produces.
+///
+/// A KEY NAMED AFTER THE COLLECTION DESCRIBES THE COLLECTION, not the parent, so it is carried
+/// unprefixed - `owners_incomplete` is a fact about the owner list and has to read the same way
+/// on every event made from it. Everything else is a property of the parent object and is
+/// prefixed.
+///
+/// The parent's arrays and nested objects are deliberately not carried: they are what made the
+/// record oversized in the first place.
+fn carried_from_parent(parent: &Value, property: &str) -> Vec<(String, Value)> {
+    let collection_marker = format!("{property}_");
+    parent
         .as_object()
         .into_iter()
         .flatten()
         .filter(|(key, value)| key.as_str() != property && !value.is_array() && !value.is_object())
-        .map(|(key, value)| (key.clone(), value.clone()))
-        .collect();
-
-    items
-        .iter()
-        .map(|item| {
-            let mut event = match item {
-                Value::Object(map) => map.clone(),
-                other => {
-                    let mut map = serde_json::Map::new();
-                    _ = map.insert(property.to_owned(), other.clone());
-                    map
-                }
+        .map(|(key, value)| {
+            let key = if key.starts_with(&collection_marker) {
+                key.clone()
+            } else {
+                format!("{PARENT_PREFIX}{key}")
             };
-            for (key, value) in &parent_scalars {
-                let key = if event.contains_key(key) {
-                    format!("{PARENT_PREFIX}{key}")
-                } else {
-                    key.clone()
-                };
-                _ = event.entry(key).or_insert(value.clone());
-            }
-            Value::Object(event)
+            (key, value.clone())
         })
         .collect()
+}
+
+/// One event naming the parent and why it produced no elements.
+fn marker_event(carried: Vec<(String, Value)>, marker: &str) -> Value {
+    let mut event: serde_json::Map<String, Value> = carried.into_iter().collect();
+    _ = event.insert(marker.to_owned(), Value::Bool(true));
+    Value::Object(event)
 }
 
 #[cfg(test)]
@@ -413,10 +467,10 @@ mod test {
         assert_eq!(events[1]["value"], json!("User.Read.All"));
         for event in &events {
             assert_eq!(
-                event["appId"],
+                event["parent_appId"],
                 json!("00000003-0000-0000-c000-000000000000")
             );
-            assert_eq!(event["displayName"], json!("Microsoft Graph"));
+            assert_eq!(event["parent_displayName"], json!("Microsoft Graph"));
             assert!(
                 event.get("appRoles").is_none(),
                 "the exploded property must not be copied onto the event"
@@ -447,16 +501,142 @@ mod test {
     /// A record is never dropped: absent, null, not an array and empty all pass through whole.
     #[test]
     fn explode_passes_a_record_through_rather_than_losing_it() {
-        for parent in [
-            json!({ "id": "no-such-property" }),
-            json!({ "id": "null-property", "appRoles": null }),
-            json!({ "id": "not-an-array", "appRoles": "Directory.Read.All" }),
-            json!({ "id": "empty-array", "appRoles": [] }),
+        for (parent, marker) in [
+            (json!({ "id": "no-such-property" }), "appRoles_unexpected"),
+            (
+                json!({ "id": "null-property", "appRoles": null }),
+                "appRoles_unexpected",
+            ),
+            (
+                json!({ "id": "not-an-array", "appRoles": "Directory.Read.All" }),
+                "appRoles_unexpected",
+            ),
+            (
+                json!({ "id": "empty-array", "appRoles": [] }),
+                "appRoles_none",
+            ),
         ] {
             let events = explode_value(&parent, "appRoles");
-            assert_eq!(events.len(), 1, "{parent} should pass through as one event");
-            assert_eq!(events[0], parent, "{parent} should pass through unchanged");
+            assert_eq!(events.len(), 1, "{parent} must still produce one event");
+            assert_eq!(
+                events[0][marker],
+                json!(true),
+                "{parent} must say why it produced no elements"
+            );
+            assert_eq!(
+                events[0]["parent_id"], parent["id"],
+                "{parent} must still name the object it came from"
+            );
+            assert!(
+                events[0].get("id").is_none(),
+                "{parent} must carry no element keys, so it cannot be read as a member"
+            );
         }
+    }
+
+    /// AN OBJECT WITH NO OWNERS MUST NOT LOOK LIKE ITS OWN OWNER. Graph returns `owners: []`
+    /// rather than omitting the key, and that is the common case, not an edge: measured
+    /// 2026-10-28, 81 of 100 service principals, 21 of 100 applications and 14 of 100 groups
+    /// have no owners. Before this, those records passed through whole, so `id` was the OBJECT
+    /// on them and the OWNER on every other record of the same sourcetype - and a search for
+    /// "who owns X" could return X itself. Now `parent_id` names the object on every event in
+    /// the feed and an ownerless one has no `id` at all.
+    #[test]
+    fn an_ownerless_object_is_named_by_parent_id_and_carries_no_owner() {
+        let group = json!({
+            "id": "group-object-id",
+            "displayName": "Infrastructure Admins",
+            "owners": [],
+        });
+
+        let events = explode_value(&group, "owners");
+
+        assert_eq!(events.len(), 1, "the object is not lost");
+        assert_eq!(events[0]["parent_id"], json!("group-object-id"));
+        assert_eq!(
+            events[0]["parent_displayName"],
+            json!("Infrastructure Admins")
+        );
+        assert_eq!(events[0]["owners_none"], json!(true));
+        assert!(
+            events[0].get("id").is_none(),
+            "an ownerless record must not carry an `id`, which on every other record of this \
+             feed is the owner - that is how an object came to look like its own owner"
+        );
+        assert!(events[0].get("userPrincipalName").is_none());
+    }
+
+    /// `parent_id` MEANS THE SAME THING ON EVERY EVENT OF A FEED, owned or not. This is the
+    /// property the ownerless pass-through used to break, and it is the one a search depends on.
+    #[test]
+    fn parent_id_identifies_the_object_whether_or_not_it_has_owners() {
+        let owned = json!({
+            "id": "owned-group",
+            "owners": [{ "id": "owner-1", "userPrincipalName": "a@example.gov.uk" }],
+        });
+        let ownerless = json!({ "id": "ownerless-group", "owners": [] });
+
+        let events: Vec<Value> = [&owned, &ownerless]
+            .iter()
+            .flat_map(|record| explode_value(record, "owners"))
+            .collect();
+
+        assert_eq!(events.len(), 2);
+        let objects: Vec<&Value> = events.iter().map(|e| &e["parent_id"]).collect();
+        assert_eq!(
+            objects,
+            vec![&json!("owned-group"), &json!("ownerless-group")],
+            "every event names its object under the same key, so `stats by parent_id` is whole"
+        );
+    }
+
+    /// A REFETCH THAT SHRINKS THE LIST IS NOT A COMPLETION. The capped list held at least the
+    /// cap, so a re-read returning fewer means a deleted object, a permission returning limited
+    /// information, or an endpoint that does not answer as assumed. Writing it would discard
+    /// known owners and call the result complete.
+    #[tokio::test]
+    async fn a_refetch_returning_fewer_members_is_refused() {
+        let records = vec![group_with_owners(EXPANSION_CAP)];
+
+        let completed = refetch_capped_collections(
+            &records,
+            "owners",
+            "/beta/groups/{id}/owners",
+            |_url| async { Ok(vec![json!({ "id": "only-one" })]) },
+        )
+        .await;
+
+        assert_eq!(
+            completed[0]["owners"].as_array().expect("array").len(),
+            EXPANSION_CAP,
+            "the known members are kept, not replaced by a shorter list"
+        );
+        assert_eq!(
+            completed[0]["owners_incomplete"],
+            json!(true),
+            "and it is marked, exactly as a failed request would be"
+        );
+    }
+
+    /// An empty successful refetch is the sharpest version of the same thing: it would have
+    /// wiped the owner list entirely and reported success.
+    #[tokio::test]
+    async fn an_empty_refetch_does_not_wipe_the_owner_list() {
+        let records = vec![group_with_owners(EXPANSION_CAP)];
+
+        let completed = refetch_capped_collections(
+            &records,
+            "owners",
+            "/beta/groups/{id}/owners",
+            |_url| async { Ok(vec![]) },
+        )
+        .await;
+
+        assert_eq!(
+            completed[0]["owners"].as_array().expect("array").len(),
+            EXPANSION_CAP
+        );
+        assert_eq!(completed[0]["owners_incomplete"], json!(true));
     }
 
     /// An element that is not an object is still a well-formed event.
@@ -468,7 +648,7 @@ mod test {
 
         assert_eq!(events.len(), 2);
         assert_eq!(events[0]["tags"], json!("one"));
-        assert_eq!(events[0]["id"], json!("parent-id"));
+        assert_eq!(events[0]["parent_id"], json!("parent-id"));
     }
 
     /// The owners feeds MUST keep their nested `$select`. Without it Graph returns a full

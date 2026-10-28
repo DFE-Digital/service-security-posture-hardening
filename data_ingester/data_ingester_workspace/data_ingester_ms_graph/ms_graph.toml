@@ -170,10 +170,22 @@ domains = { endpoint = "/v1.0/domains?$select=id,authenticationType,isVerified,i
 # principal owners correctly, so those two stay on v1.0.
 #
 # THE EVENT SHAPE THESE THREE PRODUCE is one event per owner: the owner's own `id`,
-# `userPrincipalName` and `displayName`, and the object they own under `parent_id` and
-# `parent_displayName` - the owner wins the colliding keys because the owner is the
-# subject of the event. Read `parent_id` for "who owns this", `id` for "what do they
-# own". The sourcetype says which kind of object the parent is.
+# `userPrincipalName`, `displayName` and `@odata.type`, with the object they own under
+# `parent_id` and `parent_displayName`. The parent is ALWAYS under `parent_`, so
+# `parent_id` means the same thing on every event in the feed. Read `parent_id` for "who
+# owns this", `id` for "what does this person own". The sourcetype says which kind of
+# object the parent is, and `@odata.type` says whether the OWNER is a user or a service
+# principal - a service principal owner has no `userPrincipalName`.
+#
+# AN OBJECT WITH NO OWNERS still produces one event, carrying `parent_id` and
+# `owners_none = true` and NO `id` at all. That is not an edge case: measured 2026-10-28,
+# 81 of 100 service principals, 21 of 100 applications and 14 of 100 groups have no
+# owners. The record cannot be mistaken for an ownership row, which it could when these
+# passed through whole - `id` was then the OBJECT on an ownerless record and the OWNER on
+# every other record of the same sourcetype, so a search for "who owns X" could return X.
+# A record whose `owners` key is missing entirely instead gets `owners_unexpected = true`:
+# Graph always returns the key for a collection it was asked to expand, so its absence
+# means the response shape changed and the feed should be looked at, not trusted.
 application_owners = { endpoint = "/v1.0/applications?$select=id,displayName,appId&$expand=owners($select=id,userPrincipalName,displayName)", explode = "owners", refetch_at_cap = "/v1.0/applications/{id}/owners?$select=id,userPrincipalName,displayName", source = "msgraph:application_owner", sourcetype = "m365:graph_application_owner", permissions_required = [
   "Application.Read.All",
   "Directory.Read.All",
