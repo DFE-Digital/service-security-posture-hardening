@@ -60,6 +60,173 @@ applications = { endpoint = "/v1.0/applications?$select=id,appId,displayName,sig
   "Application.Read.All",
 ] }
 
+# WHO HOLDS MICROSOFT GRAPH APPLICATION PERMISSIONS.
+#
+# Read from the RESOURCE side, not the holder side. An application's own permissions sit
+# on /servicePrincipals/{id}/appRoleAssignments, which is one call per principal and
+# about 14,000 of them. `appRoleAssignedTo` on the API's own service principal is the
+# same data from the other end: every principal granted an app role ON Microsoft Graph,
+# in one paged collection.
+#
+# NOT `$expand=appRoleAssignments` ON THE /servicePrincipals COLLECTION. Graph caps
+# expanded collections and truncates silently - that is why
+# `get_transitive_members_of_for_service_principals` exists even though the collection
+# call already expands transitiveMemberOf. A principal with many permissions would come
+# back looking LESS privileged than it is, which is the one failure a feed used to build
+# a privileged population cannot tolerate.
+#
+# ALTERNATE KEY ADDRESSING. servicePrincipals(appId='...') selects by client id, because
+# the object id of Graph's service principal differs per tenant while the appId
+# 00000003-0000-0000-c000-000000000000 is the same in every tenant.
+#
+# ONE ENTRY PER RESOURCE API. This covers Microsoft Graph. Exchange Online, SharePoint
+# and the rest would each need another entry of the same shape; Graph is the one that
+# conveys directory privilege.
+#
+# EVENTUALLY CONSISTENT. Microsoft documents replication delays on this relationship for
+# assignments granted or removed recently, so a permission granted today may not appear
+# until a later run. Treat a principal's absence as "not seen yet" rather than "holds
+# nothing" - the same distinction the transitiveMemberOf code makes for an unset value.
+graph_app_role_assignments = { endpoint = "/v1.0/servicePrincipals(appId='00000003-0000-0000-c000-000000000000')/appRoleAssignedTo", source = "msgraph:graph_app_role_assignment", sourcetype = "m365:graph_app_role_assignment", permissions_required = [
+  "Application.Read.All",
+] }
+
+# WHAT EACH PERMISSION GUID MEANS. An appRoleAssignment names its permission by
+# `appRoleId` alone, so without this feed the assignments above are unreadable GUIDs.
+#
+# EXPLODED, and this is the only feed that is. Graph's `appRoles` is a single array of
+# several hundred role definitions in ONE record, far past Splunk's [kv] maxchars of
+# 10,240 - and an oversized record yields NO extracted fields at all, measured on the
+# user feed at 23.8% of records. That is exactly why appRoles is excluded from the
+# service_principals $select above. One event per role keeps every event extractable.
+#
+# SELF-MAINTAINING. Microsoft adds Graph permissions regularly; this reads the current
+# set on every run rather than freezing a copy that then rots.
+graph_app_roles = { endpoint = "/v1.0/servicePrincipals(appId='00000003-0000-0000-c000-000000000000')?$select=id,appId,displayName,appRoles", explode = "appRoles", source = "msgraph:graph_app_role", sourcetype = "m365:graph_app_role", permissions_required = [
+  "Application.Read.All",
+] }
+
+# WHICH DOMAINS THIS TENANT TRUSTS TO AUTHENTICATE. `authenticationType` is Managed or
+# Federated, and a domain flipping from Managed to Federated hands whoever holds the
+# federation signing material the ability to mint assertions for any account in it.
+# Measured 2026-10-28: 4 domains, all Managed, the whole response 140 characters.
+domains = { endpoint = "/v1.0/domains?$select=id,authenticationType,isVerified,isDefault,isInitial", source = "msgraph:domain", sourcetype = "m365:graph_domain", permissions_required = [
+  "Domain.Read.All",
+] }
+
+# OWNERSHIP IS PRIVILEGE, and it appears in no role and no group membership. An owner of
+# an application or service principal can add credentials to it; an owner of a group can
+# add themselves to it, and if the group conveys a role they have taken that role.
+#
+# THREE DOCUMENTED LIMITS APPLY TO `$expand` ON A DIRECTORY RELATIONSHIP, and every one
+# of them fails quietly. Microsoft's known-issues list states that it "Returns a maximum
+# of 20 objects", that there is "No support for `@odata.nextLink`", and that there is "No
+# support for nesting other query parameters such as `$filter` and `$select` inside an
+# `$expand` query" - and the same list ends "Query parameters specified in a request
+# might fail silently. This can be true for unsupported query parameters and for
+# unsupported combinations of query parameters." So the overflow cannot be paged, nothing
+# in a response says a list was cut, and the nested $select below is relied on but not
+# guaranteed. The three mitigations are named against the three limits:
+#
+# 1. THE NESTED $select KEEPS THE RECORDS SMALL. Without it Graph returns a FULL user
+#    object per owner, about 2,850 characters each, and a group with twelve owners is one
+#    34,817 character record. Splunk's [kv] maxchars is 10,240 and an oversized record
+#    yields NO extracted fields at all, so 27 of 100 groups sampled would have arrived
+#    unreadable. Measured 2026-10-28 with it: max 2,725 for groups, 1,226 for
+#    applications, 570 for service principals, nothing over the limit.
+#
+# 2. `explode` MAKES THAT SAFE RATHER THAN LUCKY, because limit three says the $select
+#    may stop being honoured without saying so. One event per owner means the largest
+#    possible event is a single owner - about 2,850 characters even as a full user object
+#    - so the feed stays readable either way. The $select stays because it cuts the bytes
+#    on the wire twelvefold; `explode` is here so that losing it is a cost, not an outage.
+#
+# 3. `refetch_at_cap` MAKES THE 20 CAP SURVIVABLE. A relationship's own endpoint is an
+#    ordinary paged collection with no cap, so an object whose expanded list arrives at
+#    20 is re-read there in full. It selects the same fields as the expand so a completed
+#    list has the same shape as an uncapped one. It costs one request per such object and
+#    nothing otherwise: measured 2026-10-28 the most owners on any object was 12, mean
+#    2.5, none at the cap, so today it makes no requests at all. A refetch that fails
+#    marks the record `owners_incomplete`, which rides onto every exploded event, because
+#    a short list nothing flags is the whole failure being avoided here.
+#
+# THE GROUP REFETCH IS /beta AND MUST STAY THAT WAY. Microsoft's own note on
+# group-list-owners says "Currently, service principals are not listed as group owners
+# due to the staged rollout of service principals to the Microsoft Graph v1.0 endpoint",
+# and v1.0 documents its response as a collection of USER objects. Measured against this
+# tenant on 2026-10-28, on all six of the one hundred groups sampled that have a service
+# principal owner: $expand returned the service principal, /v1.0/groups/{id}/owners
+# returned ONLY the users, and /beta/groups/{id}/owners matched $expand exactly. So
+# re-reading a capped group on v1.0 would DELETE every service principal owner and mark
+# the result complete - strictly worse than not re-reading it, and silent. A service
+# principal owning a role-assignable group is precisely the ownership path this feed
+# exists to see.
+#
+# The /v1.0 OData casts - owners/microsoft.graph.user and owners/microsoft.graph.
+# servicePrincipal - were tested too and do return both types, but they cost two requests
+# and drop @odata.type, which the expand and /beta both carry and which is the only thing
+# telling a user owner from a service principal owner. Applications and service
+# principals have no such defect: measured on the same day, /v1.0 returned their service
+# principal owners correctly, so those two stay on v1.0.
+#
+# THE EVENT SHAPE THESE THREE PRODUCE is one event per owner: the owner's own `id`,
+# `userPrincipalName`, `displayName` and `@odata.type`, with the object they own under
+# `parent_id` and `parent_displayName`. The parent is ALWAYS under `parent_`, so
+# `parent_id` means the same thing on every event in the feed. Read `parent_id` for "who
+# owns this", `id` for "what does this person own". The sourcetype says which kind of
+# object the parent is, and `@odata.type` says whether the OWNER is a user or a service
+# principal - a service principal owner has no `userPrincipalName`.
+#
+# AN OBJECT WITH NO OWNERS still produces one event, carrying `parent_id` and
+# `owners_none = true` and NO `id` at all. That is not an edge case: measured 2026-10-28,
+# 81 of 100 service principals, 21 of 100 applications and 14 of 100 groups have no
+# owners. The record cannot be mistaken for an ownership row, which it could when these
+# passed through whole - `id` was then the OBJECT on an ownerless record and the OWNER on
+# every other record of the same sourcetype, so a search for "who owns X" could return X.
+# A record whose `owners` key is missing entirely instead gets `owners_unexpected = true`:
+# Graph always returns the key for a collection it was asked to expand, so its absence
+# means the response shape changed and the feed should be looked at, not trusted.
+application_owners = { endpoint = "/v1.0/applications?$select=id,displayName,appId&$expand=owners($select=id,userPrincipalName,displayName)", explode = "owners", refetch_at_cap = "/v1.0/applications/{id}/owners?$select=id,userPrincipalName,displayName", source = "msgraph:application_owner", sourcetype = "m365:graph_application_owner", permissions_required = [
+  "Application.Read.All",
+  "Directory.Read.All",
+] }
+
+service_principal_owners = { endpoint = "/v1.0/servicePrincipals?$select=id,displayName,appId&$expand=owners($select=id,userPrincipalName,displayName)", explode = "owners", refetch_at_cap = "/v1.0/servicePrincipals/{id}/owners?$select=id,userPrincipalName,displayName", source = "msgraph:service_principal_owner", sourcetype = "m365:graph_service_principal_owner", permissions_required = [
+  "Application.Read.All",
+  "Directory.Read.All",
+] }
+
+group_owners = { endpoint = "/v1.0/groups?$select=id,displayName&$expand=owners($select=id,userPrincipalName,displayName)", explode = "owners", refetch_at_cap = "/beta/groups/{id}/owners?$select=id,userPrincipalName,displayName", source = "msgraph:group_owner", sourcetype = "m365:graph_group_owner", permissions_required = [
+  "Group.Read.All",
+  "Directory.Read.All",
+] }
+
+# SOFT DELETE OR HARD DELETE. A deleted directory object sits in a 30-day recycle bin
+# and can be restored; a hard delete removes it immediately and cannot be undone. The
+# audit log records both as a deletion, so only the recycle bin distinguishes them, and
+# the difference matters because one is reversible and the other is destruction.
+#
+# The collection is TYPED, so each object type is its own endpoint rather than one call.
+# Measured 2026-10-28: users 32 records at max 421 characters, applications 9 at 2,458,
+# service principals 100+ at 2,525. Groups and devices returned zero, which is itself a
+# finding - 541 group deletions in 90 days by 185 people against 979 hard deletes, so
+# groups here are being destroyed rather than recycled.
+deleted_items_users = { endpoint = "/v1.0/directory/deletedItems/microsoft.graph.user", source = "msgraph:deleted_item_user", sourcetype = "m365:graph_deleted_item_user", permissions_required = [
+  "Directory.Read.All",
+] }
+
+deleted_items_groups = { endpoint = "/v1.0/directory/deletedItems/microsoft.graph.group", source = "msgraph:deleted_item_group", sourcetype = "m365:graph_deleted_item_group", permissions_required = [
+  "Directory.Read.All",
+] }
+
+deleted_items_applications = { endpoint = "/v1.0/directory/deletedItems/microsoft.graph.application", source = "msgraph:deleted_item_application", sourcetype = "m365:graph_deleted_item_application", permissions_required = [
+  "Application.Read.All",
+] }
+
+deleted_items_service_principals = { endpoint = "/v1.0/directory/deletedItems/microsoft.graph.servicePrincipal", source = "msgraph:deleted_item_service_principal", sourcetype = "m365:graph_deleted_item_service_principal", permissions_required = [
+  "Application.Read.All",
+] }
+
 # Entra ID Protection: who is currently flagged as risky. A current-state list, one
 # record per risky user with riskLevel, riskState, riskDetail and
 # riskLastUpdatedDateTime, so a daily snapshot is the right shape for it.
@@ -195,6 +362,48 @@ token_lifetime_policies = { endpoint = "/v1.0/policies/tokenLifetimePolicies", p
 ], cis_controls = [
   { filename = "CIS_Microsoft_365_Foundations_Benchmark_v2.0.0.pdf", control_id = "" },
   { filename = "CIS_Microsoft_365_Foundations_Benchmark_v2.0.0.pdf", control_id = "" },
+] }
+
+# CROSS-TENANT ACCESS: the container. Carries allowedCloudEndpoints and the policy
+# displayName and nothing per-partner. Thin on its own, and here because it states which
+# clouds are in scope before the default and partner records below mean anything.
+cross_tenant_access_policy = { endpoint = "/v1.0/policies/crossTenantAccessPolicy", permissions_required = [
+  "Policy.Read.All",
+] }
+
+# THE TERMS ON WHICH WE TRUST EVERY EXTERNAL TENANT, unless a partner record below
+# overrides them. `inboundTrust` is the part that matters: whether we accept another
+# tenant's multi-factor, its compliant-device claim or its hybrid-joined-device claim IN
+# PLACE OF OUR OWN. Accepting theirs means our own conditional access can be satisfied
+# by a control we do not operate.
+#
+# Returns a SINGLE OBJECT rather than a collection. get_url handles both.
+cross_tenant_access_policy_default = { endpoint = "/v1.0/policies/crossTenantAccessPolicy/default", permissions_required = [
+  "Policy.Read.All",
+] }
+
+# PER-PARTNER OVERRIDES of the default above, one record per external tenant that has an
+# explicit configuration.
+#
+# AN EMPTY COLLECTION IS A REAL ANSWER rather than a broken feed: it means no partner is
+# configured individually, so the default record is what is in force everywhere. Now
+# that a Graph error document is refused instead of indexed, no events and no logged
+# error does mean "nothing configured".
+#
+# identitySynchronization IS EXPANDED because it is a trust term like the others: it says
+# whether a partner may PROVISION USERS INTO our directory, which is a wider grant than
+# anything in inboundTrust. It is a navigation property and is null unless expanded, so
+# without this the feed would answer "on what terms do we trust them" with that term
+# missing. A partner with no synchronisation configured expands to null, which is the
+# answer rather than an absence.
+#
+# AND YES, $expand IS USED HERE while the app role assignment feed above deliberately
+# avoids it. The hazard there is Graph CAPPING AN EXPANDED COLLECTION and truncating a
+# member list silently. identitySynchronization is a SINGLE OBJECT per partner, and
+# partners is itself a handful of records, so there is no member list that can be
+# quietly cut short. Do not read this as licence to expand a collection.
+cross_tenant_access_policy_partners = { endpoint = "/v1.0/policies/crossTenantAccessPolicy/partners?$expand=identitySynchronization", permissions_required = [
+  "Policy.Read.All",
 ] }
 
 admin_forms = { endpoint = "/beta/admin/forms", permissions_required = [
