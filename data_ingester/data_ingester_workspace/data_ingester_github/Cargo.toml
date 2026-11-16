@@ -5,7 +5,7 @@ edition = "2021"
 
 [dependencies]
 anyhow = { version = "1", features=["backtrace"]}
-base64 = "0.22"
+base64 = "0.23"
 bytes = "1"
 clap = { version="4", features=["derive"]}
 csv = "1"
@@ -19,7 +19,7 @@ graphql_client = "0"
 http = "1"
 http-body-util = "0"
 itertools = "0"
-jsonwebtoken = {version = "10", features = ["aws_lc_rs"]}
+jsonwebtoken = {version = "11", features = ["aws_lc_rs"]}
 octocrab = { version="0", default-features=false, features =["rustls-aws-lc-rs", "jwt-aws-lc-rs", "follow-redirect", "retry", "rustls", "timeout", "tracing", "default-client"]}
 regex = "1"
 secrecy = "0"
