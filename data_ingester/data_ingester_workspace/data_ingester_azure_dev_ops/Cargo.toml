@@ -17,7 +17,7 @@ tracing = "0"
 url = "2"
 itertools = "0"
 csv = "1"
-jiff = "0.2"
+jiff = "1.0"
 valuable = { version = "*", features = ["derive"]}
 
 [dev-dependencies]
